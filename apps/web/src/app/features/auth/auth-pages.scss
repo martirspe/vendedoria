@@ -1,0 +1,59 @@
+:host {
+  display: block;
+  min-height: 100vh;
+  padding-block: var(--ds-space-10);
+  background: var(--ds-color-bg);
+}
+
+.auth {
+  display: grid;
+  gap: var(--ds-space-4);
+  max-width: 28rem;
+}
+
+.auth__brand {
+  font-family: var(--ds-font-display);
+  font-weight: 800;
+  letter-spacing: -0.03em;
+}
+
+h1 {
+  margin: 0;
+  font-size: 2rem;
+  letter-spacing: -0.03em;
+}
+
+p {
+  margin: 0;
+  color: var(--ds-color-text-secondary);
+}
+
+.auth__form {
+  display: grid;
+  gap: var(--ds-space-4);
+  margin-top: var(--ds-space-4);
+}
+
+label {
+  display: grid;
+  gap: var(--ds-space-2);
+  font-weight: 600;
+  font-size: 0.92rem;
+}
+
+input {
+  min-height: var(--ds-touch-target);
+  padding: 0 var(--ds-space-4);
+  border: 1px solid var(--ds-color-border);
+  border-radius: var(--ds-radius-md);
+  background: var(--ds-color-surface);
+}
+
+.auth__error {
+  color: var(--ds-color-danger);
+}
+
+.auth__footer a {
+  color: var(--ds-color-accent);
+  font-weight: 700;
+}

@@ -1,0 +1,290 @@
+<section class="seller">
+  <header class="seller__header">
+    <div>
+      <p class="seller__eyebrow">Vendedor IA</p>
+      <h1>Configura cómo vende</h1>
+      <p>
+        Personalidad, reglas y mensajes que el agente usa en WhatsApp. Los
+        cambios aplican en el próximo hilo, sin contaminar historial pasado.
+      </p>
+    </div>
+    <div class="seller__status" [class.seller__status--on]="form.controls.isActive.value">
+      <span class="seller__status-dot" aria-hidden="true"></span>
+      {{ form.controls.isActive.value ? 'Activo' : 'Pausado' }}
+    </div>
+  </header>
+
+  @if (errorMessage(); as error) {
+    <div class="banner banner--danger" role="alert">
+      <ds-icon name="alert" />
+      <span>{{ error }}</span>
+    </div>
+  }
+
+  @if (successMessage(); as success) {
+    <div class="banner banner--success" role="status">
+      <ds-icon name="check" />
+      <span>{{ success }}</span>
+    </div>
+  }
+
+  @if (loading()) {
+    <div class="skeleton" aria-busy="true">Cargando vendedor…</div>
+  } @else {
+    <div class="seller__layout">
+      <aside class="seller__rail" aria-label="Progreso del vendedor">
+        <div class="score">
+          <div
+            class="score__ring"
+            [style.--score]="qualityPercent()"
+            role="img"
+            [attr.aria-label]="'Calidad del vendedor ' + (quality()?.score ?? 0) + ' de ' + (quality()?.max ?? 200)"
+          >
+            <div class="score__value">
+              <strong>{{ quality()?.score ?? 0 }}</strong>
+              <span>/ {{ quality()?.max ?? 200 }}</span>
+            </div>
+          </div>
+          <div class="score__meta">
+            <h2>{{ qualityLabel() }}</h2>
+            <p>
+              {{ quality()?.completedFields ?? 0 }} de
+              {{ quality()?.totalFields ?? 0 }} bloques listos
+            </p>
+          </div>
+        </div>
+
+        @if (quality()?.missingHints?.length) {
+          <ul class="hints">
+            @for (hint of quality()!.missingHints; track hint) {
+              <li>{{ hint }}</li>
+            }
+          </ul>
+        }
+
+        <nav class="section-nav" aria-label="Secciones">
+          @for (section of sections; track section.id) {
+            <button
+              type="button"
+              class="section-nav__item"
+              [class.is-active]="activeSection() === section.id"
+              (click)="scrollTo(section.id)"
+            >
+              {{ section.label }}
+            </button>
+          }
+        </nav>
+
+        <div class="preview">
+          <div class="preview__head">
+            <ds-icon name="message" />
+            <div>
+              <strong>Vista previa</strong>
+              <span>Así saluda en el chat</span>
+            </div>
+          </div>
+          <div class="preview__thread">
+            <div class="bubble bubble--buyer">Hola</div>
+            <div class="bubble bubble--agent" [attr.data-pulse]="previewPulse()">
+              {{ previewGreeting() }}
+            </div>
+          </div>
+        </div>
+      </aside>
+
+      <form
+        class="seller__form"
+        [formGroup]="form"
+        (ngSubmit)="save()"
+        (input)="markDirty()"
+        (change)="markDirty()"
+      >
+        <section class="block" id="seller-basics">
+          <header class="block__head">
+            <h2>Básico</h2>
+            <p>Identidad del vendedor y del negocio en el chat.</p>
+          </header>
+          <div class="fields">
+            <label>
+              Nombre del vendedor
+              <input formControlName="name" maxlength="80" autocomplete="off" />
+            </label>
+            <label>
+              Nombre del negocio
+              <input formControlName="companyName" maxlength="120" />
+            </label>
+            <label class="fields__full">
+              Descripción del negocio
+              <textarea
+                formControlName="companyDescription"
+                rows="3"
+                maxlength="2000"
+                placeholder="Qué vende, en qué destaca, envíos, etc."
+              ></textarea>
+            </label>
+            <label class="toggle fields__full">
+              <input type="checkbox" formControlName="isActive" />
+              <span>
+                <strong>Vendedor activo</strong>
+                <small>Si lo desactivas, no responderá chats nuevos automáticamente.</small>
+              </span>
+            </label>
+          </div>
+        </section>
+
+        <section class="block" id="seller-audience">
+          <header class="block__head">
+            <h2>Audiencia y reglas</h2>
+            <p>A quién le vende y límites que nunca debe romper.</p>
+          </header>
+          <div class="fields">
+            <label class="fields__full">
+              Audiencia
+              <textarea
+                formControlName="audienceDescription"
+                rows="3"
+                maxlength="1000"
+                placeholder="Ej. Mujeres 25–40 que buscan moda casual en Lima"
+              ></textarea>
+            </label>
+            <label class="fields__full">
+              Reglas ALWAYS / NEVER
+              <textarea
+                formControlName="rulesText"
+                rows="5"
+                maxlength="4000"
+                placeholder="ALWAYS: confirmar stock antes de cerrar.&#10;NEVER: inventar descuentos ni prometer fechas de envío."
+              ></textarea>
+            </label>
+          </div>
+        </section>
+
+        <section class="block" id="seller-personality">
+          <header class="block__head">
+            <h2>Personalidad</h2>
+            <p>Tono, longitud y detalles que hacen reconocible al agente.</p>
+          </header>
+          <div class="fields">
+            <label>
+              Estilo de comunicación
+              <input
+                formControlName="communicationStyle"
+                placeholder="Cercano, profesional, juvenil…"
+              />
+            </label>
+            <label>
+              Estilo de ventas
+              <input
+                formControlName="salesStyle"
+                placeholder="Consultivo, directo, storytelling…"
+              />
+            </label>
+            <fieldset class="segmented fields__full">
+              <legend>Longitud de respuesta</legend>
+              <label>
+                <input type="radio" formControlName="responseLength" value="concise" />
+                Concisa
+              </label>
+              <label>
+                <input type="radio" formControlName="responseLength" value="balanced" />
+                Equilibrada
+              </label>
+              <label>
+                <input type="radio" formControlName="responseLength" value="detailed" />
+                Detallada
+              </label>
+            </fieldset>
+            <label class="toggle">
+              <input type="checkbox" formControlName="useEmojis" />
+              <span>
+                <strong>Usar emojis</strong>
+                <small>Activa o apaga emojis en las respuestas.</small>
+              </span>
+            </label>
+            <label>
+              Paleta de emojis
+              <input formControlName="emojiPalette" placeholder="✨ 🙌 💚" />
+            </label>
+            <label class="fields__full">
+              Palabras a evitar
+              <input
+                formControlName="wordsToAvoid"
+                placeholder="barato, oferta limitada, garantía eterna…"
+              />
+            </label>
+          </div>
+        </section>
+
+        <section class="block" id="seller-messages">
+          <header class="block__head">
+            <h2>Mensajes clave</h2>
+            <p>Textos fijos que el agente usa al abrir y al confirmar compra.</p>
+          </header>
+          <div class="fields">
+            <label class="fields__full">
+              Mensaje inicial
+              <textarea
+                formControlName="initialMessage"
+                rows="3"
+                maxlength="1000"
+                placeholder="¡Hola! Soy… ¿En qué te ayudo?"
+              ></textarea>
+            </label>
+            <label class="fields__full">
+              Confirmación de compra
+              <textarea
+                formControlName="purchaseConfirmMessage"
+                rows="3"
+                maxlength="1000"
+                placeholder="¡Pedido recibido! Te enviamos el link de pago…"
+              ></textarea>
+            </label>
+          </div>
+        </section>
+
+        <section class="block" id="seller-handoff">
+          <header class="block__head">
+            <h2>Handoff humano</h2>
+            <p>
+              Cuando el comprador pide una persona, el agente escala y puede
+              pausarse solo.
+            </p>
+          </header>
+          <div class="fields">
+            <label class="fields__full">
+              Mensaje de handoff
+              <textarea
+                formControlName="handoffMessage"
+                rows="3"
+                maxlength="1000"
+                placeholder="Te conecto con un asesor de nuestro equipo…"
+              ></textarea>
+            </label>
+            <label class="toggle fields__full">
+              <input type="checkbox" formControlName="pauseOnHandoff" />
+              <span>
+                <strong>Pausar IA al escalar</strong>
+                <small>
+                  Evita que agente y humano respondan a la vez en el mismo hilo.
+                </small>
+              </span>
+            </label>
+          </div>
+        </section>
+
+        <div class="seller__actions" [class.is-dirty]="dirty()">
+          <p>
+            @if (dirty()) {
+              Hay cambios sin guardar
+            } @else {
+              Todo guardado
+            }
+          </p>
+          <ds-button type="submit" [disabled]="saving() || !dirty()">
+            {{ saving() ? 'Guardando…' : 'Guardar vendedor' }}
+          </ds-button>
+        </div>
+      </form>
+    </div>
+  }
+</section>

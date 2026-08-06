@@ -1,0 +1,80 @@
+# VendedorIA — local development stack
+#
+# Recommended while Docker Hub is flaky:
+#   docker compose up db
+#   npm run prisma:migrate -w @vendedoria/api
+#   npm run dev:api
+#   npm run dev:web
+#
+# Full stack (needs node image from Docker Hub):
+#   docker compose --profile full up --build
+
+services:
+  db:
+    image: postgres:16-alpine
+    container_name: vendedoria-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: vendedoria
+    ports:
+      - '5432:5432'
+    volumes:
+      - vendedoria_pg:/var/lib/postgresql/data
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U postgres -d vendedoria']
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  api:
+    profiles: [full]
+    build:
+      context: .
+      dockerfile: apps/api/Dockerfile.dev
+    container_name: vendedoria-api
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      PORT: 3000
+      DATABASE_URL: postgresql://postgres:postgres@db:5432/vendedoria?schema=public
+      JWT_ACCESS_SECRET: local-dev-access-secret-change-me-32chars
+      JWT_REFRESH_SECRET: local-dev-refresh-secret-change-me-32chars
+      JWT_REFRESH_EXPIRES_DAYS: 30
+      CORS_ORIGIN: http://localhost:4200
+      META_VERIFY_TOKEN: local-meta-verify-token
+      PUBLIC_API_BASE_URL: http://localhost:3000/api/v1
+    ports:
+      - '3000:3000'
+    volumes:
+      - ./apps/api/src:/app/apps/api/src
+      - ./apps/api/prisma:/app/apps/api/prisma
+      - ./apps/api/nest-cli.json:/app/apps/api/nest-cli.json
+      - ./apps/api/tsconfig.json:/app/apps/api/tsconfig.json
+      - ./apps/api/tsconfig.build.json:/app/apps/api/tsconfig.build.json
+
+  web:
+    profiles: [full]
+    build:
+      context: .
+      dockerfile: apps/web/Dockerfile.dev
+    container_name: vendedoria-web
+    restart: unless-stopped
+    depends_on:
+      - api
+    environment:
+      CHOKIDAR_USEPOLLING: 'true'
+    ports:
+      - '4200:4200'
+    volumes:
+      - ./apps/web/src:/app/apps/web/src
+      - ./apps/web/public:/app/apps/web/public
+      - ./apps/web/angular.json:/app/apps/web/angular.json
+      - ./apps/web/tsconfig.json:/app/apps/web/tsconfig.json
+      - ./apps/web/tsconfig.app.json:/app/apps/web/tsconfig.app.json
+
+volumes:
+  vendedoria_pg:

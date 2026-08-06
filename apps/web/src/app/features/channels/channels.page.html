@@ -1,0 +1,145 @@
+<section class="channels">
+  <header class="channels__header">
+    <div>
+      <h1>Canales</h1>
+      <p>
+        Conecta WhatsApp Business API (Meta). Instagram llegará por el mismo
+        modelo de adapters.
+      </p>
+    </div>
+  </header>
+
+  @if (errorMessage(); as error) {
+    <div class="banner banner--danger" role="alert">
+      <ds-icon name="alert" />
+      <span>{{ error }}</span>
+    </div>
+  }
+
+  @if (successMessage(); as success) {
+    <div class="banner banner--success" role="status">
+      <ds-icon name="check" />
+      <span>{{ success }}</span>
+    </div>
+  }
+
+  @if (loading()) {
+    <div class="skeleton" aria-busy="true">Cargando canales…</div>
+  } @else {
+    <div class="channels__grid">
+      <article class="panel">
+        <div class="panel__head">
+          <div>
+            <h2>WhatsApp</h2>
+            <p>API oficial de Meta · coexistencia o número WABA</p>
+          </div>
+          @if (whatsapp; as channel) {
+            <span
+              class="status"
+              [class.status--ok]="channel.healthStatus === 'CONNECTED'"
+              [class.status--warn]="channel.healthStatus !== 'CONNECTED'"
+            >
+              {{ statusLabel(channel.healthStatus) }}
+            </span>
+          }
+        </div>
+
+        @if (!whatsapp) {
+          <ds-empty-state
+            title="Aún no hay WhatsApp conectado"
+            body="Usa tu Phone Number ID y access token de Meta Cloud API. Luego configura el webhook con el verify token del servidor."
+          />
+        } @else {
+          <dl class="meta">
+            <div>
+              <dt>Nombre</dt>
+              <dd>{{ whatsapp.displayName || 'WhatsApp Business' }}</dd>
+            </div>
+            <div>
+              <dt>Phone Number ID</dt>
+              <dd>{{ whatsapp.externalId }}</dd>
+            </div>
+            <div>
+              <dt>Modo</dt>
+              <dd>{{ whatsapp.connectionMode || '—' }}</dd>
+            </div>
+          </dl>
+        }
+
+        <form class="form" [formGroup]="connectForm" (ngSubmit)="connect()">
+          <h3>{{ whatsapp ? 'Actualizar conexión' : 'Conectar WhatsApp' }}</h3>
+          <label>
+            Phone Number ID
+            <input formControlName="phoneNumberId" autocomplete="off" />
+          </label>
+          <label>
+            Access token
+            <input
+              formControlName="accessToken"
+              type="password"
+              autocomplete="off"
+            />
+          </label>
+          <label>
+            Nombre visible
+            <input formControlName="displayName" />
+          </label>
+          <label>
+            Tipo de conexión
+            <select formControlName="connectionMode">
+              <option value="COEXISTENCE">Coexistencia (número actual)</option>
+              <option value="NEW_WABA_NUMBER">Número API / WABA nuevo</option>
+            </select>
+          </label>
+          <ds-button type="submit" [disabled]="saving()">
+            {{ saving() ? 'Guardando…' : 'Guardar conexión' }}
+          </ds-button>
+        </form>
+
+        @if (webhookInfo(); as webhook) {
+          <div class="webhook">
+            <h3>Webhook Meta</h3>
+            <p>Callback URL</p>
+            <code>{{ webhook.callbackUrl }}</code>
+            <p>{{ webhook.verifyTokenHint }}</p>
+          </div>
+        }
+      </article>
+
+      <article class="panel panel--secondary">
+        <div class="panel__head">
+          <div>
+            <h2>Probar sin Meta</h2>
+            <p>
+              Simula un mensaje entrante para validar el agente y el inbox
+              localmente.
+            </p>
+          </div>
+          <ds-icon name="bot" />
+        </div>
+
+        <form class="form" [formGroup]="simulateForm" (ngSubmit)="simulate()">
+          <label>
+            Teléfono del comprador
+            <input formControlName="fromPhone" />
+          </label>
+          <label>
+            Nombre
+            <input formControlName="contactName" />
+          </label>
+          <label>
+            Mensaje
+            <textarea formControlName="text" rows="4"></textarea>
+          </label>
+          <ds-button
+            type="submit"
+            variant="secondary"
+            [disabled]="saving() || !whatsapp"
+          >
+            Simular mensaje entrante
+          </ds-button>
+        </form>
+      </article>
+    </div>
+  }
+</section>

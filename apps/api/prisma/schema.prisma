@@ -1,0 +1,345 @@
+// VendedorIA — multi-tenant domain foundation
+// Code and schema identifiers in English (Project Constitution)
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum PlanTier {
+  FREE
+  STARTER
+  PRO
+  BUSINESS
+}
+
+enum MembershipRole {
+  OWNER
+  ADMIN
+  AGENT
+}
+
+enum ChannelType {
+  WHATSAPP
+  INSTAGRAM
+}
+
+enum ChannelConnectionMode {
+  COEXISTENCE
+  NEW_WABA_NUMBER
+}
+
+enum ChannelHealthStatus {
+  CONNECTED
+  DEGRADED
+  DISCONNECTED
+  PENDING
+}
+
+enum ConversationStatus {
+  OPEN
+  PAUSED
+  CLOSED
+}
+
+enum MessageDirection {
+  INBOUND
+  OUTBOUND
+}
+
+enum MessageAuthorType {
+  BUYER
+  SALES_AGENT
+  HUMAN_OPERATOR
+  SYSTEM
+}
+
+enum OrderStatus {
+  DRAFT
+  PENDING_PAYMENT
+  PAID
+  FULFILLING
+  SHIPPED
+  COMPLETED
+  CANCELLED
+}
+
+enum PaymentFlow {
+  BILLING_SUBSCRIPTION
+  COMMERCE_CHECKOUT
+}
+
+enum PaymentStatus {
+  PENDING
+  SUCCEEDED
+  FAILED
+  CANCELLED
+}
+
+model User {
+  id           String       @id @default(cuid())
+  email        String       @unique
+  passwordHash String
+  fullName     String?
+  createdAt    DateTime     @default(now())
+  updatedAt    DateTime     @updatedAt
+  memberships  Membership[]
+  refreshTokens RefreshToken[]
+}
+
+model Tenant {
+  id        String   @id @default(cuid())
+  name      String
+  slug      String   @unique
+  country   String   @default("PE")
+  currency  String   @default("PEN")
+  planTier  PlanTier @default(FREE)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  memberships   Membership[]
+  salesAgents   SalesAgent[]
+  channels      Channel[]
+  products      Product[]
+  conversations Conversation[]
+  orders        Order[]
+  payments      Payment[]
+}
+
+model Membership {
+  id        String         @id @default(cuid())
+  tenantId  String
+  userId    String
+  role      MembershipRole @default(OWNER)
+  createdAt DateTime       @default(now())
+  updatedAt DateTime       @updatedAt
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([tenantId, userId])
+  @@index([userId])
+}
+
+model RefreshToken {
+  id        String   @id @default(cuid())
+  userId    String
+  tokenHash String   @unique
+  expiresAt DateTime
+  revokedAt DateTime?
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+model SalesAgent {
+  id                    String   @id @default(cuid())
+  tenantId              String
+  name                  String
+  companyName           String?
+  companyDescription    String?
+  audienceDescription   String?
+  rulesText             String?
+  communicationStyle    String?
+  salesStyle            String?
+  responseLength        String   @default("balanced")
+  useEmojis             Boolean  @default(true)
+  emojiPalette          String?
+  wordsToAvoid          String?
+  initialMessage        String?
+  purchaseConfirmMessage String?
+  handoffMessage        String?
+  pauseOnHandoff        Boolean  @default(true)
+  isActive              Boolean  @default(true)
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId])
+}
+
+model Channel {
+  id             String                @id @default(cuid())
+  tenantId       String
+  type           ChannelType
+  connectionMode ChannelConnectionMode?
+  healthStatus   ChannelHealthStatus   @default(PENDING)
+  externalId     String?
+  displayName    String?
+  metadata       Json?
+  lastActiveAt   DateTime?
+  createdAt      DateTime              @default(now())
+  updatedAt      DateTime              @updatedAt
+
+  tenant        Tenant         @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  conversations Conversation[]
+
+  @@unique([tenantId, type, externalId])
+  @@index([tenantId, type])
+  @@index([externalId])
+}
+
+model Product {
+  id               String   @id @default(cuid())
+  tenantId         String
+  handle           String
+  name             String
+  descriptionShort String?
+  descriptionFull  String?
+  categories       String[] @default([])
+  basePriceCents   Int
+  currency         String   @default("PEN")
+  isAvailable      Boolean  @default(true)
+  stockUnlimited   Boolean  @default(true)
+  stockQty         Int?
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  tenant    Tenant           @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  variants  ProductVariant[]
+  media     ProductMedia[]
+  orderItems OrderItem[]
+
+  @@unique([tenantId, handle])
+  @@index([tenantId])
+}
+
+model ProductVariant {
+  id             String  @id @default(cuid())
+  productId      String
+  sku            String?
+  option1Name    String?
+  option1Value   String?
+  option2Name    String?
+  option2Value   String?
+  option3Name    String?
+  option3Value   String?
+  priceCents     Int
+  isAvailable    Boolean @default(true)
+  stockQty       Int?
+  imageUrl       String?
+
+  product    Product     @relation(fields: [productId], references: [id], onDelete: Cascade)
+  orderItems OrderItem[]
+
+  @@index([productId])
+}
+
+model ProductMedia {
+  id        String   @id @default(cuid())
+  productId String
+  url       String
+  kind      String   @default("image")
+  sortOrder Int      @default(0)
+  createdAt DateTime @default(now())
+
+  product Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  @@index([productId])
+}
+
+model Conversation {
+  id                 String             @id @default(cuid())
+  tenantId           String
+  channelId          String
+  externalThreadId   String?
+  contactName        String?
+  contactPhone       String?
+  status             ConversationStatus @default(OPEN)
+  agentEnabled       Boolean            @default(true)
+  markedAsSale       Boolean            @default(false)
+  markedUnattended   Boolean            @default(false)
+  lastInboundAt      DateTime?
+  createdAt          DateTime           @default(now())
+  updatedAt          DateTime           @updatedAt
+
+  tenant   Tenant    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  channel  Channel   @relation(fields: [channelId], references: [id], onDelete: Cascade)
+  messages Message[]
+  orders   Order[]
+
+  @@unique([channelId, externalThreadId])
+  @@index([tenantId, status])
+  @@index([tenantId, markedUnattended])
+  @@index([channelId])
+}
+
+model Message {
+  id             String            @id @default(cuid())
+  conversationId String
+  direction      MessageDirection
+  authorType     MessageAuthorType
+  body           String
+  externalId     String?
+  createdAt      DateTime          @default(now())
+
+  conversation Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+
+  @@index([conversationId, createdAt])
+}
+
+model Order {
+  id             String      @id @default(cuid())
+  tenantId       String
+  conversationId String?
+  status         OrderStatus @default(DRAFT)
+  currency       String      @default("PEN")
+  totalCents     Int         @default(0)
+  customerName  String?
+  customerPhone  String?
+  createdAt      DateTime    @default(now())
+  updatedAt      DateTime    @updatedAt
+
+  tenant       Tenant        @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  conversation Conversation? @relation(fields: [conversationId], references: [id], onDelete: SetNull)
+  items        OrderItem[]
+  payments     Payment[]
+
+  @@index([tenantId, status])
+}
+
+model OrderItem {
+  id         String  @id @default(cuid())
+  orderId    String
+  productId  String?
+  variantId  String?
+  title      String
+  quantity   Int     @default(1)
+  unitCents  Int
+  totalCents Int
+
+  order   Order           @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  product Product?        @relation(fields: [productId], references: [id], onDelete: SetNull)
+  variant ProductVariant? @relation(fields: [variantId], references: [id], onDelete: SetNull)
+
+  @@index([orderId])
+}
+
+model Payment {
+  id               String        @id @default(cuid())
+  tenantId         String
+  orderId          String?
+  flow             PaymentFlow
+  provider         String        @default("mercadopago")
+  status           PaymentStatus @default(PENDING)
+  amountCents      Int
+  currency         String        @default("PEN")
+  externalId       String?
+  idempotencyKey   String        @unique
+  checkoutUrl      String?
+  rawPayload       Json?
+  createdAt        DateTime      @default(now())
+  updatedAt        DateTime      @updatedAt
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  order  Order? @relation(fields: [orderId], references: [id], onDelete: SetNull)
+
+  @@index([tenantId, flow, status])
+}

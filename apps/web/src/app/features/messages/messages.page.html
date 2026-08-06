@@ -1,0 +1,257 @@
+<section class="inbox">
+  <aside class="inbox__list" aria-label="Conversaciones">
+    <header class="inbox__list-head">
+      <div>
+        <h1>Mensajes</h1>
+        <p>{{ conversations().length }} conversaciones</p>
+      </div>
+      <button
+        type="button"
+        class="chip"
+        [class.chip--active]="filterUnattended()"
+        (click)="toggleUnattendedFilter()"
+      >
+        Sin atender
+      </button>
+    </header>
+
+    <label class="search">
+      <ds-icon name="search" />
+      <input
+        type="search"
+        placeholder="Buscar conversaciones…"
+        [value]="query()"
+        (input)="onSearch($any($event.target).value)"
+      />
+    </label>
+
+    @if (loadingList()) {
+      <div class="list-state">Cargando inbox…</div>
+    } @else if (conversations().length === 0) {
+      <ds-empty-state
+        title="Sin conversaciones"
+        body="Conecta WhatsApp y simula un mensaje desde Canales para ver el agente responder aquí."
+      />
+    } @else {
+      <ul>
+        @for (item of conversations(); track item.id) {
+          <li>
+            <button
+              type="button"
+              class="thread-item"
+              [class.is-active]="selected()?.id === item.id"
+              (click)="openConversation(item.id)"
+            >
+              <span class="avatar">{{ initials(item) }}</span>
+              <span class="thread-item__body">
+                <span class="thread-item__top">
+                  <strong>{{ item.contactName || item.contactPhone }}</strong>
+                  <time>{{ item.updatedAt | date: 'dd/MM HH:mm' }}</time>
+                </span>
+                <span class="thread-item__preview">{{ preview(item) }}</span>
+                <span class="thread-item__flags">
+                  @if (!item.agentEnabled) {
+                    <span class="flag flag--paused">Pausado</span>
+                  }
+                  @if (item.markedUnattended) {
+                    <span class="flag flag--alert">Sin atender</span>
+                  }
+                  @if (item.markedAsSale) {
+                    <span class="flag flag--sale">Venta</span>
+                  }
+                  <span class="flag">{{ item.channel.type }}</span>
+                </span>
+              </span>
+            </button>
+          </li>
+        }
+      </ul>
+    }
+  </aside>
+
+  <section class="inbox__thread" aria-live="polite">
+    @if (errorMessage(); as error) {
+      <div class="banner banner--danger" role="alert">{{ error }}</div>
+    }
+    @if (notice(); as info) {
+      <div class="banner banner--info" role="status">{{ info }}</div>
+    }
+
+    @if (!selected()) {
+      <div class="thread-empty">
+        <h2>Selecciona una conversación</h2>
+        <p>
+          Revisa el hilo, pausa el agente, marca venta o responde como humano.
+        </p>
+      </div>
+    } @else if (loadingThread()) {
+      <div class="thread-empty">Abriendo conversación…</div>
+    } @else {
+      @if (selected(); as thread) {
+        <header class="thread-head">
+          <div class="thread-head__identity">
+            <span class="avatar avatar--lg">{{ initials(thread) }}</span>
+            <div>
+              <h2>{{ thread.contactName || thread.contactPhone }}</h2>
+              <p>{{ thread.contactPhone }}</p>
+            </div>
+          </div>
+
+          <div class="thread-head__actions">
+            <ds-button
+              type="button"
+              variant="secondary"
+              (click)="openCreateOrder()"
+            >
+              Crear pedido
+            </ds-button>
+            <label class="check">
+              <input
+                type="checkbox"
+                [checked]="thread.markedAsSale"
+                (change)="toggleSale()"
+              />
+              Venta
+            </label>
+            <label class="check">
+              <input
+                type="checkbox"
+                [checked]="thread.markedUnattended"
+                (change)="toggleUnattended()"
+              />
+              Sin atender
+            </label>
+            <button type="button" class="agent-toggle" (click)="toggleAgent()">
+              <ds-icon [name]="thread.agentEnabled ? 'pause' : 'play'" />
+              {{ thread.agentEnabled ? 'Pausar IA' : 'Reactivar IA' }}
+            </button>
+          </div>
+        </header>
+
+        @if (lastOrderId(); as orderId) {
+          <div class="banner banner--info" role="status">
+            Pedido listo.
+            <a [routerLink]="['/app/orders']" [queryParams]="{ orderId }">
+              Ver en Pedidos
+            </a>
+          </div>
+        }
+
+        @if (!thread.agentEnabled) {
+          <div class="banner banner--warn">
+            Respuestas automáticas OFF · el agente no responde en este chat
+          </div>
+        }
+
+        @if (!thread.messagingWindow.canSendFreeForm) {
+          <div class="banner banner--warn">
+            {{
+              thread.messagingWindow.reason ||
+                'Ventana de 24h cerrada. Meta solo permite plantillas aprobadas.'
+            }}
+          </div>
+        }
+
+        <div class="messages">
+          @for (message of thread.messages; track message.id) {
+            <article
+              class="bubble"
+              [class.bubble--in]="message.direction === 'INBOUND'"
+              [class.bubble--out]="message.direction === 'OUTBOUND'"
+              [class.bubble--human]="message.authorType === 'HUMAN_OPERATOR'"
+              [class.bubble--agent]="message.authorType === 'SALES_AGENT'"
+            >
+              <p>{{ message.body }}</p>
+              <footer>
+                <span>
+                  {{
+                    message.authorType === 'BUYER'
+                      ? 'Cliente'
+                      : message.authorType === 'SALES_AGENT'
+                        ? 'Vendedor IA'
+                        : message.authorType === 'HUMAN_OPERATOR'
+                          ? 'Tú'
+                          : 'Sistema'
+                  }}
+                </span>
+                <time>{{ message.createdAt | date: 'dd/MM HH:mm' }}</time>
+              </footer>
+            </article>
+          }
+        </div>
+
+        <form class="composer" [formGroup]="composer" (ngSubmit)="send()">
+          <textarea
+            formControlName="text"
+            rows="2"
+            placeholder="Escribe una respuesta…"
+            [disabled]="!canSend()"
+          ></textarea>
+          <ds-button type="submit" [disabled]="sending() || !canSend()">
+            <ds-icon name="send" />
+            {{ sending() ? 'Enviando…' : 'Enviar' }}
+          </ds-button>
+        </form>
+      }
+    }
+  </section>
+
+  @if (orderModalOpen()) {
+    <div
+      class="order-modal"
+      role="dialog"
+      aria-modal="true"
+      aria-label="Crear pedido desde el chat"
+    >
+      <form
+        class="order-modal__panel"
+        [formGroup]="orderForm"
+        (ngSubmit)="createOrder()"
+      >
+        <header>
+          <h2>Crear pedido</h2>
+          <p>
+            Se vincula a este chat. Puedes generar el link de pago y enviarlo
+            como mensaje del sistema.
+          </p>
+        </header>
+
+        <label>
+          Producto
+          <select formControlName="productId">
+            @for (product of products(); track product.id) {
+              <option [value]="product.id">
+                {{ product.name }} —
+                {{ formatMoney(product.basePriceCents, product.currency) }}
+              </option>
+            }
+          </select>
+        </label>
+        <label>
+          Cantidad
+          <input type="number" min="1" formControlName="quantity" />
+        </label>
+        <label class="toggle">
+          <input type="checkbox" formControlName="createPaymentLink" />
+          <span>Crear link de pago (Mercado Pago / mock)</span>
+        </label>
+        <label class="toggle">
+          <input type="checkbox" formControlName="sendLinkToChat" />
+          <span>Enviar link al chat</span>
+        </label>
+
+        <footer>
+          <ds-button type="button" variant="ghost" (click)="closeCreateOrder()">
+            Cancelar
+          </ds-button>
+          <ds-button
+            type="submit"
+            [disabled]="creatingOrder() || products().length === 0"
+          >
+            {{ creatingOrder() ? 'Creando…' : 'Crear y cobrar' }}
+          </ds-button>
+        </footer>
+      </form>
+    </div>
+  }
+</section>

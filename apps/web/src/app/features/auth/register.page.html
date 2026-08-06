@@ -1,0 +1,41 @@
+<section class="auth ds-page-shell">
+  <a class="auth__brand" routerLink="/">VendedorIA</a>
+  <h1>Crea tu cuenta</h1>
+  <p>Configura tu negocio y tu primer agente en minutos.</p>
+
+  <form class="auth__form" [formGroup]="form" (ngSubmit)="submit()">
+    <label>
+      Nombre completo
+      <input formControlName="fullName" autocomplete="name" />
+    </label>
+    <label>
+      Nombre del negocio
+      <input formControlName="businessName" autocomplete="organization" />
+    </label>
+    <label>
+      Email
+      <input formControlName="email" type="email" autocomplete="email" />
+    </label>
+    <label>
+      Contraseña
+      <input
+        formControlName="password"
+        type="password"
+        autocomplete="new-password"
+      />
+    </label>
+
+    @if (errorMessage(); as error) {
+      <p class="auth__error" role="alert">{{ error }}</p>
+    }
+
+    <ds-button type="submit" [disabled]="submitting()">
+      {{ submitting() ? 'Creando…' : 'Crear cuenta' }}
+    </ds-button>
+  </form>
+
+  <p class="auth__footer">
+    ¿Ya tienes cuenta?
+    <a routerLink="/auth/login">Entrar</a>
+  </p>
+</section>

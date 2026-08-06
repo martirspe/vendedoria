@@ -1,0 +1,132 @@
+:host {
+  display: block;
+  min-height: 100vh;
+  background:
+    radial-gradient(circle at 20% 20%, rgb(200 245 66 / 12%), transparent 40%),
+    radial-gradient(circle at 80% 0%, rgb(91 140 255 / 18%), transparent 35%),
+    var(--ds-color-marketing-bg);
+  color: var(--ds-color-marketing-text);
+}
+
+.hero {
+  display: grid;
+  gap: var(--ds-space-10);
+  padding-block: var(--ds-space-6) var(--ds-space-12);
+}
+
+.hero__nav {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--ds-space-4);
+}
+
+.hero__brand {
+  font-family: var(--ds-font-display);
+  font-size: 1.35rem;
+  font-weight: 800;
+  letter-spacing: -0.03em;
+}
+
+.hero__links {
+  display: flex;
+  align-items: center;
+  gap: var(--ds-space-4);
+}
+
+.hero__content {
+  display: grid;
+  gap: var(--ds-space-5);
+  max-width: 42rem;
+  animation: hero-enter var(--ds-motion-base) var(--ds-ease-out);
+}
+
+.hero__eyebrow {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--ds-space-2);
+  margin: 0;
+  color: var(--ds-color-primary);
+  font-weight: 600;
+}
+
+h1 {
+  margin: 0;
+  font-family: var(--ds-font-display);
+  font-size: clamp(2.4rem, 6vw, 4rem);
+  line-height: 1.05;
+  letter-spacing: -0.04em;
+}
+
+.hero__support {
+  margin: 0;
+  max-width: 36rem;
+  color: var(--ds-color-marketing-muted);
+  font-size: 1.05rem;
+  line-height: 1.55;
+}
+
+.hero__cta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--ds-space-3);
+}
+
+.hero__visual {
+  width: min(1120px, calc(100% - 2 * var(--ds-gutter)));
+  margin-inline: auto;
+}
+
+.hero__chat {
+  display: grid;
+  gap: var(--ds-space-3);
+  max-width: 28rem;
+  padding: var(--ds-space-6);
+  border-radius: var(--ds-radius-lg);
+  background: var(--ds-color-surface-elevated-marketing);
+  border: 1px solid rgb(255 255 255 / 8%);
+  animation: hero-enter calc(var(--ds-motion-base) + 80ms) var(--ds-ease-out);
+}
+
+.hero__bubble {
+  width: fit-content;
+  max-width: 90%;
+  padding: var(--ds-space-3) var(--ds-space-4);
+  border-radius: var(--ds-radius-md);
+  font-size: 0.95rem;
+}
+
+.hero__bubble--agent {
+  background: rgb(255 255 255 / 8%);
+}
+
+.hero__bubble--buyer {
+  justify-self: end;
+  background: rgb(91 140 255 / 22%);
+}
+
+.hero__bubble--success {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--ds-space-2);
+  background: rgb(26 232 122 / 16%);
+  color: var(--ds-color-success);
+}
+
+@keyframes hero-enter {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .hero__content,
+  .hero__chat {
+    animation: none;
+  }
+}

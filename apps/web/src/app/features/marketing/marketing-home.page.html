@@ -1,0 +1,44 @@
+<div class="hero">
+  <header class="hero__nav ds-page-shell">
+    <a class="hero__brand" routerLink="/">VendedorIA</a>
+    <nav class="hero__links" aria-label="Principal">
+      <a routerLink="/auth/login">Entrar</a>
+      <a routerLink="/auth/register">
+        <ds-button variant="primary">Crear agente gratis</ds-button>
+      </a>
+    </nav>
+  </header>
+
+  <section class="hero__content ds-page-shell">
+    <p class="hero__eyebrow">
+      <ds-icon name="sparkles" />
+      SaaS premium 2027
+    </p>
+    <h1>Tu vendedor IA, del hola al pago</h1>
+    <p class="hero__support">
+      Agentes que atienden WhatsApp e Instagram, recomiendan de tu catálogo y
+      cierran la venta con Mercado Pago.
+    </p>
+    <div class="hero__cta">
+      <a routerLink="/auth/register">
+        <ds-button variant="primary">Crear mi agente</ds-button>
+      </a>
+      <a routerLink="/auth/login">
+        <ds-button variant="secondary">Ya tengo cuenta</ds-button>
+      </a>
+    </div>
+  </section>
+
+  <div class="hero__visual" aria-hidden="true">
+    <div class="hero__chat">
+      <div class="hero__bubble hero__bubble--agent">
+        Separé estas opciones de tu catálogo
+      </div>
+      <div class="hero__bubble hero__bubble--buyer">¿Cómo pago?</div>
+      <div class="hero__bubble hero__bubble--success">
+        <ds-icon name="message" />
+        Pago confirmado · Pedido creado
+      </div>
+    </div>
+  </div>
+</div>

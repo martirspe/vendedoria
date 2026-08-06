@@ -1,0 +1,23 @@
+﻿{
+  "name": "vendedoria",
+  "private": true,
+  "version": "0.1.0",
+  "description": "VendedorIA — Premium AI Sales Agents SaaS",
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "scripts": {
+    "dev:api": "npm run start:dev -w @vendedoria/api",
+    "dev:web": "npm run start -w @vendedoria/web",
+    "build": "npm run build -w @vendedoria/api && npm run build -w @vendedoria/web",
+    "build:api": "npm run build -w @vendedoria/api",
+    "build:web": "npm run build -w @vendedoria/web",
+    "lint": "npm run lint -w @vendedoria/api --if-present && npm run lint -w @vendedoria/web --if-present",
+    "prisma:generate": "npm run prisma:generate -w @vendedoria/api",
+    "prisma:migrate": "npm run prisma:migrate -w @vendedoria/api"
+  },
+  "engines": {
+    "node": ">=22"
+  }
+}

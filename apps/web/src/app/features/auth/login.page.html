@@ -1,0 +1,33 @@
+<section class="auth ds-page-shell">
+  <a class="auth__brand" routerLink="/">VendedorIA</a>
+  <h1>Entrar</h1>
+  <p>Continúa gestionando tus agentes y conversaciones.</p>
+
+  <form class="auth__form" [formGroup]="form" (ngSubmit)="submit()">
+    <label>
+      Email
+      <input formControlName="email" type="email" autocomplete="email" />
+    </label>
+    <label>
+      Contraseña
+      <input
+        formControlName="password"
+        type="password"
+        autocomplete="current-password"
+      />
+    </label>
+
+    @if (errorMessage(); as error) {
+      <p class="auth__error" role="alert">{{ error }}</p>
+    }
+
+    <ds-button type="submit" [disabled]="submitting()">
+      {{ submitting() ? 'Entrando…' : 'Entrar' }}
+    </ds-button>
+  </form>
+
+  <p class="auth__footer">
+    ¿Nuevo en VendedorIA?
+    <a routerLink="/auth/register">Crear cuenta</a>
+  </p>
+</section>

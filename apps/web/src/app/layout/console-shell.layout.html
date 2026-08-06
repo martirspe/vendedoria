@@ -1,0 +1,19 @@
+<div class="console">
+  <aside class="console__sidebar" aria-label="Navegación de consola">
+    <a class="console__brand" routerLink="/app/products">VendedorIA</a>
+    <nav class="console__nav">
+      <a routerLink="/app/get-started" routerLinkActive="is-active">Empezar</a>
+      <a routerLink="/app/products" routerLinkActive="is-active">Productos</a>
+      <a routerLink="/app/seller" routerLinkActive="is-active">Vendedor</a>
+      <a routerLink="/app/channels" routerLinkActive="is-active">Canales</a>
+      <a routerLink="/app/messages" routerLinkActive="is-active">Mensajes</a>
+      <a routerLink="/app/orders" routerLinkActive="is-active">Pedidos</a>
+      <a routerLink="/app/metrics" routerLinkActive="is-active">Métricas</a>
+      <a routerLink="/app/settings" routerLinkActive="is-active">Ajustes</a>
+    </nav>
+    <ds-button variant="ghost" (click)="logout()">Cerrar sesión</ds-button>
+  </aside>
+  <main class="console__main">
+    <router-outlet />
+  </main>
+</div>

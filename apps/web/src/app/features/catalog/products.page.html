@@ -1,0 +1,34 @@
+<section class="products">
+  <header class="products__header">
+    <div>
+      <h1>Productos</h1>
+      <p>Agrega, edita o importa tu catálogo.</p>
+    </div>
+    <ds-button variant="primary">Nuevo producto</ds-button>
+  </header>
+
+  @if (loading()) {
+    <div class="products__loading" aria-busy="true">Cargando catálogo…</div>
+  } @else if (errorMessage(); as error) {
+    <ds-empty-state title="No se pudo cargar" [body]="error">
+      <ds-button variant="secondary" (click)="load()">Reintentar</ds-button>
+    </ds-empty-state>
+  } @else if (products().length === 0) {
+    <ds-empty-state
+      title="Agrega tus productos"
+      body="Aquí verás todo el catálogo. Agrega el primero para que tu agente empiece a vender."
+    >
+      <ds-button variant="primary">Nuevo producto</ds-button>
+    </ds-empty-state>
+  } @else {
+    <ul class="products__list">
+      @for (product of products(); track product.id) {
+        <li>
+          <strong>{{ product.name }}</strong>
+          <span>{{ product.handle }}</span>
+          <span>{{ formatPrice(product.basePriceCents, product.currency) }}</span>
+        </li>
+      }
+    </ul>
+  }
+</section>

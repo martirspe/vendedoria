@@ -1,0 +1,369 @@
+import {
+  ChangeDetectionStrategy,
+  Component,
+  computed,
+  inject,
+  signal,
+} from '@angular/core';
+import { DatePipe } from '@angular/common';
+import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
+import { ActivatedRoute, RouterLink } from '@angular/router';
+import { DsButtonComponent } from '../../design-system/button/ds-button.component';
+import { DsEmptyStateComponent } from '../../design-system/empty-state/ds-empty-state.component';
+import { DsIconComponent } from '../../design-system/icon/ds-icon.component';
+import {
+  OrderDto,
+  OrderStatus,
+  OrdersApiService,
+  ProductOption,
+} from '../../core/api/orders-api.service';
+
+type ViewMode = 'table' | 'kanban';
+type TabMode = 'new' | 'all';
+
+const KANBAN_COLUMNS: Array<{ id: OrderStatus; label: string }> = [
+  { id: 'DRAFT', label: 'Borrador' },
+  { id: 'PENDING_PAYMENT', label: 'Por pagar' },
+  { id: 'PAID', label: 'Pagado' },
+  { id: 'FULFILLING', label: 'Preparando' },
+  { id: 'SHIPPED', label: 'Enviado' },
+  { id: 'COMPLETED', label: 'Completado' },
+];
+
+@Component({
+  selector: 'app-orders-page',
+  standalone: true,
+  imports: [
+    DatePipe,
+    ReactiveFormsModule,
+    RouterLink,
+    DsButtonComponent,
+    DsEmptyStateComponent,
+    DsIconComponent,
+  ],
+  templateUrl: './orders.page.html',
+  styleUrl: './orders.page.scss',
+  changeDetection: ChangeDetectionStrategy.OnPush,
+})
+export class OrdersPage {
+  private readonly api = inject(OrdersApiService);
+  private readonly fb = inject(FormBuilder);
+  private readonly route = inject(ActivatedRoute);
+
+  readonly orders = signal<OrderDto[]>([]);
+  readonly products = signal<ProductOption[]>([]);
+  readonly selected = signal<OrderDto | null>(null);
+  readonly loading = signal(true);
+  readonly saving = signal(false);
+  readonly view = signal<ViewMode>('kanban');
+  readonly tab = signal<TabMode>('new');
+  readonly query = signal('');
+  readonly statusFilter = signal<OrderStatus | 'ALL'>('ALL');
+  readonly mockMode = signal(true);
+  readonly errorMessage = signal<string | null>(null);
+  readonly successMessage = signal<string | null>(null);
+  readonly createOpen = signal(false);
+
+  readonly columns = KANBAN_COLUMNS;
+
+  readonly createForm = this.fb.nonNullable.group({
+    productId: ['', Validators.required],
+    quantity: [1, [Validators.required, Validators.min(1)]],
+    customerName: [''],
+    customerPhone: [''],
+    createPaymentLink: [true],
+  });
+
+  readonly filteredOrders = computed(() => {
+    const status = this.statusFilter();
+    const list = this.orders();
+    if (status === 'ALL') return list;
+    return list.filter((order) => order.status === status);
+  });
+
+  readonly kanbanBoard = computed(() => {
+    const list = this.filteredOrders();
+    return this.columns.map((column) => ({
+      ...column,
+      orders: list.filter((order) => order.status === column.id),
+    }));
+  });
+
+  constructor() {
+    void this.bootstrap();
+  }
+
+  async bootstrap(): Promise<void> {
+    this.loading.set(true);
+    try {
+      const provider = await this.api.getPaymentProvider();
+      this.mockMode.set(provider.mockMode);
+      await Promise.all([this.load(), this.loadProducts()]);
+      const paymentState = this.route.snapshot.queryParamMap.get('payment');
+      const orderId = this.route.snapshot.queryParamMap.get('orderId');
+      if (paymentState === 'success') {
+        this.successMessage.set(
+          'El comprador volvió del checkout. Si el webhook ya llegó, el pedido aparecerá como Pagado.',
+        );
+      } else if (paymentState === 'pending') {
+        this.successMessage.set(
+          'Pago pendiente en la pasarela. Esperamos confirmación del webhook.',
+        );
+      } else if (paymentState === 'failure') {
+        this.errorMessage.set(
+          'El checkout falló o fue cancelado. Puedes regenerar el link de pago.',
+        );
+      }
+      if (orderId) {
+        await this.openOrder(orderId);
+      }
+    } catch {
+      this.errorMessage.set('No pudimos cargar pedidos.');
+    } finally {
+      this.loading.set(false);
+    }
+  }
+
+  async load(): Promise<void> {
+    this.errorMessage.set(null);
+    try {
+      this.orders.set(
+        await this.api.list({
+          tab: this.tab(),
+          q: this.query() || undefined,
+          status:
+            this.tab() === 'all' && this.statusFilter() !== 'ALL'
+              ? (this.statusFilter() as OrderStatus)
+              : undefined,
+        }),
+      );
+    } catch {
+      this.errorMessage.set('No pudimos cargar pedidos.');
+    }
+  }
+
+  async loadProducts(): Promise<void> {
+    try {
+      this.products.set(
+        (await this.api.listProducts()).filter((item) => item.isAvailable),
+      );
+    } catch {
+      this.products.set([]);
+    }
+  }
+
+  setTab(tab: TabMode): void {
+    this.tab.set(tab);
+    void this.load();
+  }
+
+  setView(view: ViewMode): void {
+    this.view.set(view);
+  }
+
+  onSearch(value: string): void {
+    this.query.set(value);
+    void this.load();
+  }
+
+  onStatusFilter(value: string): void {
+    this.statusFilter.set(value as OrderStatus | 'ALL');
+    if (this.tab() === 'all') {
+      void this.load();
+    }
+  }
+
+  openCreate(): void {
+    this.createOpen.set(true);
+    this.createForm.reset({
+      productId: this.products()[0]?.id ?? '',
+      quantity: 1,
+      customerName: '',
+      customerPhone: '',
+      createPaymentLink: true,
+    });
+  }
+
+  closeCreate(): void {
+    this.createOpen.set(false);
+  }
+
+  async createOrder(): Promise<void> {
+    if (this.createForm.invalid) {
+      this.createForm.markAllAsTouched();
+      return;
+    }
+    const product = this.products().find(
+      (item) => item.id === this.createForm.controls.productId.value,
+    );
+    if (!product) {
+      this.errorMessage.set('Selecciona un producto del catálogo.');
+      return;
+    }
+
+    this.saving.set(true);
+    this.errorMessage.set(null);
+    try {
+      const values = this.createForm.getRawValue();
+      const order = await this.api.create({
+        customerName: values.customerName.trim() || undefined,
+        customerPhone: values.customerPhone.trim() || undefined,
+        currency: product.currency,
+        items: [
+          {
+            productId: product.id,
+            title: product.name,
+            quantity: values.quantity,
+            unitCents: product.basePriceCents,
+          },
+        ],
+        createPaymentLink: values.createPaymentLink,
+      });
+      this.successMessage.set(
+        values.createPaymentLink
+          ? 'Pedido creado con link de pago.'
+          : 'Pedido creado.',
+      );
+      this.createOpen.set(false);
+      await this.load();
+      this.selected.set(order);
+    } catch {
+      this.errorMessage.set('No se pudo crear el pedido.');
+    } finally {
+      this.saving.set(false);
+    }
+  }
+
+  async openOrder(orderId: string): Promise<void> {
+    try {
+      this.selected.set(await this.api.get(orderId));
+    } catch {
+      this.errorMessage.set('No pudimos abrir el pedido.');
+    }
+  }
+
+  closeDetail(): void {
+    this.selected.set(null);
+  }
+
+  async createLink(order: OrderDto): Promise<void> {
+    this.saving.set(true);
+    try {
+      const updated = await this.api.createPaymentLink(
+        order.id,
+        Boolean(order.conversationId),
+      );
+      this.selected.set(updated);
+      this.successMessage.set('Link de pago generado.');
+      await this.load();
+    } catch {
+      this.errorMessage.set('No se pudo crear el link de pago.');
+    } finally {
+      this.saving.set(false);
+    }
+  }
+
+  async simulatePay(order: OrderDto): Promise<void> {
+    const payment = order.payments.find((item) => item.status === 'PENDING');
+    if (!payment) return;
+    this.saving.set(true);
+    try {
+      await this.api.simulatePayment(payment.id);
+      this.successMessage.set('Pago simulado · pedido marcado como Pagado.');
+      await this.load();
+      this.selected.set(await this.api.get(order.id));
+    } catch {
+      this.errorMessage.set('No se pudo simular el pago.');
+    } finally {
+      this.saving.set(false);
+    }
+  }
+
+  async advance(order: OrderDto, status: OrderStatus): Promise<void> {
+    this.saving.set(true);
+    try {
+      const updated = await this.api.updateStatus(order.id, status);
+      this.selected.set(updated);
+      await this.load();
+    } catch {
+      this.errorMessage.set('Transición de estado no permitida.');
+    } finally {
+      this.saving.set(false);
+    }
+  }
+
+  async copyLink(url: string): Promise<void> {
+    try {
+      await navigator.clipboard.writeText(url);
+      this.successMessage.set('Link copiado al portapapeles.');
+    } catch {
+      this.errorMessage.set('No se pudo copiar el link.');
+    }
+  }
+
+  formatMoney(cents: number, currency: string): string {
+    return new Intl.NumberFormat('es-PE', {
+      style: 'currency',
+      currency,
+    }).format(cents / 100);
+  }
+
+  statusLabel(status: OrderStatus): string {
+    switch (status) {
+      case 'DRAFT':
+        return 'Borrador';
+      case 'PENDING_PAYMENT':
+        return 'Por pagar';
+      case 'PAID':
+        return 'Pagado';
+      case 'FULFILLING':
+        return 'Preparando';
+      case 'SHIPPED':
+        return 'Enviado';
+      case 'COMPLETED':
+        return 'Completado';
+      case 'CANCELLED':
+        return 'Cancelado';
+    }
+  }
+
+  paymentLabel(status: string): string {
+    switch (status) {
+      case 'SUCCEEDED':
+        return 'Pagado';
+      case 'FAILED':
+        return 'Fallido';
+      case 'CANCELLED':
+        return 'Cancelado';
+      default:
+        return 'Pendiente';
+    }
+  }
+
+  nextActions(order: OrderDto): Array<{ status: OrderStatus; label: string }> {
+    switch (order.status) {
+      case 'DRAFT':
+        return [{ status: 'CANCELLED', label: 'Cancelar' }];
+      case 'PENDING_PAYMENT':
+        return [{ status: 'CANCELLED', label: 'Cancelar' }];
+      case 'PAID':
+        return [
+          { status: 'FULFILLING', label: 'Preparar' },
+          { status: 'COMPLETED', label: 'Completar' },
+        ];
+      case 'FULFILLING':
+        return [
+          { status: 'SHIPPED', label: 'Marcar enviado' },
+          { status: 'COMPLETED', label: 'Completar' },
+        ];
+      case 'SHIPPED':
+        return [{ status: 'COMPLETED', label: 'Completar' }];
+      default:
+        return [];
+    }
+  }
+
+  latestPayment(order: OrderDto) {
+    return order.payments[0] ?? null;
+  }
+}

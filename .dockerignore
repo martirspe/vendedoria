@@ -1,0 +1,16 @@
+node_modules
+dist
+.angular
+.git
+.tmp
+coverage
+*.log
+.env
+.env.local
+apps/api/.env
+apps/web/dist
+**/.DS_Store
+**/README.md
+Project constitution*
+CHANGELOG.md
+.cursor

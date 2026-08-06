@@ -1,0 +1,352 @@
+<section class="orders">
+  <header class="orders__header">
+    <div>
+      <p class="orders__eyebrow">Commerce</p>
+      <h1>Pedidos</h1>
+      <p>
+        Del chat al cobro: crea pedidos, genera el link de pago y sigue el
+        estado hasta completar.
+      </p>
+    </div>
+    <div class="orders__header-actions">
+      @if (mockMode()) {
+        <span class="provider-pill">Pagos en modo mock</span>
+      } @else {
+        <span class="provider-pill provider-pill--live">Mercado Pago</span>
+      }
+      <ds-button type="button" (click)="openCreate()">Nuevo pedido</ds-button>
+    </div>
+  </header>
+
+  @if (errorMessage(); as error) {
+    <div class="banner banner--danger" role="alert">
+      <ds-icon name="alert" />
+      <span>{{ error }}</span>
+    </div>
+  }
+  @if (successMessage(); as success) {
+    <div class="banner banner--success" role="status">
+      <ds-icon name="check" />
+      <span>{{ success }}</span>
+    </div>
+  }
+
+  <div class="orders__toolbar">
+    <div class="tabs" role="tablist" aria-label="Vista de pedidos">
+      <button
+        type="button"
+        role="tab"
+        [attr.aria-selected]="tab() === 'new'"
+        [class.is-active]="tab() === 'new'"
+        (click)="setTab('new')"
+      >
+        Nuevos
+      </button>
+      <button
+        type="button"
+        role="tab"
+        [attr.aria-selected]="tab() === 'all'"
+        [class.is-active]="tab() === 'all'"
+        (click)="setTab('all')"
+      >
+        Todos
+      </button>
+    </div>
+
+    <label class="search">
+      <ds-icon name="search" />
+      <input
+        type="search"
+        placeholder="Buscar por cliente, teléfono o ID…"
+        [value]="query()"
+        (input)="onSearch($any($event.target).value)"
+      />
+    </label>
+
+    <label class="filter">
+      Estado
+      <select
+        [value]="statusFilter()"
+        (change)="onStatusFilter($any($event.target).value)"
+      >
+        <option value="ALL">Todos</option>
+        @for (column of columns; track column.id) {
+          <option [value]="column.id">{{ column.label }}</option>
+        }
+        <option value="CANCELLED">Cancelado</option>
+      </select>
+    </label>
+
+    <div class="view-toggle" role="group" aria-label="Tipo de vista">
+      <button
+        type="button"
+        [class.is-active]="view() === 'kanban'"
+        (click)="setView('kanban')"
+      >
+        <ds-icon name="kanban" />
+        Kanban
+      </button>
+      <button
+        type="button"
+        [class.is-active]="view() === 'table'"
+        (click)="setView('table')"
+      >
+        <ds-icon name="list" />
+        Tabla
+      </button>
+    </div>
+  </div>
+
+  @if (loading()) {
+    <div class="skeleton" aria-busy="true">Cargando pedidos…</div>
+  } @else if (filteredOrders().length === 0) {
+    <ds-empty-state
+      title="No hay pedidos"
+      body="Crea un pedido desde aquí o usa “Crear pedido” en Mensajes. Ajusta filtros si esperabas resultados."
+    >
+      <ds-button type="button" (click)="openCreate()">Crear pedido</ds-button>
+    </ds-empty-state>
+  } @else if (view() === 'kanban') {
+    <div class="kanban" role="list">
+      @for (column of kanbanBoard(); track column.id) {
+        <section class="kanban__column" role="listitem">
+          <header>
+            <h2>{{ column.label }}</h2>
+            <span>{{ column.orders.length }}</span>
+          </header>
+          <div class="kanban__cards">
+            @for (order of column.orders; track order.id) {
+              <button
+                type="button"
+                class="order-card"
+                (click)="openOrder(order.id)"
+              >
+                <div class="order-card__top">
+                  <strong>{{
+                    order.customerName || order.customerPhone || 'Cliente'
+                  }}</strong>
+                  <span>{{ formatMoney(order.totalCents, order.currency) }}</span>
+                </div>
+                <p>{{ order.items[0]?.title || 'Sin ítems' }}</p>
+                <footer>
+                  <span>#{{ order.id.slice(-6).toUpperCase() }}</span>
+                  <time>{{ order.createdAt | date: 'dd/MM HH:mm' }}</time>
+                </footer>
+              </button>
+            }
+          </div>
+        </section>
+      }
+    </div>
+  } @else {
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>Pedido</th>
+            <th>Cliente</th>
+            <th>Estado</th>
+            <th>Pago</th>
+            <th>Total</th>
+            <th>Creado</th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (order of filteredOrders(); track order.id) {
+            <tr (click)="openOrder(order.id)">
+              <td>#{{ order.id.slice(-6).toUpperCase() }}</td>
+              <td>
+                {{ order.customerName || order.customerPhone || '—' }}
+              </td>
+              <td>
+                <span class="status" [attr.data-status]="order.status">
+                  {{ statusLabel(order.status) }}
+                </span>
+              </td>
+              <td>
+                {{
+                  latestPayment(order)
+                    ? paymentLabel(latestPayment(order)!.status)
+                    : 'Sin link'
+                }}
+              </td>
+              <td>{{ formatMoney(order.totalCents, order.currency) }}</td>
+              <td>{{ order.createdAt | date: 'dd/MM/yyyy HH:mm' }}</td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+  }
+
+  @if (selected(); as order) {
+    <aside class="drawer" role="dialog" aria-label="Detalle del pedido">
+      <header class="drawer__head">
+        <div>
+          <p class="orders__eyebrow">Pedido</p>
+          <h2>#{{ order.id.slice(-6).toUpperCase() }}</h2>
+        </div>
+        <button type="button" class="icon-btn" (click)="closeDetail()">
+          Cerrar
+        </button>
+      </header>
+
+      <div class="drawer__body">
+        <div class="status-row">
+          <span class="status" [attr.data-status]="order.status">
+            {{ statusLabel(order.status) }}
+          </span>
+          <strong>{{ formatMoney(order.totalCents, order.currency) }}</strong>
+        </div>
+
+        <dl class="meta">
+          <div>
+            <dt>Cliente</dt>
+            <dd>{{ order.customerName || '—' }}</dd>
+          </div>
+          <div>
+            <dt>Teléfono</dt>
+            <dd>{{ order.customerPhone || '—' }}</dd>
+          </div>
+          <div>
+            <dt>Conversación</dt>
+            <dd>
+              @if (order.conversationId) {
+                <a [routerLink]="['/app/messages']">Ver en Mensajes</a>
+              } @else {
+                —
+              }
+            </dd>
+          </div>
+        </dl>
+
+        <section>
+          <h3>Ítems</h3>
+          <ul class="items">
+            @for (item of order.items; track item.id) {
+              <li>
+                <span>{{ item.quantity }}× {{ item.title }}</span>
+                <span>{{ formatMoney(item.totalCents, order.currency) }}</span>
+              </li>
+            }
+          </ul>
+        </section>
+
+        <section>
+          <h3>Pago (flujo B)</h3>
+          @if (latestPayment(order); as payment) {
+            <div class="payment-box" [attr.data-status]="payment.status">
+              <div>
+                <strong>{{ paymentLabel(payment.status) }}</strong>
+                <p>{{ payment.provider }} · {{ payment.externalId || 'sin id externo' }}</p>
+              </div>
+              @if (payment.checkoutUrl) {
+                <div class="payment-box__actions">
+                  <ds-button
+                    type="button"
+                    variant="secondary"
+                    (click)="copyLink(payment.checkoutUrl)"
+                  >
+                    Copiar link
+                  </ds-button>
+                  <a
+                    class="link-btn"
+                    [href]="payment.checkoutUrl"
+                    target="_blank"
+                    rel="noopener"
+                  >
+                    Abrir checkout
+                  </a>
+                </div>
+              }
+              @if (mockMode() && payment.status === 'PENDING') {
+                <ds-button
+                  type="button"
+                  [disabled]="saving()"
+                  (click)="simulatePay(order)"
+                >
+                  Simular pago recibido
+                </ds-button>
+              }
+            </div>
+          } @else {
+            <ds-button
+              type="button"
+              [disabled]="saving()"
+              (click)="createLink(order)"
+            >
+              Generar link de pago
+            </ds-button>
+          }
+        </section>
+
+        @if (nextActions(order).length) {
+          <section>
+            <h3>Avanzar</h3>
+            <div class="actions">
+              @for (action of nextActions(order); track action.status) {
+                <ds-button
+                  type="button"
+                  [variant]="action.status === 'CANCELLED' ? 'ghost' : 'secondary'"
+                  [disabled]="saving()"
+                  (click)="advance(order, action.status)"
+                >
+                  {{ action.label }}
+                </ds-button>
+              }
+            </div>
+          </section>
+        }
+      </div>
+    </aside>
+    <button type="button" class="backdrop" aria-label="Cerrar" (click)="closeDetail()"></button>
+  }
+
+  @if (createOpen()) {
+    <div class="modal" role="dialog" aria-modal="true" aria-label="Nuevo pedido">
+      <form class="modal__panel" [formGroup]="createForm" (ngSubmit)="createOrder()">
+        <header>
+          <h2>Nuevo pedido</h2>
+          <p>Elige un producto del catálogo y opcionalmente genera el link de pago.</p>
+        </header>
+
+        <label>
+          Producto
+          <select formControlName="productId">
+            @for (product of products(); track product.id) {
+              <option [value]="product.id">
+                {{ product.name }} —
+                {{ formatMoney(product.basePriceCents, product.currency) }}
+              </option>
+            }
+          </select>
+        </label>
+        <label>
+          Cantidad
+          <input type="number" min="1" formControlName="quantity" />
+        </label>
+        <label>
+          Nombre del cliente
+          <input formControlName="customerName" />
+        </label>
+        <label>
+          Teléfono
+          <input formControlName="customerPhone" />
+        </label>
+        <label class="toggle">
+          <input type="checkbox" formControlName="createPaymentLink" />
+          <span>Crear link de pago ahora</span>
+        </label>
+
+        <footer>
+          <ds-button type="button" variant="ghost" (click)="closeCreate()">
+            Cancelar
+          </ds-button>
+          <ds-button type="submit" [disabled]="saving() || products().length === 0">
+            {{ saving() ? 'Creando…' : 'Crear pedido' }}
+          </ds-button>
+        </footer>
+      </form>
+    </div>
+  }
+</section>
