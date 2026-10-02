@@ -508,7 +508,7 @@ Nunca hardcodear colores ni espaciados en features.
 
 ## Iconografía
 
-Únicamente **Lucide** vía el registro del Design System.
+Únicamente **Tabler Icons** (`@tabler/icons-angular`) vía el registro del Design System (`ds-icon`).
 
 Nunca mezclar librerías de iconos.
 

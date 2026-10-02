@@ -1,5 +1,6 @@
-import { ChangeDetectionStrategy, Component, computed, input } from '@angular/core';
-import { DsIconName, dsIconPaths } from '@vendedoria/ui';
+import { ChangeDetectionStrategy, Component, ViewEncapsulation, computed, input } from '@angular/core';
+import { TablerIconComponent } from '@tabler/icons-angular';
+import { DS_ICONS, DsIconName } from '@vendedoria/ui';
 
 export type SelectaIconName =
   | 'bag'
@@ -28,7 +29,7 @@ export type SelectaIconName =
   | 'coupon'
   | 'whatsapp';
 
-const NAMES: Record<Exclude<SelectaIconName, 'whatsapp'>, DsIconName> = {
+const NAMES: Record<SelectaIconName, DsIconName> = {
   bag: 'shoppingBag',
   arrow: 'arrowRight',
   back: 'arrowLeft',
@@ -53,18 +54,19 @@ const NAMES: Record<Exclude<SelectaIconName, 'whatsapp'>, DsIconName> = {
   book: 'bookOpen',
   print: 'printer',
   coupon: 'ticketPercent',
+  whatsapp: 'whatsapp',
 };
 
 /** Selecta icon: the stylesheet sizes `app-icon svg`, so the svg carries no inline size. */
 @Component({
   selector: 'app-icon',
+  imports: [TablerIconComponent],
   templateUrl: './selecta-icon.html',
+  styleUrl: './selecta-icon.scss',
+  encapsulation: ViewEncapsulation.None,
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class SelectaIcon {
   readonly name = input.required<SelectaIconName>();
-  readonly paths = computed(() => {
-    const name = this.name();
-    return name === 'whatsapp' ? [] : dsIconPaths(NAMES[name]);
-  });
+  readonly icon = computed(() => DS_ICONS[NAMES[this.name()]]);
 }

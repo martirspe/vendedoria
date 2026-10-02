@@ -4,5 +4,9 @@
   "private": true,
   "description": "VendedorIA Design System components shared by the console and the storefront",
   "main": "index.ts",
-  "types": "index.ts"
+  "types": "index.ts",
+  "dependencies": {
+    "@tabler/icons": "^3.48.0",
+    "@tabler/icons-angular": "^3.48.0"
+  }
 }
