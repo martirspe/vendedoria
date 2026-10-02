@@ -20,7 +20,7 @@ import {
   ValidateNested,
 } from 'class-validator';
 
-const SHIPPING_MODES = ['LIMA', 'PROVINCE', 'OLVA', 'SHALOM', 'PICKUP'] as const;
+const SHIPPING_MODES = ['OLVA', 'SHALOM', 'PICKUP'] as const;
 
 export class CheckoutItemDto {
   @ApiProperty({ example: 'polo-algodon' })

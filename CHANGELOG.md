@@ -2,6 +2,9 @@
 
 ## [Unreleased]
 
+### Removed
+- Flat Lima/province shipping rates (`LIMA`/`PROVINCE` modes and their `Storefront` columns): home delivery is priced only by ubigeo, with Olva/Shalom rates by distance from the store origin district; pickup stays. Past orders keep their saved delivery label
+
 ### Added
 - Tabler Icons (`@tabler/icons-angular`) as the only icon set of the console, marketing site and store templates, through the `ds-icon` registry
 - Selecta catalog seed (`apps/api/scripts/seed-selecta-catalog.mjs`) also sets free shipping from S/ 500, the shipping origin and the Olva/Shalom rates

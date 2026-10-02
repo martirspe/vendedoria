@@ -2,11 +2,7 @@ import { carrierQuotes, quoteShipping, type ShippingRules, shippingOptions } fro
 
 const rules: ShippingRules = {
   deliveryEnabled: true,
-  shippingLimaCents: 1000,
-  shippingProvinceCents: 2000,
   freeShippingFromCents: 20000,
-  deliveryDaysLima: '1 a 2 días hábiles',
-  deliveryDaysProvince: '3 a 5 días hábiles',
   pickupEnabled: true,
   pickupAddress: 'Av. Larco 123, Miraflores',
   shippingOriginUbigeo: null,
@@ -39,33 +35,32 @@ describe('carrierQuotes', () => {
     ]);
     expect(quoteShipping(couriers, 'OLVA', 5000)).toBeNull();
     expect(quoteShipping(couriers, 'OLVA', 5000, false, '160101')).toMatchObject({ cents: 2800 });
-    expect(quoteShipping(couriers, 'SHALOM', 20000, false, '160101')).toMatchObject({ cents: 0, free: true });
   });
 });
 
 describe('shippingOptions', () => {
   it('lists only configured modes', () => {
-    expect(shippingOptions(rules).map((o) => o.mode)).toEqual(['LIMA', 'PROVINCE', 'PICKUP']);
-    expect(
-      shippingOptions({ ...rules, shippingProvinceCents: null, pickupAddress: null }).map((o) => o.mode),
-    ).toEqual(['LIMA']);
-    expect(shippingOptions({ ...rules, deliveryEnabled: false }).map((o) => o.mode)).toEqual(['PICKUP']);
+    expect(shippingOptions(couriers).map((o) => o.mode)).toEqual(['OLVA', 'SHALOM', 'PICKUP']);
+    expect(shippingOptions(rules).map((o) => o.mode)).toEqual(['PICKUP']);
+    expect(shippingOptions({ ...couriers, pickupAddress: null }).map((o) => o.mode)).toEqual(['OLVA', 'SHALOM']);
+    expect(shippingOptions({ ...couriers, deliveryEnabled: false }).map((o) => o.mode)).toEqual(['PICKUP']);
   });
 });
 
 describe('quoteShipping', () => {
-  it('charges the base price under the threshold', () => {
-    expect(quoteShipping(rules, 'LIMA', 5000)).toMatchObject({ cents: 1000, free: false });
-    expect(quoteShipping(rules, 'PROVINCE', 5000)).toMatchObject({ cents: 2000, free: false });
+  it('charges the district rate under the threshold', () => {
+    expect(quoteShipping(couriers, 'OLVA', 5000, false, '150122')).toMatchObject({ cents: 900, free: false });
+    expect(quoteShipping(couriers, 'SHALOM', 5000, false, '040101')).toMatchObject({ cents: 1800, free: false });
   });
 
   it('is free from the threshold or with a free shipping coupon', () => {
-    expect(quoteShipping(rules, 'LIMA', 20000)).toMatchObject({ cents: 0, free: true });
-    expect(quoteShipping(rules, 'PROVINCE', 100, true)).toMatchObject({ cents: 0, free: true });
+    expect(quoteShipping(couriers, 'SHALOM', 20000, false, '160101')).toMatchObject({ cents: 0, free: true });
+    expect(quoteShipping(couriers, 'OLVA', 100, true, '160101')).toMatchObject({ cents: 0, free: true });
   });
 
   it('never charges pickup and rejects unavailable modes', () => {
     expect(quoteShipping(rules, 'PICKUP', 100)).toMatchObject({ cents: 0, free: false });
     expect(quoteShipping({ ...rules, pickupEnabled: false }, 'PICKUP', 100)).toBeNull();
+    expect(quoteShipping(rules, 'OLVA', 100, false, '150122')).toBeNull();
   });
 });

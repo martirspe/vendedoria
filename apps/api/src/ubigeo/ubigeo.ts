@@ -36,8 +36,3 @@ export function distanceKm(fromCode: string, toCode: string): number | null {
     Math.cos(rad(a.lat)) * Math.cos(rad(b.lat)) * Math.sin(rad(b.lon - a.lon) / 2) ** 2;
   return Math.round(6371 * 2 * Math.atan2(Math.sqrt(h), Math.sqrt(1 - h)));
 }
-
-/** Lima Metropolitana (province 1501) and Callao (department 07) use the store's Lima rate. */
-export function shippingZone(code: string): 'LIMA' | 'PROVINCE' {
-  return code.startsWith('1501') || code.startsWith('07') ? 'LIMA' : 'PROVINCE';
-}

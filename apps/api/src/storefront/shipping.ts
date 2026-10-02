@@ -4,11 +4,7 @@ import { distanceKm, findUbigeo } from '../ubigeo/ubigeo';
 
 export type ShippingRules = {
   deliveryEnabled: boolean;
-  shippingLimaCents: number | null;
-  shippingProvinceCents: number | null;
   freeShippingFromCents: number | null;
-  deliveryDaysLima: string | null;
-  deliveryDaysProvince: string | null;
   pickupEnabled: boolean;
   pickupAddress: string | null;
   shippingOriginUbigeo: string | null;
@@ -34,8 +30,6 @@ const CARRIERS: Record<CarrierMode, { key: 'olva' | 'shalom'; label: string }> =
   SHALOM: { key: 'shalom', label: 'Shalom' },
 };
 
-export const isCarrierMode = (mode: string): mode is CarrierMode => mode === 'OLVA' || mode === 'SHALOM';
-
 /** Valid tier arrays per carrier; anything malformed counts as not configured. */
 export function carrierTiers(rules: Pick<ShippingRules, 'shippingOriginUbigeo' | 'carrierRates'>) {
   const tiers: Partial<Record<CarrierMode, number[]>> = {};
@@ -58,24 +52,6 @@ export function carrierTiers(rules: Pick<ShippingRules, 'shippingOriginUbigeo' |
 /** Delivery modes the store offers, with their base price. */
 export function shippingOptions(rules: ShippingRules): ShippingOption[] {
   const options: ShippingOption[] = [];
-  if (rules.deliveryEnabled && rules.shippingLimaCents !== null) {
-    options.push({
-      mode: 'LIMA',
-      label: 'Envío a Lima Metropolitana y Callao',
-      cents: rules.shippingLimaCents,
-      eta: rules.deliveryDaysLima,
-      byDistance: false,
-    });
-  }
-  if (rules.deliveryEnabled && rules.shippingProvinceCents !== null) {
-    options.push({
-      mode: 'PROVINCE',
-      label: 'Envío a provincias',
-      cents: rules.shippingProvinceCents,
-      eta: rules.deliveryDaysProvince,
-      byDistance: false,
-    });
-  }
   if (rules.deliveryEnabled) {
     for (const [mode, tiers] of Object.entries(carrierTiers(rules)) as [CarrierMode, number[]][]) {
       options.push({
@@ -130,12 +106,9 @@ export function quoteShipping(
   if (option.mode === 'PICKUP') {
     return { mode, label: option.label, cents: 0, free: false };
   }
-  let cents = option.cents;
-  if (option.byDistance) {
-    const quote = ubigeo ? carrierQuotes(rules, ubigeo).find((q) => q.mode === mode) : undefined;
-    if (!quote) return null;
-    cents = quote.cents;
-  }
+  const quote = ubigeo ? carrierQuotes(rules, ubigeo).find((q) => q.mode === mode) : undefined;
+  if (!quote) return null;
+  const cents = quote.cents;
   const reachesThreshold =
     rules.freeShippingFromCents !== null && subtotalCents >= rules.freeShippingFromCents;
   const free = couponFreeShipping || reachesThreshold || cents === 0;

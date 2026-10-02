@@ -20,7 +20,7 @@ import { campaignCoupon, forgetCampaignCoupon } from '../../core/campaign-coupon
 import { CartService } from '../../core/cart.service';
 import { MoneyPipe } from '../../core/money.pipe';
 import { SeoService } from '../../core/seo.service';
-import { isCarrier, shippingZone } from '../../core/shipping';
+import { isCarrier } from '../../core/shipping';
 import { StoreApiService } from '../../core/store-api.service';
 import { StoreStateService } from '../../core/store-state.service';
 
@@ -67,19 +67,12 @@ export class CheckoutPage {
   readonly ubigeoState = signal<'idle' | 'loading' | 'ready' | 'error'>('idle');
   readonly department = signal('');
   readonly province = signal('');
-  readonly homeDelivery = computed(() => {
-    const mode = this.mode();
-    return mode === 'LIMA' || mode === 'PROVINCE' || isCarrier(mode);
-  });
-  readonly carrierMode = computed(() => isCarrier(this.mode()));
+  readonly homeDelivery = computed(() => isCarrier(this.mode()));
+  readonly carrierMode = this.homeDelivery;
   /** Reference courier rates for the chosen district; `null` until a district is picked. */
   readonly quotes = signal<ShippingQuote[] | null>(null);
   readonly quoteState = signal<'idle' | 'loading' | 'error'>('idle');
-  private readonly zoneDistricts = computed(() => {
-    const mode = this.mode();
-    if (isCarrier(mode)) return this.ubigeos();
-    return this.ubigeos().filter((d) => shippingZone(d.code) === mode);
-  });
+  private readonly zoneDistricts = computed(() => (this.homeDelivery() ? this.ubigeos() : []));
   readonly departments = computed(() => [...new Set(this.zoneDistricts().map((d) => d.department))].sort());
   readonly provinces = computed(() =>
     [...new Set(this.zoneDistricts().filter((d) => d.department === this.department()).map((d) => d.province))].sort(),
@@ -95,7 +88,7 @@ export class CheckoutPage {
   readonly baseShippingCents = computed<number | null>(() => {
     const option = this.selectedOption();
     if (!option) return null;
-    if (!option.byDistance) return option.cents;
+    if (option.mode === 'PICKUP') return 0;
     return this.quotes()?.find((q) => q.mode === option.mode)?.cents ?? null;
   });
   readonly shippingCents = computed(() => {
@@ -107,7 +100,7 @@ export class CheckoutPage {
     return this.baseShippingCents() ?? 0;
   });
   readonly shippingPending = computed(
-    () => Boolean(this.selectedOption()?.byDistance) && this.baseShippingCents() === null,
+    () => this.homeDelivery() && this.baseShippingCents() === null,
   );
   readonly totalCents = computed(
     () => this.cart.subtotalCents() - this.discountCents() + this.shippingCents(),
@@ -166,7 +159,7 @@ export class CheckoutPage {
 
   private async loadQuotes(code: string): Promise<void> {
     this.quotes.set(null);
-    if (!code || !this.options().some((o) => o.byDistance)) return;
+    if (!code || !this.options().some((o) => isCarrier(o.mode))) return;
     this.quoteState.set('loading');
     try {
       const quotes = await this.api.shippingQuote(code);
@@ -289,8 +282,8 @@ export class CheckoutPage {
 
   private syncAddressValidators(mode: ShippingMode | null): void {
     const { address, department, province, ubigeo, acknowledgeRate } = this.form.controls;
-    const delivery = mode === 'LIMA' || mode === 'PROVINCE' || isCarrier(mode);
-    acknowledgeRate.setValidators(isCarrier(mode) ? [Validators.requiredTrue] : []);
+    const delivery = isCarrier(mode);
+    acknowledgeRate.setValidators(delivery ? [Validators.requiredTrue] : []);
     acknowledgeRate.updateValueAndValidity({ emitEvent: false });
     address.setValidators(delivery ? [Validators.required, Validators.minLength(5), Validators.maxLength(200)] : []);
     for (const control of [department, province, ubigeo]) {

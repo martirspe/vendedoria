@@ -1,4 +1,4 @@
-import { findUbigeo, shippingZone, UBIGEO_DISTRICTS } from './ubigeo';
+import { findUbigeo, UBIGEO_DISTRICTS } from './ubigeo';
 
 describe('ubigeo', () => {
   it('loads the INEI 2025 list with 25 departments and 196 provinces', () => {
@@ -17,12 +17,5 @@ describe('ubigeo', () => {
     expect(findUbigeo('150122')).toMatchObject({ district: 'Miraflores', province: 'Lima' });
     expect(findUbigeo('160405')).toMatchObject({ district: 'Santa Rosa de Loreto', department: 'Loreto' });
     expect(findUbigeo('999999')).toBeNull();
-  });
-
-  it('ships Lima Metropolitana and Callao at the Lima rate', () => {
-    expect(shippingZone('150132')).toBe('LIMA');
-    expect(shippingZone('070101')).toBe('LIMA');
-    expect(shippingZone('150501')).toBe('PROVINCE');
-    expect(shippingZone('040101')).toBe('PROVINCE');
   });
 });

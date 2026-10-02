@@ -21,7 +21,7 @@ import { campaignCoupon, forgetCampaignCoupon, keepCoupon } from '../../core/cam
 import { CartService } from '../../core/cart.service';
 import { MoneyPipe } from '../../core/money.pipe';
 import { SeoService } from '../../core/seo.service';
-import { isCarrier, shippingZone } from '../../core/shipping';
+import { isCarrier } from '../../core/shipping';
 import { StoreApiService } from '../../core/store-api.service';
 import { StoreStateService } from '../../core/store-state.service';
 import { MAX_UNITS, Product, SelectaCatalog, complements, maxUnits } from './selecta-catalog';
@@ -166,12 +166,8 @@ export class SelectaCheckoutPage {
   readonly quoteState = signal<'idle' | 'loading' | 'error'>('idle');
   readonly mode = signal<ShippingMode | null>(null);
 
-  /** Couriers reach every district; flat zone rates only their own zone. */
-  private readonly eligible = computed(() => {
-    const modes = this.homeOptions().map((o) => o.mode);
-    if (modes.some((m) => isCarrier(m))) return this.ubigeos();
-    return this.ubigeos().filter((d) => modes.includes(shippingZone(d.code)));
-  });
+  /** Couriers reach every district; the rate comes from the district. */
+  private readonly eligible = computed(() => (this.homeOptions().length ? this.ubigeos() : []));
   readonly departments = computed(() => [...new Set(this.eligible().map((d) => d.department))].sort());
   readonly provinces = computed(() =>
     [...new Set(this.eligible().filter((d) => d.department === this.department()).map((d) => d.province))].sort(),
@@ -182,16 +178,10 @@ export class SelectaCheckoutPage {
 
   /** Delivery options for the chosen district, with their price there. */
   readonly choices = computed<DeliveryChoice[]>(() => {
-    const code = this.ubigeo();
-    if (!code) return [];
+    if (!this.ubigeo()) return [];
     return this.homeOptions().flatMap((o): DeliveryChoice[] => {
-      if (isCarrier(o.mode)) {
-        const quote = this.quotes()?.find((q) => q.mode === o.mode);
-        return quote ? [{ mode: o.mode, label: o.label, cents: quote.cents, note: 'A domicilio · cobertura por confirmar' }] : [];
-      }
-      return shippingZone(code) === o.mode
-        ? [{ mode: o.mode, label: o.label, cents: o.cents, note: o.eta ?? 'A domicilio' }]
-        : [];
+      const quote = this.quotes()?.find((q) => q.mode === o.mode);
+      return quote ? [{ mode: o.mode, label: o.label, cents: quote.cents, note: 'A domicilio · cobertura por confirmar' }] : [];
     });
   });
   readonly choice = computed<DeliveryChoice | null>(() => {
@@ -289,7 +279,7 @@ export class SelectaCheckoutPage {
     const code = this.form.controls.ubigeo.value;
     this.ubigeo.set(code);
     this.quotes.set(null);
-    if (!code || !this.homeOptions().some((o) => o.byDistance)) return;
+    if (!code || !this.homeOptions().length) return;
     this.quoteState.set('loading');
     try {
       const quotes = await this.api.shippingQuote(code);

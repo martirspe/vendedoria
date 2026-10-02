@@ -242,27 +242,7 @@
             <span>Hago envíos a domicilio</span>
           </label>
           @if (form.controls.deliveryEnabled.value) {
-            <p class="hint">El comprador elige su distrito de la lista oficial del INEI. Lima Metropolitana y Callao pagan la tarifa de Lima; el resto del país, la de provincias.</p>
-            <div class="row">
-              <label>
-                <span class="label-text">Costo en Lima (S/) <span class="optional">Vacío = no envío a Lima</span></span>
-                <input formControlName="shippingLima" type="number" min="0" max="1000" step="0.10" inputmode="decimal" />
-              </label>
-              <label>
-                <span class="label-text">Plazo en Lima <span class="optional">Opcional</span></span>
-                <input formControlName="deliveryDaysLima" maxlength="60" placeholder="1 a 2 días hábiles" />
-              </label>
-            </div>
-            <div class="row">
-              <label>
-                <span class="label-text">Costo a provincias (S/) <span class="optional">Vacío = no envío a provincias</span></span>
-                <input formControlName="shippingProvince" type="number" min="0" max="1000" step="0.10" inputmode="decimal" />
-              </label>
-              <label>
-                <span class="label-text">Plazo a provincias <span class="optional">Opcional</span></span>
-                <input formControlName="deliveryDaysProvince" maxlength="60" placeholder="3 a 5 días hábiles" />
-              </label>
-            </div>
+            <p class="hint">El comprador elige su distrito de la lista oficial del INEI y el costo se calcula por la distancia desde tu distrito de despacho.</p>
             <label>
               <span class="label-text">Envío gratis desde (S/) <span class="optional">Opcional</span></span>
               <input formControlName="freeShippingFrom" type="number" min="1" step="1" inputmode="decimal" />

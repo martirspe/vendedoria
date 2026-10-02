@@ -55,7 +55,6 @@ function defaultFaq(store: StorefrontView): StoreTemplateFaq[] {
   const options = store.shipping.options;
   const home = options.filter((o) => o.mode !== 'PICKUP');
   const pickup = options.find((o) => o.mode === 'PICKUP');
-  const couriers = home.filter((o) => o.byDistance);
   const free = store.shipping.freeShippingFromCents;
   const contact = store.whatsappPhone ? 'Escríbenos por WhatsApp' : 'Escríbenos';
   const faq: StoreTemplateFaq[] = [
@@ -76,17 +75,9 @@ function defaultFaq(store: StorefrontView): StoreTemplateFaq[] {
     const names = home.map((o) => o.label).join(' o ');
     const from = store.shipping.origin ? ` desde ${store.shipping.origin}` : '';
     const parts = [
-      couriers.length
-        ? `Enviamos${from} a todo el Perú, sujeto a cobertura, con ${names}.`
-        : `Enviamos${from} con ${names}.`,
+      `Enviamos${from} a todo el Perú, sujeto a cobertura, con ${names}.`,
+      'Al elegir tu distrito ves el costo antes de pagar: una tarifa referencial según la distancia. Nunca cobramos una diferencia sin tu aprobación.',
     ];
-    if (couriers.length) {
-      parts.push(
-        'Al elegir tu distrito ves el costo antes de pagar: una tarifa referencial según la distancia. Nunca cobramos una diferencia sin tu aprobación.',
-      );
-    } else {
-      parts.push('Al elegir tu distrito ves el costo exacto antes de pagar.');
-    }
     if (free) parts.push(`En pedidos desde ${wholeMoney(store, free)} el envío es gratis.`);
     faq.push({ question: '¿Cuánto cuesta el envío y a dónde llegan?', answer: parts.join(' ') });
   }

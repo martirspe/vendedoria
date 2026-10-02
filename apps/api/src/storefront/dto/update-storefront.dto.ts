@@ -209,39 +209,9 @@ export class UpdateStorefrontDto {
   @IsOptional()
   @ValidateIf((_, value) => value !== null)
   @IsInt()
-  @Min(0)
-  @Max(100_000)
-  shippingLimaCents?: number | null;
-
-  @ApiPropertyOptional()
-  @IsOptional()
-  @ValidateIf((_, value) => value !== null)
-  @IsInt()
-  @Min(0)
-  @Max(100_000)
-  shippingProvinceCents?: number | null;
-
-  @ApiPropertyOptional()
-  @IsOptional()
-  @ValidateIf((_, value) => value !== null)
-  @IsInt()
   @Min(1)
   @Max(100_000_000)
   freeShippingFromCents?: number | null;
-
-  @ApiPropertyOptional({ example: '1 a 2 días hábiles' })
-  @IsOptional()
-  @ValidateIf((_, value) => value !== null)
-  @IsString()
-  @MaxLength(60)
-  deliveryDaysLima?: string | null;
-
-  @ApiPropertyOptional({ example: '3 a 5 días hábiles' })
-  @IsOptional()
-  @ValidateIf((_, value) => value !== null)
-  @IsString()
-  @MaxLength(60)
-  deliveryDaysProvince?: string | null;
 
   @ApiPropertyOptional()
   @IsOptional()

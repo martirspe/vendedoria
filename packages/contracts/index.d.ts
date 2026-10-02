@@ -55,8 +55,8 @@ export type StoreTemplateCopy = {
   faq?: StoreTemplateFaq[];
 };
 
-/** LIMA/PROVINCE are flat zone rates; OLVA/SHALOM are courier rates by distance. */
-export type ShippingMode = 'LIMA' | 'PROVINCE' | 'OLVA' | 'SHALOM' | 'PICKUP';
+/** Home delivery is priced by ubigeo: OLVA/SHALOM courier rates by distance from the store origin. */
+export type ShippingMode = 'OLVA' | 'SHALOM' | 'PICKUP';
 
 export type ShippingOption = {
   mode: ShippingMode;
@@ -223,7 +223,7 @@ export type CheckoutRequest = {
   customer: { name: string; email: string; phone: string; document?: string };
   delivery: {
     mode: ShippingMode;
-    /** INEI district code; required for LIMA and PROVINCE and must belong to that zone. */
+    /** INEI district code; required for home delivery, it prices the courier rate. */
     ubigeo?: string;
     address?: string;
     reference?: string;
@@ -234,7 +234,7 @@ export type CheckoutRequest = {
   acceptTerms: true;
 };
 
-/** Peruvian district (INEI ubigeo). Lima Metropolitana and Callao ship at the LIMA rate. */
+/** Peruvian district (INEI ubigeo). */
 export type UbigeoDistrict = {
   code: string;
   department: string;

@@ -36,7 +36,7 @@ export type PaymentDto = {
 };
 
 export type OrderDelivery = {
-  mode: 'LIMA' | 'PROVINCE' | 'OLVA' | 'SHALOM' | 'PICKUP';
+  mode: 'OLVA' | 'SHALOM' | 'PICKUP';
   label: string;
   address: string | null;
   district: string | null;

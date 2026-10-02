@@ -269,13 +269,9 @@ model Storefront {
   /// Voluntary exchange window in days (0 = only the legal warranty).
   exchangeDays      Int     @default(0)
 
-  // Shipping. Amounts in cents; null rate = zone not served.
+  // Shipping. Amounts in cents; home delivery is priced by ubigeo (courier rates by distance).
   deliveryEnabled       Boolean @default(true)
-  shippingLimaCents     Int?
-  shippingProvinceCents Int?
   freeShippingFromCents Int?
-  deliveryDaysLima      String?
-  deliveryDaysProvince  String?
   pickupEnabled         Boolean @default(false)
   pickupAddress         String?
   /// Courier rates by distance from this INEI district.

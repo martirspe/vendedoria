@@ -30,11 +30,7 @@ export type StorefrontDto = {
   dataBankCode: string | null;
   exchangeDays: number;
   deliveryEnabled: boolean;
-  shippingLimaCents: number | null;
-  shippingProvinceCents: number | null;
   freeShippingFromCents: number | null;
-  deliveryDaysLima: string | null;
-  deliveryDaysProvince: string | null;
   pickupEnabled: boolean;
   pickupAddress: string | null;
   shippingOriginUbigeo: string | null;
@@ -103,11 +99,7 @@ export type UpdateStorePayload = Partial<{
   dataBankCode: string | null;
   exchangeDays: number;
   deliveryEnabled: boolean;
-  shippingLimaCents: number | null;
-  shippingProvinceCents: number | null;
   freeShippingFromCents: number | null;
-  deliveryDaysLima: string | null;
-  deliveryDaysProvince: string | null;
   pickupEnabled: boolean;
   pickupAddress: string | null;
   shippingOriginUbigeo: string | null;

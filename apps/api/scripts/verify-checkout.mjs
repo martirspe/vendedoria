@@ -114,38 +114,22 @@ try {
     if (again.status === 201) await post(`orders/${again.body.id}/cancel`, { token: again.body.token });
   }
 
-  // 7. Ubigeo: the district must exist and belong to the chosen shipping zone.
+  // 7. Home delivery by ubigeo: the district must exist and the reference rate must be accepted.
   const storefront = await prisma.storefront.findUniqueOrThrow({ where: { tenantId: tenant.id } });
-  const home = (n, mode, ubigeo) =>
-    checkout(n, { delivery: { mode, ubigeo, address: 'Av. Larco 345, dpto. 501' } });
-  if (storefront.deliveryEnabled && storefront.shippingLimaCents !== null) {
-    const lima = await home(21, 'LIMA', '150122');
-    check(
-      'Ubigeo de Miraflores con tarifa de Lima',
-      lima.status === 201 && lima.body.delivery.address.endsWith('Miraflores, Lima, Lima'),
-      `${lima.status} ${lima.body?.delivery?.address ?? ''}`,
-    );
-    if (lima.status === 201) await post(`orders/${lima.body.id}/cancel`, { token: lima.body.token });
-    const callao = await home(22, 'LIMA', '070101');
-    check('Callao usa la tarifa de Lima', callao.status === 201, `${callao.status}`);
-    if (callao.status === 201) await post(`orders/${callao.body.id}/cancel`, { token: callao.body.token });
-  }
-  if (storefront.deliveryEnabled && storefront.shippingProvinceCents !== null) {
-    const mismatch = await home(23, 'PROVINCE', '150122');
-    check('Miraflores no se acepta como provincia', mismatch.status === 400, `${mismatch.status}`);
-  }
-  const unknown = await home(24, 'LIMA', '999999');
-  check('Ubigeo inexistente → 400', unknown.status === 400, `${unknown.status}`);
-
-  // 8. Couriers: the reference rate must be accepted explicitly.
   const courier = Object.keys(storefront.carrierRates ?? {}).includes('olva') ? 'OLVA' : 'SHALOM';
+  const home = (n, ubigeo, acknowledgeRate) =>
+    checkout(n, { delivery: { mode: courier, ubigeo, address: 'Av. Larco 345, dpto. 501', acknowledgeRate } });
   if (storefront.deliveryEnabled && storefront.shippingOriginUbigeo && storefront.carrierRates) {
-    const silent = await home(25, courier, '150122');
+    const unknown = await home(24, '999999', true);
+    check('Ubigeo inexistente → 400', unknown.status === 400, `${unknown.status}`);
+    const silent = await home(25, '150122');
     check('Courier sin aceptar la tarifa → 400', silent.status === 400, `${silent.status}`);
-    const accepted = await checkout(26, {
-      delivery: { mode: courier, ubigeo: '150122', address: 'Av. Larco 345, dpto. 501', acknowledgeRate: true },
-    });
-    check('Courier con tarifa aceptada', accepted.status === 201, `${accepted.status}`);
+    const accepted = await home(26, '150122', true);
+    check(
+      'Courier con tarifa aceptada y dirección con ubigeo',
+      accepted.status === 201 && accepted.body.delivery.address.endsWith('Miraflores, Lima, Lima'),
+      `${accepted.status} ${accepted.body?.delivery?.address ?? ''}`,
+    );
     if (accepted.status === 201) await post(`orders/${accepted.body.id}/cancel`, { token: accepted.body.token });
   } else {
     console.log('SKIP courier: la tienda no tiene origen ni tarifas por distancia');

@@ -30,9 +30,9 @@ import {
   mercadoPago,
 } from '../payments/mercadopago.client';
 import { PrismaService } from '../prisma/prisma.service';
-import { carrierQuotes, isCarrierMode, quoteShipping } from '../storefront/shipping';
+import { carrierQuotes, quoteShipping } from '../storefront/shipping';
 import type { StoreAccess } from '../storefront/storefront-public.service';
-import { findUbigeo, shippingZone } from '../ubigeo/ubigeo';
+import { findUbigeo } from '../ubigeo/ubigeo';
 import { StorefrontPublicService } from '../storefront/storefront-public.service';
 import {
   CheckoutItemDto,
@@ -216,14 +216,9 @@ export class CheckoutService implements OnModuleInit, OnModuleDestroy {
               province: place?.province ?? null,
               department: place?.department ?? null,
               reference: dto.delivery.reference?.trim() || null,
-              eta:
-                shipping.mode === 'LIMA'
-                  ? storefront.deliveryDaysLima
-                  : shipping.mode === 'PROVINCE'
-                    ? storefront.deliveryDaysProvince
-                    : shipping.mode === 'PICKUP'
-                      ? storefront.pickupAddress
-                      : 'Tarifa referencial: la cobertura se coordina antes del despacho.',
+              eta: pickup
+                ? storefront.pickupAddress
+                : 'Tarifa referencial: la cobertura se coordina antes del despacho.',
               free: shipping.free,
             };
             return tx.order.create({
@@ -757,7 +752,7 @@ export class CheckoutService implements OnModuleInit, OnModuleDestroy {
     return Boolean(order.expiresAt && order.expiresAt.getTime() <= Date.now());
   }
 
-  /** Home deliveries need a real district whose zone matches the chosen rate. */
+  /** Home deliveries need a real district and the buyer's acceptance of the reference rate. */
   private deliveryPlace(
     mode: ShippingMode,
     ubigeo: string | undefined,
@@ -768,18 +763,8 @@ export class CheckoutService implements OnModuleInit, OnModuleDestroy {
     if (!place) {
       throw new BadRequestException('Selecciona el departamento, la provincia y el distrito.');
     }
-    if (isCarrierMode(mode)) {
-      if (acknowledgeRate !== true) {
-        throw new BadRequestException('Acepta la tarifa referencial del envío para continuar.');
-      }
-      return place;
-    }
-    if (shippingZone(place.code) !== mode) {
-      throw new BadRequestException(
-        mode === 'LIMA'
-          ? 'Ese distrito no está en Lima Metropolitana ni Callao. Elige el envío a provincias.'
-          : 'Ese distrito está en Lima Metropolitana o Callao. Elige el envío a Lima.',
-      );
+    if (acknowledgeRate !== true) {
+      throw new BadRequestException('Acepta la tarifa referencial del envío para continuar.');
     }
     return place;
   }
