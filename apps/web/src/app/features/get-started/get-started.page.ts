@@ -6,8 +6,8 @@ import {
   signal,
 } from '@angular/core';
 import { RouterLink } from '@angular/router';
-import { DsButtonComponent } from '../../design-system/button/ds-button.component';
-import { DsIconComponent } from '../../design-system/icon/ds-icon.component';
+import { DsButtonComponent } from '@vendedoria/ui';
+import { DsIconComponent } from '@vendedoria/ui';
 import { AgentsApiService } from '../../core/api/agents-api.service';
 import { CatalogApiService } from '../../core/api/catalog-api.service';
 import { MessagingApiService } from '../../core/api/messaging-api.service';

@@ -10,9 +10,9 @@ import { takeUntilDestroyed, toSignal } from '@angular/core/rxjs-interop';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { HttpErrorResponse } from '@angular/common/http';
 import { map, startWith } from 'rxjs';
-import { DsButtonComponent } from '../../design-system/button/ds-button.component';
-import { DsEmptyStateComponent } from '../../design-system/empty-state/ds-empty-state.component';
-import { DsIconComponent } from '../../design-system/icon/ds-icon.component';
+import { DsButtonComponent } from '@vendedoria/ui';
+import { DsEmptyStateComponent } from '@vendedoria/ui';
+import { DsIconComponent } from '@vendedoria/ui';
 import {
   CatalogApiService,
   ProductDto,

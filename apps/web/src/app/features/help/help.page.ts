@@ -1,6 +1,6 @@
 import { ChangeDetectionStrategy, Component } from '@angular/core';
 import { RouterLink } from '@angular/router';
-import { DsIconComponent } from '../../design-system/icon/ds-icon.component';
+import { DsIconComponent } from '@vendedoria/ui';
 
 type HelpTopic = {
   title: string;

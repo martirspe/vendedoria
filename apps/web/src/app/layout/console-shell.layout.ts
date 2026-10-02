@@ -12,7 +12,7 @@ import { BillingApiService } from '../core/api/billing-api.service';
 import {
   DsIconComponent,
   DsIconName,
-} from '../design-system/icon/ds-icon.component';
+} from '@vendedoria/ui';
 
 type ConsoleNavItem = {
   label: string;

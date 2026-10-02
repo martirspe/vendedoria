@@ -8,9 +8,9 @@ import {
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { DatePipe } from '@angular/common';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
-import { DsButtonComponent } from '../../design-system/button/ds-button.component';
-import { DsEmptyStateComponent } from '../../design-system/empty-state/ds-empty-state.component';
-import { DsIconComponent } from '../../design-system/icon/ds-icon.component';
+import { DsButtonComponent } from '@vendedoria/ui';
+import { DsEmptyStateComponent } from '@vendedoria/ui';
+import { DsIconComponent } from '@vendedoria/ui';
 import {
   ConversationDetail,
   ConversationListItem,

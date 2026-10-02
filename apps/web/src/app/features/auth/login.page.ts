@@ -1,7 +1,7 @@
 import { ChangeDetectionStrategy, Component, inject, signal } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
-import { DsButtonComponent } from '../../design-system/button/ds-button.component';
+import { DsButtonComponent } from '@vendedoria/ui';
 import { AuthApiService } from '../../core/auth/auth-api.service';
 
 @Component({

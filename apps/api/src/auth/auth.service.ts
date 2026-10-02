@@ -193,12 +193,14 @@ export class AuthService {
   }
 
   private buildSlug(name: string): string {
-    return name
+    const slug = name
       .toLowerCase()
       .normalize('NFD')
       .replace(/[\u0300-\u036f]/g, '')
       .replace(/[^a-z0-9]+/g, '-')
-      .replace(/^-|-$/g, '')
-      .slice(0, 40);
+      .slice(0, 40)
+      .replace(/^-+|-+$/g, '');
+    // The slug becomes the store subdomain, so it must be a valid DNS label.
+    return slug || 'tienda';
   }
 }

@@ -5,8 +5,8 @@ import {
   signal,
 } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
-import { DsButtonComponent } from '../../design-system/button/ds-button.component';
-import { DsIconComponent } from '../../design-system/icon/ds-icon.component';
+import { DsButtonComponent } from '@vendedoria/ui';
+import { DsIconComponent } from '@vendedoria/ui';
 import { TenantsApiService } from '../../core/api/tenants-api.service';
 
 @Component({

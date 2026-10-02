@@ -1,5 +1,5 @@
 import { ChangeDetectionStrategy, Component, input } from '@angular/core';
-import { DsEmptyStateComponent } from '../../design-system/empty-state/ds-empty-state.component';
+import { DsEmptyStateComponent } from '@vendedoria/ui';
 
 @Component({
   selector: 'app-placeholder-page',

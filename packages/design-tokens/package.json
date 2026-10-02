@@ -1,0 +1,6 @@
+{
+  "name": "@vendedoria/design-tokens",
+  "version": "0.1.0",
+  "private": true,
+  "description": "VendedorIA Design System tokens (console) and themeable storefront tokens"
+}
