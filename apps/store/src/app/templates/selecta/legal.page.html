@@ -15,7 +15,7 @@
           <p>Contenido</p>
           <ol>
             @for (section of d.sections; track section.id) {
-              <li><a [href]="'#' + section.id">{{ section.title }}</a></li>
+              <li><a [routerLink]="[]" [fragment]="section.id">{{ section.title }}</a></li>
             }
           </ol>
         </aside>

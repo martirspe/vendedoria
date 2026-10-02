@@ -75,6 +75,20 @@ type ResolvedLine = {
 const sha256 = (value: string) => createHash('sha256').update(value).digest('hex');
 const amount = (cents: number) => (cents / 100).toFixed(2);
 
+/** A free shipping coupon must not be spent where shipping is already free. */
+function assertFreeShippingCoupon(
+  freeShippingFromCents: number | null,
+  mode: ShippingMode | undefined,
+  subtotalCents: number,
+): void {
+  if (mode === 'PICKUP') {
+    throw new BadRequestException('El envío gratis de este cupón aplica solo a entregas a domicilio.');
+  }
+  if (freeShippingFromCents !== null && freeShippingFromCents > 0 && subtotalCents >= freeShippingFromCents) {
+    throw new BadRequestException('Tu pedido ya tiene envío gratis. Guarda este cupón para otra compra.');
+  }
+}
+
 @Injectable()
 export class CheckoutService implements OnModuleInit, OnModuleDestroy {
   private readonly logger = new Logger(CheckoutService.name);
@@ -109,6 +123,16 @@ export class CheckoutService implements OnModuleInit, OnModuleDestroy {
       lines: lines.map((line) => line.coupon),
       email: dto.email,
     });
+    if (quote.freeShipping) {
+      const storefront = await this.prisma.storefront.findUniqueOrThrow({
+        where: { tenantId: access.tenantId },
+      });
+      assertFreeShippingCoupon(
+        storefront.freeShippingFromCents,
+        dto.mode,
+        lines.reduce((sum, line) => sum + line.totalCents, 0),
+      );
+    }
     return {
       code: quote.coupon.code,
       label: quote.coupon.label,
@@ -166,6 +190,9 @@ export class CheckoutService implements OnModuleInit, OnModuleDestroy {
                   { lock: true },
                 )
               : null;
+            if (coupon?.freeShipping) {
+              assertFreeShippingCoupon(storefront.freeShippingFromCents, dto.delivery.mode, subtotalCents);
+            }
             const discountCents = coupon?.discountCents ?? 0;
             const shipping = quoteShipping(
               storefront,

@@ -73,8 +73,13 @@ function defaultFaq(store: StorefrontView): StoreTemplateFaq[] {
     },
   ];
   if (home.length) {
-    const names = home.map((o) => o.label).join(', ');
-    const parts = [`Enviamos con ${names}.`];
+    const names = home.map((o) => o.label).join(' o ');
+    const from = store.shipping.origin ? ` desde ${store.shipping.origin}` : '';
+    const parts = [
+      couriers.length
+        ? `Enviamos${from} a todo el Perú, sujeto a cobertura, con ${names}.`
+        : `Enviamos${from} con ${names}.`,
+    ];
     if (couriers.length) {
       parts.push(
         'Al elegir tu distrito ves el costo antes de pagar: una tarifa referencial según la distancia. Nunca cobramos una diferencia sin tu aprobación.',
@@ -88,7 +93,8 @@ function defaultFaq(store: StorefrontView): StoreTemplateFaq[] {
   if (pickup) {
     faq.push({
       question: '¿Puedo recoger mi pedido?',
-      answer: `Sí, sin costo${pickup.eta ? ` en ${pickup.eta}` : ''}. Te avisamos por correo cuando tu pedido esté listo para recoger.`,
+      answer:
+        'Sí, sin costo. Por tu seguridad, la dirección y el horario de recojo llegan en el correo de confirmación una vez acreditado el pago.',
     });
   }
   if (online) {

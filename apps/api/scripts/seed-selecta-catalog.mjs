@@ -4,6 +4,7 @@
 //
 // Re-running refreshes names, texts, photos and set pieces. Price, stock, availability and
 // publication of products that already exist are kept, so sales and console edits survive.
+// The store gets Selecta's free shipping threshold; origin and courier rates only when unset.
 import { createHash } from 'node:crypto';
 import { constants } from 'node:fs';
 import { copyFile, mkdir } from 'node:fs/promises';
@@ -21,6 +22,10 @@ const UPLOADS = resolve(process.env.UPLOADS_DIR ?? 'uploads');
 const PUBLIC_BASE = (process.env.PUBLIC_API_BASE_URL ?? 'http://localhost:3000/api/v1').replace(/\/$/, '');
 const HERO = 'set-icono-yanbal/ritual.jpg';
 const BANNER = 'set-osadia-infinita-yanbal/ritual.jpg';
+// Selecta's shipping rules: free from S/ 500, Olva/Shalom by distance from San Juan de Lurigancho.
+const FREE_SHIPPING_FROM_CENTS = 50_000;
+const SHIPPING_ORIGIN_UBIGEO = '150132';
+const CARRIER_RATES = { olva: [900, 1200, 1600, 2200, 2800], shalom: [800, 1000, 1400, 1800, 2400] };
 
 const clip = (value, max) => (typeof value === 'string' && value.trim() ? value.trim().slice(0, max) : null);
 const clips = (values, max = 400) => (Array.isArray(values) ? values.map((v) => clip(v, max)).filter(Boolean).slice(0, 20) : []);
@@ -165,6 +170,10 @@ try {
           industry: 'belleza',
           template: 'selecta',
           heroImageUrl: storefront.heroImageUrl ?? hero,
+          deliveryEnabled: true,
+          freeShippingFromCents: FREE_SHIPPING_FROM_CENTS,
+          shippingOriginUbigeo: storefront.shippingOriginUbigeo ?? SHIPPING_ORIGIN_UBIGEO,
+          carrierRates: storefront.carrierRates ?? CARRIER_RATES,
           templateCopy: { ...copy, bannerImageUrl: copy.bannerImageUrl ?? banner },
         },
       });

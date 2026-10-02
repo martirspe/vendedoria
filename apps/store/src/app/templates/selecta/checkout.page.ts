@@ -17,7 +17,7 @@ import type {
   ShippingQuote,
   UbigeoDistrict,
 } from '@vendedoria/contracts';
-import { campaignCoupon, forgetCampaignCoupon } from '../../core/campaign-coupon';
+import { campaignCoupon, forgetCampaignCoupon, keepCoupon } from '../../core/campaign-coupon';
 import { CartService } from '../../core/cart.service';
 import { MoneyPipe } from '../../core/money.pipe';
 import { SeoService } from '../../core/seo.service';
@@ -105,15 +105,19 @@ export class SelectaCheckoutPage {
         },
       ];
     }
-    return this.cart.lines().map((line) => ({
-      handle: line.handle,
-      variantId: line.variantId,
-      name: line.name,
-      variantLabel: line.variantLabel,
-      unitCents: line.unitCents,
-      quantity: line.quantity,
-      product: this.catalog.find(line.handle),
-    }));
+    return this.cart.lines().map((line) => {
+      const product = this.catalog.find(line.handle);
+      const variant = line.variantId ? product?.variants.find((v) => v.id === line.variantId) : undefined;
+      return {
+        handle: line.handle,
+        variantId: line.variantId,
+        name: line.name,
+        variantLabel: line.variantLabel,
+        unitCents: variant?.priceCents ?? product?.priceCents ?? line.unitCents,
+        quantity: line.quantity,
+        product,
+      };
+    });
   });
   readonly bump = signal<string | null>(null);
   readonly bumpOffer = computed(
@@ -144,6 +148,8 @@ export class SelectaCheckoutPage {
   readonly couponError = signal('');
   readonly couponBusy = signal(false);
   readonly couponOpen = signal(false);
+  /** Code that did not apply; retried when the bag or the delivery changes. */
+  private readonly failedCoupon = signal<string | null>(null);
   private couponSeq = 0;
   readonly discount = computed(() => this.coupon()?.discountCents ?? 0);
 
@@ -193,6 +199,9 @@ export class SelectaCheckoutPage {
     if (this.pickup()) return pickup ? { mode: 'PICKUP', label: pickup.label, cents: 0, note: pickup.eta ?? '' } : null;
     return this.choices().find((c) => c.mode === this.mode()) ?? null;
   });
+  readonly deliveryMode = computed<ShippingMode | undefined>(() =>
+    this.pickup() ? 'PICKUP' : this.choice()?.mode,
+  );
   readonly carrierChosen = computed(() => !this.pickup() && isCarrier(this.choice()?.mode ?? null));
   readonly freeFrom = computed(() => this.store()?.shipping.freeShippingFromCents ?? 0);
   readonly freeShip = computed(() => this.freeFrom() > 0 && this.subtotal() - this.discount() >= this.freeFrom());
@@ -214,9 +223,11 @@ export class SelectaCheckoutPage {
       const choices = this.choices();
       if (choices.length && !choices.some((c) => c.mode === untracked(this.mode))) this.mode.set(choices[0].mode);
     });
+    /** Lines or delivery changed: re-check the applied code, or retry one that did not apply. */
     effect(() => {
+      this.deliveryMode();
       if (!this.lines().length) return;
-      const code = untracked(this.coupon)?.code ?? this.pendingCoupon;
+      const code = untracked(this.coupon)?.code ?? this.pendingCoupon ?? untracked(this.failedCoupon);
       this.pendingCoupon = null;
       if (code) untracked(() => void this.applyCoupon(code, true));
     });
@@ -301,15 +312,24 @@ export class SelectaCheckoutPage {
     this.couponBusy.set(true);
     if (!silent) this.couponError.set('');
     const email = this.form.controls.email.valid ? this.form.controls.email.value.trim() : undefined;
+    const mode = this.deliveryMode();
     try {
-      const coupon = await this.api.previewCoupon({ items: this.items(), code, ...(email ? { email } : {}) });
+      const coupon = await this.api.previewCoupon({
+        items: this.items(),
+        code,
+        ...(email ? { email } : {}),
+        ...(mode ? { mode } : {}),
+      });
       if (seq !== this.couponSeq) return;
       this.coupon.set(coupon);
+      this.failedCoupon.set(null);
       this.couponInput.set('');
       this.couponError.set('');
+      keepCoupon(coupon.code);
     } catch (error) {
       if (seq !== this.couponSeq) return;
       this.coupon.set(null);
+      this.failedCoupon.set(code);
       this.couponOpen.set(true);
       this.couponInput.set(code);
       this.couponError.set(this.messageFrom(error, 'No pudimos validar el cupón.'));
@@ -322,6 +342,7 @@ export class SelectaCheckoutPage {
   removeCoupon(): void {
     this.couponSeq++;
     this.coupon.set(null);
+    this.failedCoupon.set(null);
     this.couponError.set('');
     this.couponBusy.set(false);
     forgetCampaignCoupon();

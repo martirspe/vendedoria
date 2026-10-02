@@ -80,6 +80,8 @@ export type ShippingQuote = {
 export type StorefrontShipping = {
   options: ShippingOption[];
   freeShippingFromCents: number | null;
+  /** District and department orders ship from, e.g. "San Juan de Lurigancho, Lima". */
+  origin: string | null;
 };
 
 export type StorefrontLegal = {

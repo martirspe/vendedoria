@@ -1,5 +1,5 @@
 @if (store(); as s) {
-  <a class="skip" href="#main">Saltar al contenido</a>
+  <a class="skip" [routerLink]="[]" fragment="main">Saltar al contenido</a>
   @if (s.isPreview) {
     <div class="announcement" role="status">Vista previa: esta tienda aún no está publicada. Solo tú puedes verla con este enlace.</div>
   }

@@ -150,7 +150,7 @@ export class CouponsService {
     const coupon = await db.coupon.findUnique({
       where: { tenantId_code: { tenantId, code } },
     });
-    if (!coupon) throw new BadRequestException('Este cupón no existe.');
+    if (!coupon) throw new BadRequestException('Este cupón no existe o ya no está disponible.');
 
     const result = evaluateCoupon(coupon, input.lines);
     if (!result.ok) throw new BadRequestException(result.reason);

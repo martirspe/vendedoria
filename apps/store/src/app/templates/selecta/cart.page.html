@@ -16,7 +16,7 @@
             <div>
               <h3>{{ row.line.name }}@if (row.line.variantLabel) { · {{ row.line.variantLabel }}}</h3>
               <p>{{ row.product?.descriptionShort }}</p>
-              <strong>{{ row.line.unitCents | money }}</strong>
+              <strong>{{ row.unitCents | money }}</strong>
               <div class="quantity">
                 <button (click)="change(row.line, -1)" aria-label="Reducir cantidad"><app-icon name="minus" /></button>
                 <span>{{ row.line.quantity }}</span>
@@ -66,7 +66,7 @@
               }
             </p>
             <div class="free-ship-bar" role="progressbar" aria-label="Avance hacia el envío gratis" aria-valuemin="0" aria-valuemax="100" [attr.aria-valuenow]="progress()"><span [style.width.%]="progress()"></span></div>
-            <small>Envío gratis@if (carrierNames()) { con {{ carrierNames() }}} en pedidos desde {{ freeFrom() | money }}.</small>
+            <small>Envío gratis@if (carrierNames()) { con {{ carrierNames() }}} en pedidos desde {{ freeLabel() }}.</small>
           </div>
         }
         @if (online()) {

@@ -145,7 +145,7 @@
     <header class="faq-intro">
       <p class="eyebrow">COMPRA CON CLARIDAD</p>
       <h2 id="faq-title">Antes de elegir,<br /><em>todo claro.</em></h2>
-      <p>Pago, envío y entrega explicados en un minuto, para que compres con total tranquilidad.</p>
+      <p>{{ hasPickup() ? 'Pago, envío y recojo' : 'Pago y envío' }} explicados en un minuto, para que compres con total tranquilidad.</p>
       @if (whatsapp(); as href) {
         <div class="faq-help">
           <span class="faq-help-icon"><app-icon name="whatsapp" /></span>

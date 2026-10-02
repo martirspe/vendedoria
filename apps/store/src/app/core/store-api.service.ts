@@ -10,6 +10,7 @@ import type {
   PublicProductDetail,
   PublicProductList,
   PublicProductSort,
+  ShippingMode,
   ShippingQuote,
   StoreCatalogProduct,
   StorefrontView,
@@ -75,6 +76,7 @@ export class StoreApiService {
     items: CheckoutItemInput[];
     code: string;
     email?: string;
+    mode?: ShippingMode;
   }): Promise<CouponPreviewResult> {
     return firstValueFrom(
       this.http.post<CouponPreviewResult>(`${STORE_PROXY_PREFIX}/coupons/preview`, body),

@@ -60,6 +60,11 @@ export class CouponPreviewDto {
   @IsEmail()
   @MaxLength(160)
   email?: string;
+
+  @ApiPropertyOptional({ enum: SHIPPING_MODES, description: 'Chosen delivery, to validate free shipping coupons' })
+  @IsOptional()
+  @IsIn(SHIPPING_MODES)
+  mode?: (typeof SHIPPING_MODES)[number];
 }
 
 export class CheckoutCustomerDto {

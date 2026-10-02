@@ -6,6 +6,7 @@ import { SeoService } from '../../core/seo.service';
 import { StoreStateService } from '../../core/store-state.service';
 import { whatsappUrl } from '../../core/whatsapp';
 import { Product, SelectaCatalog, bagLine, complements, maxUnits, scarcity } from './selecta-catalog';
+import { wholeMoney } from './selecta-copy';
 import { SelectaIcon } from './selecta-icon';
 import { SelectaProductImage } from './selecta-photo';
 
@@ -27,11 +28,13 @@ export class SelectaCartPage {
       const product = this.catalog.find(line.handle);
       const variant = line.variantId ? product?.variants.find((v) => v.id === line.variantId) : undefined;
       const available = Boolean(product?.isAvailable) && (!line.variantId || Boolean(variant?.isAvailable));
-      return { line, product, max: product && available ? maxUnits(product) : 0 };
+      const unitCents = variant?.priceCents ?? product?.priceCents ?? line.unitCents;
+      return { line, product, unitCents, max: product && available ? maxUnits(product) : 0 };
     }),
   );
   readonly invalid = computed(() => this.rows().some((r) => r.line.quantity > r.max));
-  readonly total = this.cart.subtotalCents;
+  /** Live catalog prices: the bag never shows a price the checkout will not charge. */
+  readonly total = computed(() => this.rows().reduce((n, r) => n + r.unitCents * r.line.quantity, 0));
   readonly extras = computed(() =>
     complements(
       this.cart.lines().map((l) => ({ handle: l.handle, quantity: l.quantity })),
@@ -46,25 +49,29 @@ export class SelectaCartPage {
   readonly carrierNames = computed(() =>
     (this.store()?.shipping.options ?? [])
       .filter((o) => o.mode !== 'PICKUP')
-      .map((o) => o.label)
+      .map((o) => (o.mode === 'OLVA' ? 'Olva' : o.mode === 'SHALOM' ? 'Shalom' : o.label))
       .join(' o '),
   );
+  readonly freeLabel = computed(() => {
+    const store = this.store();
+    return store ? wholeMoney(store, this.freeFrom()) : '';
+  });
 
   /** The order message carries one product reference per line for the sales agent. */
   readonly orderHref = computed(() => {
     const store = this.store();
     const lines = this.cart.lines();
     if (!store?.whatsappPhone || !lines.length) return null;
-    const items = lines.map((line) => {
+    const items = this.rows().map(({ line, unitCents }) => {
       const variant = line.variantLabel ? ` (${line.variantLabel})` : '';
-      const total = this.state.formatMoney(line.unitCents * line.quantity, line.currency);
+      const total = this.state.formatMoney(unitCents * line.quantity, line.currency);
       const ref = line.variantId ? `${line.handle}:${line.variantId}` : line.handle;
       return `• ${line.quantity} × ${line.name}${variant} — ${total} [P-${ref}]`;
     });
     const text = [
       `Hola ${store.displayName}, quiero hacer este pedido:`,
       ...items,
-      `Subtotal: ${this.state.formatMoney(this.cart.subtotalCents())}`,
+      `Subtotal: ${this.state.formatMoney(this.total())}`,
       '¿Me confirman stock, envío y forma de pago?',
     ].join('\n');
     return whatsappUrl(store.whatsappPhone, text);
@@ -84,6 +91,6 @@ export class SelectaCartPage {
   }
 
   addExtra(p: Product): void {
-    this.cart.add(bagLine(p), 1);
+    this.cart.add(bagLine(p), 1, maxUnits(p));
   }
 }

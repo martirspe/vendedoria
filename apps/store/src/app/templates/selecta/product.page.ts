@@ -63,6 +63,12 @@ export class SelectaProductPage {
     const free = store?.shipping.freeShippingFromCents;
     return store && free ? wholeMoney(store, free) : '';
   });
+  readonly deliveryLabel = computed(() => {
+    const modes = (this.store()?.shipping.options ?? []).map((o) => o.mode);
+    const home = modes.some((m) => m !== 'PICKUP');
+    const pickup = modes.includes('PICKUP');
+    return home && pickup ? 'envío o recojo' : pickup ? 'recojo' : 'envío';
+  });
   readonly photos = computed(() => {
     const p = this.product();
     return p ? photos(p) : [];
@@ -109,9 +115,17 @@ export class SelectaProductPage {
     const store = this.store();
     const p = this.product();
     if (!store?.whatsappPhone || !p) return null;
+    const codes = p.includes.map((i) => i.code).filter(Boolean).join(', ');
     return whatsappUrl(
       store.whatsappPhone,
-      `Hola, me interesa ${p.name} (${this.state.formatMoney(this.price())}). ${productReference(p.handle)}`,
+      [
+        `Hola, me interesa ${p.name} (${this.state.formatMoney(this.price())}).`,
+        codes ? `Códigos: ${codes}.` : '',
+        this.seo.absolute(`/producto/${p.handle}`),
+        productReference(p.handle),
+      ]
+        .filter(Boolean)
+        .join(' '),
     );
   });
 
@@ -154,13 +168,13 @@ export class SelectaProductPage {
 
   add(p: Product): void {
     if (!this.canBuy()) return;
-    this.cart.add(bagLine(p, this.variant()), this.qty());
+    this.cart.add(bagLine(p, this.variant()), this.qty(), maxUnits(p));
     this.added.set('Añadido a tu bolsa.');
   }
 
   quickAdd(p: Product): void {
     if (!buyable(p)) return;
-    this.cart.add(bagLine(p), 1);
+    this.cart.add(bagLine(p), 1, maxUnits(p));
     this.added.set(`${p.name} se añadió a tu bolsa.`);
   }
 
@@ -230,8 +244,8 @@ export class SelectaProductPage {
         '@context': 'https://schema.org',
         '@type': 'Product',
         name: p.name,
-        ...(p.descriptionShort ? { description: p.descriptionShort } : {}),
-        ...(p.imageUrl ? { image: [p.imageUrl] } : {}),
+        ...(p.descriptionFull || p.descriptionShort ? { description: p.descriptionFull || p.descriptionShort } : {}),
+        ...(photos(p).length ? { image: photos(p).map((m) => m.url) } : {}),
         ...(p.brand ? { brand: { '@type': 'Brand', name: p.brand } } : {}),
         offers: {
           '@type': 'Offer',

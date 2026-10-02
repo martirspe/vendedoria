@@ -120,6 +120,9 @@
           <p class="notice">Recibimos un pago después de la cancelación. La tienda te contactará para coordinar la entrega o la devolución.</p>
         }
       </div>
+      @if (processing()) {
+        <button type="button" class="button" [disabled]="busy()" (click)="checkStatus()">{{ busy() ? 'Consultando…' : 'Consultar estado' }}</button>
+      }
       @if (ended()) {
         <a class="button" routerLink="/carrito">Volver a mi bolsa <app-icon name="arrow" /></a>
       }

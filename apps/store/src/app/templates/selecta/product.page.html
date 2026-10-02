@@ -61,7 +61,7 @@
           } @else if (scarcity(p)) {
             <strong>Solo quedan {{ p.stockLeft }} unidades</strong>{{ online() ? ' · se reservan al continuar al pago' : '' }}
           } @else {
-            Disponible para envío o recojo
+            Disponible para {{ deliveryLabel() }}
           }
         </p>
         @if (p.descriptionFull) {

@@ -23,6 +23,13 @@ import {
 import { toCatalogProduct, toProductCard, toProductDetail } from './storefront-mapper';
 import { verifyPreviewToken } from './storefront-preview';
 import { effectiveTemplate, readTemplateCopy } from './store-templates';
+import { findUbigeo } from '../ubigeo/ubigeo';
+
+/** "San Juan de Lurigancho, Lima": where orders ship from, for buyer-facing copy. */
+function shippingOrigin(ubigeo: string | null): string | null {
+  const place = ubigeo ? findUbigeo(ubigeo) : undefined;
+  return place ? `${place.district}, ${place.department}` : null;
+}
 
 const PRODUCT_INCLUDE = {
   variants: { orderBy: { id: 'asc' } },
@@ -150,6 +157,7 @@ export class StorefrontPublicService {
       shipping: {
         options: shippingOptions(storefront),
         freeShippingFromCents: storefront.freeShippingFromCents,
+        origin: shippingOrigin(storefront.shippingOriginUbigeo),
       },
       legal: {
         legalName: storefront.legalName,

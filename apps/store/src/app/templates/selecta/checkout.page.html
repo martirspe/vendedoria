@@ -53,7 +53,7 @@
               </div>
             }
             @if (pickup()) {
-              <p class="notice">Recojo sin costo@if (pickupOption()?.eta; as place) { en {{ place }}}. Te avisaremos por correo cuando tu pedido esté listo para recoger.</p>
+              <p class="notice">Recojo sin costo. Enviaremos la dirección y coordinaremos el horario por correo después de confirmar tu pago.</p>
             } @else if (homeOptions().length) {
               @switch (ubigeoState()) {
                 @case ('error') {

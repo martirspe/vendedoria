@@ -8,6 +8,11 @@ export function rememberCampaignCoupon(search: string): void {
   if (code && CODE.test(code)) sessionStorage.setItem(KEY, code.toUpperCase());
 }
 
+/** Keeps a code typed at checkout so it survives reloads and returns from the bag. */
+export function keepCoupon(code: string): void {
+  if (typeof sessionStorage !== 'undefined' && CODE.test(code)) sessionStorage.setItem(KEY, code.toUpperCase());
+}
+
 export function campaignCoupon(): string | null {
   if (typeof sessionStorage === 'undefined') return null;
   return sessionStorage.getItem(KEY);

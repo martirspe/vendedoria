@@ -176,6 +176,16 @@ export class OrderPage {
     await this.run(() => this.api.cancel(this.id, this.token));
   }
 
+  /** Manual check while a payment is in review, beyond the automatic polling. */
+  async checkStatus(): Promise<void> {
+    this.busy.set(true);
+    try {
+      await this.refresh();
+    } finally {
+      this.busy.set(false);
+    }
+  }
+
   private async load(): Promise<void> {
     if (!this.id || !this.token) {
       this.notFound.set(true);

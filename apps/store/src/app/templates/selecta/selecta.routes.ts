@@ -21,8 +21,12 @@ export const SELECTA_ROUTES: Routes = [
       },
       {
         path: 'productos',
+        pathMatch: 'full',
         redirectTo: () => inject(Router).createUrlTree(['/'], { fragment: 'coleccion' }),
       },
+      { path: 'productos/:handle', redirectTo: ({ params }) => `/producto/${params['handle']}` },
+      { path: 'terminos', redirectTo: '/terminos-y-condiciones' },
+      { path: 'privacidad', redirectTo: '/politica-de-privacidad' },
       {
         path: 'producto/:handle',
         loadComponent: () => import('./product.page').then((m) => m.SelectaProductPage),

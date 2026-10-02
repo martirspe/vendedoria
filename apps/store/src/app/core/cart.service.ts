@@ -42,18 +42,20 @@ export class CartService {
     this.ready.set(true);
   }
 
-  add(line: Omit<CartLine, 'key' | 'quantity'>, quantity: number): void {
+  /** `max` caps the line (stock or per-order limit); the bag never exceeds what can be bought. */
+  add(line: Omit<CartLine, 'key' | 'quantity'>, quantity: number, max = MAX_QUANTITY): void {
     const key = `${line.handle}::${line.variantId ?? ''}`;
+    const cap = (n: number) => Math.min(clamp(n), Math.max(max, 1));
     this.update((lines) => {
       const existing = lines.find((item) => item.key === key);
       if (existing) {
         return lines.map((item) =>
           item.key === key
-            ? { ...item, ...line, quantity: clamp(item.quantity + quantity) }
+            ? { ...item, ...line, quantity: cap(item.quantity + quantity) }
             : item,
         );
       }
-      return [...lines, { ...line, key, quantity: clamp(quantity) }];
+      return [...lines, { ...line, key, quantity: cap(quantity) }];
     });
   }
 

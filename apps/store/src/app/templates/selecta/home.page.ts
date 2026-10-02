@@ -23,6 +23,7 @@ export class SelectaHomePage {
   readonly store = inject(StoreStateService).store;
   readonly products = this.catalog.products;
   readonly failed = this.catalog.failed;
+  readonly hasPickup = computed(() => Boolean(this.store()?.shipping.options.some((o) => o.mode === 'PICKUP')));
   readonly copy = computed(() => {
     const store = this.store();
     return store ? selectaCopy(store) : null;

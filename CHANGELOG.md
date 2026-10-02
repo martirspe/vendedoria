@@ -3,6 +3,10 @@
 ## [Unreleased]
 
 ### Added
+- Tabler Icons (`@tabler/icons-angular`) as the only icon set of the console, marketing site and store templates, through the `ds-icon` registry
+- Selecta catalog seed (`apps/api/scripts/seed-selecta-catalog.mjs`) also sets free shipping from S/ 500, the shipping origin and the Olva/Shalom rates
+- Selecta template parity: bag quantities capped by stock, live catalog prices in bag and checkout, coupon re-check on delivery changes, free shipping coupons rejected for pickup or orders that already ship free, pickup address revealed only after payment, "Consultar estado" on orders in review, refund and rejected payment titles, legacy Selecta URLs redirected, WhatsApp message with product codes and link, product JSON-LD with all photos
+- Store payload exposes the shipping origin (`shipping.origin`) for buyer-facing copy
 - Store templates by industry: the merchant picks the business industry and a template in Tienda; the first one, Selecta (Belleza y cuidado personal), brings the full Selecta storefront (home, product page, bag, checkout, order/payment page, legal center, 404) with editable texts per store
 - Product sets with shared inventory (pieces per SKU, reserved and released with the set), set offers on the product page, complements in the bag and an order bump in checkout
 - Coupons by product line, option to exclude sets, and campaign links (`?cupon=`) applied at checkout
