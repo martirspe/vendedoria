@@ -68,12 +68,16 @@ export class SalesAgentRuntimeService {
     customerPhone?: string | null;
   }): Promise<AgentReplyResult> {
     const mode = params.mode ?? 'production';
+    const refs = this.tools.extractProductRefs(params.inboundText);
     const [agentRow, products, runtimeKnowledge] = await Promise.all([
       this.prisma.salesAgent.findFirst({
         where: { tenantId: params.tenantId },
         orderBy: { createdAt: 'asc' },
       }),
-      this.tools.listAvailableProducts(params.tenantId),
+      this.tools.listAvailableProducts(
+        params.tenantId,
+        refs.map((ref) => ref.handle),
+      ),
       this.knowledge.getRuntimeKnowledge(params.tenantId),
     ]);
 
@@ -94,6 +98,7 @@ export class SalesAgentRuntimeService {
     const { matches, trace: searchTrace } = this.tools.searchCatalog(
       params.inboundText,
       products,
+      refs,
     );
     traces.push(searchTrace);
 
@@ -129,20 +134,27 @@ export class SalesAgentRuntimeService {
     let orderId: string | undefined;
     let checkoutUrl: string | undefined;
 
-    if (this.tools.wantsPurchase(params.inboundText) && matches[0]) {
+    const cartLines = this.tools.orderLinesFromRefs(refs, products);
+    const lines = cartLines.length
+      ? cartLines
+      : matches[0]
+        ? [{ product: matches[0], quantity: 1 }]
+        : [];
+    if (this.tools.wantsPurchase(params.inboundText) && lines.length) {
       const commerce = await this.tools.createOrderWithOptionalLink({
         tenantId: params.tenantId,
         mode,
-        product: matches[0],
+        lines,
         conversationId: params.conversationId,
         customerName: params.customerName,
         customerPhone: params.customerPhone,
-        createPaymentLink: true,
+        createPaymentLink: !cartLines.length,
       });
       traces.push(...commerce.traces);
       orderId = commerce.orderId;
       checkoutUrl = commerce.checkoutUrl;
     }
+    const cartOrder = cartLines.length > 0 && Boolean(orderId);
 
     const openAiKey = this.config.get<string>('OPENAI_API_KEY');
     if (openAiKey) {
@@ -156,6 +168,7 @@ export class SalesAgentRuntimeService {
           faqMatches,
           journeys,
           checkoutUrl,
+          cartOrder,
           mode,
         });
         if (ai) {
@@ -184,6 +197,7 @@ export class SalesAgentRuntimeService {
         faqMatches,
         journeys,
         checkoutUrl,
+        cartOrder,
         mode,
       }),
       tools: traces,
@@ -245,9 +259,23 @@ export class SalesAgentRuntimeService {
     faqMatches: FaqMatch[];
     journeys: JourneyView[];
     checkoutUrl?: string;
+    cartOrder: boolean;
     mode: AgentRuntimeMode;
   }): Omit<AgentReplyResult, 'tools' | 'orderId' | 'checkoutUrl'> {
     const { agent } = params;
+
+    if (params.cartOrder) {
+      const lines = params.catalogMatches.map((product) => `• ${product.name}`);
+      return {
+        escalate: false,
+        usedCatalog: true,
+        pauseOnHandoff: agent.pauseOnHandoff,
+        replyText: this.applyTone(
+          agent,
+          `¡Gracias! Registré tu pedido de la tienda web:\n${lines.join('\n')}\nEn breve te confirmamos stock, costo de envío y forma de pago.`,
+        ),
+      };
+    }
 
     if (params.checkoutUrl) {
       const confirm =
@@ -292,7 +320,8 @@ export class SalesAgentRuntimeService {
               .map((variant) => `${variant.label} ${variant.priceLabel}`)
               .join('; ')}`
           : '';
-        return `• ${product.name} (${product.priceLabel}, ${product.stockLabel})${blurb}${variants}`;
+        const url = product.productUrl ? `\n  Ver: ${product.productUrl}` : '';
+        return `• ${product.name} (${product.priceLabel}, ${product.stockLabel})${blurb}${variants}${url}`;
       });
       const faqNote = params.faqMatches[0]
         ? `\n\nTambién: ${params.faqMatches[0].answer}`
@@ -369,6 +398,7 @@ export class SalesAgentRuntimeService {
     faqMatches: FaqMatch[];
     journeys: JourneyView[];
     checkoutUrl?: string;
+    cartOrder: boolean;
     mode: AgentRuntimeMode;
   }): Promise<Omit<
     AgentReplyResult,
@@ -379,6 +409,7 @@ export class SalesAgentRuntimeService {
       description: product.descriptionShort,
       price: product.priceLabel,
       stock: product.stockLabel,
+      url: product.productUrl,
       variants: product.variants.map((variant) => ({
         label: variant.label,
         price: variant.priceLabel,
@@ -412,6 +443,10 @@ export class SalesAgentRuntimeService {
       params.checkoutUrl
         ? `Ya existe un link de pago generado: ${params.checkoutUrl}. Inclúyelo en la respuesta.`
         : '',
+      params.cartOrder
+        ? 'El cliente envió su carrito de la tienda web y ya quedó registrado como pedido. Agradécele, resume los productos y dile que un asesor confirmará stock, envío y forma de pago. No envíes link de pago.'
+        : '',
+      'Si un producto del catálogo tiene url, puedes compartirla para que vea fotos y detalles en la tienda. No inventes enlaces.',
       params.mode === 'playground'
         ? 'Estás en playground de prueba: sé claro si algo es simulado.'
         : '',

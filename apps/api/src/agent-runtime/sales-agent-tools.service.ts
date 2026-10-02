@@ -1,6 +1,33 @@
 import { Injectable } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { PrismaService } from '../prisma/prisma.service';
 import { OrdersService } from '../orders/orders.service';
+import {
+  DEFAULT_STOREFRONT_URL_TEMPLATE,
+  storefrontUrl,
+} from '../storefront/storefront-host';
+
+/**
+ * Product references written by the store: `Ref: P-{handle}` on product pages and
+ * `• {qty} × {name} — {total} [P-{handle}:{variantId}]` per cart line.
+ */
+const CART_LINE = /^\s*•\s*(\d{1,3})\s*[×x]\s.*\[P-([a-z0-9][a-z0-9-]{0,99})(?::([a-z0-9]{10,40}))?\]\s*$/gim;
+const PRODUCT_REF = /\bP-([a-z0-9][a-z0-9-]{0,99})/gi;
+const MAX_REFS = 10;
+
+export type OrderLine = {
+  product: CatalogProductView;
+  variant?: CatalogProductView['variants'][number];
+  quantity: number;
+};
+
+export type ProductRef = {
+  handle: string;
+  variantId: string | null;
+  quantity: number;
+  /** True when it comes from a cart line, i.e. the buyer sent a full order. */
+  fromCart: boolean;
+};
 
 export type AgentRuntimeMode = 'production' | 'playground';
 
@@ -32,6 +59,8 @@ export type CatalogProductView = {
   stockQty: number | null;
   stockLabel: string;
   priceLabel: string;
+  /** Product page in the published store, or null when the store is not public. */
+  productUrl: string | null;
   variants: Array<{
     id: string;
     label: string;
@@ -47,24 +76,93 @@ export class SalesAgentToolsService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly ordersService: OrdersService,
+    private readonly config: ConfigService,
   ) {}
 
-  async listAvailableProducts(tenantId: string): Promise<CatalogProductView[]> {
-    const products = await this.prisma.product.findMany({
-      where: { tenantId, isAvailable: true },
-      include: { variants: true },
-      take: 40,
-      orderBy: { updatedAt: 'desc' },
-    });
-    return products.map((product) => this.toView(product));
+  extractProductRefs(text: string): ProductRef[] {
+    const refs = new Map<string, ProductRef>();
+    for (const match of text.matchAll(CART_LINE)) {
+      const handle = match[2].toLowerCase();
+      const variantId = match[3] ?? null;
+      refs.set(`${handle}:${variantId ?? ''}`, {
+        handle,
+        variantId,
+        quantity: Math.min(Math.max(Number(match[1]), 1), 99),
+        fromCart: true,
+      });
+    }
+    for (const match of text.matchAll(PRODUCT_REF)) {
+      const handle = match[1].toLowerCase();
+      if (![...refs.values()].some((ref) => ref.handle === handle)) {
+        refs.set(`${handle}:`, { handle, variantId: null, quantity: 1, fromCart: false });
+      }
+    }
+    return [...refs.values()].slice(0, MAX_REFS);
+  }
+
+  /** Recent available products plus any product the buyer referenced explicitly. */
+  async listAvailableProducts(
+    tenantId: string,
+    referencedHandles: string[] = [],
+  ): Promise<CatalogProductView[]> {
+    const [products, referenced, storefront] = await Promise.all([
+      this.prisma.product.findMany({
+        where: { tenantId, isAvailable: true },
+        include: { variants: true },
+        take: 40,
+        orderBy: { updatedAt: 'desc' },
+      }),
+      referencedHandles.length
+        ? this.prisma.product.findMany({
+            where: { tenantId, isAvailable: true, handle: { in: referencedHandles } },
+            include: { variants: true },
+          })
+        : Promise.resolve([]),
+      this.prisma.storefront.findUnique({
+        where: { tenantId },
+        select: { status: true, tenant: { select: { slug: true } } },
+      }),
+    ]);
+    const base =
+      storefront?.status === 'PUBLISHED'
+        ? storefrontUrl(
+            this.config.get<string>('STOREFRONT_URL_TEMPLATE') ?? DEFAULT_STOREFRONT_URL_TEMPLATE,
+            storefront.tenant.slug,
+          ).replace(/\/$/, '')
+        : null;
+    const byId = new Map([...referenced, ...products].map((product) => [product.id, product]));
+    return [...byId.values()].map((product) => ({
+      ...this.toView(product),
+      productUrl:
+        base && product.isPublishedOnStore
+          ? `${base}/producto/${encodeURIComponent(product.handle)}`
+          : null,
+    }));
   }
 
   searchCatalog(
     inboundText: string,
     products: CatalogProductView[],
+    refs: ProductRef[] = [],
   ): { matches: CatalogProductView[]; trace: AgentToolTrace } {
     const query = inboundText.toLowerCase();
     const tokens = query.split(/\s+/).filter((token) => token.length > 2);
+    const referenced = refs
+      .map((ref) => products.find((product) => product.handle === ref.handle))
+      .filter((product): product is CatalogProductView => Boolean(product))
+      .filter((product, index, list) => list.indexOf(product) === index);
+
+    if (referenced.length) {
+      return {
+        matches: referenced,
+        trace: {
+          name: 'search_catalog',
+          status: 'ok',
+          summary: `Productos referenciados: ${referenced.map((item) => item.name).join(', ')}`,
+          data: { matchIds: referenced.map((item) => item.id), count: referenced.length, byReference: true },
+        },
+      };
+    }
 
     let matches = products
       .map((product) => {
@@ -196,11 +294,25 @@ export class SalesAgentToolsService {
     };
   }
 
+  /** Order lines for referenced cart items, priced from the catalog (never from the message). */
+  orderLinesFromRefs(refs: ProductRef[], products: CatalogProductView[]): OrderLine[] {
+    return refs
+      .filter((ref) => ref.fromCart)
+      .flatMap((ref) => {
+        const product = products.find((item) => item.handle === ref.handle);
+        if (!product) return [];
+        const variant = ref.variantId
+          ? product.variants.find((item) => item.id === ref.variantId)
+          : undefined;
+        if (ref.variantId && !variant) return [];
+        return [{ product, variant, quantity: ref.quantity }];
+      });
+  }
+
   async createOrderWithOptionalLink(params: {
     tenantId: string;
     mode: AgentRuntimeMode;
-    product: CatalogProductView;
-    quantity?: number;
+    lines: OrderLine[];
     conversationId?: string | null;
     customerName?: string | null;
     customerPhone?: string | null;
@@ -211,11 +323,18 @@ export class SalesAgentToolsService {
     checkoutUrl?: string;
     dryRun: boolean;
   }> {
-    const quantity = Math.max(1, params.quantity ?? 1);
-    const totalCents = quantity * params.product.basePriceCents;
+    const lines = params.lines.map((line) => ({
+      ...line,
+      quantity: Math.max(1, line.quantity),
+      unitCents: line.variant?.priceCents ?? line.product.basePriceCents,
+      title: line.variant ? `${line.product.name} (${line.variant.label})` : line.product.name,
+    }));
+    const totalCents = lines.reduce((sum, line) => sum + line.quantity * line.unitCents, 0);
+    const currency = lines[0].product.currency;
+    const label = lines.map((line) => `${line.quantity}× ${line.title}`).join(', ');
 
     if (params.mode === 'playground') {
-      const fakeOrderId = `pg_order_${params.product.handle}`;
+      const fakeOrderId = `pg_order_${lines[0].product.handle}`;
       const fakeUrl = params.createPaymentLink
         ? `https://playground.local/checkout/${fakeOrderId}`
         : undefined;
@@ -223,12 +342,12 @@ export class SalesAgentToolsService {
         {
           name: 'create_order',
           status: 'ok',
-          summary: `Pedido de prueba (no guarda en Pedidos): ${quantity}× ${params.product.name}`,
+          summary: `Pedido de prueba (no guarda en Pedidos): ${label}`,
           data: {
             dryRun: true,
             orderId: fakeOrderId,
             totalCents,
-            currency: params.product.currency,
+            currency,
           },
         },
       ];
@@ -253,15 +372,14 @@ export class SalesAgentToolsService {
         conversationId: params.conversationId ?? undefined,
         customerName: params.customerName ?? undefined,
         customerPhone: params.customerPhone ?? undefined,
-        currency: params.product.currency,
-        items: [
-          {
-            productId: params.product.id,
-            title: params.product.name,
-            quantity,
-            unitCents: params.product.basePriceCents,
-          },
-        ],
+        currency,
+        items: lines.map((line) => ({
+          productId: line.product.id,
+          ...(line.variant ? { variantId: line.variant.id } : {}),
+          title: line.title,
+          quantity: line.quantity,
+          unitCents: line.unitCents,
+        })),
         createPaymentLink: params.createPaymentLink,
         sendLinkToChat: false,
       });
@@ -271,7 +389,7 @@ export class SalesAgentToolsService {
         {
           name: 'create_order',
           status: 'ok',
-          summary: `Pedido creado: ${quantity}× ${params.product.name} (${params.product.priceLabel})`,
+          summary: `Pedido creado: ${label}`,
           data: {
             dryRun: false,
             orderId: order.id,
@@ -398,6 +516,7 @@ export class SalesAgentToolsService {
       stockQty: product.stockQty,
       stockLabel,
       priceLabel,
+      productUrl: null,
       variants,
     };
   }
