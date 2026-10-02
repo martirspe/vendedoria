@@ -11,7 +11,9 @@ import { AppModule } from './app.module';
 async function bootstrap() {
   const app = await NestFactory.create<NestFastifyApplication>(
     AppModule,
-    new FastifyAdapter({ logger: true }),
+    // nginx and the store server reach the API over the Docker network; trusting only those
+    // hops makes `request.ip` the real client and ignores X-Forwarded-For sent by the client.
+    new FastifyAdapter({ logger: true, trustProxy: ['loopback', 'uniquelocal'] }),
   );
 
   const config = app.get(ConfigService);

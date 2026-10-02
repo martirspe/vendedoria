@@ -15,6 +15,7 @@ import type {
   PublicOrder,
   PublicOrderStatus,
   ShippingMode,
+  UbigeoDistrict,
 } from '@vendedoria/contracts';
 import { couponCustomerKey, CouponsService } from '../coupons/coupons.service';
 import type { CouponLine } from '../coupons/coupon-engine';
@@ -30,6 +31,7 @@ import {
 import { PrismaService } from '../prisma/prisma.service';
 import { quoteShipping } from '../storefront/shipping';
 import type { StoreAccess } from '../storefront/storefront-public.service';
+import { findUbigeo, shippingZone } from '../ubigeo/ubigeo';
 import { StorefrontPublicService } from '../storefront/storefront-public.service';
 import {
   CheckoutItemDto,
@@ -49,8 +51,10 @@ type DeliveryRecord = {
   mode: ShippingMode;
   label: string;
   address: string | null;
+  ubigeo: string | null;
   district: string | null;
-  city: string | null;
+  province: string | null;
+  department: string | null;
   reference: string | null;
   eta: string | null;
   free: boolean;
@@ -129,6 +133,7 @@ export class CheckoutService implements OnModuleInit, OnModuleDestroy {
     );
     const replay = await this.findReplay(access.tenantId, dto.checkoutKey, requestHash);
     if (replay) return this.view(replay);
+    const place = this.deliveryPlace(dto.delivery.mode, dto.delivery.ubigeo);
 
     const storefront = await this.prisma.storefront.findUniqueOrThrow({
       where: { tenantId: access.tenantId },
@@ -164,8 +169,10 @@ export class CheckoutService implements OnModuleInit, OnModuleDestroy {
               mode: shipping.mode,
               label: shipping.label,
               address: pickup ? null : dto.delivery.address?.trim() ?? null,
-              district: pickup ? null : dto.delivery.district?.trim() ?? null,
-              city: pickup ? null : shipping.mode === 'PROVINCE' ? dto.delivery.city?.trim() ?? null : 'Lima',
+              ubigeo: place?.code ?? null,
+              district: place?.district ?? null,
+              province: place?.province ?? null,
+              department: place?.department ?? null,
               reference: dto.delivery.reference?.trim() || null,
               eta:
                 shipping.mode === 'LIMA'
@@ -652,6 +659,23 @@ export class CheckoutService implements OnModuleInit, OnModuleDestroy {
     return Boolean(order.expiresAt && order.expiresAt.getTime() <= Date.now());
   }
 
+  /** Home deliveries need a real district whose zone matches the chosen rate. */
+  private deliveryPlace(mode: ShippingMode, ubigeo: string | undefined): UbigeoDistrict | null {
+    if (mode === 'PICKUP') return null;
+    const place = ubigeo ? findUbigeo(ubigeo) : null;
+    if (!place) {
+      throw new BadRequestException('Selecciona el departamento, la provincia y el distrito.');
+    }
+    if (shippingZone(place.code) !== mode) {
+      throw new BadRequestException(
+        mode === 'LIMA'
+          ? 'Ese distrito no está en Lima Metropolitana ni Callao. Elige el envío a provincias.'
+          : 'Ese distrito está en Lima Metropolitana o Callao. Elige el envío a Lima.',
+      );
+    }
+    return place;
+  }
+
   private newCode(): string {
     let code = 'P';
     for (let i = 0; i < 6; i++) code += CODE_ALPHABET[randomInt(CODE_ALPHABET.length)];
@@ -660,7 +684,9 @@ export class CheckoutService implements OnModuleInit, OnModuleDestroy {
 
   private view(order: FullOrder): PublicOrder {
     const delivery = (order.delivery ?? {}) as Partial<DeliveryRecord>;
-    const address = [delivery.address, delivery.district, delivery.city].filter(Boolean).join(', ');
+    const address = [delivery.address, delivery.district, delivery.province, delivery.department]
+      .filter(Boolean)
+      .join(', ');
     return {
       id: order.id,
       code: order.code ?? order.id.slice(-6).toUpperCase(),

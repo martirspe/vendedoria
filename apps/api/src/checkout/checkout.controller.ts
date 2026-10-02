@@ -1,8 +1,11 @@
 import { Body, Controller, Get, Headers, HttpCode, Param, Post, Query, Res } from '@nestjs/common';
 import { ApiTags } from '@nestjs/swagger';
 import type { FastifyReply } from 'fastify';
+import type { UbigeoDistrict } from '@vendedoria/contracts';
 import { Public } from '../common/decorators/auth.decorators';
+import { RateLimit } from '../rate-limit/rate-limit.decorator';
 import { StorefrontPublicService } from '../storefront/storefront-public.service';
+import { UBIGEO_DISTRICTS } from '../ubigeo/ubigeo';
 import { CheckoutService } from './checkout.service';
 import {
   CouponPreviewDto,
@@ -23,7 +26,20 @@ export class CheckoutController {
     private readonly checkout: CheckoutService,
   ) {}
 
+  /** INEI district list for the delivery selects; identical for every store. */
+  @Get('ubigeos')
+  async ubigeos(
+    @Param('slug') slug: string,
+    @Headers(PREVIEW_HEADER) preview: string | undefined,
+    @Res({ passthrough: true }) reply: FastifyReply,
+  ): Promise<UbigeoDistrict[]> {
+    await this.storefront.access(slug, preview);
+    reply.header('Cache-Control', 'public, max-age=86400');
+    return UBIGEO_DISTRICTS;
+  }
+
   @Post('coupons/preview')
+  @RateLimit('store-coupon', 10)
   @HttpCode(200)
   async previewCoupon(
     @Param('slug') slug: string,
@@ -35,6 +51,7 @@ export class CheckoutController {
   }
 
   @Post('checkout')
+  @RateLimit('store-checkout', 10)
   async create(
     @Param('slug') slug: string,
     @Body() dto: CreateCheckoutDto,
@@ -55,6 +72,7 @@ export class CheckoutController {
   }
 
   @Post('orders/:id/pay')
+  @RateLimit('store-pay', 10)
   @HttpCode(200)
   async pay(
     @Param('slug') slug: string,
@@ -66,6 +84,7 @@ export class CheckoutController {
   }
 
   @Post('orders/:id/cancel')
+  @RateLimit('store-order-action', 20)
   @HttpCode(200)
   async cancel(
     @Param('slug') slug: string,
@@ -77,6 +96,7 @@ export class CheckoutController {
   }
 
   @Post('orders/:id/simulate')
+  @RateLimit('store-order-action', 20)
   @HttpCode(200)
   async simulate(
     @Param('slug') slug: string,

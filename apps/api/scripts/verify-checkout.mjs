@@ -15,24 +15,33 @@ const check = (name, ok, detail = '') => {
   console.log(`${ok ? 'OK  ' : 'FAIL'} ${name}${detail ? ` · ${detail}` : ''}`);
 };
 
-async function post(path, body, store = slug) {
+// Each simulated buyer gets its own documentation IP (RFC 5737) so the per-IP rate limit
+// applies as it would to real buyers; the API trusts X-Forwarded-For from loopback.
+const buyerIp = (n) => `203.0.113.${n}`;
+
+async function post(path, body, store = slug, ip = buyerIp(200)) {
   const res = await fetch(`${API}/${store}/${path}`, {
     method: 'POST',
-    headers: { 'content-type': 'application/json' },
+    headers: { 'content-type': 'application/json', 'x-forwarded-for': ip },
     body: JSON.stringify(body),
   });
   return { status: res.status, body: await res.json().catch(() => null) };
 }
 
 const checkout = (n, extra = {}) =>
-  post('checkout', {
-    checkoutKey: randomUUID(),
-    items: [{ handle, quantity: 1 }],
-    customer: { name: 'Prueba Concurrencia', email: `buyer${n}@verify.test`, phone: '987654321' },
-    delivery: { mode: 'PICKUP' },
-    acceptTerms: true,
-    ...extra,
-  });
+  post(
+    'checkout',
+    {
+      checkoutKey: randomUUID(),
+      items: [{ handle, quantity: 1 }],
+      customer: { name: 'Prueba Concurrencia', email: `buyer${n}@verify.test`, phone: '987654321' },
+      delivery: { mode: 'PICKUP' },
+      acceptTerms: true,
+      ...extra,
+    },
+    slug,
+    buyerIp(n),
+  );
 
 const tenant = await prisma.tenant.findUniqueOrThrow({ where: { slug } });
 const product = await prisma.product.findFirstOrThrow({ where: { tenantId: tenant.id, handle } });
@@ -104,6 +113,38 @@ try {
     check('Cupón liberado se puede volver a usar', again.status === 201, `${again.status}`);
     if (again.status === 201) await post(`orders/${again.body.id}/cancel`, { token: again.body.token });
   }
+
+  // 7. Ubigeo: the district must exist and belong to the chosen shipping zone.
+  const storefront = await prisma.storefront.findUniqueOrThrow({ where: { tenantId: tenant.id } });
+  const home = (n, mode, ubigeo) =>
+    checkout(n, { delivery: { mode, ubigeo, address: 'Av. Larco 345, dpto. 501' } });
+  if (storefront.deliveryEnabled && storefront.shippingLimaCents !== null) {
+    const lima = await home(21, 'LIMA', '150122');
+    check(
+      'Ubigeo de Miraflores con tarifa de Lima',
+      lima.status === 201 && lima.body.delivery.address.endsWith('Miraflores, Lima, Lima'),
+      `${lima.status} ${lima.body?.delivery?.address ?? ''}`,
+    );
+    if (lima.status === 201) await post(`orders/${lima.body.id}/cancel`, { token: lima.body.token });
+    const callao = await home(22, 'LIMA', '070101');
+    check('Callao usa la tarifa de Lima', callao.status === 201, `${callao.status}`);
+    if (callao.status === 201) await post(`orders/${callao.body.id}/cancel`, { token: callao.body.token });
+  }
+  if (storefront.deliveryEnabled && storefront.shippingProvinceCents !== null) {
+    const mismatch = await home(23, 'PROVINCE', '150122');
+    check('Miraflores no se acepta como provincia', mismatch.status === 400, `${mismatch.status}`);
+  }
+  const unknown = await home(24, 'LIMA', '999999');
+  check('Ubigeo inexistente → 400', unknown.status === 400, `${unknown.status}`);
+
+  // 8. Rate limit: coupon guesses from one IP stop at 10 per minute; other buyers are unaffected.
+  const guesses = [];
+  for (let i = 0; i < 11; i++) {
+    guesses.push(await post('coupons/preview', { items: [{ handle, quantity: 1 }], code: 'NOEXISTE' }, slug, buyerIp(250)));
+  }
+  check('Límite de intentos de cupón → 429', guesses.at(-1).status === 429 && guesses[0].status !== 429, guesses.map((g) => g.status).join(','));
+  const neighbour = await post('coupons/preview', { items: [{ handle, quantity: 1 }], code: 'NOEXISTE' }, slug, buyerIp(251));
+  check('Otra IP no queda bloqueada', neighbour.status !== 429, `${neighbour.status}`);
 } finally {
   await prisma.product.update({ where: { id: product.id }, data: original });
   await prisma.couponRedemption.deleteMany({ where: { coupon: { code: couponCode, tenantId: tenant.id } } });

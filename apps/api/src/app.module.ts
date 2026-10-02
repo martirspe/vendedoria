@@ -16,6 +16,7 @@ import { KnowledgeModule } from './knowledge/knowledge.module';
 import { StorefrontModule } from './storefront/storefront.module';
 import { CouponsModule } from './coupons/coupons.module';
 import { CheckoutModule } from './checkout/checkout.module';
+import { RateLimitModule } from './rate-limit/rate-limit.module';
 import { validateEnv } from './config/env.validation';
 
 @Module({
@@ -27,6 +28,7 @@ import { validateEnv } from './config/env.validation';
     PrismaModule,
     HealthModule,
     AuthModule,
+    RateLimitModule,
     TenantsModule,
     AgentsModule,
     KnowledgeModule,

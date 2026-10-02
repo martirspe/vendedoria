@@ -70,16 +70,31 @@ h1 {
 }
 
 .field input,
+.field select,
 .coupon input {
   min-height: var(--ds-touch-target);
   padding: 0 var(--ds-space-4);
   border: 1px solid var(--store-border);
   border-radius: var(--store-radius-control);
   background: var(--store-bg);
+  color: inherit;
+  font: inherit;
+  font-weight: 500;
 }
 
-.field input.ng-invalid.ng-touched {
+.field input.ng-invalid.ng-touched,
+.field select.ng-invalid.ng-touched {
   border-color: var(--store-danger);
+}
+
+.link-button {
+  padding: 0;
+  border: 0;
+  background: none;
+  color: inherit;
+  font: inherit;
+  text-decoration: underline;
+  cursor: pointer;
 }
 
 .field__error {

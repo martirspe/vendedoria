@@ -9,7 +9,7 @@ import {
 import { HttpErrorResponse } from '@angular/common/http';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
-import type { CouponPreviewResult, ShippingMode } from '@vendedoria/contracts';
+import type { CouponPreviewResult, ShippingMode, UbigeoDistrict } from '@vendedoria/contracts';
 import { DsIconComponent } from '@vendedoria/ui';
 import { CartService } from '../../core/cart.service';
 import { MoneyPipe } from '../../core/money.pipe';
@@ -18,6 +18,10 @@ import { StoreApiService } from '../../core/store-api.service';
 import { StoreStateService } from '../../core/store-state.service';
 
 const CHECKOUT_KEY = 'vendedoria-checkout-key';
+
+/** Same rule as the API: Lima Metropolitana (1501) and Callao (07) use the Lima rate. */
+const shippingZone = (code: string): ShippingMode =>
+  code.startsWith('1501') || code.startsWith('07') ? 'LIMA' : 'PROVINCE';
 
 @Component({
   selector: 'store-checkout-page',
@@ -46,13 +50,31 @@ export class CheckoutPage {
     phone: ['', [Validators.required, Validators.pattern(/^9\d{8}$/)]],
     document: ['', [Validators.pattern(/^\d{8,12}$/)]],
     mode: ['' as ShippingMode | '', [Validators.required]],
+    department: [''],
+    province: [''],
+    ubigeo: [''],
     address: ['', [Validators.maxLength(200)]],
-    district: ['', [Validators.maxLength(80)]],
-    city: ['', [Validators.maxLength(80)]],
     reference: ['', [Validators.maxLength(180)]],
     couponCode: ['', [Validators.maxLength(40)]],
     acceptTerms: [false, [Validators.requiredTrue]],
   });
+
+  readonly ubigeos = signal<UbigeoDistrict[]>([]);
+  readonly ubigeoState = signal<'idle' | 'loading' | 'ready' | 'error'>('idle');
+  readonly department = signal('');
+  readonly province = signal('');
+  readonly homeDelivery = computed(() => this.mode() === 'LIMA' || this.mode() === 'PROVINCE');
+  private readonly zoneDistricts = computed(() => {
+    const mode = this.mode();
+    return this.ubigeos().filter((d) => shippingZone(d.code) === mode);
+  });
+  readonly departments = computed(() => [...new Set(this.zoneDistricts().map((d) => d.department))].sort());
+  readonly provinces = computed(() =>
+    [...new Set(this.zoneDistricts().filter((d) => d.department === this.department()).map((d) => d.province))].sort(),
+  );
+  readonly districts = computed(() =>
+    this.zoneDistricts().filter((d) => d.department === this.department() && d.province === this.province()),
+  );
 
   readonly options = computed(() => this.store()?.shipping.options ?? []);
   readonly selectedOption = computed(() => this.options().find((o) => o.mode === this.mode()) ?? null);
@@ -80,7 +102,11 @@ export class CheckoutPage {
     this.form.controls.mode.valueChanges.subscribe((mode) => {
       this.mode.set(mode || null);
       this.syncAddressValidators(mode || null);
+      this.selectDepartment('');
+      if (mode === 'LIMA' || mode === 'PROVINCE') void this.loadUbigeos();
     });
+    this.form.controls.department.valueChanges.subscribe((value) => this.selectDepartment(value, false));
+    this.form.controls.province.valueChanges.subscribe((value) => this.selectProvince(value, false));
     effect(() => {
       if (this.cart.ready() && !this.cart.lines().length && !this.submitting()) {
         void this.router.navigate(['/carrito']);
@@ -92,6 +118,35 @@ export class CheckoutPage {
         this.form.controls.mode.setValue(options[0].mode);
       }
     });
+  }
+
+  async loadUbigeos(): Promise<void> {
+    if (this.ubigeoState() === 'loading' || this.ubigeoState() === 'ready') return;
+    this.ubigeoState.set('loading');
+    try {
+      this.ubigeos.set(await this.api.ubigeos());
+      this.ubigeoState.set('ready');
+      this.selectDepartment('');
+    } catch {
+      this.ubigeoState.set('error');
+    }
+  }
+
+  /** Resets the dependent selects and preselects the only option when there is one. */
+  private selectDepartment(value: string, write = true): void {
+    const departments = this.departments();
+    const department = value || (departments.length === 1 ? departments[0] : '');
+    this.department.set(department);
+    if (write) this.form.controls.department.setValue(department, { emitEvent: false });
+    this.selectProvince('');
+  }
+
+  private selectProvince(value: string, write = true): void {
+    const provinces = this.provinces();
+    const province = value || (provinces.length === 1 ? provinces[0] : '');
+    this.province.set(province);
+    if (write || province !== value) this.form.controls.province.setValue(province, { emitEvent: false });
+    this.form.controls.ubigeo.setValue('', { emitEvent: false });
   }
 
   async applyCoupon(): Promise<void> {
@@ -145,9 +200,8 @@ export class CheckoutPage {
           mode,
           ...(mode !== 'PICKUP'
             ? {
+                ubigeo: v.ubigeo,
                 address: v.address.trim(),
-                district: v.district.trim(),
-                ...(mode === 'PROVINCE' ? { city: v.city.trim() } : {}),
               }
             : {}),
           ...(v.reference.trim() ? { reference: v.reference.trim() } : {}),
@@ -185,16 +239,19 @@ export class CheckoutPage {
   }
 
   private syncAddressValidators(mode: ShippingMode | null): void {
-    const { address, district, city } = this.form.controls;
+    const { address, department, province, ubigeo } = this.form.controls;
     const delivery = mode === 'LIMA' || mode === 'PROVINCE';
     address.setValidators(delivery ? [Validators.required, Validators.minLength(5), Validators.maxLength(200)] : []);
-    district.setValidators(delivery ? [Validators.required, Validators.minLength(2), Validators.maxLength(80)] : []);
-    city.setValidators(mode === 'PROVINCE' ? [Validators.required, Validators.minLength(2), Validators.maxLength(80)] : []);
-    for (const control of [address, district, city]) control.updateValueAndValidity({ emitEvent: false });
+    for (const control of [department, province, ubigeo]) {
+      control.setValidators(delivery ? [Validators.required] : []);
+    }
+    for (const control of [address, department, province, ubigeo]) {
+      control.updateValueAndValidity({ emitEvent: false });
+    }
   }
 
   private messageFrom(error: unknown, fallback: string): string {
-    if (error instanceof HttpErrorResponse && [400, 403, 404, 409].includes(error.status)) {
+    if (error instanceof HttpErrorResponse && [400, 403, 404, 409, 429].includes(error.status)) {
       const message = error.error?.message;
       if (typeof message === 'string') return message;
       if (Array.isArray(message) && typeof message[0] === 'string') return message[0];

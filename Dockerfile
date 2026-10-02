@@ -34,6 +34,7 @@ ENV NODE_ENV=production PORT=3000
 WORKDIR /app
 COPY --from=api-dependencies --chown=node:node /app/node_modules ./node_modules
 COPY --from=api-build --chown=node:node /app/apps/api/dist ./apps/api/dist
+COPY --from=api-build --chown=node:node /app/apps/api/data/ubigeos.json ./apps/api/data/ubigeos.json
 COPY --from=api-build --chown=node:node /app/apps/api/package.json ./apps/api/package.json
 WORKDIR /app/apps/api
 USER node

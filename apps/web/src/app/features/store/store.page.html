@@ -125,6 +125,7 @@
             <span>Hago envíos a domicilio</span>
           </label>
           @if (form.controls.deliveryEnabled.value) {
+            <p class="hint">El comprador elige su distrito de la lista oficial del INEI. Lima Metropolitana y Callao pagan la tarifa de Lima; el resto del país, la de provincias.</p>
             <div class="row">
               <label>
                 <span class="label-text">Costo en Lima (S/) <span class="optional">Vacío = no envío a Lima</span></span>

@@ -139,13 +139,21 @@ export type CheckoutRequest = {
   customer: { name: string; email: string; phone: string; document?: string };
   delivery: {
     mode: ShippingMode;
+    /** INEI district code; required for LIMA and PROVINCE and must belong to that zone. */
+    ubigeo?: string;
     address?: string;
-    district?: string;
-    city?: string;
     reference?: string;
   };
   couponCode?: string;
   acceptTerms: true;
+};
+
+/** Peruvian district (INEI ubigeo). Lima Metropolitana and Callao ship at the LIMA rate. */
+export type UbigeoDistrict = {
+  code: string;
+  department: string;
+  province: string;
+  district: string;
 };
 
 export type PublicOrderStatus = 'PENDING_PAYMENT' | 'PAID' | 'FULFILLING' | 'SHIPPED' | 'COMPLETED' | 'CANCELLED';

@@ -296,7 +296,7 @@ export class OrderPage {
   }
 
   private messageFrom(error: unknown, fallback: string): string {
-    if (error instanceof HttpErrorResponse && [400, 403, 404, 409].includes(error.status)) {
+    if (error instanceof HttpErrorResponse && [400, 403, 404, 409, 429].includes(error.status)) {
       const message = error.error?.message;
       if (typeof message === 'string') return message;
       if (Array.isArray(message) && typeof message[0] === 'string') return message[0];

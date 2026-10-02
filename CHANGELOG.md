@@ -3,6 +3,11 @@
 ## [Unreleased]
 
 ### Added
+- Rate limiting per client IP (HMAC-hashed, Postgres-backed) on store checkout, coupon preview, payment, order actions, login and register; 429 with a Spanish message
+- Peruvian ubigeos (INEI 2025, 1 892 districts) in the store checkout: department → province → district selects; the server validates the district and that Lima Metropolitana/Callao use the Lima rate
+- Web store checkout per tenant: Mercado Pago Card Brick and Yape with per-tenant encrypted credentials and webhook, stock reservation with 15-minute expiry, idempotent orders, coupons, shipping rules, order page and confirmation email
+- Legal center per store (terms, privacy, cookies, shipping, returns, promotions) and publish requirements (legal identity, complaints book, contact email, delivery)
+- Console pages Cobros (Mercado Pago account) and Cupones; WhatsApp sales agent understands web cart orders and links to product pages
 - Help/Learn page (`/app/help`) with in-app guides and Ctrl+K hint
 - Console command palette (Ctrl+K): quick nav + Connect WhatsApp + Test seller
 - Plan quota enforcement (products + new conversations) with `/billing/usage` banner

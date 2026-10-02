@@ -1,6 +1,7 @@
 import { Body, Controller, Post } from '@nestjs/common';
 import { ApiTags } from '@nestjs/swagger';
 import { Public } from '../common/decorators/auth.decorators';
+import { RateLimit } from '../rate-limit/rate-limit.decorator';
 import { AuthService } from './auth.service';
 import { LoginDto, RefreshTokenDto, RegisterDto } from './dto/auth.dto';
 
@@ -10,12 +11,14 @@ export class AuthController {
   constructor(private readonly authService: AuthService) {}
 
   @Public()
+  @RateLimit('auth-register', 5)
   @Post('register')
   register(@Body() dto: RegisterDto) {
     return this.authService.register(dto);
   }
 
   @Public()
+  @RateLimit('auth-login', 10)
   @Post('login')
   login(@Body() dto: LoginDto) {
     return this.authService.login(dto);

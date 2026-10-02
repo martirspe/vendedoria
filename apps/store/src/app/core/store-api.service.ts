@@ -11,6 +11,7 @@ import type {
   PublicProductList,
   PublicProductSort,
   StorefrontView,
+  UbigeoDistrict,
 } from '@vendedoria/contracts';
 import { STORE_PROXY_PREFIX } from './store-context';
 
@@ -50,6 +51,10 @@ export class StoreApiService {
         `${STORE_PROXY_PREFIX}/products/${encodeURIComponent(handle)}`,
       ),
     );
+  }
+
+  ubigeos(): Promise<UbigeoDistrict[]> {
+    return firstValueFrom(this.http.get<UbigeoDistrict[]>(`${STORE_PROXY_PREFIX}/ubigeos`));
   }
 
   previewCoupon(body: {

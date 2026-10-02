@@ -95,19 +95,10 @@ export class CheckoutDeliveryDto {
   @MaxLength(200)
   address?: string;
 
-  @ApiPropertyOptional()
+  @ApiPropertyOptional({ example: '150122', description: 'INEI district code (ubigeo) for home delivery' })
   @ValidateIf((o: CheckoutDeliveryDto) => o.mode !== 'PICKUP')
-  @IsString()
-  @MinLength(2)
-  @MaxLength(80)
-  district?: string;
-
-  @ApiPropertyOptional({ description: 'Province / department for PROVINCE deliveries' })
-  @ValidateIf((o: CheckoutDeliveryDto) => o.mode === 'PROVINCE')
-  @IsString()
-  @MinLength(2)
-  @MaxLength(80)
-  city?: string;
+  @Matches(/^\d{6}$/, { message: 'Selecciona el departamento, la provincia y el distrito.' })
+  ubigeo?: string;
 
   @ApiPropertyOptional()
   @IsOptional()

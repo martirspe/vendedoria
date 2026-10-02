@@ -24,7 +24,7 @@ export function shippingOptions(rules: ShippingRules): ShippingOption[] {
   if (rules.deliveryEnabled && rules.shippingLimaCents !== null) {
     options.push({
       mode: 'LIMA',
-      label: 'Envío a domicilio en Lima',
+      label: 'Envío a Lima Metropolitana y Callao',
       cents: rules.shippingLimaCents,
       eta: rules.deliveryDaysLima,
     });

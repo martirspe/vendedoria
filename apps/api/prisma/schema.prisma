@@ -643,3 +643,13 @@ model Payment {
 
   @@index([tenantId, flow, status])
 }
+
+/// Per-minute request counters for anonymous endpoints. `key` is an HMAC of IP, bucket and
+/// window, so raw IPs are never stored. Rows are swept after they expire.
+model RateLimitHit {
+  key       String   @id
+  count     Int      @default(1)
+  expiresAt DateTime
+
+  @@index([expiresAt])
+}

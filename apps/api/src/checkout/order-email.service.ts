@@ -53,11 +53,14 @@ export class OrderEmailService {
       label?: string;
       address?: string | null;
       district?: string | null;
-      city?: string | null;
+      province?: string | null;
+      department?: string | null;
       eta?: string | null;
       free?: boolean;
     };
-    const place = [delivery.address, delivery.district, delivery.city].filter(Boolean).join(', ');
+    const place = [delivery.address, delivery.district, delivery.province, delivery.department]
+      .filter(Boolean)
+      .join(', ');
     const html = `<div style="font-family:Arial,sans-serif;max-width:600px;margin:auto;padding:24px;color:#0b0d12">
 <p style="font-weight:700">${esc(store.displayName)}</p>
 <h1 style="font-size:22px">Gracias, ${esc(order.customerName)}. Tu pago está confirmado.</h1>

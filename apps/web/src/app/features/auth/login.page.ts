@@ -1,3 +1,4 @@
+import { HttpErrorResponse } from '@angular/common/http';
 import { ChangeDetectionStrategy, Component, inject, signal } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
@@ -37,8 +38,12 @@ export class LoginPage {
     try {
       await this.authApi.login(this.form.getRawValue());
       await this.router.navigateByUrl('/app/products');
-    } catch {
-      this.errorMessage.set('Email o contraseña incorrectos.');
+    } catch (error) {
+      this.errorMessage.set(
+        error instanceof HttpErrorResponse && error.status === 429
+          ? 'Demasiados intentos seguidos. Espera un minuto y vuelve a intentarlo.'
+          : 'Email o contraseña incorrectos.',
+      );
     } finally {
       this.submitting.set(false);
     }

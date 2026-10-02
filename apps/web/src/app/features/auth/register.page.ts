@@ -48,7 +48,9 @@ export class RegisterPage {
       this.errorMessage.set(
         emailTaken
           ? 'Ya existe una cuenta con este email.'
-          : 'No pudimos crear la cuenta. Revisa los datos e inténtalo de nuevo.',
+          : error instanceof HttpErrorResponse && error.status === 429
+            ? 'Demasiados intentos seguidos. Espera un minuto y vuelve a intentarlo.'
+            : 'No pudimos crear la cuenta. Revisa los datos e inténtalo de nuevo.',
       );
     } finally {
       this.submitting.set(false);

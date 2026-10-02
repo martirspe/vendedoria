@@ -58,7 +58,52 @@
           @if (s.shipping.freeShippingFromCents && missingForFree() > 0) {
             <p class="hint">Te faltan {{ missingForFree() | money }} para el envío gratis.</p>
           }
-          @if (mode() === 'LIMA' || mode() === 'PROVINCE') {
+          @if (homeDelivery()) {
+            @switch (ubigeoState()) {
+              @case ('error') {
+                <p class="warning" role="alert">
+                  No pudimos cargar la lista de distritos.
+                  <button type="button" class="link-button" (click)="loadUbigeos()">Reintentar</button>
+                </p>
+              }
+              @case ('ready') {
+                <div class="row">
+                  <label class="field">
+                    <span>Departamento</span>
+                    <select formControlName="department" autocomplete="address-level1">
+                      <option value="">Selecciona</option>
+                      @for (d of departments(); track d) {
+                        <option [value]="d">{{ d }}</option>
+                      }
+                    </select>
+                  </label>
+                  <label class="field">
+                    <span>Provincia</span>
+                    <select formControlName="province" autocomplete="address-level2">
+                      <option value="">Selecciona</option>
+                      @for (p of provinces(); track p) {
+                        <option [value]="p">{{ p }}</option>
+                      }
+                    </select>
+                  </label>
+                </div>
+                <label class="field">
+                  <span>Distrito</span>
+                  <select formControlName="ubigeo" autocomplete="address-level3">
+                    <option value="">Selecciona tu distrito</option>
+                    @for (d of districts(); track d.code) {
+                      <option [value]="d.code">{{ d.district }}</option>
+                    }
+                  </select>
+                  @if (form.controls.ubigeo.touched && form.controls.ubigeo.invalid) {
+                    <small class="field__error">Selecciona el departamento, la provincia y el distrito.</small>
+                  }
+                </label>
+              }
+              @default {
+                <p class="hint" aria-busy="true">Cargando distritos…</p>
+              }
+            }
             <label class="field">
               <span>Dirección</span>
               <input formControlName="address" autocomplete="street-address" maxlength="200" placeholder="Av., calle, número, dpto." />
@@ -66,24 +111,6 @@
                 <small class="field__error">Escribe la dirección de entrega.</small>
               }
             </label>
-            <div class="row">
-              <label class="field">
-                <span>Distrito</span>
-                <input formControlName="district" autocomplete="address-level3" maxlength="80" />
-                @if (form.controls.district.touched && form.controls.district.invalid) {
-                  <small class="field__error">Indica el distrito.</small>
-                }
-              </label>
-              @if (mode() === 'PROVINCE') {
-                <label class="field">
-                  <span>Provincia y departamento</span>
-                  <input formControlName="city" autocomplete="address-level2" maxlength="80" placeholder="Arequipa, Arequipa" />
-                  @if (form.controls.city.touched && form.controls.city.invalid) {
-                    <small class="field__error">Indica la provincia.</small>
-                  }
-                </label>
-              }
-            </div>
           }
           <label class="field">
             <span>Referencia o indicaciones <em>Opcional</em></span>

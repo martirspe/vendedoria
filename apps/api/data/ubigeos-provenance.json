@@ -1,0 +1,9 @@
+{
+  "compiledOn": "2026-10-01",
+  "districts": 1892,
+  "departments": 25,
+  "provinces": 196,
+  "source": "https://github.com/yull23/ubigeos_peru/blob/main/databases/ubigeo_inei_2025.csv",
+  "newDistrictVerification": "https://cdn.www.gob.pe/uploads/document/file/9970947/8132784-reporte-trimestral-de-finanzas-y-reglas-fiscales-gr-gl-1trim2026.pdf",
+  "notes": "Snapshot de 1891 distritos INEI 2025 más Santa Rosa de Loreto (160405), confirmado en el anexo municipal MEF 2026. Coordenadas de capitales distritales para estimación geográfica, no distancia de ruta ni tarifa oficial. Revisar nuevos ubigeos al actualizar el catálogo."
+}

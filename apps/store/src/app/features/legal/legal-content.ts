@@ -271,10 +271,11 @@ export function legalDocs(store: StorefrontView): LegalDoc[] {
             ['Categoría', 'Datos', 'Origen'],
             [
               ['Identificación y contacto', 'Nombre, correo, celular y, si lo indicas, DNI o CE', 'Tú, en el checkout'],
-              ['Entrega', 'Dirección, distrito, provincia y referencia', 'Tú, en el checkout'],
+              ['Entrega', 'Departamento, provincia, distrito (ubigeo), dirección y referencia', 'Tú, en el checkout'],
               ['Pedido', 'Productos, montos, cupón usado y estado del pago', 'La tienda'],
               ...(online ? [['Pago', 'Estado y referencia de la operación (no el número de tarjeta)', 'Mercado Pago'] as Inline[]] : []),
               ...(whatsapp ? [['Conversaciones', 'Mensajes que nos envías por WhatsApp', 'Tú'] as Inline[]] : []),
+              ['Técnicos y de seguridad', 'Tu dirección IP, que se usa transformada de forma irreversible y por unos minutos para limitar intentos abusivos', 'Tu navegador'],
             ],
           ),
           p('No almacenamos el número, la fecha de vencimiento ni el código de seguridad de tu tarjeta, ni tu código de aprobación de Yape. Por favor, no nos envíes datos sensibles, como información de salud.'),
