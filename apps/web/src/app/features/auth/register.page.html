@@ -26,7 +26,12 @@
     </label>
 
     @if (errorMessage(); as error) {
-      <p class="auth__error" role="alert">{{ error }}</p>
+      <p class="auth__error" role="alert">
+        {{ error }}
+        @if (emailTaken()) {
+          <a routerLink="/auth/login">Inicia sesión</a>
+        }
+      </p>
     }
 
     <ds-button type="submit" [disabled]="submitting()">

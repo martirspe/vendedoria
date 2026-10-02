@@ -1,3 +1,4 @@
+import { HttpErrorResponse } from '@angular/common/http';
 import { ChangeDetectionStrategy, Component, inject, signal } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
@@ -18,6 +19,7 @@ export class RegisterPage {
   private readonly router = inject(Router);
 
   readonly errorMessage = signal<string | null>(null);
+  readonly emailTaken = signal(false);
   readonly submitting = signal(false);
 
   readonly form = this.fb.nonNullable.group({
@@ -39,9 +41,14 @@ export class RegisterPage {
     try {
       await this.authApi.register(this.form.getRawValue());
       await this.router.navigateByUrl('/app/products');
-    } catch {
+    } catch (error) {
+      const emailTaken =
+        error instanceof HttpErrorResponse && error.status === 409;
+      this.emailTaken.set(emailTaken);
       this.errorMessage.set(
-        'No pudimos crear la cuenta. Revisa los datos e inténtalo de nuevo.',
+        emailTaken
+          ? 'Ya existe una cuenta con este email.'
+          : 'No pudimos crear la cuenta. Revisa los datos e inténtalo de nuevo.',
       );
     } finally {
       this.submitting.set(false);
