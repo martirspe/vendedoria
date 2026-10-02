@@ -1,0 +1,84 @@
+<section class="store-container catalog">
+  <header class="catalog__header">
+    <div>
+      <h1>{{ heading() }}</h1>
+      <p class="catalog__count" aria-live="polite">
+        {{ list().total }} {{ list().total === 1 ? 'producto' : 'productos' }}
+      </p>
+    </div>
+    <label class="catalog__sort">
+      <span>Ordenar por</span>
+      <select [value]="sort()" (change)="changeSort($any($event.target).value)">
+        @for (option of sortOptions; track option.value) {
+          <option [value]="option.value">{{ option.label }}</option>
+        }
+      </select>
+    </label>
+  </header>
+
+  @if (store()?.categories?.length) {
+    <nav class="catalog__filters" aria-label="Filtrar por categoría">
+      <a
+        class="store-chip"
+        [class.is-active]="!categoria()"
+        routerLink="/productos"
+        [queryParams]="{ q: q() || null, orden: orden() || null }"
+        [attr.aria-current]="!categoria() ? 'page' : null"
+        >Todos</a
+      >
+      @for (category of store()!.categories; track category) {
+        <a
+          class="store-chip"
+          [class.is-active]="categoria() === category"
+          routerLink="/productos"
+          [queryParams]="{ categoria: category, q: q() || null, orden: orden() || null }"
+          [attr.aria-current]="categoria() === category ? 'page' : null"
+          >{{ category }}</a
+        >
+      }
+    </nav>
+  }
+
+  @if (list().items.length) {
+    <div class="store-grid">
+      @for (product of list().items; track product.handle) {
+        <store-product-card [product]="product" />
+      }
+    </div>
+
+    @if (totalPages() > 1) {
+      <nav class="pagination" aria-label="Paginación">
+        @if (list().page > 1) {
+          <a
+            class="store-btn store-btn--secondary"
+            routerLink="/productos"
+            [queryParams]="{ pagina: list().page - 1 > 1 ? list().page - 1 : null }"
+            queryParamsHandling="merge"
+            rel="prev"
+          >
+            <ds-icon name="chevronLeft" [size]="1" /> Anterior
+          </a>
+        }
+        <span>Página {{ list().page }} de {{ totalPages() }}</span>
+        @if (list().page < totalPages()) {
+          <a
+            class="store-btn store-btn--secondary"
+            routerLink="/productos"
+            [queryParams]="{ pagina: list().page + 1 }"
+            queryParamsHandling="merge"
+            rel="next"
+          >
+            Siguiente <ds-icon name="chevronRight" [size]="1" />
+          </a>
+        }
+      </nav>
+    }
+  } @else {
+    <div class="store-empty">
+      <ds-icon name="search" [size]="2" />
+      <h2>No encontramos productos</h2>
+      <p>Prueba con otra búsqueda o revisa todas las categorías.</p>
+      <a class="store-btn store-btn--secondary" routerLink="/productos">Ver todos los productos</a>
+    </div>
+  }
+</section>

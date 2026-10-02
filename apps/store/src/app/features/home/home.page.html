@@ -1,0 +1,78 @@
+@if (store(); as s) {
+  <section class="hero" [class.hero--image]="s.heroImageUrl">
+    @if (s.heroImageUrl) {
+      <img class="hero__image" [src]="s.heroImageUrl" alt="" fetchpriority="high" />
+    }
+    <div class="store-container hero__content">
+      <h1>{{ s.displayName }}</h1>
+      @if (s.tagline) {
+        <p class="hero__tagline">{{ s.tagline }}</p>
+      }
+      <div class="hero__actions">
+        <a class="store-btn store-btn--primary" routerLink="/productos">
+          Ver productos <ds-icon name="arrowRight" [size]="1.05" />
+        </a>
+        @if (whatsappHref(); as href) {
+          <a class="store-btn store-btn--whatsapp" [href]="href" target="_blank" rel="noopener">
+            <ds-icon name="message" [size]="1.05" /> Escríbenos por WhatsApp
+          </a>
+        }
+      </div>
+    </div>
+  </section>
+
+  @if (s.categories.length) {
+    <nav class="store-container categories" aria-label="Categorías">
+      @for (category of s.categories; track category) {
+        <a class="store-chip" routerLink="/productos" [queryParams]="{ categoria: category }">{{ category }}</a>
+      }
+    </nav>
+  }
+
+  <section class="store-container section" aria-labelledby="featured-title">
+    <header class="section__header">
+      <h2 id="featured-title">Destacados</h2>
+      @if (featured().total > featured().items.length) {
+        <a routerLink="/productos" class="section__more">
+          Ver los {{ featured().total }} productos <ds-icon name="chevronRight" [size]="1" />
+        </a>
+      }
+    </header>
+    @if (featured().items.length) {
+      <div class="store-grid">
+        @for (product of featured().items; track product.handle) {
+          <store-product-card [product]="product" />
+        }
+      </div>
+    } @else {
+      <div class="store-empty">
+        <ds-icon name="package" [size]="2" />
+        <h2>Pronto verás nuestros productos aquí</h2>
+        @if (whatsappHref(); as href) {
+          <p>Mientras tanto, <a [href]="href" target="_blank" rel="noopener">escríbenos por WhatsApp</a>.</p>
+        }
+      </div>
+    }
+  </section>
+
+  <section class="store-container section how" aria-labelledby="how-title">
+    <h2 id="how-title">Cómo comprar</h2>
+    <ol class="how__steps">
+      <li>
+        <span class="how__icon"><ds-icon name="shoppingBag" /></span>
+        <strong>Elige tus productos</strong>
+        <p>Agrégalos al carrito con la talla o versión que prefieras.</p>
+      </li>
+      <li>
+        <span class="how__icon"><ds-icon name="message" /></span>
+        <strong>Envía tu pedido por WhatsApp</strong>
+        <p>Te llega un mensaje listo con el detalle de tu compra.</p>
+      </li>
+      <li>
+        <span class="how__icon"><ds-icon name="check" /></span>
+        <strong>Confirmamos y coordinamos</strong>
+        <p>Te confirmamos stock, costo de envío y forma de pago antes de cobrar.</p>
+      </li>
+    </ol>
+  </section>
+}

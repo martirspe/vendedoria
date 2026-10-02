@@ -1,0 +1,144 @@
+@if (product(); as p) {
+  <div class="store-container product">
+    <nav class="breadcrumb" aria-label="Ruta">
+      <a routerLink="/">Inicio</a>
+      <ds-icon name="chevronRight" [size]="0.85" />
+      @if (p.categories[0]; as category) {
+        <a routerLink="/productos" [queryParams]="{ categoria: category }">{{ category }}</a>
+      } @else {
+        <a routerLink="/productos">Productos</a>
+      }
+      <ds-icon name="chevronRight" [size]="0.85" />
+      <span aria-current="page">{{ p.name }}</span>
+    </nav>
+
+    <div class="product__layout">
+      <section class="gallery" aria-label="Imágenes del producto">
+        <div class="gallery__main">
+          @if (activeImage(); as image) {
+            <img [src]="image" [alt]="p.name" width="800" height="800" fetchpriority="high" />
+          } @else {
+            <span class="gallery__placeholder" aria-hidden="true"><ds-icon name="image" [size]="3" /></span>
+          }
+        </div>
+        @if (gallery().length > 1) {
+          <div class="gallery__thumbs">
+            @for (image of gallery(); track image; let i = $index) {
+              <button
+                type="button"
+                class="gallery__thumb"
+                [class.is-active]="image === activeImage()"
+                [attr.aria-label]="'Ver imagen ' + (i + 1)"
+                [attr.aria-pressed]="image === activeImage()"
+                (click)="activeImage.set(image)"
+              >
+                <img [src]="image" alt="" loading="lazy" width="96" height="96" />
+              </button>
+            }
+          </div>
+        }
+      </section>
+
+      <section class="info">
+        @if (p.brand) {
+          <p class="info__brand">{{ p.brand }}</p>
+        }
+        <h1>{{ p.name }}</h1>
+
+        <p class="info__price">
+          @if (p.priceVaries && !selectedVariant()) {
+            <span class="info__from">Desde</span>
+          }
+          <strong>{{ priceCents() | money: p.currency }}</strong>
+          @if (p.compareAtPriceCents && p.compareAtPriceCents > priceCents()) {
+            <s>{{ p.compareAtPriceCents | money: p.currency }}</s>
+          }
+        </p>
+
+        @if (p.descriptionShort) {
+          <p class="info__lead">{{ p.descriptionShort }}</p>
+        }
+
+        @for (group of optionGroups(); track group.name) {
+          <fieldset class="options">
+            <legend>
+              {{ group.name }}: <strong>{{ selection()[group.name] ?? 'elige una opción' }}</strong>
+            </legend>
+            <div class="options__values">
+              @for (option of group.values; track option.value) {
+                <button
+                  type="button"
+                  class="options__value"
+                  [class.is-active]="isSelected(group.name, option.value)"
+                  [class.is-unavailable]="!option.available"
+                  [attr.aria-pressed]="isSelected(group.name, option.value)"
+                  (click)="select(group.name, option.value)"
+                >
+                  {{ option.value }}
+                </button>
+              }
+            </div>
+          </fieldset>
+        }
+
+        <p class="info__stock" [class.is-out]="!canAdd()" role="status">
+          @if (canAdd()) {
+            <ds-icon name="check" [size]="1" /> Disponible
+          } @else if (p.hasVariants && p.isAvailable) {
+            Esta combinación no está disponible
+          } @else {
+            Agotado por ahora
+          }
+        </p>
+
+        <div class="buy">
+          <div class="quantity" role="group" aria-label="Cantidad">
+            <button type="button" (click)="changeQuantity(-1)" [disabled]="quantity() <= 1" aria-label="Quitar uno">
+              <ds-icon name="minus" [size]="1" />
+            </button>
+            <output aria-live="polite">{{ quantity() }}</output>
+            <button type="button" (click)="changeQuantity(1)" [disabled]="quantity() >= 99" aria-label="Agregar uno">
+              <ds-icon name="plus" [size]="1" />
+            </button>
+          </div>
+          <button type="button" class="store-btn store-btn--primary buy__add" [disabled]="!canAdd()" (click)="addToCart()">
+            <ds-icon name="shoppingBag" [size]="1.1" /> Agregar al carrito
+          </button>
+        </div>
+
+        @if (added()) {
+          <p class="added" role="status">
+            <ds-icon name="check" [size]="1" /> Agregado al carrito.
+            <a routerLink="/carrito">Ver carrito y pedir</a>
+          </p>
+        }
+
+        @if (whatsappHref(); as href) {
+          <a class="store-btn store-btn--whatsapp store-btn--block" [href]="href" target="_blank" rel="noopener">
+            <ds-icon name="message" [size]="1.1" /> Consultar por WhatsApp
+          </a>
+        }
+
+        @if (p.descriptionFull) {
+          <div class="description">
+            <h2>Descripción</h2>
+            <p>{{ p.descriptionFull }}</p>
+          </div>
+        }
+      </section>
+    </div>
+
+    @if (p.related.length) {
+      <section class="related" aria-labelledby="related-title">
+        <h2 id="related-title">También te puede gustar</h2>
+        <div class="related__track">
+          @for (item of p.related; track item.handle) {
+            <store-product-card [product]="item" />
+          }
+        </div>
+      </section>
+    }
+  </div>
+} @else {
+  <store-not-found-page />
+}

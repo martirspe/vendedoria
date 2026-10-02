@@ -1,0 +1,95 @@
+<section class="store-container cart">
+  <h1>Tu carrito</h1>
+
+  @if (!cart.ready()) {
+    <p class="cart__loading" aria-busy="true">Cargando tu carrito…</p>
+  } @else if (cart.lines().length) {
+    <div class="cart__layout">
+      <ul class="lines" aria-label="Productos en el carrito">
+        @for (line of cart.lines(); track line.key) {
+          <li class="line">
+            <a class="line__media" [routerLink]="['/producto', line.handle]" tabindex="-1" aria-hidden="true">
+              @if (line.imageUrl) {
+                <img [src]="line.imageUrl" alt="" width="96" height="96" loading="lazy" />
+              } @else {
+                <ds-icon name="image" [size]="1.5" />
+              }
+            </a>
+            <div class="line__info">
+              <a class="line__name" [routerLink]="['/producto', line.handle]">{{ line.name }}</a>
+              @if (line.variantLabel) {
+                <span class="line__variant">{{ line.variantLabel }}</span>
+              }
+              <span class="line__unit">{{ line.unitCents | money: line.currency }} c/u</span>
+            </div>
+            <div class="line__controls">
+              <div class="quantity" role="group" [attr.aria-label]="'Cantidad de ' + line.name">
+                <button
+                  type="button"
+                  (click)="changeQuantity(line.key, line.quantity, -1)"
+                  [disabled]="line.quantity <= 1"
+                  aria-label="Quitar uno"
+                >
+                  <ds-icon name="minus" [size]="0.95" />
+                </button>
+                <output>{{ line.quantity }}</output>
+                <button
+                  type="button"
+                  (click)="changeQuantity(line.key, line.quantity, 1)"
+                  [disabled]="line.quantity >= 99"
+                  aria-label="Agregar uno"
+                >
+                  <ds-icon name="plus" [size]="0.95" />
+                </button>
+              </div>
+              <strong class="line__total">{{ line.unitCents * line.quantity | money: line.currency }}</strong>
+              <button
+                type="button"
+                class="line__remove"
+                (click)="cart.remove(line.key)"
+                [attr.aria-label]="'Quitar ' + line.name"
+              >
+                <ds-icon name="trash" [size]="1" />
+              </button>
+            </div>
+          </li>
+        }
+      </ul>
+
+      <aside class="summary" aria-labelledby="summary-title">
+        <h2 id="summary-title">Resumen</h2>
+        <dl>
+          <div>
+            <dt>Productos</dt>
+            <dd>{{ cart.count() }}</dd>
+          </div>
+          <div class="summary__total">
+            <dt>Subtotal</dt>
+            <dd>{{ cart.subtotalCents() | money }}</dd>
+          </div>
+        </dl>
+        @if (orderHref(); as href) {
+          <a class="store-btn store-btn--whatsapp store-btn--block" [href]="href" target="_blank" rel="noopener">
+            <ds-icon name="message" [size]="1.1" /> Enviar pedido por WhatsApp
+          </a>
+        } @else {
+          <p class="summary__warning" role="alert">Esta tienda aún no tiene un WhatsApp configurado para recibir pedidos.</p>
+        }
+        <p class="summary__note">
+          Aún no pagas nada. Te confirmaremos stock, costo de envío y forma de pago por WhatsApp.
+        </p>
+        <div class="summary__links">
+          <a routerLink="/productos">Seguir comprando</a>
+          <button type="button" (click)="cart.clear()">Vaciar carrito</button>
+        </div>
+      </aside>
+    </div>
+  } @else {
+    <div class="store-empty">
+      <ds-icon name="shoppingBag" [size]="2" />
+      <h2>Tu carrito está vacío</h2>
+      <p>Explora el catálogo y agrega lo que te guste.</p>
+      <a class="store-btn store-btn--primary" routerLink="/productos">Ver productos</a>
+    </div>
+  }
+</section>

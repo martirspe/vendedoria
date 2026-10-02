@@ -10,9 +10,11 @@
   "scripts": {
     "dev:api": "npm run start:dev -w @vendedoria/api",
     "dev:web": "npm run start -w @vendedoria/web",
-    "build": "npm run build -w @vendedoria/api && npm run build -w @vendedoria/web",
+    "dev:store": "npm run start -w @vendedoria/store",
+    "build": "npm run build -w @vendedoria/api && npm run build -w @vendedoria/web && npm run build -w @vendedoria/store",
     "build:api": "npm run build -w @vendedoria/api",
     "build:web": "npm run build -w @vendedoria/web",
+    "build:store": "npm run build -w @vendedoria/store",
     "lint": "npm run lint -w @vendedoria/api --if-present && npm run lint -w @vendedoria/web --if-present",
     "prisma:generate": "npm run prisma:generate -w @vendedoria/api",
     "prisma:migrate": "npm run prisma:migrate -w @vendedoria/api"

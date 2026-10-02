@@ -1,0 +1,26 @@
+/*
+ * Storefront tokens. Built on the Design System scale (spacing, radius, motion, type)
+ * with a neutral palette; --store-brand / --store-accent are overridden per tenant at runtime.
+ */
+
+:root {
+  --store-brand: #0b0d12;
+  --store-on-brand: #ffffff;
+  --store-accent: #5b8cff;
+
+  --store-bg: #ffffff;
+  --store-surface: #f6f7f9;
+  --store-surface-strong: #eceef2;
+  --store-text: #111318;
+  --store-muted: #5b6472;
+  --store-border: #e4e7ec;
+  --store-success: #12805c;
+  --store-danger: #c9353a;
+  --store-whatsapp: #128c4a;
+  --store-on-whatsapp: #ffffff;
+
+  --store-max-width: 1200px;
+  --store-radius-card: var(--ds-radius-lg);
+  --store-radius-control: var(--ds-radius-md);
+  --store-shadow-card: 0 1px 2px rgb(17 19 24 / 6%), 0 8px 24px rgb(17 19 24 / 6%);
+}

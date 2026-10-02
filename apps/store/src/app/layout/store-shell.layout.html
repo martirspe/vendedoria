@@ -1,0 +1,97 @@
+@if (store(); as s) {
+  <div
+    class="shell"
+    [style.--store-brand]="s.brandColor"
+    [style.--store-on-brand]="onBrand()"
+    [style.--store-accent]="s.accentColor"
+  >
+    <a class="skip-link" href="#contenido">Saltar al contenido</a>
+
+    @if (s.isPreview) {
+      <div class="preview-bar" role="status">
+        <ds-icon name="eye" [size]="1" />
+        <span>Vista previa: esta tienda aún no está publicada. Solo tú puedes verla con este enlace.</span>
+      </div>
+    }
+
+    <header class="header">
+      <div class="store-container header__inner">
+        <a class="brand" routerLink="/" [attr.aria-label]="s.displayName + ', inicio'">
+          @if (s.logoUrl) {
+            <img class="brand__logo" [src]="s.logoUrl" [alt]="s.displayName" height="40" />
+          } @else {
+            <span class="brand__name">{{ s.displayName }}</span>
+          }
+        </a>
+
+        <nav class="nav" aria-label="Principal">
+          <a routerLink="/" routerLinkActive="is-active" [routerLinkActiveOptions]="{ exact: true }">Inicio</a>
+          <a routerLink="/productos" routerLinkActive="is-active">Productos</a>
+        </nav>
+
+        <form class="search" role="search" action="/productos" method="get" (submit)="search($event, query.value)">
+          <label class="visually-hidden" for="store-search">Buscar productos</label>
+          <ds-icon name="search" [size]="1.05" />
+          <input #query id="store-search" type="search" name="q" placeholder="Buscar productos" maxlength="80" />
+        </form>
+
+        <a class="cart-link" routerLink="/carrito" [attr.aria-label]="'Carrito: ' + cart.count() + ' productos'">
+          <ds-icon name="shoppingBag" />
+          @if (cart.count() > 0) {
+            <span class="cart-link__badge" aria-hidden="true">{{ cart.count() }}</span>
+          }
+        </a>
+      </div>
+    </header>
+
+    <main id="contenido" class="main">
+      <router-outlet />
+    </main>
+
+    <footer class="footer">
+      <div class="store-container footer__inner">
+        <div class="footer__brand">
+          <strong>{{ s.displayName }}</strong>
+          @if (s.tagline) {
+            <p>{{ s.tagline }}</p>
+          }
+        </div>
+        <ul class="footer__contact" aria-label="Contacto">
+          @if (whatsappHref(); as href) {
+            <li>
+              <a [href]="href" target="_blank" rel="noopener">
+                <ds-icon name="message" [size]="1" /> WhatsApp
+              </a>
+            </li>
+          }
+          @if (s.contactEmail) {
+            <li>
+              <a [href]="'mailto:' + s.contactEmail">
+                <ds-icon name="mail" [size]="1" /> {{ s.contactEmail }}
+              </a>
+            </li>
+          }
+        </ul>
+        <div class="footer__legal">
+          <span>© {{ year }} {{ s.displayName }}</span>
+          @if (s.showPlatformBadge) {
+            <span class="footer__badge">Tienda creada con VendedorIA</span>
+          }
+        </div>
+      </div>
+    </footer>
+
+    @if (whatsappHref(); as href) {
+      <a class="wa-fab" [href]="href" target="_blank" rel="noopener" aria-label="Escríbenos por WhatsApp">
+        <ds-icon name="message" />
+        <span>Escríbenos</span>
+      </a>
+    }
+  </div>
+} @else {
+  <main class="unavailable">
+    <ds-icon name="store" [size]="2.5" />
+    <h1>Esta tienda no está disponible</h1>
+    <p>Puede que aún no esté publicada o que el enlace no sea correcto.</p>
+  </main>
+}
