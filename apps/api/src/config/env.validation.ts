@@ -83,6 +83,11 @@ class EnvironmentVariables {
   @IsOptional()
   @Matches(/^https?:\/\/\{slug\}\.[a-z0-9.-]+(:\d+)?\/?$/)
   STOREFRONT_URL_TEMPLATE?: string;
+
+  /** Folder for uploaded product photos (a persistent volume in production). */
+  @IsOptional()
+  @IsString()
+  UPLOADS_DIR?: string;
 }
 
 export function validateEnv(config: Record<string, unknown>) {

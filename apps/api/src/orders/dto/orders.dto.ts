@@ -7,6 +7,7 @@ import {
   IsInt,
   IsOptional,
   IsString,
+  MaxLength,
   Min,
   MinLength,
   ValidateNested,
@@ -113,6 +114,20 @@ export class UpdateOrderStatusDto {
     | 'SHIPPED'
     | 'COMPLETED'
     | 'CANCELLED';
+
+  @ApiPropertyOptional({ description: 'Courier tracking code; required to ship a home delivery' })
+  @IsOptional()
+  @IsString()
+  @MaxLength(80)
+  trackingCode?: string;
+}
+
+export class ReconcileOrderDto {
+  @ApiPropertyOptional({ example: 'ORD01JABCDEF', description: 'Mercado Pago order reference' })
+  @IsOptional()
+  @IsString()
+  @MaxLength(64)
+  providerOrderId?: string;
 }
 
 export class CreatePaymentLinkDto {

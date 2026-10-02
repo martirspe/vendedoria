@@ -15,12 +15,13 @@ import type {
   PublicOrder,
   PublicOrderStatus,
   ShippingMode,
+  ShippingQuote,
   UbigeoDistrict,
 } from '@vendedoria/contracts';
 import { couponCustomerKey, CouponsService } from '../coupons/coupons.service';
 import type { CouponLine } from '../coupons/coupon-engine';
 import { releaseOrder, settlePaidOrder } from '../orders/settlement';
-import { reserveStock } from '../orders/stock';
+import { reserveStock, withAllocations } from '../orders/stock';
 import { MerchantAccountsService } from '../payments/merchant-accounts.service';
 import {
   type MercadoPagoOrder,
@@ -29,7 +30,7 @@ import {
   mercadoPago,
 } from '../payments/mercadopago.client';
 import { PrismaService } from '../prisma/prisma.service';
-import { quoteShipping } from '../storefront/shipping';
+import { carrierQuotes, isCarrierMode, quoteShipping } from '../storefront/shipping';
 import type { StoreAccess } from '../storefront/storefront-public.service';
 import { findUbigeo, shippingZone } from '../ubigeo/ubigeo';
 import { StorefrontPublicService } from '../storefront/storefront-public.service';
@@ -116,6 +117,14 @@ export class CheckoutService implements OnModuleInit, OnModuleDestroy {
     };
   }
 
+  async quoteCarriers(access: StoreAccess, ubigeo: string): Promise<ShippingQuote[]> {
+    if (!findUbigeo(ubigeo)) throw new BadRequestException('Selecciona un distrito válido.');
+    const storefront = await this.prisma.storefront.findUniqueOrThrow({
+      where: { tenantId: access.tenantId },
+    });
+    return carrierQuotes(storefront, ubigeo);
+  }
+
   async create(access: StoreAccess, dto: CreateCheckoutDto): Promise<PublicOrder> {
     this.assertLive(access);
     const checkout = await this.storefront.checkout(access.tenantId);
@@ -133,7 +142,11 @@ export class CheckoutService implements OnModuleInit, OnModuleDestroy {
     );
     const replay = await this.findReplay(access.tenantId, dto.checkoutKey, requestHash);
     if (replay) return this.view(replay);
-    const place = this.deliveryPlace(dto.delivery.mode, dto.delivery.ubigeo);
+    const place = this.deliveryPlace(
+      dto.delivery.mode,
+      dto.delivery.ubigeo,
+      dto.delivery.acknowledgeRate,
+    );
 
     const storefront = await this.prisma.storefront.findUniqueOrThrow({
       where: { tenantId: access.tenantId },
@@ -159,11 +172,13 @@ export class CheckoutService implements OnModuleInit, OnModuleDestroy {
               dto.delivery.mode,
               subtotalCents - discountCents,
               coupon?.freeShipping ?? false,
+              place?.code,
             );
             if (!shipping) {
               throw new BadRequestException('Elige una forma de entrega disponible.');
             }
-            await reserveStock(tx, lines);
+            const stocked = await withAllocations(tx, lines);
+            await reserveStock(tx, stocked);
             const pickup = shipping.mode === 'PICKUP';
             const delivery: DeliveryRecord = {
               mode: shipping.mode,
@@ -179,7 +194,9 @@ export class CheckoutService implements OnModuleInit, OnModuleDestroy {
                   ? storefront.deliveryDaysLima
                   : shipping.mode === 'PROVINCE'
                     ? storefront.deliveryDaysProvince
-                    : storefront.pickupAddress,
+                    : shipping.mode === 'PICKUP'
+                      ? storefront.pickupAddress
+                      : 'Tarifa referencial: la cobertura se coordina antes del despacho.',
               free: shipping.free,
             };
             return tx.order.create({
@@ -205,7 +222,7 @@ export class CheckoutService implements OnModuleInit, OnModuleDestroy {
                 stockState: 'held',
                 expiresAt: new Date(Date.now() + RESERVATION_MS),
                 items: {
-                  create: lines.map((line) => ({
+                  create: stocked.map((line) => ({
                     productId: line.productId,
                     variantId: line.variantId,
                     title: line.title,
@@ -213,6 +230,7 @@ export class CheckoutService implements OnModuleInit, OnModuleDestroy {
                     quantity: line.quantity,
                     unitCents: line.unitCents,
                     totalCents: line.totalCents,
+                    ...(line.allocations ? { allocations: line.allocations } : {}),
                   })),
                 },
                 ...(coupon
@@ -498,6 +516,57 @@ export class CheckoutService implements OnModuleInit, OnModuleDestroy {
     if (paidNow) await this.email.sendConfirmation(providerOrder.external_reference);
   }
 
+  /**
+   * Console reconciliation: re-reads a Mercado Pago order (the `ORD…` reference shown in
+   * the merchant's MP account, or the last attempt) and applies it like the webhook.
+   */
+  async reconcile(tenantId: string, orderId: string, providerOrderId?: string) {
+    const order = await this.prisma.order.findFirst({
+      where: { id: orderId, tenantId, channel: 'WEB' },
+      select: { id: true, totalCents: true, currency: true },
+    });
+    if (!order) throw new NotFoundException('Solo se concilian pedidos de la tienda web.');
+    const reference =
+      providerOrderId?.trim() ||
+      (
+        await this.prisma.payment.findFirst({
+          where: { orderId: order.id, externalId: { not: null } },
+          orderBy: { createdAt: 'desc' },
+          select: { externalId: true },
+        })
+      )?.externalId;
+    if (!reference) throw new BadRequestException('Este pedido no tiene intentos de pago. Ingresa la referencia ORD.');
+    if (!isProviderOrderId(reference)) throw new BadRequestException('La referencia debe empezar con ORD.');
+    const credentials = await this.accounts.credentials(tenantId);
+    if (!credentials) throw new ConflictException('Conecta tu cuenta de Mercado Pago para conciliar.');
+    let providerOrder: MercadoPagoOrder;
+    try {
+      providerOrder = await mercadoPago.getOrder(credentials.accessToken, reference);
+    } catch {
+      throw new BadRequestException('Mercado Pago no encontró esa referencia en tu cuenta.');
+    }
+    if (providerOrder.external_reference !== order.id) {
+      throw new BadRequestException('Esa referencia de Mercado Pago pertenece a otro pedido.');
+    }
+    const known = await this.prisma.payment.findFirst({ where: { orderId: order.id, externalId: reference } });
+    if (!known) {
+      await this.prisma.payment.create({
+        data: {
+          tenantId,
+          orderId: order.id,
+          flow: 'COMMERCE_CHECKOUT',
+          status: 'PENDING',
+          amountCents: order.totalCents,
+          currency: order.currency,
+          externalId: reference,
+          idempotencyKey: `reconcile:${reference}`,
+        },
+      });
+    }
+    await this.applyProviderOrder(tenantId, providerOrder);
+    return { reference, providerStatus: providerOrder.status, detail: providerOrder.status_detail ?? null };
+  }
+
   /** Releases reservations whose time ran out and no payment is in flight. */
   async expireDue(): Promise<number> {
     const due = await this.prisma.order.findMany({
@@ -573,7 +642,7 @@ export class CheckoutService implements OnModuleInit, OnModuleDestroy {
     const handles = [...new Set(items.map((item) => item.handle))];
     const products = await db.product.findMany({
       where: { tenantId, handle: { in: handles }, isPublishedOnStore: true },
-      include: { variants: true },
+      include: { variants: true, _count: { select: { components: true } } },
     });
     const lines: ResolvedLine[] = [];
     for (const item of merged.values()) {
@@ -616,6 +685,8 @@ export class CheckoutService implements OnModuleInit, OnModuleDestroy {
           handle: product.handle,
           categories: product.categories,
           brand: product.brand,
+          line: product.line,
+          isSet: product._count.components > 0,
           unitCents,
           quantity: item.quantity,
         },
@@ -660,11 +731,21 @@ export class CheckoutService implements OnModuleInit, OnModuleDestroy {
   }
 
   /** Home deliveries need a real district whose zone matches the chosen rate. */
-  private deliveryPlace(mode: ShippingMode, ubigeo: string | undefined): UbigeoDistrict | null {
+  private deliveryPlace(
+    mode: ShippingMode,
+    ubigeo: string | undefined,
+    acknowledgeRate: boolean | undefined,
+  ): UbigeoDistrict | null {
     if (mode === 'PICKUP') return null;
     const place = ubigeo ? findUbigeo(ubigeo) : null;
     if (!place) {
       throw new BadRequestException('Selecciona el departamento, la provincia y el distrito.');
+    }
+    if (isCarrierMode(mode)) {
+      if (acknowledgeRate !== true) {
+        throw new BadRequestException('Acepta la tarifa referencial del envío para continuar.');
+      }
+      return place;
     }
     if (shippingZone(place.code) !== mode) {
       throw new BadRequestException(
@@ -718,6 +799,7 @@ export class CheckoutService implements OnModuleInit, OnModuleDestroy {
         address: address || null,
         eta: delivery.eta ?? null,
       },
+      trackingCode: order.trackingCode,
       expiresAt: order.expiresAt?.toISOString() ?? null,
       cancelReason: order.cancelReason,
       createdAt: order.createdAt.toISOString(),

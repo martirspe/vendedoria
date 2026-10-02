@@ -13,9 +13,9 @@ import {
   ValidateNested,
 } from 'class-validator';
 import { ApiPropertyOptional } from '@nestjs/swagger';
-import { ProductVariantInputDto } from './create-product.dto';
+import { ProductExtrasDto, ProductVariantInputDto } from './create-product.dto';
 
-export class UpdateProductDto {
+export class UpdateProductDto extends ProductExtrasDto {
   @ApiPropertyOptional({ example: 'polo-basico' })
   @IsOptional()
   @IsString()

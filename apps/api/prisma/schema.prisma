@@ -114,6 +114,7 @@ enum CouponScope {
   ALL
   CATEGORY
   BRAND
+  LINE
   PRODUCTS
 }
 
@@ -202,8 +203,10 @@ model Coupon {
   minSubtotalCents Int         @default(0)
   minItems         Int         @default(0)
   scope            CouponScope @default(ALL)
-  /// Categories, brands or product handles depending on `scope`.
+  /// Categories, brands, lines or product handles depending on `scope`.
   targets          String[]    @default([])
+  /// False excludes products sold as sets (with components) from the discount.
+  applyToSets      Boolean     @default(true)
   startsAt         DateTime?
   endsAt           DateTime?
   usageLimit       Int?
@@ -275,6 +278,17 @@ model Storefront {
   deliveryDaysProvince  String?
   pickupEnabled         Boolean @default(false)
   pickupAddress         String?
+  /// Courier rates by distance from this INEI district.
+  shippingOriginUbigeo  String?
+  /// { olva?: number[5], shalom?: number[5] } in cents per distance tier.
+  carrierRates          Json?
+
+  /// Business type; it decides which templates the merchant can choose.
+  industry     String @default("general")
+  /// classic | selecta
+  template     String @default("classic")
+  /// Template texts (hero, banner, FAQ, footer note); null uses the template defaults.
+  templateCopy Json?
 
   tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
 }
@@ -408,16 +422,25 @@ model Product {
   isPublishedOnStore  Boolean  @default(false)
   compareAtPriceCents Int?
   brand               String?
+  sku                 String?
+  /// Product line inside the brand (coupons and related products).
+  line                String?
+  /// { size, benefits[], usage[], notes[], highlights[], family, intensity, scent[], montage }
+  details             Json?
   sortOrder           Int      @default(0)
   seoTitle            String?
   seoDescription      String?
   createdAt           DateTime @default(now())
   updatedAt           DateTime @updatedAt
 
-  tenant     Tenant           @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  variants   ProductVariant[]
-  media      ProductMedia[]
-  orderItems OrderItem[]
+  tenant      Tenant             @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  variants    ProductVariant[]
+  media       ProductMedia[]
+  orderItems  OrderItem[]
+  /// Pieces of this product when it is sold as a set.
+  components  ProductComponent[] @relation("SetComponents")
+  /// Sets that include this product as a piece.
+  componentOf ProductComponent[] @relation("ComponentOf")
 
   @@unique([tenantId, handle])
   @@index([tenantId])
@@ -449,13 +472,30 @@ model ProductMedia {
   id        String   @id @default(cuid())
   productId String
   url       String
+  /// image | related (ambient photo shown in the product details)
   kind      String   @default("image")
+  alt       String?
+  caption   String?
   sortOrder Int      @default(0)
   createdAt DateTime @default(now())
 
   product Product @relation(fields: [productId], references: [id], onDelete: Cascade)
 
   @@index([productId])
+}
+
+/// A set consumes the stock of its pieces; its own stock fields are ignored.
+model ProductComponent {
+  id          String @id @default(cuid())
+  setId       String
+  componentId String
+  quantity    Int    @default(1)
+
+  set       Product @relation("SetComponents", fields: [setId], references: [id], onDelete: Cascade)
+  component Product @relation("ComponentOf", fields: [componentId], references: [id], onDelete: Restrict)
+
+  @@unique([setId, componentId])
+  @@index([componentId])
 }
 
 model Conversation {
@@ -563,6 +603,8 @@ model Order {
   paymentMethod  String?
   paymentDetail  String?
   cancelReason   String?
+  /// Courier tracking code, required to mark a home delivery as shipped.
+  trackingCode   String?
   /// pending | preview | sent | failed
   emailStatus    String       @default("pending")
   emailClaimedAt DateTime?
@@ -614,6 +656,8 @@ model OrderItem {
   quantity   Int     @default(1)
   unitCents  Int
   totalCents Int
+  /// Set pieces taken at reservation: [{ productId, quantity }].
+  allocations Json?
 
   order   Order           @relation(fields: [orderId], references: [id], onDelete: Cascade)
   product Product?        @relation(fields: [productId], references: [id], onDelete: SetNull)

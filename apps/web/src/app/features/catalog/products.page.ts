@@ -15,8 +15,12 @@ import { DsEmptyStateComponent } from '@vendedoria/ui';
 import { DsIconComponent } from '@vendedoria/ui';
 import {
   CatalogApiService,
+  ComponentInput,
+  MediaInput,
+  ProductDetails,
   ProductDto,
 } from '../../core/api/catalog-api.service';
+import { resizeImage } from '../../core/media/resize-image';
 
 type VariantDraft = {
   option1Value: string;
@@ -24,6 +28,16 @@ type VariantDraft = {
   price: number;
   stockQty: number | null;
 };
+
+type MediaDraft = { url: string; kind: 'image' | 'related'; alt: string; caption: string };
+
+const MAX_MEDIA = 12;
+const lines = (text: string) =>
+  text
+    .split('\n')
+    .map((line) => line.trim())
+    .filter(Boolean)
+    .slice(0, 20);
 
 function slugify(value: string): string {
   return value
@@ -65,8 +79,20 @@ export class ProductsPage {
   readonly handleLocked = signal(false);
   readonly variantsEnabled = signal(false);
   readonly sellerHelpEnabled = signal(false);
-  readonly mediaUrls = signal<string[]>([]);
+  readonly media = signal<MediaDraft[]>([]);
   readonly mediaDraft = signal('');
+  readonly uploading = signal(false);
+  readonly detailsEnabled = signal(false);
+  readonly setEnabled = signal(false);
+  readonly components = signal<ComponentInput[]>([]);
+  readonly pieceOptions = computed(() =>
+    this.products().filter(
+      (product) =>
+        product.id !== this.editingId() &&
+        !(product.variants?.length ?? 0) &&
+        !(product.components?.length ?? 0),
+    ),
+  );
   readonly categoryDraft = signal('');
   readonly errorMessage = signal<string | null>(null);
   readonly successMessage = signal<string | null>(null);
@@ -88,6 +114,17 @@ export class ProductsPage {
     isPublishedOnStore: [false],
     compareAtPrice: [null as number | null, [Validators.min(0)]],
     brand: ['', [Validators.maxLength(60)]],
+    sku: ['', [Validators.maxLength(60)]],
+    line: ['', [Validators.maxLength(80)]],
+    size: ['', [Validators.maxLength(60)]],
+    family: ['', [Validators.maxLength(80)]],
+    intensity: ['', [Validators.maxLength(80)]],
+    benefitsText: [''],
+    usageText: [''],
+    notesText: [''],
+    highlightsText: [''],
+    scentText: [''],
+    montage: [false],
   });
 
   private readonly formValues = toSignal(
@@ -103,7 +140,7 @@ export class ProductsPage {
     const hasName = values.name.trim().length >= 2;
     const hasDescription = values.descriptionShort.trim().length >= 8;
     const hasPrice = Number(values.price) > 0;
-    const hasPhoto = this.mediaUrls().length > 0;
+    const hasPhoto = this.media().some((item) => item.kind === 'image');
     return [
       { id: 'name', label: 'Nombre del producto', done: hasName, required: true },
       {
@@ -176,10 +213,13 @@ export class ProductsPage {
     this.handleLocked.set(false);
     this.variantsEnabled.set(false);
     this.sellerHelpEnabled.set(false);
-    this.mediaUrls.set([]);
+    this.media.set([]);
     this.mediaDraft.set('');
     this.categoryDraft.set('');
     this.variantDrafts.set([]);
+    this.detailsEnabled.set(false);
+    this.setEnabled.set(false);
+    this.components.set([]);
     this.errorMessage.set(null);
     this.successMessage.set(null);
     this.productForm.reset({
@@ -196,6 +236,17 @@ export class ProductsPage {
       isPublishedOnStore: false,
       compareAtPrice: null,
       brand: '',
+      sku: '',
+      line: '',
+      size: '',
+      family: '',
+      intensity: '',
+      benefitsText: '',
+      usageText: '',
+      notesText: '',
+      highlightsText: '',
+      scentText: '',
+      montage: false,
     });
     this.productForm.controls.stockQty.disable({ emitEvent: false });
     this.editorOpen.set(true);
@@ -208,10 +259,36 @@ export class ProductsPage {
     this.successMessage.set(null);
     this.sellerHelpEnabled.set(Boolean(product.descriptionFull?.trim()));
     this.variantsEnabled.set((product.variants?.length ?? 0) > 0);
-    this.mediaUrls.set((product.media ?? []).map((item) => item.url));
+    this.media.set(
+      (product.media ?? []).map((item) => ({
+        url: item.url,
+        kind: item.kind === 'related' ? 'related' : 'image',
+        alt: item.alt ?? '',
+        caption: item.caption ?? '',
+      })),
+    );
     this.mediaDraft.set('');
     this.categoryDraft.set('');
+    const details = product.details ?? {};
+    this.detailsEnabled.set(Object.keys(details).length > 0);
+    this.setEnabled.set((product.components?.length ?? 0) > 0);
+    this.components.set(
+      (product.components ?? []).map((row) => ({ productId: row.componentId, quantity: row.quantity })),
+    );
     this.productForm.reset({
+      sku: product.sku ?? '',
+      line: product.line ?? '',
+      size: details.size ?? '',
+      family: details.family ?? '',
+      intensity: details.intensity ?? '',
+      benefitsText: (details.benefits ?? []).join('\n'),
+      usageText: (details.usage ?? []).join('\n'),
+      notesText: (details.notes ?? []).join('\n'),
+      highlightsText: (details.highlights ?? []).join('\n'),
+      scentText: (details.scent ?? [])
+        .map((note) => (note.description ? `${note.name}: ${note.description}` : note.name))
+        .join('\n'),
+      montage: details.montage ?? false,
       name: product.name,
       handle: product.handle,
       descriptionShort: product.descriptionShort ?? '',
@@ -247,7 +324,79 @@ export class ProductsPage {
     this.editorOpen.set(false);
     this.editingId.set(null);
     this.variantDrafts.set([]);
-    this.mediaUrls.set([]);
+    this.media.set([]);
+  }
+
+  toggleDetails(enabled: boolean): void {
+    this.detailsEnabled.set(enabled);
+  }
+
+  toggleSet(enabled: boolean): void {
+    this.setEnabled.set(enabled);
+    if (enabled) {
+      this.variantsEnabled.set(false);
+      if (!this.components().length) this.addComponent();
+    }
+  }
+
+  addComponent(): void {
+    const used = new Set(this.components().map((row) => row.productId));
+    const next = this.pieceOptions().find((product) => !used.has(product.id));
+    this.components.update((list) => [...list, { productId: next?.id ?? '', quantity: 1 }]);
+  }
+
+  updateComponent(index: number, patch: Partial<ComponentInput>): void {
+    this.components.update((list) => list.map((row, i) => (i === index ? { ...row, ...patch } : row)));
+  }
+
+  removeComponent(index: number): void {
+    this.components.update((list) => list.filter((_, i) => i !== index));
+  }
+
+  updateMedia(index: number, patch: Partial<MediaDraft>): void {
+    this.media.update((list) => list.map((item, i) => (i === index ? { ...item, ...patch } : item)));
+  }
+
+  moveMedia(index: number, delta: -1 | 1): void {
+    this.media.update((list) => {
+      const target = index + delta;
+      if (target < 0 || target >= list.length) return list;
+      const next = [...list];
+      [next[index], next[target]] = [next[target], next[index]];
+      return next;
+    });
+  }
+
+  async onFiles(input: HTMLInputElement): Promise<void> {
+    const files = Array.from(input.files ?? []);
+    input.value = '';
+    if (!files.length) return;
+    const room = MAX_MEDIA - this.media().length;
+    if (room <= 0) {
+      this.errorMessage.set(`Máximo ${MAX_MEDIA} fotos por producto.`);
+      return;
+    }
+    this.uploading.set(true);
+    this.errorMessage.set(null);
+    try {
+      for (const file of files.slice(0, room)) {
+        const image = await resizeImage(file);
+        const { url } = await this.api.uploadMedia(image.contentType, image.data);
+        this.media.update((list) => [...list, { url, kind: 'image', alt: '', caption: '' }]);
+      }
+    } catch (error) {
+      this.errorMessage.set(
+        error instanceof HttpErrorResponse && error.status === 429
+          ? 'Subiste muchas fotos seguidas. Espera un minuto e inténtalo de nuevo.'
+          : 'No pudimos subir la foto. Usa una imagen JPG, PNG o WebP.',
+      );
+    } finally {
+      this.uploading.set(false);
+    }
+  }
+
+  pieceName(productId: string): string {
+    return this.products().find((product) => product.id === productId)?.name ?? '';
   }
 
   onHandleInput(): void {
@@ -294,20 +443,22 @@ export class ProductsPage {
   addMediaUrl(): void {
     const url = this.mediaDraft().trim();
     if (!url) return;
-    if (this.mediaUrls().length >= 8) {
-      this.errorMessage.set('Máximo 8 archivos por producto.');
+    if (!/^https?:\/\//.test(url)) {
+      this.errorMessage.set('La URL debe empezar con https://');
       return;
     }
-    if (this.mediaUrls().includes(url)) {
-      this.mediaDraft.set('');
+    if (this.media().length >= MAX_MEDIA) {
+      this.errorMessage.set(`Máximo ${MAX_MEDIA} fotos por producto.`);
       return;
     }
-    this.mediaUrls.update((list) => [...list, url]);
+    if (!this.media().some((item) => item.url === url)) {
+      this.media.update((list) => [...list, { url, kind: 'image', alt: '', caption: '' }]);
+    }
     this.mediaDraft.set('');
   }
 
   removeMediaUrl(index: number): void {
-    this.mediaUrls.update((list) => list.filter((_, i) => i !== index));
+    this.media.update((list) => list.filter((_, i) => i !== index));
   }
 
   onCategoryDraftInput(value: string): void {
@@ -371,7 +522,29 @@ export class ProductsPage {
       return;
     }
 
-    const variants = this.variantsEnabled()
+    const components = this.setEnabled()
+      ? this.components().filter((row) => row.productId && row.quantity >= 1)
+      : [];
+    if (this.setEnabled() && !components.length) {
+      this.errorMessage.set('Agrega al menos una pieza al set o desactiva "Se vende como set".');
+      return;
+    }
+    const extras = {
+      sku: values.sku.trim() || null,
+      line: values.line.trim() || null,
+      details: this.detailsEnabled() ? this.detailsPayload(values) : null,
+      media: this.media().map(
+        (item): MediaInput => ({
+          url: item.url,
+          kind: item.kind,
+          alt: item.alt.trim() || undefined,
+          caption: item.caption.trim() || undefined,
+        }),
+      ),
+      components,
+    };
+
+    const variants = this.variantsEnabled() && !this.setEnabled()
       ? this.variantDrafts()
           .filter(
             (item) => item.option1Value.trim() || item.option2Value.trim(),
@@ -405,8 +578,8 @@ export class ProductsPage {
             isAvailable: values.isAvailable,
             stockUnlimited: values.stockUnlimited,
             stockQty: values.stockUnlimited ? null : Number(values.stockQty),
-            mediaUrls: this.mediaUrls(),
             variants,
+            ...extras,
             ...this.storeFields(values),
           })
         : await this.api.create({
@@ -424,8 +597,8 @@ export class ProductsPage {
             stockQty: values.stockUnlimited
               ? undefined
               : Number(values.stockQty),
-            mediaUrls: this.mediaUrls(),
             variants,
+            ...extras,
             ...this.storeFields(values),
           });
       this.editorOpen.set(false);
@@ -451,6 +624,8 @@ export class ProductsPage {
   }
 
   stockLabel(product: ProductDto): string {
+    const pieces = product.components?.length ?? 0;
+    if (pieces) return `Set · ${pieces} ${pieces === 1 ? 'pieza' : 'piezas'}`;
     if (product.stockUnlimited) return 'Stock ilimitado';
     const qty = product.stockQty ?? 0;
     const base = qty === 1 ? '1 unidad' : `${qty} unidades`;
@@ -459,7 +634,38 @@ export class ProductsPage {
   }
 
   thumb(product: ProductDto): string | null {
-    return product.media?.[0]?.url ?? null;
+    return product.media?.find((item) => item.kind !== 'related')?.url ?? null;
+  }
+
+  private detailsPayload(values: ReturnType<ProductsPage['productForm']['getRawValue']>): ProductDetails | null {
+    const details: ProductDetails = {};
+    const text = (value: string) => value.trim() || undefined;
+    details.size = text(values.size);
+    details.family = text(values.family);
+    details.intensity = text(values.intensity);
+    for (const [key, raw] of [
+      ['benefits', values.benefitsText],
+      ['usage', values.usageText],
+      ['notes', values.notesText],
+      ['highlights', values.highlightsText],
+    ] as const) {
+      const list = lines(raw);
+      if (list.length) details[key] = list;
+    }
+    const scent = lines(values.scentText)
+      .slice(0, 6)
+      .map((row) => {
+        const [name, ...rest] = row.split(':');
+        const description = rest.join(':').trim();
+        return { name: name.trim().slice(0, 80), ...(description ? { description: description.slice(0, 200) } : {}) };
+      })
+      .filter((note) => note.name);
+    if (scent.length) details.scent = scent;
+    if (values.montage) details.montage = true;
+    const clean = Object.fromEntries(
+      Object.entries(details).filter(([, value]) => value !== undefined),
+    ) as ProductDetails;
+    return Object.keys(clean).length ? clean : null;
   }
 
   private parseCategories(raw: string): string[] {

@@ -4,6 +4,7 @@ import {
   ArrayMaxSize,
   ArrayMinSize,
   Equals,
+  IsBoolean,
   IsEmail,
   IsIn,
   IsInt,
@@ -19,7 +20,7 @@ import {
   ValidateNested,
 } from 'class-validator';
 
-const SHIPPING_MODES = ['LIMA', 'PROVINCE', 'PICKUP'] as const;
+const SHIPPING_MODES = ['LIMA', 'PROVINCE', 'OLVA', 'SHALOM', 'PICKUP'] as const;
 
 export class CheckoutItemDto {
   @ApiProperty({ example: 'polo-algodon' })
@@ -105,6 +106,17 @@ export class CheckoutDeliveryDto {
   @IsString()
   @MaxLength(180)
   reference?: string;
+
+  @ApiPropertyOptional({ description: 'Required for OLVA/SHALOM: accepts the reference rate' })
+  @IsOptional()
+  @IsBoolean()
+  acknowledgeRate?: boolean;
+}
+
+export class ShippingQuoteQueryDto {
+  @ApiProperty({ example: '150122' })
+  @Matches(/^\d{6}$/, { message: 'Selecciona un distrito válido.' })
+  ubigeo!: string;
 }
 
 export class CreateCheckoutDto {

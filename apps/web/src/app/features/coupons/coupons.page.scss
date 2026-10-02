@@ -107,6 +107,23 @@
   font-size: 0.85rem;
 }
 
+.coupon__link {
+  display: inline-flex;
+  gap: 0.35rem;
+  align-items: center;
+  justify-self: start;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: inherit;
+  font: inherit;
+  font-size: 0.85rem;
+  font-weight: 600;
+  text-decoration: underline;
+  text-underline-offset: 0.2em;
+  cursor: pointer;
+}
+
 .coupon__stats {
   display: flex;
   gap: var(--ds-space-5);

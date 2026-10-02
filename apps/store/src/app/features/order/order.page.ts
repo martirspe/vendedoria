@@ -83,6 +83,22 @@ export class OrderPage {
   readonly processing = computed(() => this.pending() && ['processing', 'review'].includes(this.order()?.paymentState ?? ''));
   readonly canPay = computed(() => this.pending() && !this.processing() && this.secondsLeft() > 0);
   readonly paid = computed(() => ['PAID', 'FULFILLING', 'SHIPPED', 'COMPLETED'].includes(this.order()?.status ?? ''));
+  /** Fulfillment step in buyer words; pickup orders reuse SHIPPED as "ready to pick up". */
+  readonly logistics = computed(() => {
+    const order = this.order();
+    if (!order) return null;
+    const pickup = order.delivery.mode === 'PICKUP';
+    switch (order.status) {
+      case 'FULFILLING':
+        return 'Estamos preparando tu pedido.';
+      case 'SHIPPED':
+        return pickup ? 'Tu pedido está listo para recoger.' : 'Tu pedido está en camino.';
+      case 'COMPLETED':
+        return 'Pedido entregado.';
+      default:
+        return null;
+    }
+  });
   readonly secondsLeft = computed(() => {
     const expires = this.order()?.expiresAt;
     return expires ? Math.max(Math.floor((Date.parse(expires) - this.now()) / 1000), 0) : 0;

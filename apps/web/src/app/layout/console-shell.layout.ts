@@ -58,6 +58,7 @@ export class ConsoleShellLayout {
       items: [
         { label: 'Empezar', path: '/app/get-started', icon: 'rocket' },
         { label: 'Productos', path: '/app/products', icon: 'package' },
+        { label: 'Inventario', path: '/app/inventory', icon: 'list' },
         { label: 'Tienda web', path: '/app/store', icon: 'store' },
         { label: 'Cupones', path: '/app/coupons', icon: 'ticket' },
         { label: 'Vendedor', path: '/app/seller', icon: 'bot' },
@@ -122,6 +123,13 @@ export class ConsoleShellLayout {
       hint: 'Publicar catálogo en tu web',
       path: '/app/store',
       icon: 'store',
+    },
+    {
+      id: 'inventory',
+      label: 'Inventario',
+      hint: 'Stock por SKU',
+      path: '/app/inventory',
+      icon: 'list',
     },
     {
       id: 'coupons',

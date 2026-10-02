@@ -146,6 +146,11 @@ export class CreateCouponDto {
   @IsBoolean()
   firstOrderOnly?: boolean;
 
+  @ApiPropertyOptional({ description: 'False excludes products sold as sets.' })
+  @IsOptional()
+  @IsBoolean()
+  applyToSets?: boolean;
+
   @ApiPropertyOptional()
   @IsOptional()
   @IsBoolean()

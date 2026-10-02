@@ -117,8 +117,13 @@
             <option value="ALL">Toda la tienda</option>
             <option value="CATEGORY">Categorías</option>
             <option value="BRAND">Marcas</option>
+            <option value="LINE">Líneas o colecciones</option>
             <option value="PRODUCTS">Productos específicos</option>
           </select>
+        </label>
+        <label class="check">
+          <input type="checkbox" formControlName="applyToSets" />
+          <span>También aplica a sets</span>
         </label>
         @if (scope() !== 'ALL') {
           @if (targetOptions().length) {
@@ -217,6 +222,12 @@
             </div>
             <strong>{{ coupon.label }}</strong>
             <span class="coupon__meta">{{ summary(coupon) }}</span>
+            @if (campaignLink(coupon); as link) {
+              <button type="button" class="coupon__link" (click)="copyLink(coupon)" [attr.aria-label]="'Copiar enlace de campaña ' + link">
+                <ds-icon name="externalLink" [size]="0.9" />
+                {{ copiedCode() === coupon.code ? 'Enlace copiado' : 'Copiar enlace de campaña' }}
+              </button>
+            }
           </div>
           <dl class="coupon__stats">
             <div>

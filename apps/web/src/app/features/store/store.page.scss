@@ -131,6 +131,7 @@ small {
 }
 
 .card input,
+.card select,
 .card textarea {
   min-height: var(--ds-touch-target);
   padding: var(--ds-space-3) var(--ds-space-4);
@@ -180,6 +181,78 @@ small {
   grid-template-columns: 1fr 1fr;
   gap: var(--ds-space-3);
   align-items: start;
+}
+
+.row--3 {
+  grid-template-columns: repeat(3, 1fr);
+}
+
+.templates {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(14rem, 1fr));
+  gap: var(--ds-space-3);
+}
+
+.template {
+  display: grid;
+  gap: var(--ds-space-1);
+  align-content: start;
+  padding: var(--ds-space-4);
+  border: 1.5px solid var(--ds-color-border);
+  border-radius: var(--ds-radius-md);
+  background: #fff;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.template span {
+  color: var(--ds-color-text-secondary);
+  font-size: 0.85rem;
+}
+
+.template.is-selected {
+  border-color: var(--ds-color-text-primary, currentColor);
+  box-shadow: inset 0 0 0 1px var(--ds-color-text-primary, currentColor);
+}
+
+.template:disabled {
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+.copy,
+.faq,
+.carriers {
+  display: grid;
+  gap: var(--ds-space-3);
+}
+
+.faq__head {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--ds-space-3);
+  align-items: center;
+  justify-content: space-between;
+}
+
+.faq__row {
+  display: grid;
+  gap: var(--ds-space-2);
+  padding: var(--ds-space-3);
+  border: 1px dashed var(--ds-color-border);
+  border-radius: var(--ds-radius-md);
+}
+
+.faq__row ds-button {
+  justify-self: end;
+}
+
+.tiers {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: var(--ds-space-2);
 }
 
 .label-text {
@@ -275,7 +348,12 @@ small {
 }
 
 @media (max-width: 640px) {
-  .row {
+  .row,
+  .row--3 {
     grid-template-columns: 1fr;
+  }
+
+  .tiers {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }

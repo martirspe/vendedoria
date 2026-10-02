@@ -6,6 +6,8 @@ import {
   signal,
 } from '@angular/core';
 import { DatePipe } from '@angular/common';
+import { HttpErrorResponse } from '@angular/common/http';
+import { DomSanitizer, SafeHtml } from '@angular/platform-browser';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { DsButtonComponent } from '@vendedoria/ui';
@@ -63,6 +65,10 @@ export class OrdersPage {
   readonly errorMessage = signal<string | null>(null);
   readonly successMessage = signal<string | null>(null);
   readonly createOpen = signal(false);
+  readonly trackingDraft = signal('');
+  readonly reconcileDraft = signal('');
+  readonly emailPreview = signal<{ subject: string; status: string; safeHtml: SafeHtml } | null>(null);
+  private readonly sanitizer = inject(DomSanitizer);
 
   readonly columns = KANBAN_COLUMNS;
 
@@ -235,6 +241,8 @@ export class OrdersPage {
   }
 
   async openOrder(orderId: string): Promise<void> {
+    this.trackingDraft.set('');
+    this.reconcileDraft.set('');
     try {
       this.selected.set(await this.api.get(orderId));
     } catch {
@@ -280,16 +288,94 @@ export class OrdersPage {
   }
 
   async advance(order: OrderDto, status: OrderStatus): Promise<void> {
+    const trackingCode = this.trackingDraft().trim();
+    if (status === 'SHIPPED' && this.needsTracking(order) && !trackingCode) {
+      this.errorMessage.set('Ingresa el código de seguimiento antes de marcar el envío.');
+      return;
+    }
     this.saving.set(true);
+    this.errorMessage.set(null);
     try {
-      const updated = await this.api.updateStatus(order.id, status);
+      const updated = await this.api.updateStatus(order.id, status, status === 'SHIPPED' ? trackingCode : undefined);
       this.selected.set(updated);
+      this.trackingDraft.set('');
       await this.load();
-    } catch {
-      this.errorMessage.set('Transición de estado no permitida.');
+    } catch (error) {
+      this.errorMessage.set(this.apiMessage(error) ?? 'Transición de estado no permitida.');
     } finally {
       this.saving.set(false);
     }
+  }
+
+  async saveTracking(order: OrderDto): Promise<void> {
+    await this.advance(order, 'SHIPPED');
+  }
+
+  async reconcile(order: OrderDto): Promise<void> {
+    this.saving.set(true);
+    this.errorMessage.set(null);
+    try {
+      const result = await this.api.reconcile(order.id, this.reconcileDraft().trim() || undefined);
+      this.successMessage.set(`Mercado Pago ${result.reference}: ${this.providerStatusLabel(result.providerStatus)}.`);
+      this.reconcileDraft.set('');
+      await this.load();
+      this.selected.set(await this.api.get(order.id));
+    } catch (error) {
+      this.errorMessage.set(this.apiMessage(error) ?? 'No se pudo conciliar el pago.');
+    } finally {
+      this.saving.set(false);
+    }
+  }
+
+  async openEmailPreview(order: OrderDto): Promise<void> {
+    this.errorMessage.set(null);
+    try {
+      const preview = await this.api.emailPreview(order.id);
+      // Server-rendered email with escaped buyer data; shown in a sandboxed iframe without scripts.
+      this.emailPreview.set({ ...preview, safeHtml: this.sanitizer.bypassSecurityTrustHtml(preview.html) });
+    } catch (error) {
+      this.errorMessage.set(this.apiMessage(error) ?? 'No pudimos generar la vista previa del correo.');
+    }
+  }
+
+  closeEmailPreview(): void {
+    this.emailPreview.set(null);
+  }
+
+  isPickup(order: OrderDto): boolean {
+    return order.delivery?.mode === 'PICKUP';
+  }
+
+  needsTracking(order: OrderDto): boolean {
+    return order.channel === 'WEB' && Boolean(order.delivery) && !this.isPickup(order);
+  }
+
+  deliveryPlace(order: OrderDto): string {
+    const d = order.delivery;
+    if (!d) return '';
+    return [d.address, d.district, d.province, d.department].filter(Boolean).join(', ');
+  }
+
+  private providerStatusLabel(status: string): string {
+    const labels: Record<string, string> = {
+      processed: 'pago aprobado',
+      action_required: 'esperando acción del comprador',
+      processing: 'en proceso',
+      failed: 'pago rechazado',
+      canceled: 'cancelado',
+      expired: 'vencido',
+      refunded: 'reembolsado',
+    };
+    return labels[status] ?? status;
+  }
+
+  private apiMessage(error: unknown): string | null {
+    if (error instanceof HttpErrorResponse && error.status >= 400 && error.status < 500) {
+      const message = error.error?.message;
+      if (typeof message === 'string') return message;
+      if (Array.isArray(message) && typeof message[0] === 'string') return message[0];
+    }
+    return null;
   }
 
   async copyLink(url: string): Promise<void> {
@@ -308,7 +394,11 @@ export class OrdersPage {
     }).format(cents / 100);
   }
 
-  statusLabel(status: OrderStatus): string {
+  statusLabel(status: OrderStatus, order?: OrderDto): string {
+    if (order && this.isPickup(order)) {
+      if (status === 'SHIPPED') return 'Listo para recoger';
+      if (status === 'COMPLETED') return 'Entregado';
+    }
     switch (status) {
       case 'DRAFT':
         return 'Borrador';
@@ -341,23 +431,28 @@ export class OrdersPage {
   }
 
   nextActions(order: OrderDto): Array<{ status: OrderStatus; label: string }> {
+    const pickup = this.isPickup(order);
+    const ship: { status: OrderStatus; label: string } = {
+      status: 'SHIPPED',
+      label: pickup ? 'Listo para recoger' : 'Marcar enviado',
+    };
+    const complete: { status: OrderStatus; label: string } = {
+      status: 'COMPLETED',
+      label: order.delivery ? 'Marcar entregado' : 'Completar',
+    };
     switch (order.status) {
       case 'DRAFT':
         return [{ status: 'CANCELLED', label: 'Cancelar' }];
       case 'PENDING_PAYMENT':
         return [{ status: 'CANCELLED', label: 'Cancelar' }];
       case 'PAID':
-        return [
-          { status: 'FULFILLING', label: 'Preparar' },
-          { status: 'COMPLETED', label: 'Completar' },
-        ];
+        return order.delivery
+          ? [{ status: 'FULFILLING', label: 'Preparar' }, ship, complete]
+          : [{ status: 'FULFILLING', label: 'Preparar' }, complete];
       case 'FULFILLING':
-        return [
-          { status: 'SHIPPED', label: 'Marcar enviado' },
-          { status: 'COMPLETED', label: 'Completar' },
-        ];
+        return [ship, complete];
       case 'SHIPPED':
-        return [{ status: 'COMPLETED', label: 'Completar' }];
+        return [complete];
       default:
         return [];
     }

@@ -137,7 +137,21 @@ try {
   const unknown = await home(24, 'LIMA', '999999');
   check('Ubigeo inexistente → 400', unknown.status === 400, `${unknown.status}`);
 
-  // 8. Rate limit: coupon guesses from one IP stop at 10 per minute; other buyers are unaffected.
+  // 8. Couriers: the reference rate must be accepted explicitly.
+  const courier = Object.keys(storefront.carrierRates ?? {}).includes('olva') ? 'OLVA' : 'SHALOM';
+  if (storefront.deliveryEnabled && storefront.shippingOriginUbigeo && storefront.carrierRates) {
+    const silent = await home(25, courier, '150122');
+    check('Courier sin aceptar la tarifa → 400', silent.status === 400, `${silent.status}`);
+    const accepted = await checkout(26, {
+      delivery: { mode: courier, ubigeo: '150122', address: 'Av. Larco 345, dpto. 501', acknowledgeRate: true },
+    });
+    check('Courier con tarifa aceptada', accepted.status === 201, `${accepted.status}`);
+    if (accepted.status === 201) await post(`orders/${accepted.body.id}/cancel`, { token: accepted.body.token });
+  } else {
+    console.log('SKIP courier: la tienda no tiene origen ni tarifas por distancia');
+  }
+
+  // 9. Rate limit: coupon guesses from one IP stop at 10 per minute; other buyers are unaffected.
   const guesses = [];
   for (let i = 0; i < 11; i++) {
     guesses.push(await post('coupons/preview', { items: [{ handle, quantity: 1 }], code: 'NOEXISTE' }, slug, buyerIp(250)));

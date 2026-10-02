@@ -7,6 +7,8 @@ dist/
 !.env.example
 !.env.production.example
 apps/api/.env
+apps/api/uploads/
+.local/
 backups/
 *.log
 coverage/

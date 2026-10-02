@@ -287,7 +287,9 @@
 }
 
 .field input,
+.field select,
 .field textarea,
+.media-list input:not([type='checkbox']),
 .media-drop__row input,
 .price-row input,
 .stock-row input {
@@ -510,6 +512,105 @@
   align-items: end;
 }
 
+.variant-row--set {
+  grid-template-columns: 1fr 6rem auto;
+}
+
+.field-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: var(--ds-space-3);
+}
+
+.check-row {
+  display: flex;
+  gap: var(--ds-space-2);
+  align-items: center;
+  font-size: 0.88rem;
+  cursor: pointer;
+}
+
+.upload-btn {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  min-height: var(--ds-touch-target);
+  padding: 0 var(--ds-space-5);
+  border-radius: 999px;
+  background: var(--ds-color-ink);
+  color: #fff;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.upload-btn input {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  cursor: pointer;
+}
+
+.upload-btn:focus-within {
+  outline: 2px solid var(--ds-color-focus-ring);
+  outline-offset: 2px;
+}
+
+.upload-btn.is-busy {
+  opacity: 0.7;
+  cursor: progress;
+}
+
+.media-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: var(--ds-space-3);
+}
+
+.media-list li {
+  display: grid;
+  grid-template-columns: 5.5rem minmax(0, 1fr) auto;
+  gap: var(--ds-space-3);
+  align-items: start;
+  padding: var(--ds-space-3);
+  border: 1px solid var(--ds-color-border);
+  border-radius: var(--ds-radius-md);
+}
+
+.media-list img {
+  width: 5.5rem;
+  aspect-ratio: 1;
+  border-radius: var(--ds-radius-md);
+  object-fit: cover;
+  background: #f0f2f6;
+}
+
+.media-list__fields {
+  display: grid;
+  gap: var(--ds-space-2);
+}
+
+.media-list__actions {
+  display: grid;
+  gap: var(--ds-space-1);
+  justify-items: center;
+}
+
+.media-list__actions .media-grid__main {
+  position: static;
+}
+
+.media-list .icon-btn {
+  background: #eceef3;
+  color: var(--ds-color-text-secondary);
+}
+
+.media-list .icon-btn:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
 .variant-row .icon-btn {
   background: #eceef3;
   color: var(--ds-color-text-secondary);
@@ -637,8 +738,23 @@
     position: static;
   }
 
-  .variant-row {
+  .variant-row,
+  .field-grid {
     grid-template-columns: 1fr;
+  }
+
+  .media-list li {
+    grid-template-columns: 4rem minmax(0, 1fr);
+  }
+
+  .media-list img {
+    width: 4rem;
+  }
+
+  .media-list__actions {
+    grid-column: 1 / -1;
+    display: flex;
+    justify-content: flex-end;
   }
 }
 

@@ -6,6 +6,7 @@ import type {
   PublicProductList,
   PublicProductSort,
   SitemapEntry,
+  StoreCatalogProduct,
   StoreResolveResult,
   StorefrontCheckout,
   StorefrontView,
@@ -19,15 +20,35 @@ import {
   slugFromHost,
   storefrontBaseDomain,
 } from './storefront-host';
-import { toProductCard, toProductDetail } from './storefront-mapper';
+import { toCatalogProduct, toProductCard, toProductDetail } from './storefront-mapper';
 import { verifyPreviewToken } from './storefront-preview';
+import { effectiveTemplate, readTemplateCopy } from './store-templates';
 
 const PRODUCT_INCLUDE = {
   variants: { orderBy: { id: 'asc' } },
   media: { orderBy: { sortOrder: 'asc' } },
+  components: {
+    orderBy: { id: 'asc' },
+    select: {
+      quantity: true,
+      component: {
+        select: {
+          handle: true,
+          name: true,
+          sku: true,
+          details: true,
+          isAvailable: true,
+          isPublishedOnStore: true,
+          stockUnlimited: true,
+          stockQty: true,
+        },
+      },
+    },
+  },
 } satisfies Prisma.ProductInclude;
 
 const MAX_PAGE_SIZE = 48;
+const MAX_CATALOG = 500;
 const BADGE_PLANS: PlanTier[] = [PlanTier.FREE, PlanTier.STARTER];
 
 export type StoreAccess = {
@@ -140,7 +161,21 @@ export class StorefrontPublicService {
         updatedAt: storefront.updatedAt.toISOString(),
       },
       checkout: await this.checkout(access.tenantId),
+      industry: storefront.industry,
+      template: effectiveTemplate(storefront.template, storefront.industry),
+      templateCopy: readTemplateCopy(storefront.templateCopy),
     };
+  }
+
+  /** Whole published catalog for templates that filter and recommend in the browser. */
+  async catalog(access: StoreAccess): Promise<StoreCatalogProduct[]> {
+    const products = await this.prisma.product.findMany({
+      where: { tenantId: access.tenantId, isPublishedOnStore: true },
+      include: PRODUCT_INCLUDE,
+      orderBy: this.orderBy('featured'),
+      take: MAX_CATALOG,
+    });
+    return products.map(toCatalogProduct);
   }
 
   async checkout(tenantId: string): Promise<StorefrontCheckout> {

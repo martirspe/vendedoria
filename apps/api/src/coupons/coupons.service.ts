@@ -63,7 +63,7 @@ export class CouponsService {
   async targets(tenantId: string) {
     const products = await this.prisma.product.findMany({
       where: { tenantId },
-      select: { handle: true, name: true, categories: true, brand: true },
+      select: { handle: true, name: true, categories: true, brand: true, line: true },
       orderBy: { name: 'asc' },
     });
     const unique = (values: string[]) =>
@@ -71,6 +71,7 @@ export class CouponsService {
     return {
       categories: unique(products.flatMap((p) => p.categories)),
       brands: unique(products.flatMap((p) => (p.brand ? [p.brand] : []))),
+      lines: unique(products.flatMap((p) => (p.line ? [p.line] : []))),
       products: products.map((p) => ({ handle: p.handle, name: p.name })),
     };
   }
@@ -111,6 +112,7 @@ export class CouponsService {
           usageLimit: data.usageLimit,
           perCustomerLimit: data.perCustomerLimit,
           firstOrderOnly: data.firstOrderOnly,
+          applyToSets: data.applyToSets,
           isActive: data.isActive,
         },
       });
@@ -221,6 +223,7 @@ export class CouponsService {
     if (dto.usageLimit !== undefined) data.usageLimit = dto.usageLimit;
     if (dto.perCustomerLimit !== undefined) data.perCustomerLimit = dto.perCustomerLimit;
     if (dto.firstOrderOnly !== undefined) data.firstOrderOnly = dto.firstOrderOnly;
+    if (dto.applyToSets !== undefined) data.applyToSets = dto.applyToSets;
     if (dto.isActive !== undefined) data.isActive = dto.isActive;
     return data as Omit<Coupon, 'id' | 'tenantId' | 'createdAt' | 'updatedAt'>;
   }

@@ -4,7 +4,7 @@ import { firstValueFrom } from 'rxjs';
 import { environment } from '../../../environments/environment';
 
 export type CouponKind = 'PERCENT' | 'FIXED' | 'FREE_SHIPPING' | 'BUY_X_GET_Y';
-export type CouponScope = 'ALL' | 'CATEGORY' | 'BRAND' | 'PRODUCTS';
+export type CouponScope = 'ALL' | 'CATEGORY' | 'BRAND' | 'LINE' | 'PRODUCTS';
 
 export type CouponPayload = {
   code: string;
@@ -26,6 +26,7 @@ export type CouponPayload = {
   perCustomerLimit: number | null;
   firstOrderOnly: boolean;
   isActive: boolean;
+  applyToSets: boolean;
 };
 
 export type Coupon = CouponPayload & {
@@ -39,6 +40,7 @@ export type Coupon = CouponPayload & {
 export type CouponTargets = {
   categories: string[];
   brands: string[];
+  lines: string[];
   products: { handle: string; name: string }[];
 };
 

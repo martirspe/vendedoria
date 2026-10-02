@@ -1,9 +1,11 @@
 import { BadRequestException, Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { Storefront } from '@prisma/client';
+import { Prisma, Storefront } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
+import { findUbigeo } from '../ubigeo/ubigeo';
 import { RUC, UpdateStorefrontDto } from './dto/update-storefront.dto';
 import { shippingOptions } from './shipping';
+import { readTemplateCopy, templateAllowed } from './store-templates';
 import {
   DEFAULT_STOREFRONT_URL_TEMPLATE,
   storefrontUrl,
@@ -53,10 +55,41 @@ export class StorefrontService {
     tenantId: string,
     dto: UpdateStorefrontDto,
   ): Promise<StorefrontSettingsView> {
-    await this.ensure(tenantId);
+    const current = await this.ensure(tenantId);
+    const industry = dto.industry ?? current.industry;
+    let template = dto.template ?? current.template;
+    if (!templateAllowed(template, industry)) {
+      if (dto.template !== undefined) {
+        throw new BadRequestException('Esa plantilla no está disponible para el rubro de tu negocio.');
+      }
+      template = 'classic';
+    }
+    if (dto.shippingOriginUbigeo && !findUbigeo(dto.shippingOriginUbigeo)) {
+      throw new BadRequestException('Elige un distrito de origen válido.');
+    }
     const storefront = await this.prisma.storefront.update({
       where: { tenantId },
       data: {
+        industry,
+        template,
+        ...(dto.templateCopy !== undefined
+          ? {
+              templateCopy: dto.templateCopy
+                ? (readTemplateCopy(dto.templateCopy as Prisma.JsonObject) as Prisma.JsonObject)
+                : Prisma.DbNull,
+            }
+          : {}),
+        ...(dto.carrierRates !== undefined
+          ? {
+              carrierRates: dto.carrierRates
+                ? ({
+                    ...(dto.carrierRates.olva ? { olva: dto.carrierRates.olva } : {}),
+                    ...(dto.carrierRates.shalom ? { shalom: dto.carrierRates.shalom } : {}),
+                  } as Prisma.JsonObject)
+                : Prisma.DbNull,
+            }
+          : {}),
+        shippingOriginUbigeo: this.optionalText(dto.shippingOriginUbigeo),
         displayName: dto.displayName?.trim(),
         tagline: this.optionalText(dto.tagline),
         logoUrl: this.optionalText(dto.logoUrl),

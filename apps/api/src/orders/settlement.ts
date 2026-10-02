@@ -4,7 +4,7 @@ import { consumeStock, restoreStock } from './stock';
 type SettlementOrder = Pick<
   Order,
   'id' | 'status' | 'stockState' | 'conversationId' | 'totalCents' | 'currency' | 'code'
-> & { items: Pick<OrderItem, 'productId' | 'variantId' | 'quantity'>[] };
+> & { items: Pick<OrderItem, 'productId' | 'variantId' | 'quantity' | 'allocations'>[] };
 
 export function orderReference(order: Pick<Order, 'id' | 'code'>): string {
   return order.code ?? order.id.slice(-6).toUpperCase();

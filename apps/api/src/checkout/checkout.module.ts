@@ -11,5 +11,6 @@ import { OrderEmailService } from './order-email.service';
   imports: [PaymentsModule, CouponsModule, StorefrontModule],
   controllers: [CheckoutController, MercadoPagoWebhookController],
   providers: [CheckoutService, OrderEmailService],
+  exports: [CheckoutService, OrderEmailService],
 })
 export class CheckoutModule {}

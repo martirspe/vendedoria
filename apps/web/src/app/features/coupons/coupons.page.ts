@@ -10,6 +10,7 @@ import {
   CouponTargets,
   CouponsApiService,
 } from '../../core/api/coupons-api.service';
+import { StoreApiService } from '../../core/api/store-api.service';
 
 type TargetOption = { value: string; label: string };
 
@@ -40,6 +41,7 @@ const fromLocalInput = (value: string) => (value ? new Date(value).toISOString()
 })
 export class CouponsPage {
   private readonly api = inject(CouponsApiService);
+  private readonly store = inject(StoreApiService);
   private readonly fb = inject(FormBuilder);
 
   readonly kindLabels = KIND_LABELS;
@@ -50,7 +52,9 @@ export class CouponsPage {
   readonly errorMessage = signal<string | null>(null);
   readonly successMessage = signal<string | null>(null);
   readonly coupons = signal<Coupon[]>([]);
-  readonly targetsCatalog = signal<CouponTargets>({ categories: [], brands: [], products: [] });
+  readonly targetsCatalog = signal<CouponTargets>({ categories: [], brands: [], lines: [], products: [] });
+  readonly storeUrl = signal<string | null>(null);
+  readonly copiedCode = signal<string | null>(null);
   /** `null` = editor closed, `'new'` = creating, otherwise the coupon being edited. */
   readonly editing = signal<Coupon | 'new' | null>(null);
 
@@ -74,6 +78,7 @@ export class CouponsPage {
     perCustomerLimit: [null as number | null],
     firstOrderOnly: [false],
     isActive: [true],
+    applyToSets: [true],
   });
 
   readonly kind = signal<CouponKind>('PERCENT');
@@ -87,6 +92,8 @@ export class CouponsPage {
         return catalog.categories.map((c) => ({ value: c, label: c }));
       case 'BRAND':
         return catalog.brands.map((b) => ({ value: b, label: b }));
+      case 'LINE':
+        return catalog.lines.map((l) => ({ value: l, label: l }));
       case 'PRODUCTS':
         return catalog.products.map((p) => ({ value: p.handle, label: p.name }));
       default:
@@ -120,6 +127,10 @@ export class CouponsPage {
       const [coupons, targets] = await Promise.all([this.api.list(), this.api.targets()]);
       this.coupons.set(coupons);
       this.targetsCatalog.set(targets);
+      this.store
+        .get()
+        .then((view) => this.storeUrl.set(view.url))
+        .catch(() => this.storeUrl.set(null));
     } catch {
       this.errorMessage.set('No pudimos cargar tus cupones.');
     } finally {
@@ -160,6 +171,7 @@ export class CouponsPage {
       perCustomerLimit: coupon.perCustomerLimit,
       firstOrderOnly: coupon.firstOrderOnly,
       isActive: coupon.isActive,
+      applyToSets: coupon.applyToSets,
     });
     this.scope.set(coupon.scope);
     this.setTargets(coupon.targets);
@@ -285,7 +297,25 @@ export class CouponsPage {
       perCustomerLimit: v.perCustomerLimit,
       firstOrderOnly: v.firstOrderOnly,
       isActive: v.isActive,
+      applyToSets: v.applyToSets,
     };
+  }
+
+  campaignLink(coupon: Coupon): string | null {
+    const url = this.storeUrl();
+    return url ? `${url.replace(/\/$/, '')}/?cupon=${encodeURIComponent(coupon.code)}` : null;
+  }
+
+  async copyLink(coupon: Coupon): Promise<void> {
+    const link = this.campaignLink(coupon);
+    if (!link) return;
+    try {
+      await navigator.clipboard.writeText(link);
+      this.copiedCode.set(coupon.code);
+      setTimeout(() => this.copiedCode.set(null), 2000);
+    } catch {
+      this.errorMessage.set('No pudimos copiar el enlace. Cópialo manualmente: ' + link);
+    }
   }
 
   private clearMessages(): void {

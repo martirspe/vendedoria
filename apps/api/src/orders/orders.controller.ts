@@ -14,6 +14,7 @@ import type { AuthUserPayload } from '../common/types/auth-user';
 import {
   CreateOrderDto,
   CreatePaymentLinkDto,
+  ReconcileOrderDto,
   UpdateOrderStatusDto,
 } from './dto/orders.dto';
 import { OrdersService } from './orders.service';
@@ -57,6 +58,23 @@ export class OrdersController {
     @Body() dto: CreatePaymentLinkDto,
   ) {
     return this.ordersService.createPaymentLink(user.tenantId, orderId, dto);
+  }
+
+  @Post(':orderId/reconcile')
+  reconcile(
+    @CurrentUser() user: AuthUserPayload,
+    @Param('orderId') orderId: string,
+    @Body() dto: ReconcileOrderDto,
+  ) {
+    return this.ordersService.reconcile(user.tenantId, orderId, dto);
+  }
+
+  @Get(':orderId/email-preview')
+  emailPreview(
+    @CurrentUser() user: AuthUserPayload,
+    @Param('orderId') orderId: string,
+  ) {
+    return this.ordersService.emailPreview(user.tenantId, orderId);
   }
 
   @Patch(':orderId/status')

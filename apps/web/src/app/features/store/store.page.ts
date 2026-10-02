@@ -8,9 +8,12 @@ import {
 import { HttpErrorResponse } from '@angular/common/http';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { RouterLink } from '@angular/router';
+import type { StoreTemplate, StoreTemplateCopy, UbigeoDistrict } from '@vendedoria/contracts';
 import { DsButtonComponent, DsIconComponent } from '@vendedoria/ui';
 import {
+  CarrierRates,
   StoreApiService,
+  StoreIndustry,
   StoreSettingsView,
   UpdateStorePayload,
 } from '../../core/api/store-api.service';
@@ -19,6 +22,61 @@ const HEX_COLOR = /^#[0-9a-fA-F]{6}$/;
 const toCents = (soles: number | null) =>
   soles === null || Number.isNaN(soles) ? null : Math.round(soles * 100);
 const toSoles = (cents: number | null) => (cents === null ? null : cents / 100);
+
+export const INDUSTRY_OPTIONS: { value: StoreIndustry; label: string }[] = [
+  { value: 'general', label: 'General / varios rubros' },
+  { value: 'belleza', label: 'Belleza y cuidado personal' },
+  { value: 'moda', label: 'Moda y accesorios' },
+  { value: 'hogar', label: 'Hogar y decoración' },
+  { value: 'alimentos', label: 'Alimentos y bebidas' },
+  { value: 'tecnologia', label: 'Tecnología' },
+  { value: 'salud', label: 'Salud y bienestar' },
+  { value: 'mascotas', label: 'Mascotas' },
+  { value: 'otros', label: 'Otro rubro' },
+];
+
+/** Mirrors `apps/api/src/storefront/store-templates.ts`. */
+export const TEMPLATE_OPTIONS: {
+  value: StoreTemplate;
+  label: string;
+  description: string;
+  industries: StoreIndustry[] | 'all';
+}[] = [
+  {
+    value: 'classic',
+    label: 'Clásica',
+    description: 'Catálogo limpio con tus colores. Sirve para cualquier rubro.',
+    industries: 'all',
+  },
+  {
+    value: 'selecta',
+    label: 'Selecta',
+    description:
+      'Editorial y elegante, pensada para belleza: sets con ahorro, complementos en el carrito y fichas con notas, beneficios y modo de uso.',
+    industries: ['belleza'],
+  },
+];
+
+export const CARRIERS = [
+  { key: 'olva', label: 'Olva Courier', defaults: [9, 12, 16, 22, 28] },
+  { key: 'shalom', label: 'Shalom', defaults: [8, 10, 14, 18, 24] },
+] as const;
+export const CARRIER_TIER_LABELS = ['Hasta 20 km', 'Hasta 100 km', 'Hasta 400 km', 'Hasta 900 km', 'Más lejos'];
+
+const COPY_FIELDS = [
+  'heroEyebrow',
+  'heroTitle',
+  'heroEmphasis',
+  'heroText',
+  'heroNote',
+  'bannerEyebrow',
+  'bannerTitle',
+  'bannerText',
+  'bannerImageUrl',
+  'closingPhrase',
+  'footerNote',
+] as const;
+type CopyField = (typeof COPY_FIELDS)[number];
 
 @Component({
   selector: 'app-store-page',
@@ -73,17 +131,95 @@ export class StorePage {
     complaintsBookUrl: ['', [Validators.pattern(/^https:\/\/\S+$/), Validators.maxLength(500)]],
     exchangeDays: [0, [Validators.min(0), Validators.max(60)]],
     dataBankCode: ['', [Validators.maxLength(60)]],
+    industry: ['general' as StoreIndustry],
+    template: ['classic' as StoreTemplate],
+    copy: this.fb.nonNullable.group(
+      Object.fromEntries(COPY_FIELDS.map((field) => [field, ['', [Validators.maxLength(600)]]])) as Record<
+        CopyField,
+        [string, ReturnType<typeof Validators.maxLength>[]]
+      >,
+    ),
+    faq: this.fb.array<ReturnType<StorePage['faqGroup']>>([]),
+    shippingOriginUbigeo: [''],
+    olvaEnabled: [false],
+    olva: this.fb.array(this.rateControls([...CARRIERS[0].defaults])),
+    shalomEnabled: [false],
+    shalom: this.fb.array(this.rateControls([...CARRIERS[1].defaults])),
+  });
+
+  readonly industries = INDUSTRY_OPTIONS;
+  readonly carriers = CARRIERS;
+  readonly tierLabels = CARRIER_TIER_LABELS;
+  readonly districts = signal<UbigeoDistrict[]>([]);
+  readonly originDepartment = signal('');
+  readonly originProvince = signal('');
+  private readonly industry = signal<StoreIndustry>('general');
+  readonly templates = computed(() =>
+    TEMPLATE_OPTIONS.map((option) => ({
+      ...option,
+      available: option.industries === 'all' || option.industries.includes(this.industry()),
+    })),
+  );
+  readonly departments = computed(() => [...new Set(this.districts().map((d) => d.department))]);
+  readonly provinces = computed(() => {
+    const department = this.originDepartment();
+    return [...new Set(this.districts().filter((d) => d.department === department).map((d) => d.province))];
+  });
+  readonly originDistricts = computed(() => {
+    const department = this.originDepartment();
+    const province = this.originProvince();
+    return this.districts().filter((d) => d.department === department && d.province === province);
   });
 
   constructor() {
     void this.load();
+    this.form.controls.industry.valueChanges.subscribe((industry) => {
+      this.industry.set(industry);
+      const allowed = this.templates().find((t) => t.value === this.form.controls.template.value)?.available;
+      if (!allowed) this.form.controls.template.setValue('classic');
+    });
+  }
+
+  get faq() {
+    return this.form.controls.faq;
+  }
+
+  addFaq(): void {
+    this.faq.push(this.faqGroup('', ''));
+    this.faq.markAsDirty();
+  }
+
+  removeFaq(index: number): void {
+    this.faq.removeAt(index);
+    this.faq.markAsDirty();
+  }
+
+  pickTemplate(template: StoreTemplate): void {
+    if (!this.templates().find((t) => t.value === template)?.available) return;
+    this.form.controls.template.setValue(template);
+    this.form.controls.template.markAsDirty();
+  }
+
+  setOriginDepartment(department: string): void {
+    this.originDepartment.set(department);
+    this.originProvince.set('');
+    this.form.controls.shippingOriginUbigeo.setValue('');
+    this.form.controls.shippingOriginUbigeo.markAsDirty();
+  }
+
+  setOriginProvince(province: string): void {
+    this.originProvince.set(province);
+    this.form.controls.shippingOriginUbigeo.setValue('');
+    this.form.controls.shippingOriginUbigeo.markAsDirty();
   }
 
   async load(): Promise<void> {
     this.loading.set(true);
     this.errorMessage.set(null);
     try {
-      this.apply(await this.api.get());
+      const [view, districts] = await Promise.all([this.api.get(), this.api.ubigeos()]);
+      this.districts.set(districts);
+      this.apply(view);
     } catch {
       this.errorMessage.set('No pudimos cargar tu tienda web. Revisa la API e inténtalo de nuevo.');
     } finally {
@@ -123,7 +259,16 @@ export class StorePage {
       complaintsBookUrl: values.complaintsBookUrl.trim() || null,
       exchangeDays: values.exchangeDays ?? 0,
       dataBankCode: values.dataBankCode.trim() || null,
+      industry: values.industry,
+      template: values.template,
+      templateCopy: this.copyPayload(values.copy, values.faq),
+      shippingOriginUbigeo: values.shippingOriginUbigeo || null,
+      carrierRates: this.ratesPayload(values),
     };
+    if (payload.carrierRates && !payload.shippingOriginUbigeo) {
+      this.errorMessage.set('Elige el distrito desde donde despachas para cobrar Olva o Shalom por distancia.');
+      return;
+    }
     this.saving.set(true);
     this.clearMessages();
     try {
@@ -193,10 +338,64 @@ export class StorePage {
     }
   }
 
+  private faqGroup(question: string, answer: string) {
+    return this.fb.nonNullable.group({
+      question: [question, [Validators.required, Validators.maxLength(200)]],
+      answer: [answer, [Validators.required, Validators.maxLength(1200)]],
+    });
+  }
+
+  private rateControls(soles: number[]) {
+    return soles.map((value) =>
+      this.fb.nonNullable.control<number | null>(value, [Validators.required, Validators.min(0), Validators.max(1000)]),
+    );
+  }
+
+  private copyPayload(
+    copy: Record<CopyField, string>,
+    faq: { question: string; answer: string }[],
+  ): StoreTemplateCopy | null {
+    const result: StoreTemplateCopy = {};
+    for (const field of COPY_FIELDS) {
+      const text = copy[field].trim();
+      if (text) result[field] = text;
+    }
+    const rows = faq
+      .map((row) => ({ question: row.question.trim(), answer: row.answer.trim() }))
+      .filter((row) => row.question && row.answer);
+    if (rows.length) result.faq = rows;
+    return Object.keys(result).length ? result : null;
+  }
+
+  private ratesPayload(values: ReturnType<StorePage['form']['getRawValue']>): CarrierRates | null {
+    const cents = (rates: (number | null)[]) => rates.map((soles) => toCents(soles) ?? 0);
+    const rates: CarrierRates = {};
+    if (values.olvaEnabled) rates.olva = cents(values.olva);
+    if (values.shalomEnabled) rates.shalom = cents(values.shalom);
+    return rates.olva || rates.shalom ? rates : null;
+  }
+
   private apply(view: StoreSettingsView): void {
     const store = view.storefront;
     this.view.set(view);
+    const copy = store.templateCopy ?? {};
+    this.faq.clear();
+    for (const row of copy.faq ?? []) this.faq.push(this.faqGroup(row.question, row.answer));
+    const origin = this.districts().find((d) => d.code === store.shippingOriginUbigeo);
+    this.originDepartment.set(origin?.department ?? '');
+    this.originProvince.set(origin?.province ?? '');
+    this.industry.set(store.industry);
+    const olva = store.carrierRates?.olva;
+    const shalom = store.carrierRates?.shalom;
     this.form.reset({
+      industry: store.industry,
+      template: store.template,
+      copy: Object.fromEntries(COPY_FIELDS.map((field) => [field, copy[field] ?? ''])) as Record<CopyField, string>,
+      shippingOriginUbigeo: store.shippingOriginUbigeo ?? '',
+      olvaEnabled: Boolean(olva),
+      olva: olva?.map((c) => c / 100) ?? [...CARRIERS[0].defaults],
+      shalomEnabled: Boolean(shalom),
+      shalom: shalom?.map((c) => c / 100) ?? [...CARRIERS[1].defaults],
       displayName: store.displayName,
       tagline: store.tagline ?? '',
       logoUrl: store.logoUrl ?? '',

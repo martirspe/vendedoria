@@ -1,7 +1,9 @@
 import { Body, Controller, Get, Patch, Post } from '@nestjs/common';
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
+import type { UbigeoDistrict } from '@vendedoria/contracts';
 import { CurrentUser } from '../common/decorators/auth.decorators';
 import type { AuthUserPayload } from '../common/types/auth-user';
+import { UBIGEO_DISTRICTS } from '../ubigeo/ubigeo';
 import { UpdateStorefrontDto } from './dto/update-storefront.dto';
 import { StorefrontService } from './storefront.service';
 
@@ -14,6 +16,12 @@ export class StorefrontController {
   @Get()
   get(@CurrentUser() user: AuthUserPayload) {
     return this.storefront.get(user.tenantId);
+  }
+
+  /** INEI districts for the shipping origin picker. */
+  @Get('ubigeos')
+  ubigeos(): UbigeoDistrict[] {
+    return UBIGEO_DISTRICTS;
   }
 
   @Patch()

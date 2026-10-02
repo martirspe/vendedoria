@@ -98,9 +98,15 @@
 
         <section class="panel" aria-labelledby="delivery-title">
           <h2 id="delivery-title">Entrega</h2>
+          @if (logistics(); as step) {
+            <p class="notice">{{ step }}</p>
+          }
           <p><strong>{{ o.delivery.label }}</strong></p>
           @if (o.delivery.address) { <p>{{ o.delivery.address }}</p> }
           @if (o.delivery.eta) { <p class="muted">{{ o.delivery.eta }}</p> }
+          @if (o.trackingCode) {
+            <p>Código de seguimiento: <strong>{{ o.trackingCode }}</strong></p>
+          }
           <p class="muted">{{ o.customer.name }} · {{ o.customer.phone }}</p>
         </section>
       </div>

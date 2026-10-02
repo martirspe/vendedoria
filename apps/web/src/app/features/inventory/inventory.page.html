@@ -1,0 +1,124 @@
+<section class="store">
+  <header class="store__header">
+    <div>
+      <p class="store__eyebrow">Vender</p>
+      <h1>Inventario</h1>
+      <p>
+        Stock por SKU de todos tus productos y variantes. Los sets no aparecen: se venden
+        mientras sus piezas tengan unidades.
+      </p>
+    </div>
+    @if (changes().length) {
+      <div class="store__actions">
+        <ds-button variant="ghost" [disabled]="saving()" (click)="discard()">Descartar</ds-button>
+        <ds-button [disabled]="saving()" (click)="save()">
+          {{ saving() ? 'Guardando…' : 'Guardar ' + changes().length + (changes().length === 1 ? ' cambio' : ' cambios') }}
+        </ds-button>
+      </div>
+    }
+  </header>
+
+  @if (errorMessage(); as error) {
+    <div class="banner banner--danger" role="alert">
+      <ds-icon name="alert" />
+      <span>{{ error }}</span>
+    </div>
+  }
+  @if (successMessage(); as success) {
+    <div class="banner banner--success" role="status">
+      <ds-icon name="check" />
+      <span>{{ success }}</span>
+    </div>
+  }
+
+  @if (loading()) {
+    <div class="skeleton" aria-busy="true">Cargando inventario…</div>
+  } @else if (!rows().length) {
+    <ds-empty-state title="Aún no hay productos" body="Publica productos para controlar su stock desde aquí.">
+      <a routerLink="/app/products" class="rail-link">Ir a productos <ds-icon name="chevronRight" [size]="1" /></a>
+    </ds-empty-state>
+  } @else {
+    <div class="inventory__toolbar">
+      <label class="inventory__search">
+        <ds-icon name="search" [size]="1" />
+        <input
+          type="search"
+          placeholder="Buscar por nombre, variante o SKU"
+          aria-label="Buscar en el inventario"
+          [value]="query()"
+          (input)="query.set($any($event.target).value)"
+        />
+      </label>
+      <label class="check">
+        <input type="checkbox" [checked]="lowOnly()" (change)="lowOnly.set($any($event.target).checked)" />
+        <span>Solo stock bajo (3 o menos)</span>
+      </label>
+    </div>
+
+    @if (!visible().length) {
+      <p class="hint">Ningún SKU coincide con el filtro.</p>
+    } @else {
+      <div class="card inventory">
+        <table>
+          <thead>
+            <tr>
+              <th scope="col">Producto</th>
+              <th scope="col">SKU</th>
+              <th scope="col">Stock</th>
+              <th scope="col">Ilimitado</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (row of visible(); track track(row)) {
+              @let d = draft(row);
+              <tr [class.is-changed]="isChanged(row)">
+                <td>
+                  <strong>{{ row.name }}</strong>
+                  @if (row.option) {
+                    <span class="inventory__option">{{ row.option }}</span>
+                  }
+                  @if (row.usedInSets) {
+                    <span class="inventory__option">En {{ row.usedInSets }} {{ row.usedInSets === 1 ? 'set' : 'sets' }}</span>
+                  }
+                </td>
+                <td><code>{{ row.sku || '—' }}</code></td>
+                <td>
+                  <div class="stepper" [class.is-off]="d.unlimited">
+                    <button type="button" [disabled]="d.unlimited || d.qty <= 0" (click)="step(row, -1)" [attr.aria-label]="'Restar una unidad de ' + row.name">
+                      <ds-icon name="minus" [size]="0.9" />
+                    </button>
+                    <input
+                      type="number"
+                      min="0"
+                      step="1"
+                      inputmode="numeric"
+                      [attr.aria-label]="'Stock de ' + row.name + (row.option ? ' ' + row.option : '')"
+                      [disabled]="d.unlimited"
+                      [value]="d.unlimited ? '' : d.qty"
+                      (input)="setQty(row, $any($event.target).value)"
+                    />
+                    <button type="button" [disabled]="d.unlimited" (click)="step(row, 1)" [attr.aria-label]="'Sumar una unidad a ' + row.name">
+                      <ds-icon name="plus" [size]="0.9" />
+                    </button>
+                  </div>
+                  @if (!d.unlimited && d.qty === 0) {
+                    <span class="inventory__alert">Agotado</span>
+                  }
+                </td>
+                <td>
+                  <input
+                    type="checkbox"
+                    class="inventory__toggle"
+                    [attr.aria-label]="'Stock ilimitado para ' + row.name"
+                    [checked]="d.unlimited"
+                    (change)="setUnlimited(row, $any($event.target).checked)"
+                  />
+                </td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    }
+  }
+</section>

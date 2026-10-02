@@ -49,6 +49,16 @@ export class StorefrontPublicController {
     return this.storefront.listProducts(access, query);
   }
 
+  @Get(':slug/catalog')
+  async catalog(
+    @Param('slug') slug: string,
+    @Headers(PREVIEW_HEADER) preview: string | undefined,
+    @Res({ passthrough: true }) reply: FastifyReply,
+  ) {
+    const access = await this.access(slug, preview, reply);
+    return this.storefront.catalog(access);
+  }
+
   @Get(':slug/products/:handle')
   async getProduct(
     @Param('slug') slug: string,

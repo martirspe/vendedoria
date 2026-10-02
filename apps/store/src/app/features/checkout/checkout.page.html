@@ -49,9 +49,19 @@
                 <input type="radio" formControlName="mode" [value]="option.mode" />
                 <span class="option__body">
                   <strong>{{ option.label }}</strong>
-                  @if (option.eta) { <small>{{ option.eta }}</small> }
+                  @if (option.byDistance) {
+                    <small>A todo el Perú · tarifa según la distancia</small>
+                  } @else if (option.eta) {
+                    <small>{{ option.eta }}</small>
+                  }
                 </span>
-                <span class="option__price">{{ option.cents === 0 ? 'Gratis' : (option.cents | money) }}</span>
+                <span class="option__price">
+                  @if (option.byDistance) {
+                    desde {{ option.cents | money }}
+                  } @else {
+                    {{ option.cents === 0 ? 'Gratis' : (option.cents | money) }}
+                  }
+                </span>
               </label>
             }
           </div>
@@ -112,6 +122,27 @@
               }
             </label>
           }
+          @if (carrierMode()) {
+            @if (quoteState() === 'loading') {
+              <p class="hint" aria-busy="true">Calculando la tarifa…</p>
+            } @else if (quoteState() === 'error') {
+              <p class="warning" role="alert">No pudimos calcular la tarifa. Elige el distrito otra vez.</p>
+            } @else if (baseShippingCents() !== null) {
+              <p class="hint">
+                Tarifa referencial de {{ selectedOption()?.label }} a tu distrito: {{ baseShippingCents()! | money }}.
+              </p>
+            }
+            <label class="consent">
+              <input type="checkbox" formControlName="acknowledgeRate" />
+              <span>
+                Entiendo que la tarifa de la agencia es referencial y que la tienda me confirmará la
+                cobertura antes del despacho.
+              </span>
+            </label>
+            @if (form.controls.acknowledgeRate.touched && form.controls.acknowledgeRate.invalid) {
+              <small class="field__error">Confirma que aceptas la tarifa referencial.</small>
+            }
+          }
           <label class="field">
             <span>Referencia o indicaciones <em>Opcional</em></span>
             <input formControlName="reference" maxlength="180" />
@@ -160,7 +191,7 @@
           }
           <div>
             <dt>Envío</dt>
-            <dd>{{ !selectedOption() ? 'Elige una opción' : shippingCents() === 0 ? 'Gratis' : (shippingCents() | money) }}</dd>
+            <dd>{{ !selectedOption() ? 'Elige una opción' : shippingPending() ? 'Elige tu distrito' : shippingCents() === 0 ? 'Gratis' : (shippingCents() | money) }}</dd>
           </div>
           <div class="summary__total"><dt>Total</dt><dd>{{ totalCents() | money }}</dd></div>
         </dl>

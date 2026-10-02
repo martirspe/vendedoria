@@ -9,19 +9,22 @@ import {
 import { HttpErrorResponse } from '@angular/common/http';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
-import type { CouponPreviewResult, ShippingMode, UbigeoDistrict } from '@vendedoria/contracts';
+import type {
+  CouponPreviewResult,
+  ShippingMode,
+  ShippingQuote,
+  UbigeoDistrict,
+} from '@vendedoria/contracts';
 import { DsIconComponent } from '@vendedoria/ui';
+import { campaignCoupon, forgetCampaignCoupon } from '../../core/campaign-coupon';
 import { CartService } from '../../core/cart.service';
 import { MoneyPipe } from '../../core/money.pipe';
 import { SeoService } from '../../core/seo.service';
+import { isCarrier, shippingZone } from '../../core/shipping';
 import { StoreApiService } from '../../core/store-api.service';
 import { StoreStateService } from '../../core/store-state.service';
 
 const CHECKOUT_KEY = 'vendedoria-checkout-key';
-
-/** Same rule as the API: Lima Metropolitana (1501) and Callao (07) use the Lima rate. */
-const shippingZone = (code: string): ShippingMode =>
-  code.startsWith('1501') || code.startsWith('07') ? 'LIMA' : 'PROVINCE';
 
 @Component({
   selector: 'store-checkout-page',
@@ -56,6 +59,7 @@ export class CheckoutPage {
     address: ['', [Validators.maxLength(200)]],
     reference: ['', [Validators.maxLength(180)]],
     couponCode: ['', [Validators.maxLength(40)]],
+    acknowledgeRate: [false],
     acceptTerms: [false, [Validators.requiredTrue]],
   });
 
@@ -63,9 +67,17 @@ export class CheckoutPage {
   readonly ubigeoState = signal<'idle' | 'loading' | 'ready' | 'error'>('idle');
   readonly department = signal('');
   readonly province = signal('');
-  readonly homeDelivery = computed(() => this.mode() === 'LIMA' || this.mode() === 'PROVINCE');
+  readonly homeDelivery = computed(() => {
+    const mode = this.mode();
+    return mode === 'LIMA' || mode === 'PROVINCE' || isCarrier(mode);
+  });
+  readonly carrierMode = computed(() => isCarrier(this.mode()));
+  /** Reference courier rates for the chosen district; `null` until a district is picked. */
+  readonly quotes = signal<ShippingQuote[] | null>(null);
+  readonly quoteState = signal<'idle' | 'loading' | 'error'>('idle');
   private readonly zoneDistricts = computed(() => {
     const mode = this.mode();
+    if (isCarrier(mode)) return this.ubigeos();
     return this.ubigeos().filter((d) => shippingZone(d.code) === mode);
   });
   readonly departments = computed(() => [...new Set(this.zoneDistricts().map((d) => d.department))].sort());
@@ -79,14 +91,24 @@ export class CheckoutPage {
   readonly options = computed(() => this.store()?.shipping.options ?? []);
   readonly selectedOption = computed(() => this.options().find((o) => o.mode === this.mode()) ?? null);
   readonly discountCents = computed(() => this.coupon()?.discountCents ?? 0);
+  /** Base price of the chosen option; couriers need the district quote first. */
+  readonly baseShippingCents = computed<number | null>(() => {
+    const option = this.selectedOption();
+    if (!option) return null;
+    if (!option.byDistance) return option.cents;
+    return this.quotes()?.find((q) => q.mode === option.mode)?.cents ?? null;
+  });
   readonly shippingCents = computed(() => {
     const option = this.selectedOption();
     if (!option || option.mode === 'PICKUP') return 0;
     const threshold = this.store()?.shipping.freeShippingFromCents ?? null;
     const base = this.cart.subtotalCents() - this.discountCents();
     if (this.coupon()?.freeShipping || (threshold !== null && base >= threshold)) return 0;
-    return option.cents;
+    return this.baseShippingCents() ?? 0;
   });
+  readonly shippingPending = computed(
+    () => Boolean(this.selectedOption()?.byDistance) && this.baseShippingCents() === null,
+  );
   readonly totalCents = computed(
     () => this.cart.subtotalCents() - this.discountCents() + this.shippingCents(),
   );
@@ -103,7 +125,17 @@ export class CheckoutPage {
       this.mode.set(mode || null);
       this.syncAddressValidators(mode || null);
       this.selectDepartment('');
-      if (mode === 'LIMA' || mode === 'PROVINCE') void this.loadUbigeos();
+      if (this.homeDelivery()) void this.loadUbigeos();
+    });
+    this.form.controls.ubigeo.valueChanges.subscribe((code) => void this.loadQuotes(code));
+    const campaign = campaignCoupon();
+    effect(() => {
+      if (campaign && this.store()?.checkout.couponsEnabled && this.cart.ready() && this.cart.lines().length) {
+        if (!this.coupon() && !this.applyingCoupon() && !this.form.controls.couponCode.value) {
+          this.form.controls.couponCode.setValue(campaign);
+          void this.applyCoupon();
+        }
+      }
     });
     this.form.controls.department.valueChanges.subscribe((value) => this.selectDepartment(value, false));
     this.form.controls.province.valueChanges.subscribe((value) => this.selectProvince(value, false));
@@ -132,6 +164,19 @@ export class CheckoutPage {
     }
   }
 
+  private async loadQuotes(code: string): Promise<void> {
+    this.quotes.set(null);
+    if (!code || !this.options().some((o) => o.byDistance)) return;
+    this.quoteState.set('loading');
+    try {
+      const quotes = await this.api.shippingQuote(code);
+      if (this.form.controls.ubigeo.value === code) this.quotes.set(quotes);
+      this.quoteState.set('idle');
+    } catch {
+      this.quoteState.set('error');
+    }
+  }
+
   /** Resets the dependent selects and preselects the only option when there is one. */
   private selectDepartment(value: string, write = true): void {
     const departments = this.departments();
@@ -147,6 +192,7 @@ export class CheckoutPage {
     this.province.set(province);
     if (write || province !== value) this.form.controls.province.setValue(province, { emitEvent: false });
     this.form.controls.ubigeo.setValue('', { emitEvent: false });
+    this.quotes.set(null);
   }
 
   async applyCoupon(): Promise<void> {
@@ -174,6 +220,7 @@ export class CheckoutPage {
     this.coupon.set(null);
     this.couponError.set(null);
     this.form.controls.couponCode.setValue('');
+    forgetCampaignCoupon();
   }
 
   async submit(): Promise<void> {
@@ -204,12 +251,14 @@ export class CheckoutPage {
                 address: v.address.trim(),
               }
             : {}),
+          ...(isCarrier(mode) ? { acknowledgeRate: v.acknowledgeRate } : {}),
           ...(v.reference.trim() ? { reference: v.reference.trim() } : {}),
         },
         ...(this.coupon() ? { couponCode: this.coupon()!.code } : {}),
         acceptTerms: true,
       });
       sessionStorage.removeItem(CHECKOUT_KEY);
+      if (this.coupon()) forgetCampaignCoupon();
       await this.router.navigate(['/pedido', order.id], { queryParams: { t: order.token } });
     } catch (error) {
       this.errorMessage.set(this.messageFrom(error, 'No pudimos registrar tu pedido. Inténtalo de nuevo.'));
@@ -239,8 +288,10 @@ export class CheckoutPage {
   }
 
   private syncAddressValidators(mode: ShippingMode | null): void {
-    const { address, department, province, ubigeo } = this.form.controls;
-    const delivery = mode === 'LIMA' || mode === 'PROVINCE';
+    const { address, department, province, ubigeo, acknowledgeRate } = this.form.controls;
+    const delivery = mode === 'LIMA' || mode === 'PROVINCE' || isCarrier(mode);
+    acknowledgeRate.setValidators(isCarrier(mode) ? [Validators.requiredTrue] : []);
+    acknowledgeRate.updateValueAndValidity({ emitEvent: false });
     address.setValidators(delivery ? [Validators.required, Validators.minLength(5), Validators.maxLength(200)] : []);
     for (const control of [department, province, ubigeo]) {
       control.setValidators(delivery ? [Validators.required] : []);

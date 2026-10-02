@@ -1,7 +1,12 @@
+import type { Prisma } from '@prisma/client';
 import type {
+  PublicMedia,
   PublicProductCard,
   PublicProductDetail,
+  PublicProductDetails,
+  PublicSetPiece,
   PublicVariant,
+  StoreCatalogProduct,
 } from '@vendedoria/contracts';
 
 type VariantRecord = {
@@ -16,6 +21,20 @@ type VariantRecord = {
   isAvailable: boolean;
   stockQty: number | null;
   imageUrl: string | null;
+};
+
+type ComponentRecord = {
+  quantity: number;
+  component: {
+    handle: string;
+    name: string;
+    sku: string | null;
+    details: Prisma.JsonValue | null;
+    isAvailable: boolean;
+    isPublishedOnStore: boolean;
+    stockUnlimited: boolean;
+    stockQty: number | null;
+  };
 };
 
 export type StoreProductRecord = {
@@ -33,12 +52,46 @@ export type StoreProductRecord = {
   stockQty: number | null;
   seoTitle: string | null;
   seoDescription: string | null;
+  sku?: string | null;
+  line?: string | null;
+  details?: Prisma.JsonValue | null;
   variants: VariantRecord[];
-  media: Array<{ url: string; sortOrder: number }>;
+  media: Array<{
+    url: string;
+    sortOrder: number;
+    kind?: string;
+    alt?: string | null;
+    caption?: string | null;
+  }>;
+  components?: ComponentRecord[];
 };
 
+/** Stock shown publicly when it is this low (scarcity messages, quantity limits). */
+const LOW_STOCK = 20;
+
+/**
+ * Units the buyer can take. A set is limited by its scarcest piece; untracked
+ * stock is unlimited.
+ */
+function unitsLeft(product: StoreProductRecord): number {
+  const pieces = product.components ?? [];
+  if (pieces.length) {
+    return Math.min(
+      ...pieces.map(({ quantity, component }) =>
+        !component.isAvailable
+          ? 0
+          : component.stockUnlimited || component.stockQty === null
+            ? Number.POSITIVE_INFINITY
+            : Math.floor(component.stockQty / Math.max(quantity, 1)),
+      ),
+    );
+  }
+  if (product.stockUnlimited || product.stockQty === null) return Number.POSITIVE_INFINITY;
+  return product.stockQty;
+}
+
 function productHasStock(product: StoreProductRecord): boolean {
-  return product.stockUnlimited || (product.stockQty ?? 0) > 0;
+  return unitsLeft(product) > 0;
 }
 
 /** A variant without its own stock count follows the product stock. */
@@ -73,10 +126,14 @@ function toVariant(
   };
 }
 
-function sortedMedia(product: StoreProductRecord): string[] {
+function galleryMedia(product: StoreProductRecord) {
   return [...product.media]
-    .sort((a, b) => a.sortOrder - b.sortOrder)
-    .map((item) => item.url);
+    .filter((item) => item.kind !== 'related')
+    .sort((a, b) => a.sortOrder - b.sortOrder);
+}
+
+function sortedMedia(product: StoreProductRecord): string[] {
+  return galleryMedia(product).map((item) => item.url);
 }
 
 export function toProductCard(product: StoreProductRecord): PublicProductCard {
@@ -120,5 +177,101 @@ export function toProductDetail(
     seoTitle: product.seoTitle,
     seoDescription: product.seoDescription,
     related: related.map(toProductCard),
+  };
+}
+
+const text = (value: unknown, max = 600): string | null =>
+  typeof value === 'string' && value.trim() ? value.trim().slice(0, max) : null;
+
+const texts = (value: unknown): string[] =>
+  Array.isArray(value) ? value.map((item) => text(item, 400)).filter((item): item is string => !!item).slice(0, 20) : [];
+
+/** Merchant-entered JSON is read defensively: unknown or malformed fields are dropped. */
+export function readDetails(value: Prisma.JsonValue | null | undefined): PublicProductDetails {
+  const raw = value && typeof value === 'object' && !Array.isArray(value) ? (value as Record<string, unknown>) : {};
+  const scent = Array.isArray(raw['scent'])
+    ? raw['scent'].flatMap((item) => {
+        const row = item as Record<string, unknown> | null;
+        const name = text(row?.['name'], 80);
+        return name ? [{ name, description: text(row?.['description'], 300) ?? '' }] : [];
+      })
+    : [];
+  return {
+    size: text(raw['size'], 60),
+    benefits: texts(raw['benefits']),
+    usage: texts(raw['usage']),
+    notes: texts(raw['notes']),
+    highlights: texts(raw['highlights']),
+    family: text(raw['family'], 80),
+    intensity: text(raw['intensity'], 80),
+    scent: scent.slice(0, 6),
+    montage: raw['montage'] === true,
+  };
+}
+
+export const lineKey = (line: string | null | undefined): string | null =>
+  line
+    ? line
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '')
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g, '-')
+        .replace(/^-|-$/g, '') || null
+    : null;
+
+function toMedia(product: StoreProductRecord): PublicMedia[] {
+  return [...product.media]
+    .sort((a, b) => a.sortOrder - b.sortOrder)
+    .map((item) => ({
+      url: item.url,
+      alt: item.alt ?? null,
+      caption: item.caption ?? null,
+      kind: item.kind === 'related' ? 'related' : 'image',
+    }));
+}
+
+function toPieces(product: StoreProductRecord, details: PublicProductDetails): PublicSetPiece[] {
+  const components = product.components ?? [];
+  if (!components.length) {
+    return [
+      {
+        handle: product.handle,
+        name: product.name,
+        size: details.size,
+        code: product.sku ?? null,
+        details: details.highlights,
+        quantity: 1,
+      },
+    ];
+  }
+  return components.map(({ quantity, component }) => {
+    const piece = readDetails(component.details);
+    return {
+      handle: component.isPublishedOnStore ? component.handle : null,
+      name: component.name,
+      size: piece.size,
+      code: component.sku,
+      details: piece.highlights,
+      quantity,
+    };
+  });
+}
+
+export function toCatalogProduct(product: StoreProductRecord): StoreCatalogProduct {
+  const details = readDetails(product.details);
+  const left = unitsLeft(product);
+  return {
+    ...toProductCard(product),
+    descriptionFull: product.descriptionFull,
+    line: product.line ?? null,
+    lineKey: lineKey(product.line),
+    format: product.components?.length ? 'set' : 'individual',
+    stockLeft: Number.isFinite(left) && left <= LOW_STOCK ? Math.max(left, 0) : null,
+    media: toMedia(product),
+    variants: product.variants.map((variant) => toVariant(product, variant)),
+    details,
+    includes: toPieces(product, details),
+    seoTitle: product.seoTitle,
+    seoDescription: product.seoDescription,
   };
 }

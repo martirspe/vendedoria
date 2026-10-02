@@ -1,7 +1,7 @@
 import { Body, Controller, Get, Headers, HttpCode, Param, Post, Query, Res } from '@nestjs/common';
 import { ApiTags } from '@nestjs/swagger';
 import type { FastifyReply } from 'fastify';
-import type { UbigeoDistrict } from '@vendedoria/contracts';
+import type { ShippingQuote, UbigeoDistrict } from '@vendedoria/contracts';
 import { Public } from '../common/decorators/auth.decorators';
 import { RateLimit } from '../rate-limit/rate-limit.decorator';
 import { StorefrontPublicService } from '../storefront/storefront-public.service';
@@ -12,6 +12,7 @@ import {
   CreateCheckoutDto,
   OrderAccessDto,
   PayOrderDto,
+  ShippingQuoteQueryDto,
 } from './dto/checkout.dto';
 
 const PREVIEW_HEADER = 'x-store-preview';
@@ -36,6 +37,17 @@ export class CheckoutController {
     await this.storefront.access(slug, preview);
     reply.header('Cache-Control', 'public, max-age=86400');
     return UBIGEO_DISTRICTS;
+  }
+
+  /** Reference courier rates (Olva/Shalom) to the district, by distance from the store. */
+  @Get('shipping-quote')
+  async shippingQuote(
+    @Param('slug') slug: string,
+    @Query() query: ShippingQuoteQueryDto,
+    @Headers(PREVIEW_HEADER) preview: string | undefined,
+    @Res({ passthrough: true }) reply: FastifyReply,
+  ): Promise<ShippingQuote[]> {
+    return this.checkout.quoteCarriers(await this.access(slug, preview, reply), query.ubigeo);
   }
 
   @Post('coupons/preview')

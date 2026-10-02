@@ -10,6 +10,8 @@ import type {
   PublicProductDetail,
   PublicProductList,
   PublicProductSort,
+  ShippingQuote,
+  StoreCatalogProduct,
   StorefrontView,
   UbigeoDistrict,
 } from '@vendedoria/contracts';
@@ -55,6 +57,18 @@ export class StoreApiService {
 
   ubigeos(): Promise<UbigeoDistrict[]> {
     return firstValueFrom(this.http.get<UbigeoDistrict[]>(`${STORE_PROXY_PREFIX}/ubigeos`));
+  }
+
+  /** Every published product with details, pieces and media (template catalogs). */
+  catalog(): Promise<StoreCatalogProduct[]> {
+    return firstValueFrom(this.http.get<StoreCatalogProduct[]>(`${STORE_PROXY_PREFIX}/catalog`));
+  }
+
+  /** Reference Olva/Shalom rates to a district. */
+  shippingQuote(ubigeo: string): Promise<ShippingQuote[]> {
+    return firstValueFrom(
+      this.http.get<ShippingQuote[]>(`${STORE_PROXY_PREFIX}/shipping-quote`, { params: { ubigeo } }),
+    );
   }
 
   previewCoupon(body: {

@@ -30,17 +30,51 @@ export type StorefrontView = {
   shipping: StorefrontShipping;
   legal: StorefrontLegal;
   checkout: StorefrontCheckout;
+  industry: string;
+  template: StoreTemplate;
+  /** Template texts chosen by the merchant; missing fields use the template defaults. */
+  templateCopy: StoreTemplateCopy;
 };
 
-export type ShippingMode = 'LIMA' | 'PROVINCE' | 'PICKUP';
+export type StoreTemplate = 'classic' | 'selecta';
+
+export type StoreTemplateFaq = { question: string; answer: string };
+
+export type StoreTemplateCopy = {
+  heroEyebrow?: string;
+  heroTitle?: string;
+  heroEmphasis?: string;
+  heroText?: string;
+  heroNote?: string;
+  bannerEyebrow?: string;
+  bannerTitle?: string;
+  bannerText?: string;
+  bannerImageUrl?: string;
+  closingPhrase?: string;
+  footerNote?: string;
+  faq?: StoreTemplateFaq[];
+};
+
+/** LIMA/PROVINCE are flat zone rates; OLVA/SHALOM are courier rates by distance. */
+export type ShippingMode = 'LIMA' | 'PROVINCE' | 'OLVA' | 'SHALOM' | 'PICKUP';
 
 export type ShippingOption = {
   mode: ShippingMode;
   label: string;
-  /** Base price before the free shipping threshold or coupons. */
+  /** Base price before the free shipping threshold or coupons; the lowest tier for couriers. */
   cents: number;
   /** Delivery estimate, or the pickup address for PICKUP. */
   eta: string | null;
+  /** Courier rate: the real price comes from the shipping quote of the district. */
+  byDistance: boolean;
+};
+
+/** Reference courier rate for a district; the buyer must accept it at checkout. */
+export type ShippingQuote = {
+  mode: 'OLVA' | 'SHALOM';
+  label: string;
+  cents: number;
+  distanceKm: number | null;
 };
 
 export type StorefrontShipping = {
@@ -111,6 +145,54 @@ export type PublicProductDetail = PublicProductCard & {
   related: PublicProductCard[];
 };
 
+export type PublicMedia = {
+  url: string;
+  alt: string | null;
+  caption: string | null;
+  /** `related`: ambient photo shown with the product details, not in the gallery. */
+  kind: 'image' | 'related';
+};
+
+export type PublicProductDetails = {
+  size: string | null;
+  benefits: string[];
+  usage: string[];
+  notes: string[];
+  highlights: string[];
+  family: string | null;
+  intensity: string | null;
+  scent: Array<{ name: string; description: string }>;
+  /** Show the gallery photos together as one composition. */
+  montage: boolean;
+};
+
+/** Piece of a set (or the product itself when it is sold alone). */
+export type PublicSetPiece = {
+  /** Handle of the piece when it is also sold alone. */
+  handle: string | null;
+  name: string;
+  size: string | null;
+  code: string | null;
+  details: string[];
+  quantity: number;
+};
+
+/** Full product used by templates that browse the whole catalog in the browser. */
+export type StoreCatalogProduct = PublicProductCard & {
+  descriptionFull: string | null;
+  line: string | null;
+  lineKey: string | null;
+  format: 'individual' | 'set';
+  /** Units left when 20 or fewer are tracked; null means plenty or unlimited. */
+  stockLeft: number | null;
+  media: PublicMedia[];
+  variants: PublicVariant[];
+  details: PublicProductDetails;
+  includes: PublicSetPiece[];
+  seoTitle: string | null;
+  seoDescription: string | null;
+};
+
 export type PublicProductSort = 'featured' | 'newest' | 'price-asc' | 'price-desc';
 
 export type PublicProductList = {
@@ -143,6 +225,8 @@ export type CheckoutRequest = {
     ubigeo?: string;
     address?: string;
     reference?: string;
+    /** Required for OLVA/SHALOM: the buyer accepts the reference rate. */
+    acknowledgeRate?: boolean;
   };
   couponCode?: string;
   acceptTerms: true;
@@ -184,6 +268,8 @@ export type PublicOrder = {
   totalCents: number;
   customer: { name: string; email: string; phone: string };
   delivery: { mode: ShippingMode; label: string; address: string | null; eta: string | null };
+  /** Courier tracking code once the order ships. */
+  trackingCode: string | null;
   expiresAt: string | null;
   cancelReason: string | null;
   createdAt: string;

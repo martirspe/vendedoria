@@ -1,0 +1,131 @@
+.inventory__toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--ds-space-4);
+  align-items: center;
+}
+
+.inventory__search {
+  display: flex;
+  flex: 1;
+  gap: var(--ds-space-2);
+  align-items: center;
+  min-width: 16rem;
+  min-height: var(--ds-touch-target);
+  padding: 0 var(--ds-space-4);
+  border: 1px solid var(--ds-color-border);
+  border-radius: var(--ds-radius-md);
+  background: #fff;
+}
+
+.inventory__search input {
+  flex: 1;
+  border: 0;
+  outline: 0;
+  background: transparent;
+  font: inherit;
+}
+
+.check {
+  display: flex;
+  gap: var(--ds-space-2);
+  align-items: center;
+  font-size: 0.9rem;
+  cursor: pointer;
+}
+
+.inventory {
+  padding: 0;
+  overflow-x: auto;
+}
+
+.inventory table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.9rem;
+}
+
+.inventory th,
+.inventory td {
+  padding: var(--ds-space-3) var(--ds-space-4);
+  border-bottom: 1px solid var(--ds-color-border);
+  text-align: left;
+  vertical-align: middle;
+}
+
+.inventory th {
+  color: var(--ds-color-text-secondary);
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+}
+
+.inventory tr:last-child td {
+  border-bottom: 0;
+}
+
+.inventory tr.is-changed {
+  background: color-mix(in srgb, var(--ds-color-primary) 14%, white);
+}
+
+.inventory td strong {
+  display: block;
+}
+
+.inventory__option,
+.inventory__alert {
+  display: block;
+  color: var(--ds-color-text-secondary);
+  font-size: 0.8rem;
+}
+
+.inventory__alert {
+  margin-top: 0.2rem;
+  color: var(--ds-color-danger);
+  font-weight: 600;
+}
+
+.stepper {
+  display: inline-flex;
+  align-items: center;
+  border: 1px solid var(--ds-color-border);
+  border-radius: var(--ds-radius-md);
+  background: #fff;
+}
+
+.stepper button {
+  display: grid;
+  place-items: center;
+  width: 2.25rem;
+  height: 2.5rem;
+  border: 0;
+  background: none;
+  color: inherit;
+  cursor: pointer;
+}
+
+.stepper button:disabled {
+  opacity: 0.35;
+  cursor: default;
+}
+
+.stepper input {
+  width: 4.5rem;
+  height: 2.5rem;
+  border: 0;
+  border-inline: 1px solid var(--ds-color-border);
+  font: inherit;
+  text-align: center;
+  background: transparent;
+}
+
+.stepper.is-off {
+  background: #f4f6fa;
+}
+
+.inventory__toggle {
+  width: 1.1rem;
+  height: 1.1rem;
+  cursor: pointer;
+}

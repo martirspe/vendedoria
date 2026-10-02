@@ -15,6 +15,7 @@ export type CouponRule = {
   minItems: number;
   scope: CouponScope;
   targets: string[];
+  applyToSets: boolean;
   startsAt: Date | null;
   endsAt: Date | null;
   isActive: boolean;
@@ -24,6 +25,9 @@ export type CouponLine = {
   handle: string;
   categories: string[];
   brand: string | null;
+  line: string | null;
+  /** Sold as a set (has pieces). */
+  isSet: boolean;
   unitCents: number;
   quantity: number;
 };
@@ -37,14 +41,17 @@ export const normalizeCouponCode = (value: string) => value.trim().toUpperCase()
 const soles = (cents: number) => `S/ ${(cents / 100).toFixed(2)}`;
 
 export function lineIsEligible(
-  coupon: Pick<CouponRule, 'scope' | 'targets'>,
+  coupon: Pick<CouponRule, 'scope' | 'targets' | 'applyToSets'>,
   line: CouponLine,
 ): boolean {
+  if (line.isSet && !coupon.applyToSets) return false;
   switch (coupon.scope) {
     case 'CATEGORY':
       return line.categories.some((category) => coupon.targets.includes(category));
     case 'BRAND':
       return line.brand !== null && coupon.targets.includes(line.brand);
+    case 'LINE':
+      return line.line !== null && coupon.targets.includes(line.line);
     case 'PRODUCTS':
       return coupon.targets.includes(line.handle);
     default:

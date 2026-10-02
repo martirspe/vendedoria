@@ -160,7 +160,7 @@
               </td>
               <td>
                 <span class="status" [attr.data-status]="order.status">
-                  {{ statusLabel(order.status) }}
+                  {{ statusLabel(order.status, order) }}
                 </span>
               </td>
               <td>
@@ -194,7 +194,7 @@
       <div class="drawer__body">
         <div class="status-row">
           <span class="status" [attr.data-status]="order.status">
-            {{ statusLabel(order.status) }}
+            {{ statusLabel(order.status, order) }}
           </span>
           <strong>{{ formatMoney(order.totalCents, order.currency) }}</strong>
         </div>
@@ -219,6 +219,44 @@
             </dd>
           </div>
         </dl>
+
+        @if (order.delivery; as delivery) {
+          <section>
+            <h3>Entrega</h3>
+            <p class="delivery">
+              <strong>{{ delivery.label }}</strong>
+              @if (deliveryPlace(order)) {
+                <span>{{ deliveryPlace(order) }}</span>
+              }
+              @if (delivery.reference) {
+                <span>Referencia: {{ delivery.reference }}</span>
+              }
+              @if (order.trackingCode) {
+                <span>Código de seguimiento: <strong>{{ order.trackingCode }}</strong></span>
+              }
+            </p>
+            @if (needsTracking(order) && (order.status === 'PAID' || order.status === 'FULFILLING' || order.status === 'SHIPPED')) {
+              <label class="inline-field">
+                <span>{{ order.status === 'SHIPPED' ? 'Corregir código de seguimiento' : 'Código de seguimiento' }}</span>
+                <span class="inline-field__row">
+                  <input
+                    maxlength="80"
+                    autocomplete="off"
+                    placeholder="Ej. 12345678"
+                    [value]="trackingDraft()"
+                    (input)="trackingDraft.set($any($event.target).value)"
+                  />
+                  @if (order.status === 'SHIPPED') {
+                    <ds-button type="button" variant="secondary" [disabled]="saving() || !trackingDraft().trim()" (click)="saveTracking(order)">
+                      Guardar
+                    </ds-button>
+                  }
+                </span>
+                <small>Obligatorio para marcar el envío. El comprador lo recibe por correo.</small>
+              </label>
+            }
+          </section>
+        }
 
         <section>
           <h3>Ítems</h3>
@@ -280,6 +318,38 @@
           }
         </section>
 
+        @if (order.channel === 'WEB' && !mockMode() && (order.status === 'PENDING_PAYMENT' || order.status === 'CANCELLED')) {
+          <section>
+            <h3>Conciliar con Mercado Pago</h3>
+            <p class="hint">
+              Si el comprador pagó y el pedido no se actualizó, ingresa la referencia que empieza con
+              ORD (la ves en tu cuenta de Mercado Pago). Sin referencia se revisa el último intento.
+            </p>
+            <span class="inline-field__row">
+              <input
+                maxlength="64"
+                autocomplete="off"
+                spellcheck="false"
+                placeholder="ORD…"
+                aria-label="Referencia de Mercado Pago"
+                [value]="reconcileDraft()"
+                (input)="reconcileDraft.set($any($event.target).value)"
+              />
+              <ds-button type="button" variant="secondary" [disabled]="saving()" (click)="reconcile(order)">
+                Conciliar
+              </ds-button>
+            </span>
+          </section>
+        }
+
+        @if (order.channel === 'WEB') {
+          <section>
+            <ds-button type="button" variant="ghost" (click)="openEmailPreview(order)">
+              <ds-icon name="mail" [size]="1" /> Ver correo al comprador
+            </ds-button>
+          </section>
+        }
+
         @if (nextActions(order).length) {
           <section>
             <h3>Avanzar</h3>
@@ -300,6 +370,21 @@
       </div>
     </aside>
     <button type="button" class="backdrop" aria-label="Cerrar" (click)="closeDetail()"></button>
+  }
+
+  @if (emailPreview(); as preview) {
+    <div class="modal" role="dialog" aria-modal="true" aria-label="Vista previa del correo">
+      <div class="modal__panel modal__panel--wide">
+        <header>
+          <h2>{{ preview.subject }}</h2>
+          <p>Así recibe el comprador el correo de este pedido.</p>
+        </header>
+        <iframe class="email-frame" title="Correo al comprador" sandbox="" [srcdoc]="preview.safeHtml"></iframe>
+        <footer>
+          <ds-button type="button" variant="secondary" (click)="closeEmailPreview()">Cerrar</ds-button>
+        </footer>
+      </div>
+    </div>
   }
 
   @if (createOpen()) {

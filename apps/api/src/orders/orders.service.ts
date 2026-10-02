@@ -4,12 +4,15 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { OrderChannel, OrderStatus, Prisma } from '@prisma/client';
+import { CheckoutService } from '../checkout/checkout.service';
+import { OrderEmailService } from '../checkout/order-email.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { PaymentsService } from '../payments/payments.service';
 import { releaseOrder, settlePaidOrder } from './settlement';
 import {
   CreateOrderDto,
   CreatePaymentLinkDto,
+  ReconcileOrderDto,
   UpdateOrderStatusDto,
 } from './dto/orders.dto';
 
@@ -33,6 +36,8 @@ export class OrdersService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly paymentsService: PaymentsService,
+    private readonly checkout: CheckoutService,
+    private readonly email: OrderEmailService,
   ) {}
 
   async list(
@@ -200,8 +205,17 @@ export class OrdersService {
   ) {
     const order = await this.getById(tenantId, orderId);
     this.assertTransition(order.status, dto.status);
+    const trackingCode = dto.trackingCode?.trim() || null;
     if (order.status === dto.status) {
+      if (dto.status === 'SHIPPED' && trackingCode && trackingCode !== order.trackingCode) {
+        await this.prisma.order.update({ where: { id: order.id }, data: { trackingCode } });
+        return this.getById(tenantId, orderId);
+      }
       return order;
+    }
+    const pickup = (order.delivery as { mode?: string } | null)?.mode === 'PICKUP';
+    if (dto.status === 'SHIPPED' && !pickup && order.channel === 'WEB' && !trackingCode) {
+      throw new BadRequestException('Ingresa el código de seguimiento del envío.');
     }
 
     await this.prisma.$transaction(async (tx) => {
@@ -210,10 +224,24 @@ export class OrdersService {
       } else if (dto.status === 'PAID') {
         await settlePaidOrder(tx, order, 'Marcado como pagado en la consola');
       } else {
-        await tx.order.update({ where: { id: order.id }, data: { status: dto.status } });
+        await tx.order.update({
+          where: { id: order.id },
+          data: { status: dto.status, ...(dto.status === 'SHIPPED' && trackingCode ? { trackingCode } : {}) },
+        });
       }
     });
+    if (dto.status === 'SHIPPED' || dto.status === 'COMPLETED') {
+      await this.email.sendLogistics(order.id);
+    }
     return this.getById(tenantId, orderId);
+  }
+
+  reconcile(tenantId: string, orderId: string, dto: ReconcileOrderDto) {
+    return this.checkout.reconcile(tenantId, orderId, dto.providerOrderId);
+  }
+
+  emailPreview(tenantId: string, orderId: string) {
+    return this.email.preview(tenantId, orderId);
   }
 
   private assertTransition(from: OrderStatus, to: OrderStatus) {
@@ -221,7 +249,7 @@ export class OrdersService {
     const allowed: Record<OrderStatus, OrderStatus[]> = {
       DRAFT: ['PENDING_PAYMENT', 'PAID', 'CANCELLED'],
       PENDING_PAYMENT: ['PAID', 'CANCELLED', 'DRAFT'],
-      PAID: ['FULFILLING', 'COMPLETED', 'CANCELLED'],
+      PAID: ['FULFILLING', 'SHIPPED', 'COMPLETED', 'CANCELLED'],
       FULFILLING: ['SHIPPED', 'COMPLETED', 'CANCELLED'],
       SHIPPED: ['COMPLETED', 'CANCELLED'],
       COMPLETED: [],

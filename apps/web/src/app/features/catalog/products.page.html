@@ -180,6 +180,137 @@
 
           <section class="pub-card pub-card--row">
             <div>
+              <h2>Ficha detallada</h2>
+              <p>Tamaño, beneficios, modo de uso y notas. Se muestran en la ficha de la tienda.</p>
+            </div>
+            <label class="switch">
+              <input
+                type="checkbox"
+                [checked]="detailsEnabled()"
+                (change)="toggleDetails($any($event.target).checked)"
+              />
+              <span class="switch__track" aria-hidden="true"></span>
+              <span class="visually-hidden">Activar ficha detallada</span>
+            </label>
+          </section>
+
+          @if (detailsEnabled()) {
+            <section class="pub-card">
+              <div class="field-grid">
+                <label class="field">
+                  <span>Tamaño o presentación</span>
+                  <input formControlName="size" maxlength="60" placeholder="50 ml" />
+                </label>
+                <label class="field">
+                  <span>Familia</span>
+                  <input formControlName="family" maxlength="80" placeholder="Floral" />
+                </label>
+                <label class="field">
+                  <span>Intensidad</span>
+                  <input formControlName="intensity" maxlength="80" placeholder="Intensa" />
+                </label>
+              </div>
+              <label class="field">
+                <span>Beneficios</span>
+                <textarea formControlName="benefitsText" rows="3" placeholder="Uno por línea"></textarea>
+              </label>
+              <label class="field">
+                <span>Modo de uso</span>
+                <textarea formControlName="usageText" rows="3" placeholder="Un paso por línea"></textarea>
+              </label>
+              <label class="field">
+                <span>Notas e ingredientes</span>
+                <textarea formControlName="notesText" rows="3" placeholder="Uno por línea"></textarea>
+              </label>
+              <label class="field">
+                <span>Contenido destacado</span>
+                <textarea formControlName="highlightsText" rows="2" placeholder="Uno por línea. Se muestra cuando esta pieza va dentro de un set."></textarea>
+              </label>
+              <label class="field">
+                <span>Pirámide olfativa</span>
+                <textarea formControlName="scentText" rows="3" placeholder="Salida: bergamota y pimienta rosa"></textarea>
+                <span class="field__hint">Una nota por línea con el formato «Nota: descripción». Máximo 6.</span>
+              </label>
+              <label class="check-row">
+                <input type="checkbox" formControlName="montage" />
+                <span>Mostrar las fotos juntas como una composición</span>
+              </label>
+            </section>
+          }
+
+          <section class="pub-card pub-card--row">
+            <div>
+              <h2>Se vende como set</h2>
+              <p>Arma un set con productos de tu catálogo. Su stock sale de las piezas.</p>
+            </div>
+            <label class="switch">
+              <input
+                type="checkbox"
+                [checked]="setEnabled()"
+                (change)="toggleSet($any($event.target).checked)"
+              />
+              <span class="switch__track" aria-hidden="true"></span>
+              <span class="visually-hidden">Vender como set</span>
+            </label>
+          </section>
+
+          @if (setEnabled()) {
+            <section class="pub-card">
+              <header class="pub-card__head pub-card__head--inline">
+                <div>
+                  <h2>Piezas del set</h2>
+                  <p>Al vender un set se descuenta cada pieza de su propio stock.</p>
+                </div>
+                <ds-button
+                  type="button"
+                  variant="secondary"
+                  [disabled]="components().length >= pieceOptions().length"
+                  (click)="addComponent()"
+                >
+                  Añadir pieza
+                </ds-button>
+              </header>
+              @if (!pieceOptions().length) {
+                <p class="field__hint">Primero publica las piezas como productos simples (sin variantes).</p>
+              }
+              <ul class="variant-list">
+                @for (row of components(); track $index; let i = $index) {
+                  <li class="variant-row variant-row--set">
+                    <label class="field">
+                      <span>Producto</span>
+                      <select
+                        [value]="row.productId"
+                        (change)="updateComponent(i, { productId: $any($event.target).value })"
+                      >
+                        <option value="">Elige una pieza…</option>
+                        @for (option of pieceOptions(); track option.id) {
+                          <option [value]="option.id">{{ option.name }}{{ option.sku ? ' · ' + option.sku : '' }}</option>
+                        }
+                      </select>
+                    </label>
+                    <label class="field">
+                      <span>Unidades</span>
+                      <input
+                        type="number"
+                        min="1"
+                        max="20"
+                        step="1"
+                        [value]="row.quantity"
+                        (input)="updateComponent(i, { quantity: +$any($event.target).value || 1 })"
+                      />
+                    </label>
+                    <button type="button" class="icon-btn" (click)="removeComponent(i)" aria-label="Quitar pieza">
+                      <ds-icon name="x" />
+                    </button>
+                  </li>
+                }
+              </ul>
+            </section>
+          }
+
+          @if (!setEnabled()) {
+          <section class="pub-card pub-card--row">
+            <div>
               <h2>¿Tu producto tiene variantes?</h2>
               <p>
                 Colores, tallas, tamaños: cada variante con su propio precio y stock.
@@ -258,18 +389,28 @@
               </ul>
             </section>
           }
+          }
 
           <section class="pub-card">
             <header class="pub-card__head">
-              <h2>Imágenes y videos</h2>
-              <p>La primera imagen será la principal en el catálogo.</p>
+              <h2>Fotos</h2>
+              <p>La primera foto será la principal en el catálogo.</p>
             </header>
 
             <div class="media-drop">
               <ds-icon name="upload" />
-              <p>
-                Subida a S3 llega pronto. Por ahora pega la URL pública del archivo.
-              </p>
+              <p>Sube fotos desde tu equipo; las optimizamos antes de enviarlas.</p>
+              <label class="upload-btn" [class.is-busy]="uploading()">
+                <input
+                  type="file"
+                  accept="image/jpeg,image/png,image/webp"
+                  multiple
+                  [disabled]="uploading()"
+                  (change)="onFiles($any($event.target))"
+                />
+                {{ uploading() ? 'Subiendo…' : 'Elegir fotos' }}
+              </label>
+              <p class="field__hint">O pega la URL pública de una imagen:</p>
               <div class="media-drop__row">
                 <input
                   type="url"
@@ -284,31 +425,55 @@
               </div>
             </div>
 
-            @if (mediaUrls().length) {
-              <ul class="media-grid">
-                @for (url of mediaUrls(); track url; let i = $index) {
+            @if (media().length) {
+              <ul class="media-list">
+                @for (item of media(); track item.url; let i = $index; let last = $last) {
                   <li>
-                    <img [src]="url" alt="" loading="lazy" />
-                    @if (i === 0) {
-                      <span class="media-grid__main">Principal</span>
-                    }
-                    <button
-                      type="button"
-                      class="icon-btn media-grid__remove"
-                      (click)="removeMediaUrl(i)"
-                      aria-label="Quitar media"
-                    >
-                      <ds-icon name="x" />
-                    </button>
+                    <img [src]="item.url" [alt]="item.alt" loading="lazy" />
+                    <div class="media-list__fields">
+                      <input
+                        [value]="item.alt"
+                        maxlength="160"
+                        placeholder="Texto alternativo (qué se ve)"
+                        aria-label="Texto alternativo"
+                        (input)="updateMedia(i, { alt: $any($event.target).value })"
+                      />
+                      <input
+                        [value]="item.caption"
+                        maxlength="200"
+                        placeholder="Leyenda (opcional)"
+                        aria-label="Leyenda"
+                        (input)="updateMedia(i, { caption: $any($event.target).value })"
+                      />
+                      <label class="check-row">
+                        <input
+                          type="checkbox"
+                          [checked]="item.kind === 'related'"
+                          (change)="updateMedia(i, { kind: $any($event.target).checked ? 'related' : 'image' })"
+                        />
+                        <span>Foto de ambiente (no va en la galería principal)</span>
+                      </label>
+                    </div>
+                    <div class="media-list__actions">
+                      @if (i === 0) {
+                        <span class="media-grid__main">Principal</span>
+                      }
+                      <button type="button" class="icon-btn" [disabled]="i === 0" (click)="moveMedia(i, -1)" aria-label="Subir foto">
+                        <ds-icon name="chevronUp" />
+                      </button>
+                      <button type="button" class="icon-btn" [disabled]="last" (click)="moveMedia(i, 1)" aria-label="Bajar foto">
+                        <ds-icon name="chevronDown" />
+                      </button>
+                      <button type="button" class="icon-btn" (click)="removeMediaUrl(i)" aria-label="Quitar foto">
+                        <ds-icon name="x" />
+                      </button>
+                    </div>
                   </li>
                 }
               </ul>
             }
 
-            <p class="field__hint">
-              Máximo 8 archivos. Pesos objetivo: 5&nbsp;MB imgs / 16&nbsp;MB videos
-              (JPEG, PNG, MP4).
-            </p>
+            <p class="field__hint">Máximo 12 fotos (JPG, PNG o WebP).</p>
           </section>
         </div>
 
@@ -374,6 +539,17 @@
 
             <label class="field">
               <span class="field__label-row">
+                SKU
+                <span class="pill pill--soft">Opcional</span>
+              </span>
+              <input formControlName="sku" maxlength="60" autocomplete="off" placeholder="PER-50" />
+            </label>
+
+            @if (setEnabled()) {
+              <p class="field__hint">El stock del set sale de sus piezas: se vende mientras todas tengan unidades.</p>
+            } @else {
+            <label class="field">
+              <span class="field__label-row">
                 Stock
                 <span class="pill pill--soft">Opcional</span>
               </span>
@@ -400,6 +576,7 @@
                 vuelven.
               </span>
             </label>
+            }
 
             <input type="hidden" formControlName="currency" />
           </section>
@@ -442,6 +619,14 @@
                 <span class="pill pill--soft">Opcional</span>
               </span>
               <input formControlName="brand" maxlength="60" autocomplete="off" />
+            </label>
+            <label class="field">
+              <span class="field__label-row">
+                Línea o colección
+                <span class="pill pill--soft">Opcional</span>
+              </span>
+              <input formControlName="line" maxlength="80" autocomplete="off" placeholder="Ej. Ccori" />
+              <span class="field__hint">Agrupa productos para sugerir complementos y cupones por línea.</span>
             </label>
           </section>
 

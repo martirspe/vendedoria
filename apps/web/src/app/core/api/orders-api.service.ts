@@ -35,9 +35,23 @@ export type PaymentDto = {
   createdAt: string;
 };
 
+export type OrderDelivery = {
+  mode: 'LIMA' | 'PROVINCE' | 'OLVA' | 'SHALOM' | 'PICKUP';
+  label: string;
+  address: string | null;
+  district: string | null;
+  province: string | null;
+  department: string | null;
+  reference: string | null;
+  eta: string | null;
+};
+
 export type OrderDto = {
   id: string;
   status: OrderStatus;
+  channel: string;
+  delivery: OrderDelivery | null;
+  trackingCode: string | null;
   currency: string;
   totalCents: number;
   customerName: string | null;
@@ -113,11 +127,29 @@ export class OrdersApiService {
     );
   }
 
-  updateStatus(orderId: string, status: OrderStatus) {
+  updateStatus(orderId: string, status: OrderStatus, trackingCode?: string) {
     return firstValueFrom(
       this.http.patch<OrderDto>(
         `${environment.apiBaseUrl}/orders/${orderId}/status`,
-        { status },
+        trackingCode ? { status, trackingCode } : { status },
+      ),
+    );
+  }
+
+  /** Re-reads the Mercado Pago order (`ORD…`) and applies its result to the order. */
+  reconcile(orderId: string, providerOrderId?: string) {
+    return firstValueFrom(
+      this.http.post<{ reference: string; providerStatus: string; detail: string | null }>(
+        `${environment.apiBaseUrl}/orders/${orderId}/reconcile`,
+        providerOrderId ? { providerOrderId } : {},
+      ),
+    );
+  }
+
+  emailPreview(orderId: string) {
+    return firstValueFrom(
+      this.http.get<{ subject: string; html: string; status: string }>(
+        `${environment.apiBaseUrl}/orders/${orderId}/email-preview`,
       ),
     );
   }

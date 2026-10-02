@@ -17,6 +17,7 @@ const base: CouponRule = {
   minItems: 0,
   scope: 'ALL',
   targets: [],
+  applyToSets: true,
   startsAt: null,
   endsAt: null,
   isActive: true,
@@ -26,6 +27,8 @@ const line = (over: Partial<CouponLine> = {}): CouponLine => ({
   handle: 'polo',
   categories: ['polos'],
   brand: 'Andina',
+  line: 'Verano',
+  isSet: false,
   unitCents: 5000,
   quantity: 1,
   ...over,
@@ -67,6 +70,18 @@ describe('evaluateCoupon', () => {
       ok: false,
       reason: 'Agrega S/ 30.00 más en productos participantes para usar este cupón.',
     });
+  });
+
+  it('matches the product line and can leave sets out', () => {
+    expect(evaluateCoupon({ ...base, scope: 'LINE', targets: ['Verano'] }, [line()]).ok).toBe(true);
+    expect(evaluateCoupon({ ...base, scope: 'LINE', targets: ['Otoño'] }, [line()]).ok).toBe(false);
+    expect(evaluateCoupon({ ...base, scope: 'LINE', targets: ['Verano'] }, [line({ line: null })]).ok).toBe(false);
+    const result = evaluateCoupon({ ...base, applyToSets: false }, [
+      line({ unitCents: 4000 }),
+      line({ handle: 'set', isSet: true, unitCents: 9000 }),
+    ]);
+    expect(result).toMatchObject({ ok: true, eligibleCents: 4000, discountCents: 400 });
+    expect(evaluateCoupon({ ...base, applyToSets: false }, [line({ isSet: true })]).ok).toBe(false);
   });
 
   it('matches brand and product scopes', () => {

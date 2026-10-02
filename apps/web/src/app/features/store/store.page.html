@@ -103,6 +103,123 @@
         </section>
 
         <section class="card">
+          <h2>Rubro y plantilla</h2>
+          <label>
+            Rubro de tu negocio
+            <select formControlName="industry">
+              @for (option of industries; track option.value) {
+                <option [value]="option.value">{{ option.label }}</option>
+              }
+            </select>
+            <small>Define qué plantillas puedes usar.</small>
+          </label>
+          <div class="templates" role="radiogroup" aria-label="Plantilla de la tienda">
+            @for (option of templates(); track option.value) {
+              <button
+                type="button"
+                role="radio"
+                class="template"
+                [class.is-selected]="form.controls.template.value === option.value"
+                [attr.aria-checked]="form.controls.template.value === option.value"
+                [disabled]="!option.available"
+                (click)="pickTemplate(option.value)"
+              >
+                <strong>{{ option.label }}</strong>
+                <span>{{ option.description }}</span>
+                @if (!option.available) {
+                  <span class="optional">Disponible para Belleza y cuidado personal</span>
+                }
+              </button>
+            }
+          </div>
+
+          @if (form.controls.template.value === 'selecta') {
+            <div class="copy" formGroupName="copy">
+              <p class="hint">Textos de la plantilla. Si dejas un campo vacío se usa el texto sugerido con el nombre de tu tienda.</p>
+              <div class="row">
+                <label>
+                  <span class="label-text">Antetítulo de portada <span class="optional">Opcional</span></span>
+                  <input formControlName="heroEyebrow" maxlength="60" placeholder="TU PRÓXIMO FAVORITO" />
+                </label>
+                <label>
+                  <span class="label-text">Frase destacada <span class="optional">Opcional</span></span>
+                  <input formControlName="heroEmphasis" maxlength="80" placeholder="tu esencia." />
+                </label>
+              </div>
+              <label>
+                <span class="label-text">Título de portada <span class="optional">Opcional</span></span>
+                <textarea formControlName="heroTitle" rows="2" maxlength="80" placeholder="Hay un ritual&#10;que lleva"></textarea>
+                <span class="hint">Cada línea se muestra en un renglón, antes de la frase destacada.</span>
+              </label>
+              <label>
+                <span class="label-text">Texto de portada <span class="optional">Opcional</span></span>
+                <textarea formControlName="heroText" rows="2" maxlength="300"></textarea>
+              </label>
+              <label>
+                <span class="label-text">Nota bajo la portada <span class="optional">Opcional</span></span>
+                <input formControlName="heroNote" maxlength="80" placeholder="Pequeños detalles. Grandes momentos." />
+              </label>
+              <div class="row">
+                <label>
+                  <span class="label-text">Antetítulo del banner <span class="optional">Opcional</span></span>
+                  <input formControlName="bannerEyebrow" maxlength="60" placeholder="UN REGALO CON INTENCIÓN" />
+                </label>
+                <label>
+                  <span class="label-text">Título del banner <span class="optional">Opcional</span></span>
+                  <textarea formControlName="bannerTitle" rows="2" maxlength="100" placeholder="Para alguien especial.&#10;También puedes ser tú."></textarea>
+                  <span class="hint">La última línea se destaca.</span>
+                </label>
+              </div>
+              <label>
+                <span class="label-text">Texto del banner <span class="optional">Opcional</span></span>
+                <textarea formControlName="bannerText" rows="2" maxlength="400"></textarea>
+              </label>
+              <label>
+                <span class="label-text">Imagen del banner (URL) <span class="optional">Opcional</span></span>
+                <input formControlName="bannerImageUrl" type="url" placeholder="https://" />
+              </label>
+              <div class="row">
+                <label>
+                  <span class="label-text">Frase de cierre <span class="optional">Opcional</span></span>
+                  <input formControlName="closingPhrase" maxlength="60" placeholder="Una selección para tus momentos favoritos." />
+                </label>
+                <label>
+                  <span class="label-text">Nota del pie de página <span class="optional">Opcional</span></span>
+                  <input formControlName="footerNote" maxlength="400" placeholder="Por ejemplo: comercio independiente, no somos distribuidores oficiales." />
+                </label>
+              </div>
+            </div>
+
+            <div class="faq" formArrayName="faq">
+              <div class="faq__head">
+                <strong>Preguntas frecuentes</strong>
+                <ds-button variant="secondary" type="button" [disabled]="faq.length >= 12" (click)="addFaq()">
+                  <ds-icon name="plus" /> Agregar pregunta
+                </ds-button>
+              </div>
+              @if (!faq.length) {
+                <p class="hint">Sin preguntas propias: la tienda muestra las de envíos, pagos y cambios según tu configuración.</p>
+              }
+              @for (row of faq.controls; track row; let i = $index) {
+                <div class="faq__row" [formGroupName]="i">
+                  <label>
+                    Pregunta
+                    <input formControlName="question" maxlength="200" />
+                  </label>
+                  <label>
+                    Respuesta
+                    <textarea formControlName="answer" rows="2" maxlength="1200"></textarea>
+                  </label>
+                  <ds-button variant="ghost" type="button" (click)="removeFaq(i)">
+                    <ds-icon name="trash" /> Quitar
+                  </ds-button>
+                </div>
+              }
+            </div>
+          }
+        </section>
+
+        <section class="card">
           <h2>Contacto</h2>
           <div class="row">
             <label>
@@ -151,6 +268,59 @@
               <input formControlName="freeShippingFrom" type="number" min="1" step="1" inputmode="decimal" />
               <small>Se calcula sobre el total después de descuentos.</small>
             </label>
+
+            <div class="carriers">
+              <strong>Agencias por distancia</strong>
+              <p class="hint">
+                Ofrece Olva o Shalom a cualquier distrito. La tarifa se calcula por la distancia desde tu
+                punto de despacho y el comprador la acepta como referencial.
+              </p>
+              <div class="row row--3">
+                <label>
+                  Departamento de despacho
+                  <select [value]="originDepartment()" (change)="setOriginDepartment($any($event.target).value)">
+                    <option value="">Elige…</option>
+                    @for (department of departments(); track department) {
+                      <option [value]="department">{{ department }}</option>
+                    }
+                  </select>
+                </label>
+                <label>
+                  Provincia
+                  <select [value]="originProvince()" [disabled]="!originDepartment()" (change)="setOriginProvince($any($event.target).value)">
+                    <option value="">Elige…</option>
+                    @for (province of provinces(); track province) {
+                      <option [value]="province">{{ province }}</option>
+                    }
+                  </select>
+                </label>
+                <label>
+                  Distrito
+                  <select formControlName="shippingOriginUbigeo">
+                    <option value="">Elige…</option>
+                    @for (district of originDistricts(); track district.code) {
+                      <option [value]="district.code">{{ district.district }}</option>
+                    }
+                  </select>
+                </label>
+              </div>
+              @for (carrier of carriers; track carrier.key) {
+                <label class="check">
+                  <input type="checkbox" [formControlName]="carrier.key + 'Enabled'" />
+                  <span>Envío con {{ carrier.label }}</span>
+                </label>
+                @if (form.get(carrier.key + 'Enabled')?.value) {
+                  <div class="tiers" [formArrayName]="carrier.key">
+                    @for (label of tierLabels; track label; let i = $index) {
+                      <label>
+                        <span class="label-text">{{ label }} (S/)</span>
+                        <input [formControlName]="i" type="number" min="0" max="1000" step="0.10" inputmode="decimal" />
+                      </label>
+                    }
+                  </div>
+                }
+              }
+            </div>
           }
           <label class="check">
             <input type="checkbox" formControlName="pickupEnabled" />
