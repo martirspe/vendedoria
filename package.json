@@ -8,6 +8,17 @@
     "packages/*"
   ],
   "scripts": {
+    "dev": "node scripts/docker.mjs dev",
+    "docker:up": "node scripts/docker.mjs dev",
+    "docker:down": "node scripts/docker.mjs down",
+    "docker:logs": "node scripts/docker.mjs logs",
+    "docker:ps": "node scripts/docker.mjs ps",
+    "docker:clean-legacy": "node scripts/docker.mjs clean-legacy",
+    "docker:up:prod": "docker compose up -d --build --remove-orphans --wait",
+    "docker:down:prod": "docker compose down",
+    "docker:logs:prod": "docker compose logs -f --tail 200",
+    "docker:ps:prod": "docker compose ps",
+    "test:docker": "node scripts/docker.mjs test",
     "dev:api": "npm run start:dev -w @vendedoria/api",
     "dev:web": "npm run start -w @vendedoria/web",
     "dev:store": "npm run start -w @vendedoria/store",

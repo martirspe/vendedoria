@@ -15,61 +15,45 @@ Authority document: [`Project constitution for VendedorIA.md`](./Project%20const
 ```
 apps/api     NestJS API (`/api/v1`, Swagger at `/docs`)
 apps/web     Angular console + marketing
+apps/store   Tienda pública por tenant (SSR, `{slug}.dominio`)
+packages/*   Design system, tokens y contratos compartidos
 ```
 
-## Prerequisites
+## Desarrollo (todo en Docker)
 
-- Node.js 22+
-- PostgreSQL 16+
-
-## Setup
+Requisito: Docker Desktop con Compose v2. No hace falta Node ni Postgres en el host.
 
 ```bash
-cp .env.example apps/api/.env
-# edit DATABASE_URL and JWT secrets
-
-npm install
-npm run prisma:generate
-npm run prisma:migrate -w @vendedoria/api
+npm run dev            # crea apps/api/.env si falta y levanta todo con recarga en caliente
+npm run docker:logs    # logs de api, web y store
+npm run docker:ps
+npm run docker:down
+npm run test:docker    # tests unitarios + e2e en una base aislada vendedoria_test
 ```
 
-## Docker (desarrollo)
+| Servicio | URL |
+|----------|-----|
+| Consola | http://localhost:4201 |
+| API | http://localhost:3100/api/v1/health · Swagger http://localhost:3100/docs |
+| Tiendas | http://{slug}.localhost:4300 |
+| Postgres | `localhost:5432` (`postgres` / `postgres` / db `vendedoria`) |
 
-Requisito: Docker Desktop con Compose v2.
-
-```bash
-# Recomendado ahora: solo Postgres (imagen ya local) + API/web en el host
-docker compose up db
-
-# En otra terminal
-npm install
-npm run prisma:migrate -w @vendedoria/api
-npm run dev:api
-npm run dev:web
-```
-
-Stack completo en Docker (necesita poder bajar `node:22-alpine` de Docker Hub):
-
-```bash
-docker compose --profile full up --build
-```
-
-- Web: http://localhost:4200  
-- API: http://localhost:3000/api/v1/health  
-- Postgres: `localhost:5432` (`postgres` / `postgres` / db `vendedoria`)
-
-### Si falla el pull (`TLS handshake timeout`)
-
-Es un problema de red hacia `registry-1.docker.io`, no del Dockerfile.
-
-1. Reintenta más tarde / cambia de red / desactiva VPN temporalmente  
-2. Prueba el pull manual: `docker pull node:22-alpine`  
-3. Mientras tanto usa `docker compose up db` + `npm run dev:*` en el host  
-
-- Web: http://localhost:4200
-- API: http://localhost:3000/api/v1/health
-- Swagger: http://localhost:3000/docs
+- Los puertos no chocan con selecta (3000/4200/5433): ambos stacks pueden correr a la vez.
+- Guardar un archivo recarga la API (Nest watch), la consola y la tienda (`ng serve` con sondeo).
+- Cambios en dependencias (`package.json`): `npm run dev` de nuevo (el servicio `deps` ejecuta `npm ci`).
+- Migraciones nuevas: `docker compose -f docker-compose.dev.yml exec api npx prisma migrate dev --name <nombre>`.
+- Una sola vez, tras migrar del stack anterior: `npm run docker:clean-legacy` (conserva la base).
 - Meta webhook: `GET/POST /api/v1/webhooks/meta/whatsapp`
+
+## Producción (Docker)
+
+```bash
+cp .env.production.example .env   # completar dominios, POSTGRES_PASSWORD y secretos
+npm run docker:up:prod            # migrate → api → web + store → nginx en 127.0.0.1:${WEB_PORT}
+```
+
+El nginx interno enruta `CONSOLE_HOST` a la consola y `/api/`, y `*.STORE_BASE_DOMAIN` a la tienda.
+El nginx del servidor termina HTTPS (incluido el certificado comodín de las tiendas) y reenvía a `127.0.0.1:${WEB_PORT}`.
 
 ### Local WhatsApp slice smoke test
 

@@ -1,80 +1,179 @@
-# VendedorIA — local development stack
+# VendedorIA — stack Docker de producción.
 #
-# Recommended while Docker Hub is flaky:
-#   docker compose up db
-#   npm run prisma:migrate -w @vendedoria/api
-#   npm run dev:api
-#   npm run dev:web
+# Solo nginx publica un puerto en el host (127.0.0.1:${WEB_PORT}); el nginx del servidor
+# termina HTTPS (consola y comodín *.${STORE_BASE_DOMAIN}) y reenvía aquí.
+# Postgres queda en una red interna sin salida; API, consola y tienda en la red `app`.
 #
-# Full stack (needs node image from Docker Hub):
-#   docker compose --profile full up --build
+# Tras cambiar .env:
+#   docker compose up -d --force-recreate api
+
+name: vendedoria
 
 services:
-  db:
-    image: postgres:16-alpine
+  postgres:
+    image: postgres:16-bookworm
     container_name: vendedoria-db
     restart: unless-stopped
     environment:
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: postgres
-      POSTGRES_DB: vendedoria
-    ports:
-      - '5432:5432'
+      TZ: ${TZ:-America/Lima}
+      POSTGRES_USER: ${POSTGRES_USER:-vendedoria}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Define POSTGRES_PASSWORD en .env}
+      POSTGRES_DB: ${POSTGRES_DB:-vendedoria}
     volumes:
-      - vendedoria_pg:/var/lib/postgresql/data
+      - pgdata:/var/lib/postgresql/data
+    deploy:
+      resources:
+        limits:
+          memory: ${POSTGRES_MEMORY_LIMIT:-512M}
     healthcheck:
-      test: ['CMD-SHELL', 'pg_isready -U postgres -d vendedoria']
+      test: ['CMD-SHELL', 'pg_isready -U ${POSTGRES_USER:-vendedoria} -d ${POSTGRES_DB:-vendedoria}']
       interval: 5s
       timeout: 5s
-      retries: 10
+      retries: 12
+      start_period: 10s
+    security_opt: [no-new-privileges:true]
+    networks: [database]
+
+  migrate:
+    build: {context: ., target: migrate}
+    image: vendedoria-migrate:latest
+    container_name: vendedoria-migrate
+    environment:
+      DATABASE_URL: postgresql://${POSTGRES_USER:-vendedoria}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-vendedoria}?schema=public
+    depends_on:
+      postgres: {condition: service_healthy}
+    restart: 'no'
+    networks: [database]
 
   api:
-    profiles: [full]
-    build:
-      context: .
-      dockerfile: apps/api/Dockerfile.dev
+    build: {context: ., target: api}
+    image: vendedoria-api:latest
     container_name: vendedoria-api
     restart: unless-stopped
-    depends_on:
-      db:
-        condition: service_healthy
+    env_file: .env
     environment:
-      PORT: 3000
-      DATABASE_URL: postgresql://postgres:postgres@db:5432/vendedoria?schema=public
-      JWT_ACCESS_SECRET: local-dev-access-secret-change-me-32chars
-      JWT_REFRESH_SECRET: local-dev-refresh-secret-change-me-32chars
-      JWT_REFRESH_EXPIRES_DAYS: 30
-      CORS_ORIGIN: http://localhost:4200
-      META_VERIFY_TOKEN: local-meta-verify-token
-      PUBLIC_API_BASE_URL: http://localhost:3000/api/v1
-    ports:
-      - '3000:3000'
-    volumes:
-      - ./apps/api/src:/app/apps/api/src
-      - ./apps/api/prisma:/app/apps/api/prisma
-      - ./apps/api/nest-cli.json:/app/apps/api/nest-cli.json
-      - ./apps/api/tsconfig.json:/app/apps/api/tsconfig.json
-      - ./apps/api/tsconfig.build.json:/app/apps/api/tsconfig.build.json
+      TZ: ${TZ:-America/Lima}
+      NODE_ENV: production
+      PORT: '3000'
+      DATABASE_URL: postgresql://${POSTGRES_USER:-vendedoria}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-vendedoria}?schema=public
+      CORS_ORIGIN: https://${CONSOLE_HOST:?Define CONSOLE_HOST en .env}
+      PUBLIC_API_BASE_URL: https://${CONSOLE_HOST}/api/v1
+      STOREFRONT_URL_TEMPLATE: https://{slug}.${STORE_BASE_DOMAIN:?Define STORE_BASE_DOMAIN en .env}
+      NODE_OPTIONS: ${API_NODE_OPTIONS:---max-old-space-size=384}
+    deploy:
+      resources:
+        limits:
+          memory: ${API_MEMORY_LIMIT:-512M}
+    depends_on:
+      migrate: {condition: service_completed_successfully}
+    healthcheck:
+      test: ['CMD', 'node', '-e', "fetch('http://127.0.0.1:3000/api/v1/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 30s
+    init: true
+    read_only: true
+    tmpfs: [/tmp]
+    security_opt: [no-new-privileges:true]
+    networks: [app, database]
 
   web:
-    profiles: [full]
-    build:
-      context: .
-      dockerfile: apps/web/Dockerfile.dev
+    build: {context: ., target: web}
+    image: vendedoria-web:latest
     container_name: vendedoria-web
     restart: unless-stopped
-    depends_on:
-      - api
     environment:
-      CHOKIDAR_USEPOLLING: 'true'
+      TZ: ${TZ:-America/Lima}
+      NODE_ENV: production
+      PORT: '4000'
+      NG_ALLOWED_HOSTS: ${CONSOLE_HOST}
+      NG_TRUST_PROXY_HEADERS: 'true'
+      NODE_OPTIONS: ${WEB_NODE_OPTIONS:---max-old-space-size=256}
+    deploy:
+      resources:
+        limits:
+          memory: ${WEB_MEMORY_LIMIT:-384M}
+    healthcheck:
+      test: ['CMD', 'node', '-e', "fetch('http://127.0.0.1:4000/healthz').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 20s
+    init: true
+    read_only: true
+    tmpfs: [/tmp]
+    security_opt: [no-new-privileges:true]
+    networks: [app]
+
+  store:
+    build: {context: ., target: store}
+    image: vendedoria-store:latest
+    container_name: vendedoria-store
+    restart: unless-stopped
+    environment:
+      TZ: ${TZ:-America/Lima}
+      NODE_ENV: production
+      PORT: '4300'
+      STORE_API_URL: http://api:3000/api/v1
+      STORE_ALLOWED_HOSTS: '*.${STORE_BASE_DOMAIN}'
+      NG_TRUST_PROXY_HEADERS: 'true'
+      NODE_OPTIONS: ${STORE_NODE_OPTIONS:---max-old-space-size=384}
+    deploy:
+      resources:
+        limits:
+          memory: ${STORE_MEMORY_LIMIT:-512M}
+    depends_on:
+      api: {condition: service_healthy}
+    healthcheck:
+      test: ['CMD', 'node', '-e', "fetch('http://127.0.0.1:4300/healthz').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 20s
+    init: true
+    read_only: true
+    tmpfs: [/tmp]
+    security_opt: [no-new-privileges:true]
+    networks: [app]
+
+  nginx:
+    image: nginx:1.27-alpine
+    container_name: vendedoria-nginx
+    restart: unless-stopped
+    environment:
+      TZ: ${TZ:-America/Lima}
+      CONSOLE_HOST: ${CONSOLE_HOST}
+      STORE_BASE_DOMAIN: ${STORE_BASE_DOMAIN}
+      NGINX_ENVSUBST_FILTER: ^(CONSOLE_HOST|STORE_BASE_DOMAIN)$$
     ports:
-      - '4200:4200'
+      - '127.0.0.1:${WEB_PORT:-8082}:80'
     volumes:
-      - ./apps/web/src:/app/apps/web/src
-      - ./apps/web/public:/app/apps/web/public
-      - ./apps/web/angular.json:/app/apps/web/angular.json
-      - ./apps/web/tsconfig.json:/app/apps/web/tsconfig.json
-      - ./apps/web/tsconfig.app.json:/app/apps/web/tsconfig.app.json
+      - ./docker/nginx/default.conf.template:/etc/nginx/templates/default.conf.template:ro
+      - ./docker/nginx/proxy-params.conf:/etc/nginx/snippets/proxy-params.conf:ro
+      - ./docker/nginx/security-headers.conf:/etc/nginx/snippets/security-headers.conf:ro
+    deploy:
+      resources:
+        limits:
+          memory: ${NGINX_MEMORY_LIMIT:-128M}
+    depends_on:
+      api: {condition: service_healthy}
+      web: {condition: service_healthy}
+      store: {condition: service_healthy}
+    healthcheck:
+      test: ['CMD', 'wget', '-qO-', 'http://127.0.0.1/nginx-health']
+      interval: 30s
+      timeout: 5s
+      retries: 3
+    security_opt: [no-new-privileges:true]
+    networks: [app]
 
 volumes:
-  vendedoria_pg:
+  pgdata:
+
+networks:
+  app:
+    name: vendedoria
+  database:
+    name: vendedoria-database
+    internal: true

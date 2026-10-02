@@ -1,16 +1,23 @@
-node_modules
-dist
-.angular
+**/node_modules
+**/dist
+**/.angular
 .git
+.github
 .tmp
 coverage
 *.log
 .env
-.env.local
-apps/api/.env
-apps/web/dist
+.env.*
+!.env.example
+!.env.production.example
+**/.env
+backups
+docker
+scripts
+docs
 **/.DS_Store
 **/README.md
 Project constitution*
+PROJECT CONSTITUTION.md
 CHANGELOG.md
 .cursor

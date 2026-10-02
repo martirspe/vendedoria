@@ -3,8 +3,11 @@ dist/
 .angular/
 .tmp/
 .env
-.env.local
+.env.*
+!.env.example
+!.env.production.example
 apps/api/.env
+backups/
 *.log
 coverage/
 .DS_Store

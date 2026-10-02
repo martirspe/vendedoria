@@ -51,7 +51,7 @@ const angularApp = new AngularNodeAppEngine({ allowedHosts: ALLOWED_HOSTS });
 const resolveCache = new Map<string, { slug: string | null; expiresAt: number }>();
 
 app.disable('x-powered-by');
-app.set('trust proxy', 'loopback');
+app.set('trust proxy', 'loopback, uniquelocal');
 
 app.use((_req, res, next) => {
   res.setHeader('X-Content-Type-Options', 'nosniff');

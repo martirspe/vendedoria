@@ -1,0 +1,124 @@
+# VendedorIA — desarrollo local con recarga en caliente.
+#
+# El código se monta en /app: Nest (tsc --watch) y Angular (ng serve) recargan al guardar.
+# El sondeo es necesario en Docker Desktop/Windows, donde los cambios del disco
+# no generan eventos inotify dentro del contenedor.
+# Puertos distintos de selecta (3000/4200/5433) para poder usar ambos a la vez.
+#
+# Uso: npm run dev   (prepara apps/api/.env y levanta el stack)
+#      npm run docker:down | docker:logs | docker:ps | test:docker
+
+name: vendedoria-dev
+
+x-node: &node
+  image: vendedoria-dev:latest
+  volumes:
+    - .:/app
+    - node_modules_dev:/app/node_modules
+    - api_node_modules_dev:/app/apps/api/node_modules
+    - web_node_modules_dev:/app/apps/web/node_modules
+    - store_node_modules_dev:/app/apps/store/node_modules
+    - web_angular_cache_dev:/app/apps/web/.angular
+    - store_angular_cache_dev:/app/apps/store/.angular
+  environment: &node-env
+    NG_CLI_ANALYTICS: 'false'
+    CHOKIDAR_USEPOLLING: 'true'
+    CHOKIDAR_INTERVAL: '1000'
+  init: true
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: vendedoria-dev-db
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: vendedoria
+    ports: ['127.0.0.1:5432:5432']
+    volumes: [postgres_dev:/var/lib/postgresql/data]
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U postgres -d vendedoria']
+      interval: 5s
+      timeout: 3s
+      retries: 20
+    restart: unless-stopped
+
+  deps:
+    <<: *node
+    build: {context: ., target: dependencies}
+    working_dir: /app
+    command: sh -c 'npm ci --no-audit --no-fund && npm run prisma:generate'
+
+  api:
+    <<: *node
+    container_name: vendedoria-dev-api
+    working_dir: /app/apps/api
+    environment:
+      <<: *node-env
+      NODE_ENV: development
+      PORT: '3100'
+      DATABASE_URL: postgresql://postgres:postgres@postgres:5432/vendedoria?schema=public
+      CORS_ORIGIN: http://localhost:4201
+      PUBLIC_API_BASE_URL: http://localhost:3100/api/v1
+      STOREFRONT_URL_TEMPLATE: http://{slug}.localhost:4300
+      TSC_WATCHFILE: DynamicPriorityPolling
+      TSC_WATCHDIRECTORY: DynamicPriorityPolling
+    ports: ['127.0.0.1:3100:3100']
+    command: sh -c 'npx prisma migrate deploy && npx nest start --watch'
+    depends_on:
+      postgres: {condition: service_healthy}
+      deps: {condition: service_completed_successfully}
+    healthcheck:
+      test: ['CMD', 'node', '-e', "fetch('http://localhost:3100/api/v1/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
+      interval: 10s
+      start_period: 60s
+      timeout: 5s
+      retries: 12
+    restart: unless-stopped
+
+  web:
+    <<: *node
+    container_name: vendedoria-dev-web
+    working_dir: /app/apps/web
+    ports: ['127.0.0.1:4201:4201']
+    command: npx ng serve --host 0.0.0.0 --port 4201 --poll 1000
+    depends_on:
+      api: {condition: service_healthy}
+    healthcheck:
+      test: ['CMD', 'node', '-e', "fetch('http://localhost:4201/').then(r=>process.exit(r.status<500?0:1)).catch(()=>process.exit(1))"]
+      interval: 10s
+      start_period: 120s
+      timeout: 10s
+      retries: 12
+    restart: unless-stopped
+
+  store:
+    <<: *node
+    container_name: vendedoria-dev-store
+    working_dir: /app/apps/store
+    environment:
+      <<: *node-env
+      STORE_API_URL: http://api:3100/api/v1
+      STORE_ALLOWED_HOSTS: localhost,*.localhost
+    ports: ['127.0.0.1:4300:4300']
+    command: npx ng serve --host 0.0.0.0 --port 4300 --poll 1000
+    depends_on:
+      api: {condition: service_healthy}
+    healthcheck:
+      test: ['CMD', 'node', '-e', "fetch('http://localhost:4300/healthz').then(r=>process.exit(r.status<500?0:1)).catch(()=>process.exit(1))"]
+      interval: 10s
+      start_period: 120s
+      timeout: 10s
+      retries: 12
+    restart: unless-stopped
+
+volumes:
+  # Nombre fijo: conserva la base del stack anterior (proyecto `vendedoria`, servicio `db`).
+  postgres_dev:
+    name: vendedoria_vendedoria_pg
+  node_modules_dev:
+  api_node_modules_dev:
+  web_node_modules_dev:
+  store_node_modules_dev:
+  web_angular_cache_dev:
+  store_angular_cache_dev:
