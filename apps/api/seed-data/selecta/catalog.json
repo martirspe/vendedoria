@@ -1,0 +1,4285 @@
+{
+ "source": "Selecta (export de la base, 2026-10-02)",
+ "products": [
+  {
+   "slug": "set-aires-andes-y-caribe",
+   "name": "Set Aires: Andes y Caribe",
+   "category": "Perfumería femenina",
+   "priceCents": 7590,
+   "active": true,
+   "content": {
+    "line": "Aires",
+    "brand": "Yanbal",
+    "notes": [
+     "El set y sus piezas individuales comparten las mismas unidades disponibles."
+    ],
+    "title": "Set Aires: Andes y Caribe",
+    "usage": [
+     "Aires de los Andes Eau Fraiche: Aplica en cuello, muñecas u otras zonas de pulsación.",
+     "Aires del Caribe Eau Fraiche: Aplica en cuello, muñecas u otras zonas de pulsación."
+    ],
+    "format": "set",
+    "images": [
+     {
+      "alt": "Aires de los Andes Eau Fraiche: presentación del producto",
+      "url": "/images/products/item-20013590/foto-1.jpg",
+      "file": "foto-1.jpg",
+      "kind": "component",
+      "label": "Aires de los Andes Eau Fraiche",
+      "caption": "Aires de los Andes Eau Fraiche · 200 ml"
+     },
+     {
+      "alt": "Aires del Caribe Eau Fraiche: presentación del producto",
+      "url": "/images/products/item-20013588/foto-1.jpg",
+      "file": "foto-1.jpg",
+      "kind": "component",
+      "label": "Aires del Caribe Eau Fraiche",
+      "caption": "Aires del Caribe Eau Fraiche · 200 ml"
+     }
+    ],
+    "lineKey": "aires",
+    "montage": true,
+    "summary": "Aires de los Andes Eau Fraiche 200 ml + Aires del Caribe Eau Fraiche 200 ml",
+    "benefits": [],
+    "includes": [
+     {
+      "code": "20013590",
+      "name": "Aires de los Andes Eau Fraiche",
+      "size": "200 ml",
+      "details": [
+       "Manzana verde · orquídea · lirio del valle"
+      ],
+      "productSlug": "aires-de-los-andes-eau-fraiche-20013590"
+     },
+     {
+      "code": "20013588",
+      "name": "Aires del Caribe Eau Fraiche",
+      "size": "200 ml",
+      "details": [
+       "Maracuyá · frangipani · acorde marino"
+      ],
+      "productSlug": "aires-del-caribe-eau-fraiche-20013588"
+     }
+    ],
+    "inventory": [
+     {
+      "sku": "20013590",
+      "quantity": 1
+     },
+     {
+      "sku": "20013588",
+      "quantity": 1
+     }
+    ],
+    "description": "Elige juntas las piezas de esta colección. El contenido y la presentación de cada producto aparecen a continuación."
+   }
+  },
+  {
+   "slug": "set-baby-colonia-y-crema",
+   "name": "Set Baby: colonia y crema",
+   "category": "Cuidado del bebé",
+   "priceCents": 8790,
+   "active": true,
+   "content": {
+    "line": "Baby",
+    "brand": "Yanbal",
+    "notes": [
+     "El set y sus piezas individuales comparten las mismas unidades disponibles."
+    ],
+    "title": "Set Baby: colonia y crema",
+    "usage": [
+     "Agua de Colonia Yanbal Baby: Vierte una pequeña cantidad en las manos antes de distribuirla. Evita el rostro.",
+     "Crema Hidratante Yanbal Baby: Distribuye una pequeña cantidad sobre rostro y cuerpo, evitando los ojos."
+    ],
+    "format": "set",
+    "images": [
+     {
+      "alt": "Agua de Colonia Yanbal Baby: presentación del producto",
+      "url": "/images/products/item-20013952/foto-1.jpg",
+      "file": "foto-1.jpg",
+      "kind": "component",
+      "label": "Agua de Colonia Yanbal Baby",
+      "caption": "Agua de Colonia Yanbal Baby · 200 ml"
+     },
+     {
+      "alt": "Crema Hidratante Yanbal Baby: presentación del producto",
+      "url": "/images/products/item-20014078/foto-1.jpg",
+      "file": "foto-1.jpg",
+      "kind": "component",
+      "label": "Crema Hidratante Yanbal Baby",
+      "caption": "Crema Hidratante Yanbal Baby · 200 ml"
+     }
+    ],
+    "lineKey": "baby",
+    "montage": true,
+    "summary": "Agua de Colonia Yanbal Baby 200 ml + Crema Hidratante Yanbal Baby 200 ml",
+    "benefits": [],
+    "includes": [
+     {
+      "code": "20013952",
+      "name": "Agua de Colonia Yanbal Baby",
+      "size": "200 ml",
+      "details": [
+       "Colonia sin alcohol"
+      ],
+      "productSlug": "agua-de-colonia-yanbal-baby-20013952"
+     },
+     {
+      "code": "20014078",
+      "name": "Crema Hidratante Yanbal Baby",
+      "size": "200 ml",
+      "details": [
+       "Crema de manzanilla y algodón"
+      ],
+      "productSlug": "crema-hidratante-yanbal-baby-20014078"
+     }
+    ],
+    "inventory": [
+     {
+      "sku": "20013952",
+      "quantity": 1
+     },
+     {
+      "sku": "20014078",
+      "quantity": 1
+     }
+    ],
+    "description": "Elige juntas las piezas de esta colección. El contenido y la presentación de cada producto aparecen a continuación."
+   }
+  },
+  {
+   "slug": "set-baby-rutina-de-cinco-piezas",
+   "name": "Set Baby: rutina de cinco piezas",
+   "category": "Cuidado del bebé",
+   "priceCents": 16450,
+   "active": true,
+   "content": {
+    "line": "Baby",
+    "brand": "Yanbal",
+    "notes": [
+     "El set y sus piezas individuales comparten las mismas unidades disponibles."
+    ],
+    "title": "Set Baby: rutina de cinco piezas",
+    "usage": [
+     "Agua de Colonia Yanbal Baby: Vierte una pequeña cantidad en las manos antes de distribuirla. Evita el rostro.",
+     "Crema Hidratante Yanbal Baby: Distribuye una pequeña cantidad sobre rostro y cuerpo, evitando los ojos.",
+     "Baño Líquido Yanbal Baby: Distribuye una pequeña cantidad en la piel húmeda y enjuaga."
+    ],
+    "format": "set",
+    "images": [
+     {
+      "alt": "Agua de Colonia Yanbal Baby: presentación del producto",
+      "url": "/images/products/item-20013952/foto-1.jpg",
+      "file": "foto-1.jpg",
+      "kind": "component",
+      "label": "Agua de Colonia Yanbal Baby",
+      "caption": "Agua de Colonia Yanbal Baby · 200 ml"
+     },
+     {
+      "alt": "Crema Hidratante Yanbal Baby: presentación del producto",
+      "url": "/images/products/item-20014078/foto-1.jpg",
+      "file": "foto-1.jpg",
+      "kind": "component",
+      "label": "Crema Hidratante Yanbal Baby",
+      "caption": "Crema Hidratante Yanbal Baby · 200 ml"
+     },
+     {
+      "alt": "Baño Líquido Yanbal Baby: presentación del producto",
+      "url": "/images/products/item-20013953/foto-1.jpg",
+      "file": "foto-1.jpg",
+      "kind": "component",
+      "label": "Baño Líquido Yanbal Baby",
+      "caption": "Baño Líquido Yanbal Baby · 400 ml"
+     },
+     {
+      "alt": "Set Baby: Shampoo + Jabón en Barra: presentación del producto",
+      "url": "/images/products/item-14700290/foto-1.jpg",
+      "file": "foto-1.jpg",
+      "kind": "component",
+      "label": "Set Baby: Shampoo + Jabón en Barra",
+      "caption": "Set Baby: Shampoo + Jabón en Barra · 400 ml"
+     }
+    ],
+    "lineKey": "baby",
+    "montage": true,
+    "summary": "Agua de Colonia Yanbal Baby 200 ml + Crema Hidratante Yanbal Baby 200 ml + Baño Líquido Yanbal Baby 400 ml + Shampoo acondicionador Baby 400 ml + Jabón Baby en barra",
+    "benefits": [],
+    "includes": [
+     {
+      "code": "20013952",
+      "name": "Agua de Colonia Yanbal Baby",
+      "size": "200 ml",
+      "details": [
+       "Colonia sin alcohol"
+      ],
+      "productSlug": "agua-de-colonia-yanbal-baby-20013952"
+     },
+     {
+      "code": "20014078",
+      "name": "Crema Hidratante Yanbal Baby",
+      "size": "200 ml",
+      "details": [
+       "Crema de manzanilla y algodón"
+      ],
+      "productSlug": "crema-hidratante-yanbal-baby-20014078"
+     },
+     {
+      "code": "20013953",
+      "name": "Baño Líquido Yanbal Baby",
+      "size": "400 ml",
+      "details": [
+       "Baño líquido de espuma suave"
+      ],
+      "productSlug": "bano-liquido-yanbal-baby-20013953"
+     },
+     {
+      "code": null,
+      "name": "Shampoo acondicionador Baby",
+      "size": "400 ml",
+      "details": [
+       "Con extracto de manzanilla, según el envase de la fotografía."
+      ],
+      "productSlug": "shampoo-acondicionador-baby-individual"
+     },
+     {
+      "code": null,
+      "name": "Jabón Baby en barra",
+      "size": "Contenido por confirmar",
+      "details": [
+       "Una barra incluida en este set."
+      ],
+      "productSlug": "jabon-en-barra-yanbal-baby-baby-jabon-suelto"
+     }
+    ],
+    "inventory": [
+     {
+      "sku": "20013952",
+      "quantity": 1
+     },
+     {
+      "sku": "20014078",
+      "quantity": 1
+     },
+     {
+      "sku": "20013953",
+      "quantity": 1
+     },
+     {
+      "sku": "14700290",
+      "quantity": 1
+     }
+    ],
+    "description": "Elige juntas las piezas de esta colección. El contenido y la presentación de cada producto aparecen a continuación."
+   }
+  },
+  {
+   "slug": "set-baby-shampoo-jabon-en-barra-14700290",
+   "name": "Set Baby: Shampoo + Jabón en Barra",
+   "category": "Cuidado del bebé",
+   "priceCents": 3900,
+   "active": true,
+   "content": {
+    "line": "Baby",
+    "brand": "Yanbal",
+    "notes": [
+     "Se vende como set cerrado. Sus piezas no suman stock individual."
+    ],
+    "title": "Set Baby: Shampoo + Jabón en Barra",
+    "usage": [
+     "Sigue las indicaciones del envase de cada pieza."
+    ],
+    "format": "set",
+    "images": [
+     {
+      "alt": "Set Baby: Shampoo + Jabón en Barra: presentación del producto",
+      "url": "/images/products/item-14700290/foto-1.jpg",
+      "file": "foto-1.jpg",
+      "kind": "component",
+      "label": "Producto"
+     }
+    ],
+    "lineKey": "baby",
+    "summary": "Shampoo acondicionador 400 ml + jabón en barra",
+    "benefits": [],
+    "includes": [
+     {
+      "code": null,
+      "name": "Shampoo acondicionador Baby",
+      "size": "400 ml",
+      "details": [
+       "Con extracto de manzanilla, según el envase de la fotografía."
+      ],
+      "productSlug": "shampoo-acondicionador-baby-individual"
+     },
+     {
+      "code": null,
+      "name": "Jabón Baby en barra",
+      "size": "Contenido por confirmar",
+      "details": [
+       "Una barra incluida en este set."
+      ],
+      "productSlug": "jabon-en-barra-yanbal-baby-baby-jabon-suelto"
+     }
+    ],
+    "inventory": [
+     {
+      "sku": "14700290",
+      "quantity": 1
+     }
+    ],
+    "description": "Presentación de dos piezas: shampoo acondicionador de manzanilla de 400 ml y jabón en barra. Se vende como conjunto cerrado."
+   }
+  },
+  {
+   "slug": "set-body-spa-una-de-gato-de-yanbal",
+   "name": "Set Body Spa Uña de Gato de Yanbal",
+   "category": "Cuidado corporal",
+   "priceCents": 8490,
+   "active": true,
+   "content": {
+    "line": "Body Spa Uña de Gato",
+    "brand": "Yanbal",
+    "notes": [
+     "El set y sus piezas individuales comparten las mismas unidades disponibles."
+    ],
+    "title": "Set Body Spa Uña de Gato de Yanbal",
+    "usage": [
+     "Limpiador Exfoliante en Gel Body Spa Uña de Gato: Masajea suavemente sobre la piel húmeda del cuerpo y enjuaga."
+    ],
+    "format": "set",
+    "images": [
+     {
+      "alt": "Limpiador Exfoliante en Gel Body Spa Uña de Gato: presentación del producto",
+      "url": "/images/products/item-20014140/foto-1.jpg",
+      "file": "foto-1.jpg",
+      "kind": "component",
+      "label": "Limpiador Exfoliante en Gel Body Spa Uña de Gato",
+      "caption": "Limpiador Exfoliante en Gel Body Spa Uña de Gato · 200 g"
+     },
+     {
+      "alt": "Crema Body Spa Uña de Gato de Yanbal de 400 ml en frasco verde con dosificador",
+      "url": "/images/products/item-1700179827925/foto-1.jpg",
+      "file": "foto-1.jpg",
+      "kind": "component",
+      "label": "Crema Corporal Hidratante Reparadora Yanbal 400ml Uña de Gato",
+      "caption": "Crema Corporal Hidratante Reparadora Yanbal 400ml Uña de Gato · 400 ml"
+     }
+    ],
+    "lineKey": "body-spa-una-de-gato",
+    "montage": true,
+    "summary": "Limpiador Exfoliante en Gel Body Spa Uña de Gato 200 g + Crema Corporal Hidratante Reparadora Yanbal 400ml Uña de Gato",
+    "benefits": [],
+    "includes": [
+     {
+      "code": "20014140",
+      "name": "Limpiador Exfoliante en Gel Body Spa Uña de Gato",
+      "size": "200 g",
+      "details": [
+       "Limpiador y exfoliante corporal"
+      ],
+      "productSlug": "limpiador-exfoliante-en-gel-body-spa-una-de-gato-20014140"
+     },
+     {
+      "code": "1700179827925",
+      "name": "Crema Corporal Hidratante Reparadora Yanbal 400ml Uña de Gato",
+      "size": "400 ml",
+      "details": [
+       "Crema corporal Uña de Gato · 400 ml"
+      ],
+      "productSlug": "crema-corporal-hidratante-reparadora-yanbal-400ml-una-de-gato-1700179827925"
+     }
+    ],
+    "inventory": [
+     {
+      "sku": "20014140",
+      "quantity": 1
+     },
+     {
+      "sku": "1700179827925",
+      "quantity": 1
+     }
+    ],
+    "description": "Elige juntas las piezas de esta colección. El contenido y la presentación de cada producto aparecen a continuación."
+   }
+  },
+  {
+   "slug": "set-cielo-yanbal",
+   "name": "Set Cielo de Yanbal",
+   "category": "Perfumería femenina",
+   "priceCents": 13590,
+   "active": true,
+   "content": {
+    "line": "Cielo",
+    "brand": "Yanbal",
+    "notes": [
+     "El set y sus piezas individuales comparten las mismas unidades disponibles."
+    ],
+    "title": "Set Cielo de Yanbal",
+    "usage": [
+     "Cielo Eau de Parfum: Aplica en cuello, muñecas u otras zonas de pulsación.",
+     "Desodorante Antitranspirante Cielo: Agita y distribuye sobre axilas limpias y secas. No apliques en piel irritada o lesionada.",
+     "Jabón en Barra Perfumado Cielo: Humedece, forma espuma sobre el cuerpo y enjuaga."
+    ],
+    "format": "set",
+    "images": [
+     {
+      "alt": "Set Cielo con perfume turquesa, desodorante blanco y jabón celeste",
+      "url": "/images/products/set-cielo-yanbal/set.jpg",
+      "file": "set.jpg",
+      "kind": "set",
+      "label": "Set completo",
+      "source": "Generate_product_kit_photo_20261001145734.jpg"
+     },
+     {
+      "alt": "Frasco turquesa de Cielo Eau de Parfum de Yanbal",
+      "url": "/images/products/set-cielo-yanbal/perfume.jpg",
+      "file": "perfume.jpg",
+      "kind": "component",
+      "label": "Eau de Parfum",
+      "source": "20013641-01.jpg"
+     },
+     {
+      "alt": "Cielo Eau de Parfum sostenido en una mano",
+      "url": "/images/products/set-cielo-yanbal/perfume-en-mano.jpg",
+      "file": "perfume-en-mano.jpg",
+      "kind": "component",
+      "label": "Perfume en mano",
+      "source": "20013641-02.jpg"
+     },
+     {
+      "alt": "Desodorante antitranspirante Cielo en envase blanco de 50 g",
+      "url": "/images/products/set-cielo-yanbal/desodorante.jpg",
+      "file": "desodorante.jpg",
+      "kind": "component",
+      "label": "Desodorante · 50 g",
+      "source": "20013580-01.jpg"
+     },
+     {
+      "alt": "Una mano sostiene el desodorante Cielo de Yanbal",
+      "url": "/images/products/set-cielo-yanbal/desodorante-en-mano.jpg",
+      "file": "desodorante-en-mano.jpg",
+      "kind": "component",
+      "label": "Desodorante en mano",
+      "source": "Hand_holding_white_deodorant_bottle_20261001145755.jpg"
+     },
+     {
+      "alt": "Jabón en barra celeste Cielo con marca Yanbal en relieve",
+      "url": "/images/products/set-cielo-yanbal/jabon.jpg",
+      "file": "jabon.jpg",
+      "kind": "component",
+      "label": "Jabón perfumado",
+      "source": "20013310-01.jpg"
+     },
+     {
+      "alt": "Una mano sostiene el jabón celeste de la línea Cielo",
+      "url": "/images/products/set-cielo-yanbal/jabon-en-mano.jpg",
+      "file": "jabon-en-mano.jpg",
+      "kind": "component",
+      "label": "Jabón en mano",
+      "source": "Create_new_product_image_20261001145852.jpg"
+     },
+     {
+      "alt": "Set Cielo con una mujer lavando su hombro al fondo",
+      "url": "/images/products/set-cielo-yanbal/ritual.jpg",
+      "file": "ritual.jpg",
+      "kind": "lifestyle",
+      "label": "Ritual Cielo",
+      "source": "Perfume_deodorant_and_soap_set_20261001155820.jpg"
+     }
+    ],
+    "lineKey": "cielo",
+    "montage": false,
+    "summary": "Cielo Eau de Parfum 50 ml + Desodorante Antitranspirante Cielo 50 g + Jabón en Barra Perfumado Cielo 90 g",
+    "benefits": [],
+    "includes": [
+     {
+      "code": "20013641",
+      "name": "Cielo Eau de Parfum",
+      "size": "50 ml",
+      "details": [
+       "Jazmín · flor de loto · musk"
+      ],
+      "productSlug": "cielo-eau-de-parfum-20013641"
+     },
+     {
+      "code": "20013580",
+      "name": "Desodorante Antitranspirante Cielo",
+      "size": "50 g",
+      "details": [
+       "Roll on sin alcohol · 50 g"
+      ],
+      "productSlug": "desodorante-antitranspirante-cielo-20013580"
+     },
+     {
+      "code": "20013310",
+      "name": "Jabón en Barra Perfumado Cielo",
+      "size": "90 g",
+      "details": [
+       "Jabón perfumado en barra"
+      ],
+      "productSlug": "jabon-en-barra-perfumado-cielo-20013310"
+     }
+    ],
+    "inventory": [
+     {
+      "sku": "20013641",
+      "quantity": 1
+     },
+     {
+      "sku": "20013580",
+      "quantity": 1
+     },
+     {
+      "sku": "20013310",
+      "quantity": 1
+     }
+    ],
+    "description": "Elige juntas las piezas de esta colección. El contenido y la presentación de cada producto aparecen a continuación."
+   }
+  },
+  {
+   "slug": "set-dendur-perfume-y-roll-on-destiny",
+   "name": "Set Dendur: perfume y roll on Destiny",
+   "category": "Perfumería masculina",
+   "priceCents": 11690,
+   "active": true,
+   "content": {
+    "line": "Dendur",
+    "brand": "Yanbal",
+    "notes": [
+     "Incluye Dendur Eau de Parfum y el roll on Dendur Destiny. Son variantes distintas; no se afirma que tengan el mismo aroma.",
+     "Comparte stock con las fichas individuales."
+    ],
+    "title": "Set Dendur: perfume y roll on Destiny",
+    "usage": [
+     "Dendur Eau de Parfum: Aplica en cuello, muñecas u otras zonas de pulsación.",
+     "Desodorante Antitranspirante Roll On Dendur Destiny: Agita y distribuye sobre axilas limpias y secas. No apliques en piel irritada o lesionada."
+    ],
+    "format": "set",
+    "images": [
+     {
+      "alt": "Dendur Eau de Parfum: presentación del producto",
+      "url": "/images/products/item-20013697/foto-1.jpg",
+      "file": "foto-1.jpg",
+      "kind": "component",
+      "label": "Dendur Eau de Parfum",
+      "caption": "Dendur Eau de Parfum · 75 ml"
+     },
+     {
+      "alt": "Desodorante Antitranspirante Roll On Dendur Destiny: presentación del producto",
+      "url": "/images/products/item-20013698/foto-1.jpg",
+      "file": "foto-1.jpg",
+      "kind": "component",
+      "label": "Desodorante Antitranspirante Roll On Dendur Destiny",
+      "caption": "Desodorante Antitranspirante Roll On Dendur Destiny · 50 g"
+     }
+    ],
+    "lineKey": "dendur",
+    "montage": true,
+    "summary": "Dendur Eau de Parfum 75 ml + Desodorante Antitranspirante Roll On Dendur Destiny 50 g",
+    "benefits": [],
+    "includes": [
+     {
+      "code": "20013697",
+      "name": "Dendur Eau de Parfum",
+      "size": "75 ml",
+      "details": [
+       "Pimienta negra · jengibre · tabaco"
+      ],
+      "productSlug": "dendur-eau-de-parfum-20013697"
+     },
+     {
+      "code": "20013698",
+      "name": "Desodorante Antitranspirante Roll On Dendur Destiny",
+      "size": "50 g",
+      "details": [
+       "Roll on sin alcohol · 50 g"
+      ],
+      "productSlug": "desodorante-antitranspirante-roll-on-dendur-destiny-20013698"
+     }
+    ],
+    "inventory": [
+     {
+      "sku": "20013697",
+      "quantity": 1
+     },
+     {
+      "sku": "20013698",
+      "quantity": 1
+     }
+    ],
+    "description": "Elige juntas las piezas de esta colección. El contenido y la presentación de cada producto aparecen a continuación."
+   }
+  },
+  {
+   "slug": "set-icono-yanbal",
+   "name": "Set Ícono de Yanbal",
+   "category": "Perfumería femenina",
+   "priceCents": 21190,
+   "active": true,
+   "content": {
+    "line": "Ícono",
+    "brand": "Yanbal",
+    "notes": [
+     "El set y sus piezas individuales comparten las mismas unidades disponibles."
+    ],
+    "title": "Set Ícono de Yanbal",
+    "usage": [
+     "Ícono de Yanbal Eau de Parfum: Aplica en cuello, muñecas u otras zonas de pulsación.",
+     "Ícono Loción Perfumada: Aplica sobre la piel limpia del cuerpo y distribuye con un masaje suave."
+    ],
+    "format": "set",
+    "images": [
+     {
+      "alt": "Set Ícono: perfume dorado y loción corporal de 200 ml sobre fondo blanco",
+      "url": "/images/products/set-icono-yanbal/set.jpg",
+      "file": "set.jpg",
+      "kind": "set",
+      "label": "Set completo",
+      "source": "Generate_new_product_kit_photo_20261001115442.jpg"
+     },
+     {
+      "alt": "Frasco dorado de Ícono de Yanbal Eau de Parfum con tapa negra esférica",
+      "url": "/images/products/set-icono-yanbal/perfume.jpg",
+      "file": "perfume.jpg",
+      "kind": "component",
+      "label": "Eau de Parfum",
+      "source": "20013411-01.jpg"
+     },
+     {
+      "alt": "Ícono de Yanbal Eau de Parfum sostenido entre dos manos",
+      "url": "/images/products/set-icono-yanbal/perfume-en-manos.jpg",
+      "file": "perfume-en-manos.jpg",
+      "kind": "component",
+      "label": "Perfume en manos",
+      "source": "20013411-02.jpg"
+     },
+     {
+      "alt": "Tubo amarillo de loción perfumada Ícono de Yanbal de 200 ml",
+      "url": "/images/products/set-icono-yanbal/locion.jpg",
+      "file": "locion.jpg",
+      "kind": "component",
+      "label": "Loción · 200 ml",
+      "source": "20013412-01.jpg"
+     },
+     {
+      "alt": "Loción corporal Ícono de 200 ml sostenida entre dos manos",
+      "url": "/images/products/set-icono-yanbal/locion-en-manos.jpg",
+      "file": "locion-en-manos.jpg",
+      "kind": "component",
+      "label": "Loción en manos",
+      "source": "Holding_yellow_body_lotion_tube_20261001143234.jpg"
+     },
+     {
+      "alt": "Perfume y loción Ícono en un tocador con una mujer al fondo",
+      "url": "/images/products/set-icono-yanbal/ritual.jpg",
+      "file": "ritual.jpg",
+      "kind": "lifestyle",
+      "label": "Ritual Ícono",
+      "source": "Perfume_and_lotion_set_20261001155310.jpg"
+     }
+    ],
+    "lineKey": "icono",
+    "montage": false,
+    "summary": "Ícono de Yanbal Eau de Parfum 50 ml + Ícono Loción Perfumada 200 ml",
+    "benefits": [],
+    "includes": [
+     {
+      "code": "20013411",
+      "name": "Ícono de Yanbal Eau de Parfum",
+      "size": "50 ml",
+      "details": [
+       "Clementina · ylang ylang · sándalo"
+      ],
+      "productSlug": "icono-de-yanbal-eau-de-parfum-20013411"
+     },
+     {
+      "code": "20013412",
+      "name": "Ícono Loción Perfumada",
+      "size": "200 ml",
+      "details": [
+       "Loción corporal perfumada"
+      ],
+      "productSlug": "icono-locion-perfumada-20013412"
+     }
+    ],
+    "inventory": [
+     {
+      "sku": "20013411",
+      "quantity": 1
+     },
+     {
+      "sku": "20013412",
+      "quantity": 1
+     }
+    ],
+    "description": "Elige juntas las piezas de esta colección. El contenido y la presentación de cada producto aparecen a continuación."
+   }
+  },
+  {
+   "slug": "set-ohm-de-yanbal",
+   "name": "Set Ohm de Yanbal",
+   "category": "Perfumería masculina",
+   "priceCents": 14890,
+   "active": true,
+   "content": {
+    "line": "Ohm",
+    "brand": "Yanbal",
+    "notes": [
+     "El set y sus piezas individuales comparten las mismas unidades disponibles."
+    ],
+    "title": "Set Ohm de Yanbal",
+    "usage": [
+     "Ohm Parfum: Aplica en cuello, muñecas u otras zonas de pulsación.",
+     "Ohm Desodorante Perfumado Roll on: Agita y distribuye sobre axilas limpias y secas. No apliques en piel irritada o lesionada."
+    ],
+    "format": "set",
+    "images": [
+     {
+      "alt": "Ohm Parfum: presentación del producto",
+      "url": "/images/products/item-20012786/foto-1.jpg",
+      "file": "foto-1.jpg",
+      "kind": "component",
+      "label": "Ohm Parfum",
+      "caption": "Ohm Parfum · 100 ml"
+     },
+     {
+      "alt": "Ohm Desodorante Perfumado Roll on: presentación del producto",
+      "url": "/images/products/item-20011230/foto-1.jpg",
+      "file": "foto-1.jpg",
+      "kind": "component",
+      "label": "Ohm Desodorante Perfumado Roll on",
+      "caption": "Ohm Desodorante Perfumado Roll on · 50 g"
+     }
+    ],
+    "lineKey": "ohm",
+    "montage": true,
+    "summary": "Ohm Parfum 100 ml + Ohm Desodorante Perfumado Roll on 50 g",
+    "benefits": [],
+    "includes": [
+     {
+      "code": "20012786",
+      "name": "Ohm Parfum",
+      "size": "100 ml",
+      "details": [
+       "Toronja rosada · salvia · cuero"
+      ],
+      "productSlug": "ohm-parfum-20012786"
+     },
+     {
+      "code": "20011230",
+      "name": "Ohm Desodorante Perfumado Roll on",
+      "size": "50 g",
+      "details": [
+       "Roll on sin alcohol · 50 g"
+      ],
+      "productSlug": "ohm-desodorante-perfumado-roll-on-20011230"
+     }
+    ],
+    "inventory": [
+     {
+      "sku": "20012786",
+      "quantity": 1
+     },
+     {
+      "sku": "20011230",
+      "quantity": 1
+     }
+    ],
+    "description": "Elige juntas las piezas de esta colección. El contenido y la presentación de cada producto aparecen a continuación."
+   }
+  },
+  {
+   "slug": "set-ohm-now-de-yanbal",
+   "name": "Set Ohm Now de Yanbal",
+   "category": "Perfumería masculina",
+   "priceCents": 14890,
+   "active": true,
+   "content": {
+    "line": "Ohm Now",
+    "brand": "Yanbal",
+    "notes": [
+     "El set y sus piezas individuales comparten las mismas unidades disponibles."
+    ],
+    "title": "Set Ohm Now de Yanbal",
+    "usage": [
+     "Ohm Now Parfum: Aplica en cuello, muñecas u otras zonas de pulsación.",
+     "Ohm Now Desodorante Perfumado Roll on: Agita y distribuye sobre axilas limpias y secas. No apliques en piel irritada o lesionada."
+    ],
+    "format": "set",
+    "images": [
+     {
+      "alt": "Ohm Now Parfum: presentación del producto",
+      "url": "/images/products/item-20014225/foto-1.jpg",
+      "file": "foto-1.jpg",
+      "kind": "component",
+      "label": "Ohm Now Parfum",
+      "caption": "Ohm Now Parfum · 100 ml"
+     },
+     {
+      "alt": "Ohm Now Desodorante Perfumado Roll on: presentación del producto",
+      "url": "/images/products/item-20014234/foto-1.jpg",
+      "file": "foto-1.jpg",
+      "kind": "component",
+      "label": "Ohm Now Desodorante Perfumado Roll on",
+      "caption": "Ohm Now Desodorante Perfumado Roll on · 50 g"
+     }
+    ],
+    "lineKey": "ohm-now",
+    "montage": true,
+    "summary": "Ohm Now Parfum 100 ml + Ohm Now Desodorante Perfumado Roll on 50 g",
+    "benefits": [],
+    "includes": [
+     {
+      "code": "20014225",
+      "name": "Ohm Now Parfum",
+      "size": "100 ml",
+      "details": [
+       "Higo · acorde de absenta · haba tonka"
+      ],
+      "productSlug": "ohm-now-parfum-20014225"
+     },
+     {
+      "code": "20014234",
+      "name": "Ohm Now Desodorante Perfumado Roll on",
+      "size": "50 g",
+      "details": [
+       "Roll on sin alcohol · 50 g"
+      ],
+      "productSlug": "ohm-now-desodorante-perfumado-roll-on-20014234"
+     }
+    ],
+    "inventory": [
+     {
+      "sku": "20014225",
+      "quantity": 1
+     },
+     {
+      "sku": "20014234",
+      "quantity": 1
+     }
+    ],
+    "description": "Elige juntas las piezas de esta colección. El contenido y la presentación de cada producto aparecen a continuación."
+   }
+  },
+  {
+   "slug": "set-osadia-hombre-de-yanbal",
+   "name": "Set Osadía Hombre de Yanbal",
+   "category": "Perfumería masculina",
+   "priceCents": 19490,
+   "active": true,
+   "content": {
+    "line": "Osadía Hombre",
+    "brand": "Yanbal",
+    "notes": [
+     "El set y sus piezas individuales comparten las mismas unidades disponibles."
+    ],
+    "title": "Set Osadía Hombre de Yanbal",
+    "usage": [
+     "Osadía Eau de Parfum Hombre: Aplica en cuello, muñecas u otras zonas de pulsación.",
+     "Jabón en Barra Perfumado Osadía Hombre: Humedece la barra, distribuye la espuma sobre el cuerpo y enjuaga."
+    ],
+    "format": "set",
+    "images": [
+     {
+      "alt": "Osadía Eau de Parfum Hombre: presentación del producto",
+      "url": "/images/products/item-20013055/foto-1.jpg",
+      "file": "foto-1.jpg",
+      "kind": "component",
+      "label": "Osadía Eau de Parfum Hombre",
+      "caption": "Osadía Eau de Parfum Hombre · 75 ml"
+     },
+     {
+      "alt": "Jabón en Barra Perfumado Osadía Hombre: presentación del producto",
+      "url": "/images/products/item-20014332/foto-1.jpg",
+      "file": "foto-1.jpg",
+      "kind": "component",
+      "label": "Jabón en Barra Perfumado Osadía Hombre",
+      "caption": "Jabón en Barra Perfumado Osadía Hombre · 90 g"
+     }
+    ],
+    "lineKey": "osadia-hombre",
+    "montage": true,
+    "summary": "Osadía Eau de Parfum Hombre 75 ml + Jabón en Barra Perfumado Osadía Hombre 90 g",
+    "benefits": [],
+    "includes": [
+     {
+      "code": "20013055",
+      "name": "Osadía Eau de Parfum Hombre",
+      "size": "75 ml",
+      "details": [
+       "Hierbabuena · café dulce · ébano"
+      ],
+      "productSlug": "osadia-eau-de-parfum-hombre-20013055"
+     },
+     {
+      "code": "20014332",
+      "name": "Jabón en Barra Perfumado Osadía Hombre",
+      "size": "90 g",
+      "details": [
+       "Jabón corporal perfumado"
+      ],
+      "productSlug": "jabon-en-barra-perfumado-osadia-hombre-20014332"
+     }
+    ],
+    "inventory": [
+     {
+      "sku": "20013055",
+      "quantity": 1
+     },
+     {
+      "sku": "20014332",
+      "quantity": 1
+     }
+    ],
+    "description": "Elige juntas las piezas de esta colección. El contenido y la presentación de cada producto aparecen a continuación."
+   }
+  },
+  {
+   "slug": "set-osadia-infinita-yanbal",
+   "name": "Set Osadía Infinita de Yanbal",
+   "category": "Perfumería femenina",
+   "priceCents": null,
+   "active": true,
+   "content": {
+    "line": "Osadía Infinita",
+    "brand": "Yanbal",
+    "notes": [
+     "El set y sus piezas individuales comparten las mismas unidades disponibles.",
+     "Precio del set pendiente de confirmar; falta el precio individual de al menos una pieza."
+    ],
+    "title": "Set Osadía Infinita de Yanbal",
+    "usage": [
+     "Osadía Infinita Eau de Parfum: Aplica en cuello, muñecas u otras zonas de pulsación.",
+     "Osadía Infinita Loción Perfumada: Distribuye sobre el cuerpo limpio con un masaje suave."
+    ],
+    "format": "set",
+    "images": [
+     {
+      "alt": "Set Osadía Infinita: perfume y loción con degradado rojo sobre fondo blanco",
+      "url": "/images/products/set-osadia-infinita-yanbal/set.jpg",
+      "file": "set.jpg",
+      "kind": "set",
+      "label": "Set completo",
+      "source": "Create_product_kit_photo_20261001143714.jpg"
+     },
+     {
+      "alt": "Frasco alto de Osadía Infinita Eau de Parfum en tonos rojos",
+      "url": "/images/products/set-osadia-infinita-yanbal/perfume.jpg",
+      "file": "perfume.jpg",
+      "kind": "component",
+      "label": "Eau de Parfum",
+      "source": "20013122-01.jpg"
+     },
+     {
+      "alt": "Osadía Infinita Eau de Parfum sostenido entre dos manos",
+      "url": "/images/products/set-osadia-infinita-yanbal/perfume-en-manos.jpg",
+      "file": "perfume-en-manos.jpg",
+      "kind": "component",
+      "label": "Perfume en manos",
+      "source": "20013122-02.jpg"
+     },
+     {
+      "alt": "Loción perfumada Osadía Infinita de 200 ml con envase rojo y naranja",
+      "url": "/images/products/set-osadia-infinita-yanbal/locion.jpg",
+      "file": "locion.jpg",
+      "kind": "component",
+      "label": "Loción · 200 ml",
+      "source": "20013264-01.jpg"
+     },
+     {
+      "alt": "Loción corporal Osadía Infinita de 200 ml sostenida entre dos manos",
+      "url": "/images/products/set-osadia-infinita-yanbal/locion-en-manos.jpg",
+      "file": "locion-en-manos.jpg",
+      "kind": "component",
+      "label": "Loción en manos",
+      "source": "Generate_new_product_image_20261001143725.jpg"
+     },
+     {
+      "alt": "Mujer aplicando loción corporal junto al perfume y loción Osadía Infinita",
+      "url": "/images/products/set-osadia-infinita-yanbal/ritual.jpg",
+      "file": "ritual.jpg",
+      "kind": "lifestyle",
+      "label": "Ritual Osadía",
+      "source": "Woman_applying_body_lotion_20261001155903.jpg"
+     }
+    ],
+    "lineKey": "osadia-infinita",
+    "montage": false,
+    "summary": "Osadía Infinita Eau de Parfum 50 ml + Osadía Infinita Loción Perfumada 200 ml",
+    "benefits": [],
+    "includes": [
+     {
+      "code": "20013122",
+      "name": "Osadía Infinita Eau de Parfum",
+      "size": "50 ml",
+      "details": [
+       "Bayas doradas · mimosa · guayacán"
+      ],
+      "productSlug": "osadia-infinita-eau-de-parfum-20013122"
+     },
+     {
+      "code": "20013264",
+      "name": "Osadía Infinita Loción Perfumada",
+      "size": "200 ml",
+      "details": [
+       "Loción corporal de rápida absorción"
+      ],
+      "productSlug": "osadia-infinita-locion-perfumada-20013264"
+     }
+    ],
+    "inventory": [
+     {
+      "sku": "20013122",
+      "quantity": 1
+     },
+     {
+      "sku": "20013264",
+      "quantity": 1
+     }
+    ],
+    "description": "Elige juntas las piezas de esta colección. El contenido y la presentación de cada producto aparecen a continuación."
+   }
+  },
+  {
+   "slug": "set-solo-yanbal",
+   "name": "Set Solo de Yanbal",
+   "category": "Perfumería masculina",
+   "priceCents": 14990,
+   "active": true,
+   "content": {
+    "line": "Solo",
+    "brand": "Yanbal",
+    "notes": [
+     "El set y sus piezas individuales comparten las mismas unidades disponibles."
+    ],
+    "title": "Set Solo de Yanbal",
+    "usage": [
+     "Solo Parfum: Aplica en cuello, muñecas u otras zonas de pulsación.",
+     "Solo Desodorante Perfumado Roll on: Agita y distribuye sobre axilas limpias y secas. No apliques en piel irritada o lesionada."
+    ],
+    "format": "set",
+    "images": [
+     {
+      "alt": "Perfume Solo y desodorante antitranspirante Solo sobre fondo blanco",
+      "url": "/images/products/set-solo-yanbal/set.jpg",
+      "file": "set.jpg",
+      "kind": "set",
+      "label": "Perfume y desodorante",
+      "source": "Generate_product_kit_photo_20261001184603.jpg",
+      "caption": "Perfume y desodorante. El jabón incluido en el kit no aparece en esta fotografía."
+     },
+     {
+      "alt": "Frasco verde acanalado de Solo Parfum de Yanbal con tapa negra",
+      "url": "/images/products/set-solo-yanbal/perfume.jpg",
+      "file": "perfume.jpg",
+      "kind": "component",
+      "label": "Parfum · 80 ml",
+      "source": "20012790-01.jpg"
+     },
+     {
+      "alt": "Desodorante Solo de 50 g en envase negro con letras verdes",
+      "url": "/images/products/set-solo-yanbal/desodorante.jpg",
+      "file": "desodorante.jpg",
+      "kind": "component",
+      "label": "Desodorante · 50 g",
+      "source": "20011976-01.jpg"
+     },
+     {
+      "alt": "Hombre aplicándose perfume Solo, con perfume y desodorante en primer plano",
+      "url": "/images/products/set-solo-yanbal/ritual.jpg",
+      "file": "ritual.jpg",
+      "kind": "lifestyle",
+      "label": "Ritual Solo",
+      "source": "Grooming_products_on_display_20261001185035.jpg",
+      "caption": "Ritual Solo con perfume y desodorante. El jabón del kit no aparece en la fotografía."
+     }
+    ],
+    "lineKey": "solo",
+    "montage": false,
+    "summary": "Solo Parfum 80 ml + Solo Desodorante Perfumado Roll on 50 g + Solo Jabón en Barra Perfumado 90 g",
+    "benefits": [],
+    "includes": [
+     {
+      "code": "20012790",
+      "name": "Solo Parfum",
+      "size": "80 ml",
+      "details": [
+       "Fragancia para hombre",
+       "Familia maderosa cítrica",
+       "Intensidad muy alta",
+       "Notas: cáscara de mandarina, jengibre y cuero"
+      ],
+      "productSlug": "solo-parfum-20012790"
+     },
+     {
+      "code": "20011976",
+      "name": "Solo Desodorante Perfumado Roll on",
+      "size": "50 g",
+      "details": [
+       "Roll on sin alcohol · 50 g"
+      ],
+      "productSlug": "solo-desodorante-perfumado-roll-on-20011976"
+     },
+     {
+      "code": "20013312",
+      "name": "Solo Jabón en Barra Perfumado",
+      "size": "90 g",
+      "details": [
+       "Limpia suavemente y perfuma delicadamente la piel, según la ficha suministrada"
+      ],
+      "productSlug": "solo-jabon-en-barra"
+     }
+    ],
+    "inventory": [
+     {
+      "sku": "20012790",
+      "quantity": 1
+     },
+     {
+      "sku": "20011976",
+      "quantity": 1
+     },
+     {
+      "sku": "SOLO-JABON",
+      "quantity": 1
+     }
+    ],
+    "description": "Elige juntas las piezas de esta colección. El contenido y la presentación de cada producto aparecen a continuación."
+   }
+  },
+  {
+   "slug": "set-temptation-hombre-de-yanbal",
+   "name": "Set Temptation Hombre de Yanbal",
+   "category": "Perfumería masculina",
+   "priceCents": 9890,
+   "active": true,
+   "content": {
+    "line": "Temptation Hombre",
+    "brand": "Yanbal",
+    "notes": [
+     "El set y sus piezas individuales comparten las mismas unidades disponibles."
+    ],
+    "title": "Set Temptation Hombre de Yanbal",
+    "usage": [
+     "Temptation Eau de Parfum: Aplica en cuello, muñecas u otras zonas de pulsación.",
+     "Temptation Desodorante Perfumado Roll on Hombre: Agita y distribuye sobre axilas limpias y secas. No apliques en piel irritada o lesionada."
+    ],
+    "format": "set",
+    "images": [
+     {
+      "alt": "Temptation Eau de Parfum: presentación del producto",
+      "url": "/images/products/item-20012785/foto-1.jpg",
+      "file": "foto-1.jpg",
+      "kind": "component",
+      "label": "Temptation Eau de Parfum",
+      "caption": "Temptation Eau de Parfum · 100 ml"
+     },
+     {
+      "alt": "Temptation Desodorante Perfumado Roll on Hombre: presentación del producto",
+      "url": "/images/products/item-20013317/foto-1.jpg",
+      "file": "foto-1.jpg",
+      "kind": "component",
+      "label": "Temptation Desodorante Perfumado Roll on Hombre",
+      "caption": "Temptation Desodorante Perfumado Roll on Hombre · 50 g"
+     }
+    ],
+    "lineKey": "temptation-hombre",
+    "montage": true,
+    "summary": "Temptation Eau de Parfum 100 ml + Temptation Desodorante Perfumado Roll on Hombre 50 g",
+    "benefits": [],
+    "includes": [
+     {
+      "code": "20012785",
+      "name": "Temptation Eau de Parfum",
+      "size": "100 ml",
+      "details": [
+       "Menta · mandarina · sándalo"
+      ],
+      "productSlug": "temptation-eau-de-parfum-20012785"
+     },
+     {
+      "code": "20013317",
+      "name": "Temptation Desodorante Perfumado Roll on Hombre",
+      "size": "50 g",
+      "details": [
+       "Roll on sin alcohol · 50 g"
+      ],
+      "productSlug": "temptation-desodorante-perfumado-roll-on-hombre-20013317"
+     }
+    ],
+    "inventory": [
+     {
+      "sku": "20012785",
+      "quantity": 1
+     },
+     {
+      "sku": "20013317",
+      "quantity": 1
+     }
+    ],
+    "description": "Elige juntas las piezas de esta colección. El contenido y la presentación de cada producto aparecen a continuación."
+   }
+  },
+  {
+   "slug": "set-total-block-tres-presentaciones",
+   "name": "Set Total Block: tres presentaciones",
+   "category": "Protección solar",
+   "priceCents": 19990,
+   "active": true,
+   "content": {
+    "line": "Total Block",
+    "brand": "Yanbal",
+    "notes": [
+     "El set y sus piezas individuales comparten las mismas unidades disponibles."
+    ],
+    "title": "Set Total Block: tres presentaciones",
+    "usage": [
+     "Total Block Protector Solar Matificante con Color SPF100: Aplica 15 minutos antes de la exposición al sol.",
+     "Protector Solar Total Block Ultraprotección SPF 100: Aplica 15 minutos antes de la exposición al sol.",
+     "Total Block Compacto SPF100 Claro: Distribuye sobre el rostro con el aplicador."
+    ],
+    "format": "set",
+    "images": [
+     {
+      "alt": "Total Block Protector Solar Matificante con Color SPF100: presentación del producto",
+      "url": "/images/products/item-20014165/foto-1.jpg",
+      "file": "foto-1.jpg",
+      "kind": "component",
+      "label": "Total Block Protector Solar Matificante con Color SPF100",
+      "caption": "Total Block Protector Solar Matificante con Color SPF100 · 50 g"
+     },
+     {
+      "alt": "Protector Solar Total Block Ultraprotección SPF 100: presentación del producto",
+      "url": "/images/products/item-20013519/foto-1.jpg",
+      "file": "foto-1.jpg",
+      "kind": "component",
+      "label": "Protector Solar Total Block Ultraprotección SPF 100",
+      "caption": "Protector Solar Total Block Ultraprotección SPF 100 · 80 g"
+     },
+     {
+      "alt": "Total Block Compacto SPF100 Claro: presentación del producto",
+      "url": "/images/products/item-20013523/foto-1.jpg",
+      "file": "foto-1.jpg",
+      "kind": "component",
+      "label": "Total Block Compacto SPF100 Claro",
+      "caption": "Total Block Compacto SPF100 Claro · 9 g"
+     }
+    ],
+    "lineKey": "total-block",
+    "montage": true,
+    "summary": "Total Block Protector Solar Matificante con Color SPF100 50 g + Protector Solar Total Block Ultraprotección SPF 100 80 g + Total Block Compacto SPF100 Claro 9 g",
+    "benefits": [],
+    "includes": [
+     {
+      "code": "20014165",
+      "name": "Total Block Protector Solar Matificante con Color SPF100",
+      "size": "50 g",
+      "details": [
+       "Protector facial matificante con color"
+      ],
+      "productSlug": "total-block-protector-solar-matificante-con-color-spf100-20014165"
+     },
+     {
+      "code": "20013519",
+      "name": "Protector Solar Total Block Ultraprotección SPF 100",
+      "size": "80 g",
+      "details": [
+       "Protector solar SPF 100"
+      ],
+      "productSlug": "protector-solar-total-block-ultraproteccion-spf-100-20013519"
+     },
+     {
+      "code": "20013523",
+      "name": "Total Block Compacto SPF100 Claro",
+      "size": "9 g",
+      "details": [
+       "Compacto SPF 100 · tono Claro"
+      ],
+      "productSlug": "total-block-compacto-spf100-claro-20013523"
+     }
+    ],
+    "inventory": [
+     {
+      "sku": "20014165",
+      "quantity": 1
+     },
+     {
+      "sku": "20013519",
+      "quantity": 1
+     },
+     {
+      "sku": "20013523",
+      "quantity": 1
+     }
+    ],
+    "description": "Elige juntas las piezas de esta colección. El contenido y la presentación de cada producto aparecen a continuación."
+   }
+  },
+  {
+   "slug": "set-yanbal-baby",
+   "name": "Set Yanbal Baby: colonia, crema y jabón",
+   "category": "Cuidado del bebé",
+   "priceCents": 9690,
+   "active": true,
+   "content": {
+    "line": "Baby",
+    "brand": "Yanbal",
+    "notes": [
+     "El set y sus piezas individuales comparten las mismas unidades disponibles."
+    ],
+    "title": "Set Yanbal Baby: colonia, crema y jabón",
+    "usage": [
+     "Agua de Colonia Yanbal Baby: Vierte una pequeña cantidad en las manos antes de distribuirla. Evita el rostro.",
+     "Crema Hidratante Yanbal Baby: Distribuye una pequeña cantidad sobre rostro y cuerpo, evitando los ojos."
+    ],
+    "format": "set",
+    "images": [
+     {
+      "alt": "Set Yanbal Baby Petit Pon Pon con colonia, crema hidratante y jabón blanco",
+      "url": "/images/products/set-yanbal-baby/set.jpg",
+      "file": "set.jpg",
+      "kind": "set",
+      "label": "Set completo",
+      "source": "Generate_new_product_kit_photo_20261001151450.jpg"
+     },
+     {
+      "alt": "Colonia Yanbal Baby Petit Pon Pon de 200 ml en frasco amarillo claro",
+      "url": "/images/products/set-yanbal-baby/colonia.jpg",
+      "file": "colonia.jpg",
+      "kind": "component",
+      "label": "Colonia · 200 ml",
+      "source": "20013952-01.jpg"
+     },
+     {
+      "alt": "Crema hidratante Petit Pon Pon de 200 ml para rostro y cuerpo",
+      "url": "/images/products/set-yanbal-baby/crema.jpg",
+      "file": "crema.jpg",
+      "kind": "component",
+      "label": "Crema · 200 ml",
+      "source": "20014078-01.jpg"
+     },
+     {
+      "alt": "Colonia, crema y jabón Yanbal Baby con una madre junto a su bebé al fondo",
+      "url": "/images/products/set-yanbal-baby/ritual.jpg",
+      "file": "ritual.jpg",
+      "kind": "lifestyle",
+      "label": "Ritual Baby",
+      "source": "Mother_caring_for_baby_20261001151615.jpg"
+     },
+     {
+      "alt": "Referencia adicional, no incluida en el set: shampoo Petit Pon Pon de 400 ml y jabón blanco",
+      "url": "/images/products/set-yanbal-baby/shampoo-y-jabon-referencia.jpg",
+      "file": "shampoo-y-jabon-referencia.jpg",
+      "kind": "related",
+      "label": "Otra combinación: shampoo y jabón",
+      "source": "14700290-es-PE-01.jpg",
+      "caption": "Otra combinación de la línea Baby: shampoo acondicionador de 400 ml con extracto de manzanilla y jabón. Estos productos no sustituyen a la colonia y la crema del set mostrado. Sin precio ni stock asignados."
+     }
+    ],
+    "lineKey": "baby",
+    "montage": false,
+    "summary": "Agua de Colonia Yanbal Baby 200 ml + Crema Hidratante Yanbal Baby 200 ml + Jabón en Barra Yanbal Baby",
+    "benefits": [],
+    "includes": [
+     {
+      "code": "20013952",
+      "name": "Agua de Colonia Yanbal Baby",
+      "size": "200 ml",
+      "details": [
+       "Colonia sin alcohol"
+      ],
+      "productSlug": "agua-de-colonia-yanbal-baby-20013952"
+     },
+     {
+      "code": "20014078",
+      "name": "Crema Hidratante Yanbal Baby",
+      "size": "200 ml",
+      "details": [
+       "Crema de manzanilla y algodón"
+      ],
+      "productSlug": "crema-hidratante-yanbal-baby-20014078"
+     },
+     {
+      "code": null,
+      "name": "Jabón en Barra Yanbal Baby",
+      "size": "Contenido por confirmar",
+      "details": [
+       "Jabón Baby suelto"
+      ],
+      "productSlug": "jabon-en-barra-yanbal-baby-baby-jabon-suelto"
+     }
+    ],
+    "inventory": [
+     {
+      "sku": "20013952",
+      "quantity": 1
+     },
+     {
+      "sku": "20014078",
+      "quantity": 1
+     },
+     {
+      "sku": "BABY-JABON-SUELTO",
+      "quantity": 1
+     }
+    ],
+    "description": "Elige juntas las piezas de esta colección. El contenido y la presentación de cada producto aparecen a continuación."
+   }
+  },
+  {
+   "slug": "set-zentro-de-yanbal",
+   "name": "Set Zentro de Yanbal",
+   "category": "Perfumería masculina",
+   "priceCents": 15290,
+   "active": true,
+   "content": {
+    "line": "Zentro",
+    "brand": "Yanbal",
+    "notes": [
+     "El set y sus piezas individuales comparten las mismas unidades disponibles."
+    ],
+    "title": "Set Zentro de Yanbal",
+    "usage": [
+     "Zentro Eau de Parfum: Aplica en cuello, muñecas u otras zonas de pulsación.",
+     "Zentro Desodorante Perfumado Roll on: Agita y distribuye sobre axilas limpias y secas. No apliques en piel irritada o lesionada."
+    ],
+    "format": "set",
+    "images": [
+     {
+      "alt": "Zentro Eau de Parfum: presentación del producto",
+      "url": "/images/products/item-20012788/foto-1.jpg",
+      "file": "foto-1.jpg",
+      "kind": "component",
+      "label": "Zentro Eau de Parfum",
+      "caption": "Zentro Eau de Parfum · 75 ml"
+     },
+     {
+      "alt": "Zentro Desodorante Perfumado Roll on: presentación del producto",
+      "url": "/images/products/item-20013321/foto-1.jpg",
+      "file": "foto-1.jpg",
+      "kind": "component",
+      "label": "Zentro Desodorante Perfumado Roll on",
+      "caption": "Zentro Desodorante Perfumado Roll on · 50 g"
+     }
+    ],
+    "lineKey": "zentro",
+    "montage": true,
+    "summary": "Zentro Eau de Parfum 75 ml + Zentro Desodorante Perfumado Roll on 50 g",
+    "benefits": [],
+    "includes": [
+     {
+      "code": "20012788",
+      "name": "Zentro Eau de Parfum",
+      "size": "75 ml",
+      "details": [
+       "Yuzu · cedro · haba tonka"
+      ],
+      "productSlug": "zentro-eau-de-parfum-20012788"
+     },
+     {
+      "code": "20013321",
+      "name": "Zentro Desodorante Perfumado Roll on",
+      "size": "50 g",
+      "details": [
+       "Roll on sin alcohol · 50 g"
+      ],
+      "productSlug": "zentro-desodorante-perfumado-roll-on-20013321"
+     }
+    ],
+    "inventory": [
+     {
+      "sku": "20012788",
+      "quantity": 1
+     },
+     {
+      "sku": "20013321",
+      "quantity": 1
+     }
+    ],
+    "description": "Elige juntas las piezas de esta colección. El contenido y la presentación de cada producto aparecen a continuación."
+   }
+  },
+  {
+   "slug": "agua-de-colonia-yanbal-baby-20013952",
+   "name": "Agua de Colonia Yanbal Baby",
+   "category": "Cuidado del bebé",
+   "priceCents": 6400,
+   "active": true,
+   "content": {
+    "line": "Baby",
+    "brand": "Yanbal",
+    "notes": [],
+    "title": "Agua de Colonia Yanbal Baby · 200 ml",
+    "usage": [
+     "Vierte una pequeña cantidad en las manos antes de distribuirla. Evita el rostro."
+    ],
+    "format": "individual",
+    "images": [
+     {
+      "alt": "Agua de Colonia Yanbal Baby: presentación del producto",
+      "url": "/images/products/item-20013952/foto-1.jpg",
+      "file": "foto-1.jpg",
+      "kind": "component",
+      "label": "Producto"
+     }
+    ],
+    "lineKey": "baby",
+    "summary": "Colonia sin alcohol · 200 ml",
+    "benefits": [],
+    "includes": [
+     {
+      "code": "20013952",
+      "name": "Agua de Colonia Yanbal Baby",
+      "size": "200 ml",
+      "details": [
+       "Colonia sin alcohol"
+      ]
+     }
+    ],
+    "inventory": [
+     {
+      "sku": "20013952",
+      "quantity": 1
+     }
+    ],
+    "description": "Colonia Petit Pon Pon libre de alcohol. Su aroma combina manzanilla, lavanda y musk, y acompaña la rutina de cuidado de la línea Baby."
+   }
+  },
+  {
+   "slug": "aires-de-los-andes-eau-fraiche-20013590",
+   "name": "Aires de los Andes Eau Fraiche",
+   "category": "Perfumería femenina",
+   "priceCents": 4150,
+   "active": true,
+   "content": {
+    "line": "Aires",
+    "brand": "Yanbal",
+    "notes": [],
+    "title": "Aires de los Andes Eau Fraiche · 200 ml",
+    "usage": [
+     "Aplica en cuello, muñecas u otras zonas de pulsación.",
+     "Conserva el frasco en un lugar fresco, protegido del sol."
+    ],
+    "format": "individual",
+    "images": [
+     {
+      "alt": "Aires de los Andes Eau Fraiche: presentación del producto",
+      "url": "/images/products/item-20013590/foto-1.jpg",
+      "file": "foto-1.jpg",
+      "kind": "component",
+      "label": "Producto"
+     },
+     {
+      "alt": "Aires de los Andes Eau Fraiche: imagen de la galería",
+      "url": "/images/products/item-20013590/foto-2.jpg",
+      "file": "foto-2.jpg",
+      "kind": "component",
+      "label": "Detalle 2"
+     },
+     {
+      "alt": "Aires de los Andes Eau Fraiche: imagen de la galería",
+      "url": "/images/products/item-20013590/foto-3.jpg",
+      "file": "foto-3.jpg",
+      "kind": "component",
+      "label": "Detalle 3"
+     }
+    ],
+    "lineKey": "aires",
+    "summary": "Manzana verde · orquídea · lirio del valle · 200 ml",
+    "benefits": [],
+    "includes": [
+     {
+      "code": "20013590",
+      "name": "Aires de los Andes Eau Fraiche",
+      "size": "200 ml",
+      "details": [
+       "Manzana verde · orquídea · lirio del valle"
+      ]
+     }
+    ],
+    "inventory": [
+     {
+      "sku": "20013590",
+      "quantity": 1
+     }
+    ],
+    "description": "Eau Fraiche floral verde con manzana verde, orquídea de los Andes y lirio del valle. Una de las dos fragancias Aires disponibles en esta selección."
+   }
+  },
+  {
+   "slug": "aires-del-caribe-eau-fraiche-20013588",
+   "name": "Aires del Caribe Eau Fraiche",
+   "category": "Perfumería femenina",
+   "priceCents": 4150,
+   "active": true,
+   "content": {
+    "line": "Aires",
+    "brand": "Yanbal",
+    "notes": [],
+    "title": "Aires del Caribe Eau Fraiche · 200 ml",
+    "usage": [
+     "Aplica en cuello, muñecas u otras zonas de pulsación.",
+     "Conserva el frasco en un lugar fresco, protegido del sol."
+    ],
+    "format": "individual",
+    "images": [
+     {
+      "alt": "Aires del Caribe Eau Fraiche: presentación del producto",
+      "url": "/images/products/item-20013588/foto-1.jpg",
+      "file": "foto-1.jpg",
+      "kind": "component",
+      "label": "Producto"
+     },
+     {
+      "alt": "Aires del Caribe Eau Fraiche: imagen de la galería",
+      "url": "/images/products/item-20013588/foto-2.jpg",
+      "file": "foto-2.jpg",
+      "kind": "component",
+      "label": "Detalle 2"
+     },
+     {
+      "alt": "Aires del Caribe Eau Fraiche: imagen de la galería",
+      "url": "/images/products/item-20013588/foto-3.jpg",
+      "file": "foto-3.jpg",
+      "kind": "component",
+      "label": "Detalle 3"
+     }
+    ],
+    "lineKey": "aires",
+    "summary": "Maracuyá · frangipani · acorde marino · 200 ml",
+    "benefits": [],
+    "includes": [
+     {
+      "code": "20013588",
+      "name": "Aires del Caribe Eau Fraiche",
+      "size": "200 ml",
+      "details": [
+       "Maracuyá · frangipani · acorde marino"
+      ]
+     }
+    ],
+    "inventory": [
+     {
+      "sku": "20013588",
+      "quantity": 1
+     }
+    ],
+    "description": "Eau Fraiche floral acuoso con maracuyá, frangipani y un acorde de agua de mar. Es una fragancia diferente de Aires de los Andes."
+   }
+  },
+  {
+   "slug": "aura-lila-perfume-de-mujer-45-ml-belcorp-aura-lila",
+   "name": "Aura Lila Perfume de Mujer, 45 ml",
+   "category": "Perfumería femenina",
+   "priceCents": 4900,
+   "active": true,
+   "content": {
+    "line": "Aura Lila",
+    "brand": "Ésika",
+    "notes": [],
+    "title": "Aura Lila Perfume de Mujer, 45 ml",
+    "usage": [
+     "Aplica en cuello, muñecas u otras zonas de pulsación.",
+     "Conserva el frasco en un lugar fresco, protegido del sol."
+    ],
+    "format": "individual",
+    "images": [
+     {
+      "alt": "Aura Lila Perfume de Mujer, 45 ml: presentación del producto",
+      "url": "/images/products/item-belcorp-aura-lila/foto-1.jpg",
+      "file": "foto-1.jpg",
+      "kind": "component",
+      "label": "Producto"
+     },
+     {
+      "alt": "Aura Lila Perfume de Mujer, 45 ml: imagen de la galería",
+      "url": "/images/products/item-belcorp-aura-lila/foto-2.jpg",
+      "file": "foto-2.jpg",
+      "kind": "component",
+      "label": "Detalle 2"
+     },
+     {
+      "alt": "Aura Lila Perfume de Mujer, 45 ml: imagen de la galería",
+      "url": "/images/products/item-belcorp-aura-lila/foto-3.jpg",
+      "file": "foto-3.jpg",
+      "kind": "component",
+      "label": "Detalle 3"
+     },
+     {
+      "alt": "Aura Lila Perfume de Mujer, 45 ml: imagen de la galería",
+      "url": "/images/products/item-belcorp-aura-lila/foto-4.jpg",
+      "file": "foto-4.jpg",
+      "kind": "component",
+      "label": "Detalle 4"
+     },
+     {
+      "alt": "Aura Lila Perfume de Mujer, 45 ml: imagen de la galería",
+      "url": "/images/products/item-belcorp-aura-lila/foto-5.jpg",
+      "file": "foto-5.jpg",
+      "kind": "component",
+      "label": "Detalle 5"
+     }
+    ],
+    "lineKey": "aura-lila",
+    "summary": "Manzana verde · violeta · maderas · 45 ml",
+    "benefits": [],
+    "includes": [
+     {
+      "code": "200117167",
+      "name": "Aura Lila Perfume de Mujer, 45 ml",
+      "size": "45 ml",
+      "details": [
+       "Manzana verde · violeta · maderas"
+      ]
+     }
+    ],
+    "inventory": [
+     {
+      "sku": "BELCORP-AURA-LILA",
+      "quantity": 1
+     }
+    ],
+    "description": "Perfume floral con notas de manzana verde, violeta y un fondo amaderado. Ésika lo presenta como una fragancia de larga duración elaborada con Essent Tech."
+   }
+  },
+  {
+   "slug": "bano-liquido-yanbal-baby-20013953",
+   "name": "Baño Líquido Yanbal Baby",
+   "category": "Cuidado del bebé",
+   "priceCents": 2900,
+   "active": true,
+   "content": {
+    "line": "Baby",
+    "brand": "Yanbal",
+    "notes": [],
+    "title": "Baño Líquido Yanbal Baby · 400 ml",
+    "usage": [
+     "Distribuye una pequeña cantidad en la piel húmeda y enjuaga."
+    ],
+    "format": "individual",
+    "images": [
+     {
+      "alt": "Baño Líquido Yanbal Baby: presentación del producto",
+      "url": "/images/products/item-20013953/foto-1.jpg",
+      "file": "foto-1.jpg",
+      "kind": "component",
+      "label": "Producto"
+     },
+     {
+      "alt": "Baño Líquido Yanbal Baby: imagen de la galería",
+      "url": "/images/products/item-20013953/foto-2.jpg",
+      "file": "foto-2.jpg",
+      "kind": "component",
+      "label": "Detalle 2"
+     },
+     {
+      "alt": "Baño Líquido Yanbal Baby: imagen de la galería",
+      "url": "/images/products/item-20013953/foto-3.jpg",
+      "file": "foto-3.jpg",
+      "kind": "component",
+      "label": "Detalle 3"
+     },
+     {
+      "alt": "Baño Líquido Yanbal Baby: imagen de la galería",
+      "url": "/images/products/item-20013953/foto-4.jpg",
+      "file": "foto-4.jpg",
+      "kind": "component",
+      "label": "Detalle 4"
+     }
+    ],
+    "lineKey": "baby",
+    "summary": "Baño líquido de espuma suave · 400 ml",
+    "benefits": [],
+    "includes": [
+     {
+      "code": "20013953",
+      "name": "Baño Líquido Yanbal Baby",
+      "size": "400 ml",
+      "details": [
+       "Baño líquido de espuma suave"
+      ]
+     }
+    ],
+    "inventory": [
+     {
+      "sku": "20013953",
+      "quantity": 1
+     }
+    ],
+    "description": "Baño líquido para la rutina de limpieza del bebé. La fórmula forma espuma suave y se presenta como un producto sin lágrimas, con el aroma de la línea Baby."
+   }
+  },
+  {
+   "slug": "biomilk-crema-corporal-original",
+   "name": "Biomilk Crema Corporal Original",
+   "category": "Cuidado corporal",
+   "priceCents": 4000,
+   "active": true,
+   "content": {
+    "line": "Biomilk",
+    "brand": "Yanbal",
+    "notes": [],
+    "title": "Biomilk Crema Corporal Original · 750 ml",
+    "usage": [
+     "Aplica diariamente sobre el cuerpo y distribuye hasta que se absorba."
+    ],
+    "format": "individual",
+    "images": [
+     {
+      "alt": "Biomilk Crema Corporal Original: presentación del producto",
+      "url": "/images/products/item-20013000/foto-1.jpg",
+      "file": "foto-1.jpg",
+      "kind": "component",
+      "label": "Producto"
+     },
+     {
+      "alt": "Biomilk Crema Corporal Original: imagen de la galería",
+      "url": "/images/products/item-20013000/foto-2.jpg",
+      "file": "foto-2.jpg",
+      "kind": "component",
+      "label": "Detalle 2"
+     },
+     {
+      "alt": "Crema corporal Biomilk Original de Yanbal de 750 ml con dosificador negro",
+      "url": "/images/products/biomilk-crema-corporal-original/crema-corporal.jpg",
+      "file": "crema-corporal.jpg",
+      "kind": "component",
+      "label": "Crema · 750 ml",
+      "source": "20013000-01.jpg"
+     },
+     {
+      "alt": "Biomilk Original con una mujer aplicando crema corporal en su hombro",
+      "url": "/images/products/biomilk-crema-corporal-original/ritual.jpg",
+      "file": "ritual.jpg",
+      "kind": "lifestyle",
+      "label": "Ritual Biomilk",
+      "source": "Generating_lotion_bottle_product…_20261001155710.jpg"
+     }
+    ],
+    "lineKey": "biomilk",
+    "summary": "Crema corporal original de uso diario · 750 ml",
+    "benefits": [],
+    "includes": [
+     {
+      "code": "20013000",
+      "name": "Biomilk Crema Corporal Original",
+      "size": "750 ml",
+      "details": [
+       "Crema corporal original de uso diario"
+      ]
+     }
+    ],
+    "inventory": [
+     {
+      "sku": "20013000",
+      "quantity": 1
+     }
+    ],
+    "description": "Crema corporal para todo tipo de piel con proteínas de yogurt probiótico. Su textura ligera permite una aplicación diaria de rápida absorción y ayuda a mantener la suavidad de la piel."
+   }
+  },
+  {
+   "slug": "ccori-desodorante-perfumado-roll-on-20013315",
+   "name": "Ccori Desodorante Perfumado Roll on",
+   "category": "Perfumería masculina",
+   "priceCents": 1250,
+   "active": true,
+   "content": {
+    "line": "Ccori",
+    "brand": "Yanbal",
+    "notes": [],
+    "title": "Ccori Desodorante Perfumado Roll on · 50 g",
+    "usage": [
+     "Agita y distribuye sobre axilas limpias y secas. No apliques en piel irritada o lesionada."
+    ],
+    "format": "individual",
+    "images": [
+     {
+      "alt": "Ccori Desodorante Perfumado Roll on: presentación del producto",
+      "url": "/images/products/item-20013315/foto-1.jpg",
+      "file": "foto-1.jpg",
+      "kind": "component",
+      "label": "Producto"
+     }
+    ],
+    "lineKey": "ccori",
+    "summary": "Roll on sin alcohol · 50 g",
+    "benefits": [],
+    "includes": [
+     {
+      "code": "20013315",
+      "name": "Ccori Desodorante Perfumado Roll on",
+      "size": "50 g",
+      "details": [
+       "Roll on sin alcohol · 50 g"
+      ]
+     }
+    ],
+    "inventory": [
+     {
+      "sku": "20013315",
+      "quantity": 1
+     }
+    ],
+    "description": "Desodorante antitranspirante roll on de la línea Ccori. La ficha de la marca indica una fórmula sin alcohol y de secado rápido, para el cuidado diario de las axilas."
+   }
+  },
+  {
+   "slug": "cielo-eau-de-parfum-20013641",
+   "name": "Cielo Eau de Parfum",
+   "category": "Perfumería femenina",
+   "priceCents": 11600,
+   "active": true,
+   "content": {
+    "line": "Cielo",
+    "brand": "Yanbal",
+    "notes": [],
+    "title": "Cielo Eau de Parfum · 50 ml",
+    "usage": [
+     "Aplica en cuello, muñecas u otras zonas de pulsación.",
+     "Conserva el frasco en un lugar fresco, protegido del sol."
+    ],
+    "format": "individual",
+    "images": [
+     {
+      "alt": "Cielo Eau de Parfum: presentación del producto",
+      "url": "/images/products/item-20013641/foto-1.jpg",
+      "file": "foto-1.jpg",
+      "kind": "component",
+      "label": "Producto"
+     },
+     {
+      "alt": "Cielo Eau de Parfum: imagen de la galería",
+      "url": "/images/products/item-20013641/foto-2.jpg",
+      "file": "foto-2.jpg",
+      "kind": "component",
+      "label": "Detalle 2"
+     }
+    ],
+    "lineKey": "cielo",
+    "summary": "Jazmín · flor de loto · musk · 50 ml",
+    "benefits": [],
+    "includes": [
+     {
+      "code": "20013641",
+      "name": "Cielo Eau de Parfum",
+      "size": "50 ml",
+      "details": [
+       "Jazmín · flor de loto · musk"
+      ]
+     }
+    ],
+    "inventory": [
+     {
+      "sku": "20013641",
+      "quantity": 1
+     }
+    ],
+    "description": "Eau de Parfum floral ambarado con jazmín, flor de loto y musk. La combinación de flores y un fondo envolvente define la fragancia de la línea Cielo."
+   }
+  },
+  {
+   "slug": "colonia-para-nino-yanbal-kids-20014243",
+   "name": "Colonia para Niño Yanbal Kids",
+   "category": "Perfumería infantil",
+   "priceCents": 3900,
+   "active": true,
+   "content": {
+    "line": "Kids",
+    "brand": "Yanbal",
+    "notes": [],
+    "title": "Colonia para Niño Yanbal Kids · 100 ml",
+    "usage": [
+     "Prueba primero en una pequeña zona; continúa solo si no hay reacción desfavorable.",
+     "Aplica en zonas de pulsación. En ropa, mantén al menos 15 cm de distancia."
+    ],
+    "format": "individual",
+    "images": [
+     {
+      "alt": "Colonia para Niño Yanbal Kids: presentación del producto",
+      "url": "/images/products/item-20014243/foto-1.jpg",
+      "file": "foto-1.jpg",
+      "kind": "component",
+      "label": "Producto"
+     },
+     {
+      "alt": "Colonia para Niño Yanbal Kids: imagen de la galería",
+      "url": "/images/products/item-20014243/foto-2.jpg",
+      "file": "foto-2.jpg",
+      "kind": "component",
+      "label": "Detalle 2"
+     }
+    ],
+    "lineKey": "kids",
+    "summary": "Pomelo · limón · lavanda · 100 ml",
+    "benefits": [],
+    "includes": [
+     {
+      "code": "20014243",
+      "name": "Colonia para Niño Yanbal Kids",
+      "size": "100 ml",
+      "details": [
+       "Pomelo · limón · lavanda"
+      ]
+     }
+    ],
+    "inventory": [
+     {
+      "sku": "20014243",
+      "quantity": 1
+     }
+    ],
+    "description": "Colonia infantil de perfil herbal cítrico, con pomelo, limón y lavanda. Su aroma combina frescura cítrica con un matiz floral suave."
+   }
+  },
+  {
+   "slug": "crema-corporal-hidratante-reparadora-yanbal-400ml-una-de-gato-1700179827925",
+   "name": "Crema Corporal Hidratante Reparadora Yanbal 400ml Uña de Gato",
+   "category": "Cuidado corporal",
+   "priceCents": 3990,
+   "active": true,
+   "content": {
+    "line": "Body Spa Uña de Gato",
+    "brand": "Yanbal",
+    "notes": [
+     "Las fotografías muestran distintos diseños de envase. La presentación disponible se confirma al coordinar el pedido.",
+     "Consulta las instrucciones del envase. La fuente no publica un modo de uso verificable."
+    ],
+    "title": "Crema Corporal Hidratante Reparadora Yanbal 400ml Uña de Gato",
+    "usage": [],
+    "format": "individual",
+    "images": [
+     {
+      "alt": "Crema Body Spa Uña de Gato de Yanbal de 400 ml en frasco verde con dosificador",
+      "url": "/images/products/item-1700179827925/foto-1.jpg",
+      "file": "foto-1.jpg",
+      "kind": "component",
+      "label": "Frasco · 400 ml",
+      "caption": "Crema Uña de Gato · 400 ml"
+     },
+     {
+      "alt": "Crema Body Spa Uña de Gato de Yanbal de 400 ml sostenida en una mano",
+      "url": "/images/products/item-1700179827925/foto-2.jpg",
+      "file": "foto-2.jpg",
+      "kind": "component",
+      "label": "Producto en mano",
+      "caption": "Producto en mano · diseño de envase de referencia"
+     }
+    ],
+    "lineKey": "body-spa-una-de-gato",
+    "summary": "Crema corporal Uña de Gato · 400 ml",
+    "benefits": [],
+    "includes": [
+     {
+      "code": "1700179827925",
+      "name": "Crema Corporal Hidratante Reparadora Yanbal 400ml Uña de Gato",
+      "size": "400 ml",
+      "details": [
+       "Crema corporal Uña de Gato · 400 ml"
+      ]
+     }
+    ],
+    "inventory": [
+     {
+      "sku": "1700179827925",
+      "quantity": 1
+     }
+    ],
+    "description": "Crema corporal hidratante reparadora Uña de Gato de Yanbal, en presentación de 400 ml con dosificador."
+   }
+  },
+  {
+   "slug": "crema-hidratante-yanbal-baby-20014078",
+   "name": "Crema Hidratante Yanbal Baby",
+   "category": "Cuidado del bebé",
+   "priceCents": 3250,
+   "active": true,
+   "content": {
+    "line": "Baby",
+    "brand": "Yanbal",
+    "notes": [],
+    "title": "Crema Hidratante Yanbal Baby · 200 ml",
+    "usage": [
+     "Distribuye una pequeña cantidad sobre rostro y cuerpo, evitando los ojos."
+    ],
+    "format": "individual",
+    "images": [
+     {
+      "alt": "Crema Hidratante Yanbal Baby: presentación del producto",
+      "url": "/images/products/item-20014078/foto-1.jpg",
+      "file": "foto-1.jpg",
+      "kind": "component",
+      "label": "Producto"
+     }
+    ],
+    "lineKey": "baby",
+    "summary": "Crema de manzanilla y algodón · 200 ml",
+    "benefits": [],
+    "includes": [
+     {
+      "code": "20014078",
+      "name": "Crema Hidratante Yanbal Baby",
+      "size": "200 ml",
+      "details": [
+       "Crema de manzanilla y algodón"
+      ]
+     }
+    ],
+    "inventory": [
+     {
+      "sku": "20014078",
+      "quantity": 1
+     }
+    ],
+    "description": "Crema para rostro y cuerpo con extractos de manzanilla y algodón. Su fórmula de pH neutro ayuda a mantener la piel suave y se absorbe con facilidad."
+   }
+  },
+  {
+   "slug": "dendur-eau-de-parfum-20013697",
+   "name": "Dendur Eau de Parfum",
+   "category": "Perfumería masculina",
+   "priceCents": 11500,
+   "active": true,
+   "content": {
+    "line": "Dendur",
+    "brand": "Yanbal",
+    "notes": [],
+    "title": "Dendur Eau de Parfum · 75 ml",
+    "usage": [
+     "Aplica en cuello, muñecas u otras zonas de pulsación.",
+     "Conserva el frasco en un lugar fresco, protegido del sol."
+    ],
+    "format": "individual",
+    "images": [
+     {
+      "alt": "Dendur Eau de Parfum: presentación del producto",
+      "url": "/images/products/item-20013697/foto-1.jpg",
+      "file": "foto-1.jpg",
+      "kind": "component",
+      "label": "Producto"
+     },
+     {
+      "alt": "Dendur Eau de Parfum: imagen de la galería",
+      "url": "/images/products/item-20013697/foto-2.jpg",
+      "file": "foto-2.jpg",
+      "kind": "component",
+      "label": "Detalle 2"
+     },
+     {
+      "alt": "Dendur Eau de Parfum: imagen de la galería",
+      "url": "/images/products/item-20013697/foto-3.jpg",
+      "file": "foto-3.jpg",
+      "kind": "component",
+      "label": "Detalle 3"
+     },
+     {
+      "alt": "Dendur Eau de Parfum: imagen de la galería",
+      "url": "/images/products/item-20013697/foto-4.jpg",
+      "file": "foto-4.jpg",
+      "kind": "component",
+      "label": "Detalle 4"
+     }
+    ],
+    "lineKey": "dendur",
+    "summary": "Pimienta negra · jengibre · tabaco · 75 ml",
+    "benefits": [],
+    "includes": [
+     {
+      "code": "20013697",
+      "name": "Dendur Eau de Parfum",
+      "size": "75 ml",
+      "details": [
+       "Pimienta negra · jengibre · tabaco"
+      ]
+     }
+    ],
+    "inventory": [
+     {
+      "sku": "20013697",
+      "quantity": 1
+     }
+    ],
+    "description": "Eau de Parfum ambarado especiado con pimienta negra, jengibre y tabaco. Sus notas especiadas se apoyan en un fondo cálido."
+   }
+  },
+  {
+   "slug": "desodorante-antitranspirante-cielo-20013580",
+   "name": "Desodorante Antitranspirante Cielo",
+   "category": "Perfumería femenina",
+   "priceCents": 1250,
+   "active": true,
+   "content": {
+    "line": "Cielo",
+    "brand": "Yanbal",
+    "notes": [],
+    "title": "Desodorante Antitranspirante Cielo · 50 g",
+    "usage": [
+     "Agita y distribuye sobre axilas limpias y secas. No apliques en piel irritada o lesionada."
+    ],
+    "format": "individual",
+    "images": [
+     {
+      "alt": "Desodorante Antitranspirante Cielo: presentación del producto",
+      "url": "/images/products/item-20013580/foto-1.jpg",
+      "file": "foto-1.jpg",
+      "kind": "component",
+      "label": "Producto"
+     }
+    ],
+    "lineKey": "cielo",
+    "summary": "Roll on sin alcohol · 50 g",
+    "benefits": [],
+    "includes": [
+     {
+      "code": "20013580",
+      "name": "Desodorante Antitranspirante Cielo",
+      "size": "50 g",
+      "details": [
+       "Roll on sin alcohol · 50 g"
+      ]
+     }
+    ],
+    "inventory": [
+     {
+      "sku": "20013580",
+      "quantity": 1
+     }
+    ],
+    "description": "Desodorante antitranspirante roll on de la línea Cielo. La ficha de la marca indica una fórmula sin alcohol y de secado rápido, para el cuidado diario de las axilas."
+   }
+  },
+  {
+   "slug": "desodorante-antitranspirante-roll-on-dendur-destiny-20013698",
+   "name": "Desodorante Antitranspirante Roll On Dendur Destiny",
+   "category": "Perfumería masculina",
+   "priceCents": 1250,
+   "active": true,
+   "content": {
+    "line": "Dendur Destiny",
+    "brand": "Yanbal",
+    "notes": [],
+    "title": "Desodorante Antitranspirante Roll On Dendur Destiny · 50 g",
+    "usage": [
+     "Agita y distribuye sobre axilas limpias y secas. No apliques en piel irritada o lesionada."
+    ],
+    "format": "individual",
+    "images": [
+     {
+      "alt": "Desodorante Antitranspirante Roll On Dendur Destiny: presentación del producto",
+      "url": "/images/products/item-20013698/foto-1.jpg",
+      "file": "foto-1.jpg",
+      "kind": "component",
+      "label": "Producto"
+     }
+    ],
+    "lineKey": "dendur",
+    "summary": "Roll on sin alcohol · 50 g",
+    "benefits": [],
+    "includes": [
+     {
+      "code": "20013698",
+      "name": "Desodorante Antitranspirante Roll On Dendur Destiny",
+      "size": "50 g",
+      "details": [
+       "Roll on sin alcohol · 50 g"
+      ]
+     }
+    ],
+    "inventory": [
+     {
+      "sku": "20013698",
+      "quantity": 1
+     }
+    ],
+    "description": "Desodorante antitranspirante roll on de la línea Dendur Destiny. La ficha de la marca indica una fórmula sin alcohol y de secado rápido, para el cuidado diario de las axilas."
+   }
+  },
+  {
+   "slug": "di-que-si-eau-de-parfum-20014202",
+   "name": "Di Que Sí Eau de Parfum",
+   "category": "Perfumería femenina",
+   "priceCents": 9400,
+   "active": true,
+   "content": {
+    "line": "Di Que Sí",
+    "brand": "Yanbal",
+    "notes": [],
+    "title": "Di Que Sí Eau de Parfum · 50 ml",
+    "usage": [
+     "Aplica en cuello, muñecas u otras zonas de pulsación.",
+     "Conserva el frasco en un lugar fresco, protegido del sol."
+    ],
+    "format": "individual",
+    "images": [
+     {
+      "alt": "Di Que Sí Eau de Parfum: presentación del producto",
+      "url": "/images/products/item-20014202/foto-1.jpg",
+      "file": "foto-1.jpg",
+      "kind": "component",
+      "label": "Producto"
+     }
+    ],
+    "lineKey": "di-que-si",
+    "summary": "Limón · manzana verde · jazmín · 50 ml",
+    "benefits": [],
+    "includes": [
+     {
+      "code": "20014202",
+      "name": "Di Que Sí Eau de Parfum",
+      "size": "50 ml",
+      "details": [
+       "Limón · manzana verde · jazmín"
+      ]
+     }
+    ],
+    "inventory": [
+     {
+      "sku": "20014202",
+      "quantity": 1
+     }
+    ],
+    "description": "Eau de Parfum floral frutal con limón, manzana verde y jazmín. Combina una apertura de fruta fresca con el carácter floral de su corazón."
+   }
+  },
+  {
+   "slug": "eau-vitale-te-verde-eau-de-cologne-20013690",
+   "name": "Eau Vitale Té Verde Eau de Cologne",
+   "category": "Fragancias y bienestar",
+   "priceCents": 8400,
+   "active": true,
+   "content": {
+    "line": "Eau Vitale Té Verde",
+    "brand": "Yanbal",
+    "notes": [],
+    "title": "Eau Vitale Té Verde Eau de Cologne · 200 ml",
+    "usage": [
+     "Aplica un poco en las manos, espera unos segundos y acerca el aroma para disfrutarlo."
+    ],
+    "format": "individual",
+    "images": [
+     {
+      "alt": "Eau Vitale Té Verde Eau de Cologne: presentación del producto",
+      "url": "/images/products/item-20013690/foto-1.jpg",
+      "file": "foto-1.jpg",
+      "kind": "component",
+      "label": "Producto"
+     },
+     {
+      "alt": "Eau Vitale Té Verde Eau de Cologne: imagen de la galería",
+      "url": "/images/products/item-20013690/foto-2.jpg",
+      "file": "foto-2.jpg",
+      "kind": "component",
+      "label": "Detalle 2"
+     },
+     {
+      "alt": "Eau Vitale Té Verde Eau de Cologne: imagen de la galería",
+      "url": "/images/products/item-20013690/foto-3.jpg",
+      "file": "foto-3.jpg",
+      "kind": "component",
+      "label": "Detalle 3"
+     }
+    ],
+    "lineKey": "eau-vitale-te-verde",
+    "summary": "Té verde · matices herbales y cítricos · 200 ml",
+    "benefits": [],
+    "includes": [
+     {
+      "code": "20013690",
+      "name": "Eau Vitale Té Verde Eau de Cologne",
+      "size": "200 ml",
+      "details": [
+       "Té verde · matices herbales y cítricos"
+      ]
+     }
+    ],
+    "inventory": [
+     {
+      "sku": "20013690",
+      "quantity": 1
+     }
+    ],
+    "description": "Colonia de aroma herbal con matices cítricos, inspirada en el té verde. La marca propone disfrutarla como una experiencia sensorial, tanto en las manos como en el ambiente."
+   }
+  },
+  {
+   "slug": "hydra-lip-labial-larga-duracion-iconic-67-20013794",
+   "name": "Hydra-Lip Labial Larga Duración Iconic 67",
+   "category": "Maquillaje",
+   "priceCents": 2700,
+   "active": true,
+   "content": {
+    "line": "Hydra-Lip",
+    "brand": "Yanbal",
+    "notes": [],
+    "title": "Hydra-Lip Labial Larga Duración Iconic 67 · 2 g",
+    "usage": [
+     "Aplica sobre los labios siguiendo su contorno."
+    ],
+    "format": "individual",
+    "images": [
+     {
+      "alt": "Hydra-Lip Labial Larga Duración Iconic 67: presentación del producto",
+      "url": "/images/products/item-20013794/foto-1.jpg",
+      "file": "foto-1.jpg",
+      "kind": "component",
+      "label": "Producto"
+     }
+    ],
+    "lineKey": "hydra-lip",
+    "summary": "Labial semimate · tono Iconic 67 · 2 g",
+    "benefits": [],
+    "includes": [
+     {
+      "code": "20013794",
+      "name": "Hydra-Lip Labial Larga Duración Iconic 67",
+      "size": "2 g",
+      "details": [
+       "Labial semimate · tono Iconic 67"
+      ]
+     }
+    ],
+    "inventory": [
+     {
+      "sku": "20013794",
+      "quantity": 1
+     }
+    ],
+    "description": "Labial Iconic 67 de acabado semimate, textura cremosa y cobertura de larga duración. Su fórmula contiene ceramidas y vitaminas C y E."
+   }
+  },
+  {
+   "slug": "icono-de-yanbal-eau-de-parfum-20013411",
+   "name": "Ícono de Yanbal Eau de Parfum",
+   "category": "Perfumería femenina",
+   "priceCents": 17900,
+   "active": true,
+   "content": {
+    "line": "Ícono",
+    "brand": "Yanbal",
+    "notes": [],
+    "title": "Ícono de Yanbal Eau de Parfum · 50 ml",
+    "usage": [
+     "Aplica en cuello, muñecas u otras zonas de pulsación.",
+     "Conserva el frasco en un lugar fresco, protegido del sol."
+    ],
+    "format": "individual",
+    "images": [
+     {
+      "alt": "Ícono de Yanbal Eau de Parfum: presentación del producto",
+      "url": "/images/products/item-20013411/foto-1.jpg",
+      "file": "foto-1.jpg",
+      "kind": "component",
+      "label": "Producto"
+     },
+     {
+      "alt": "Ícono de Yanbal Eau de Parfum: imagen de la galería",
+      "url": "/images/products/item-20013411/foto-2.jpg",
+      "file": "foto-2.jpg",
+      "kind": "component",
+      "label": "Detalle 2"
+     }
+    ],
+    "lineKey": "icono",
+    "summary": "Clementina · ylang ylang · sándalo · 50 ml",
+    "benefits": [],
+    "includes": [
+     {
+      "code": "20013411",
+      "name": "Ícono de Yanbal Eau de Parfum",
+      "size": "50 ml",
+      "details": [
+       "Clementina · ylang ylang · sándalo"
+      ]
+     }
+    ],
+    "inventory": [
+     {
+      "sku": "20013411",
+      "quantity": 1
+     }
+    ],
+    "description": "Fragancia floral maderosa con clementina, ylang ylang y sándalo. Su presentación Eau de Parfum reúne la frescura cítrica y un fondo cálido de madera."
+   }
+  },
+  {
+   "slug": "icono-intense-eau-de-parfum-20013904",
+   "name": "Ícono Intense Eau de Parfum",
+   "category": "Perfumería femenina",
+   "priceCents": 8900,
+   "active": true,
+   "content": {
+    "line": "Ícono Intense",
+    "brand": "Yanbal",
+    "notes": [],
+    "title": "Ícono Intense Eau de Parfum · 50 ml",
+    "usage": [
+     "Aplica en cuello, muñecas u otras zonas de pulsación.",
+     "Conserva el frasco en un lugar fresco, protegido del sol."
+    ],
+    "format": "individual",
+    "images": [
+     {
+      "alt": "Ícono Intense Eau de Parfum: presentación del producto",
+      "url": "/images/products/item-20013904/foto-1.jpg",
+      "file": "foto-1.jpg",
+      "kind": "component",
+      "label": "Producto"
+     },
+     {
+      "alt": "Ícono Intense Eau de Parfum: imagen de la galería",
+      "url": "/images/products/item-20013904/foto-2.jpg",
+      "file": "foto-2.jpg",
+      "kind": "component",
+      "label": "Detalle 2"
+     },
+     {
+      "alt": "Ícono Intense Eau de Parfum: imagen de la galería",
+      "url": "/images/products/item-20013904/foto-3.jpg",
+      "file": "foto-3.jpg",
+      "kind": "component",
+      "label": "Detalle 3"
+     }
+    ],
+    "lineKey": "icono-intense",
+    "summary": "Ylang ylang · cedro · vainilla cremosa · 50 ml",
+    "benefits": [],
+    "includes": [
+     {
+      "code": "20013904",
+      "name": "Ícono Intense Eau de Parfum",
+      "size": "50 ml",
+      "details": [
+       "Ylang ylang · cedro · vainilla cremosa"
+      ]
+     }
+    ],
+    "inventory": [
+     {
+      "sku": "20013904",
+      "quantity": 1
+     }
+    ],
+    "description": "Esta variante de Ícono combina ylang ylang, cedro y un acorde de vainilla cremosa. Es una fragancia distinta del Ícono clásico, con un perfil floral y amaderado de fondo cálido."
+   }
+  },
+  {
+   "slug": "icono-locion-perfumada-20013412",
+   "name": "Ícono Loción Perfumada",
+   "category": "Perfumería femenina",
+   "priceCents": 5200,
+   "active": true,
+   "content": {
+    "line": "Ícono",
+    "brand": "Yanbal",
+    "notes": [],
+    "title": "Ícono Loción Perfumada · 200 ml",
+    "usage": [
+     "Aplica sobre la piel limpia del cuerpo y distribuye con un masaje suave."
+    ],
+    "format": "individual",
+    "images": [
+     {
+      "alt": "Ícono Loción Perfumada: presentación del producto",
+      "url": "/images/products/item-20013412/foto-1.jpg",
+      "file": "foto-1.jpg",
+      "kind": "component",
+      "label": "Producto"
+     }
+    ],
+    "lineKey": "icono",
+    "summary": "Loción corporal perfumada · 200 ml",
+    "benefits": [],
+    "includes": [
+     {
+      "code": "20013412",
+      "name": "Ícono Loción Perfumada",
+      "size": "200 ml",
+      "details": [
+       "Loción corporal perfumada"
+      ]
+     }
+    ],
+    "inventory": [
+     {
+      "sku": "20013412",
+      "quantity": 1
+     }
+    ],
+    "description": "Loción corporal perfumada que complementa la fragancia Ícono. Su fórmula hidrata y deja la piel suave; la marca declara hidratación hasta por 24 horas."
+   }
+  },
+  {
+   "slug": "jabon-en-barra-perfumado-cielo-20013310",
+   "name": "Jabón en Barra Perfumado Cielo",
+   "category": "Perfumería femenina",
+   "priceCents": 2000,
+   "active": true,
+   "content": {
+    "line": "Cielo",
+    "brand": "Yanbal",
+    "notes": [],
+    "title": "Jabón en Barra Perfumado Cielo · 90 g",
+    "usage": [
+     "Humedece, forma espuma sobre el cuerpo y enjuaga."
+    ],
+    "format": "individual",
+    "images": [
+     {
+      "alt": "Jabón en Barra Perfumado Cielo: presentación del producto",
+      "url": "/images/products/item-20013310/foto-1.jpg",
+      "file": "foto-1.jpg",
+      "kind": "component",
+      "label": "Producto"
+     }
+    ],
+    "lineKey": "cielo",
+    "summary": "Jabón perfumado en barra · 90 g",
+    "benefits": [],
+    "includes": [
+     {
+      "code": "20013310",
+      "name": "Jabón en Barra Perfumado Cielo",
+      "size": "90 g",
+      "details": [
+       "Jabón perfumado en barra"
+      ]
+     }
+    ],
+    "inventory": [
+     {
+      "sku": "20013310",
+      "quantity": 1
+     }
+    ],
+    "description": "Jabón perfumado que limpia la piel y acompaña el aroma de la línea Cielo. Su firma olfativa reúne jazmín, flor de loto y musk."
+   }
+  },
+  {
+   "slug": "jabon-en-barra-perfumado-osadia-hombre-20014332",
+   "name": "Jabón en Barra Perfumado Osadía Hombre",
+   "category": "Perfumería masculina",
+   "priceCents": 2000,
+   "active": true,
+   "content": {
+    "line": "Osadía Hombre",
+    "brand": "Yanbal",
+    "notes": [],
+    "title": "Jabón en Barra Perfumado Osadía Hombre · 90 g",
+    "usage": [
+     "Humedece la barra, distribuye la espuma sobre el cuerpo y enjuaga."
+    ],
+    "format": "individual",
+    "images": [
+     {
+      "alt": "Jabón en Barra Perfumado Osadía Hombre: presentación del producto",
+      "url": "/images/products/item-20014332/foto-1.jpg",
+      "file": "foto-1.jpg",
+      "kind": "component",
+      "label": "Producto"
+     }
+    ],
+    "lineKey": "osadia-hombre",
+    "summary": "Jabón corporal perfumado · 90 g",
+    "benefits": [],
+    "includes": [
+     {
+      "code": "20014332",
+      "name": "Jabón en Barra Perfumado Osadía Hombre",
+      "size": "90 g",
+      "details": [
+       "Jabón corporal perfumado"
+      ]
+     }
+    ],
+    "inventory": [
+     {
+      "sku": "20014332",
+      "quantity": 1
+     }
+    ],
+    "description": "Jabón en barra perfumado de la línea Osadía Hombre. Limpia y acompaña las notas de hierbabuena, café y ébano de esta colección."
+   }
+  },
+  {
+   "slug": "jabon-en-barra-yanbal-baby-baby-jabon-suelto",
+   "name": "Jabón en Barra Yanbal Baby",
+   "category": "Cuidado del bebé",
+   "priceCents": 1000,
+   "active": true,
+   "content": {
+    "line": "Baby",
+    "brand": "Yanbal",
+    "notes": [
+     "Consulta las instrucciones del envase. La fuente no publica un modo de uso verificable."
+    ],
+    "title": "Jabón en Barra Yanbal Baby · Contenido por confirmar",
+    "usage": [],
+    "format": "individual",
+    "images": [
+     {
+      "alt": "Jabón Baby junto al shampoo del set de referencia",
+      "url": "/images/products/set-yanbal-baby/jabon.jpg",
+      "file": "shampoo-y-jabon-referencia.jpg",
+      "kind": "component",
+      "label": "Referencia del jabón",
+      "caption": "Solo se vende el jabón. El shampoo de esta foto de referencia no está incluido."
+     }
+    ],
+    "lineKey": "baby",
+    "summary": "Jabón Baby suelto · Contenido por confirmar",
+    "benefits": [],
+    "includes": [
+     {
+      "code": null,
+      "name": "Jabón en Barra Yanbal Baby",
+      "size": "Contenido por confirmar",
+      "details": [
+       "Jabón Baby suelto"
+      ]
+     }
+    ],
+    "inventory": [
+     {
+      "sku": "BABY-JABON-SUELTO",
+      "quantity": 1
+     }
+    ],
+    "description": "Una barra suelta de la línea Baby, procedente del set Shampoo + Jabón. Esta presentación incluye únicamente el jabón; el contenido neto y el código individual están pendientes de confirmar."
+   }
+  },
+  {
+   "slug": "l-essence-colonia-flor-de-cerezo-20013558",
+   "name": "L'Essence Colonia Flor de Cerezo",
+   "category": "Perfumería femenina",
+   "priceCents": 4050,
+   "active": true,
+   "content": {
+    "line": "L’Essence Flor de Cerezo",
+    "brand": "Yanbal",
+    "notes": [],
+    "title": "L'Essence Colonia Flor de Cerezo · 200 ml",
+    "usage": [
+     "Aplica en cuello, muñecas u otras zonas de pulsación.",
+     "Conserva el frasco en un lugar fresco, protegido del sol."
+    ],
+    "format": "individual",
+    "images": [
+     {
+      "alt": "L'Essence Colonia Flor de Cerezo: presentación del producto",
+      "url": "/images/products/item-20013558/foto-1.jpg",
+      "file": "foto-1.jpg",
+      "kind": "component",
+      "label": "Producto"
+     }
+    ],
+    "lineKey": "l-essence-flor-de-cerezo",
+    "summary": "Magnolia · flor de cerezo · musk · 200 ml",
+    "benefits": [],
+    "includes": [
+     {
+      "code": "20013558",
+      "name": "L'Essence Colonia Flor de Cerezo",
+      "size": "200 ml",
+      "details": [
+       "Magnolia · flor de cerezo · musk"
+      ]
+     }
+    ],
+    "inventory": [
+     {
+      "sku": "20013558",
+      "quantity": 1
+     }
+    ],
+    "description": "Colonia floral que reúne magnolia, flor de cerezo y musk. Una combinación de flores con un fondo suave."
+   }
+  },
+  {
+   "slug": "limpiador-exfoliante-en-gel-body-spa-una-de-gato-20014140",
+   "name": "Limpiador Exfoliante en Gel Body Spa Uña de Gato",
+   "category": "Cuidado corporal",
+   "priceCents": 5300,
+   "active": true,
+   "content": {
+    "line": "Body Spa Uña de Gato",
+    "brand": "Yanbal",
+    "notes": [],
+    "title": "Limpiador Exfoliante en Gel Body Spa Uña de Gato · 200 g",
+    "usage": [
+     "Masajea suavemente sobre la piel húmeda del cuerpo y enjuaga.",
+     "La marca propone incorporarlo a la rutina una vez por semana."
+    ],
+    "format": "individual",
+    "images": [
+     {
+      "alt": "Limpiador Exfoliante en Gel Body Spa Uña de Gato: presentación del producto",
+      "url": "/images/products/item-20014140/foto-1.jpg",
+      "file": "foto-1.jpg",
+      "kind": "component",
+      "label": "Producto"
+     },
+     {
+      "alt": "Limpiador Exfoliante en Gel Body Spa Uña de Gato: imagen de la galería",
+      "url": "/images/products/item-20014140/foto-2.jpg",
+      "file": "foto-2.jpg",
+      "kind": "component",
+      "label": "Detalle 2"
+     },
+     {
+      "alt": "Limpiador Exfoliante en Gel Body Spa Uña de Gato: imagen de la galería",
+      "url": "/images/products/item-20014140/foto-3.jpg",
+      "file": "foto-3.jpg",
+      "kind": "component",
+      "label": "Detalle 3"
+     },
+     {
+      "alt": "Limpiador Exfoliante en Gel Body Spa Uña de Gato: imagen de la galería",
+      "url": "/images/products/item-20014140/foto-4.jpg",
+      "file": "foto-4.jpg",
+      "kind": "component",
+      "label": "Detalle 4"
+     },
+     {
+      "alt": "Limpiador Exfoliante en Gel Body Spa Uña de Gato: imagen de la galería",
+      "url": "/images/products/item-20014140/foto-5.jpg",
+      "file": "foto-5.jpg",
+      "kind": "component",
+      "label": "Detalle 5"
+     }
+    ],
+    "lineKey": "body-spa-una-de-gato",
+    "summary": "Limpiador y exfoliante corporal · 200 g",
+    "benefits": [],
+    "includes": [
+     {
+      "code": "20014140",
+      "name": "Limpiador Exfoliante en Gel Body Spa Uña de Gato",
+      "size": "200 g",
+      "details": [
+       "Limpiador y exfoliante corporal"
+      ]
+     }
+    ],
+    "inventory": [
+     {
+      "sku": "20014140",
+      "quantity": 1
+     }
+    ],
+    "description": "Gel corporal con extracto de uña de gato y partículas de piedra pómez. Limpia y exfolia para retirar células muertas de la superficie de la piel."
+   }
+  },
+  {
+   "slug": "natura-111178",
+   "name": "Kaiak Aero Femenino Eau de Toilette",
+   "category": "Perfumería femenina",
+   "priceCents": 13300,
+   "active": true,
+   "content": {
+    "line": "Kaiak Aero",
+    "brand": "Natura",
+    "notes": [],
+    "title": "Kaiak Aero Femenino Eau de Toilette · 100 ml",
+    "usage": [
+     "Aplica en cuello, muñecas u otras zonas de pulsación.",
+     "Conserva el frasco en un lugar fresco, protegido del sol."
+    ],
+    "format": "individual",
+    "images": [
+     {
+      "alt": "NATURA: presentación del producto",
+      "url": "/images/products/item-111178/foto-1.jpg",
+      "file": "foto-1.jpg",
+      "kind": "component",
+      "label": "Producto"
+     },
+     {
+      "alt": "NATURA: imagen de la galería",
+      "url": "/images/products/item-111178/foto-2.jpg",
+      "file": "foto-2.jpg",
+      "kind": "component",
+      "label": "Detalle 2"
+     },
+     {
+      "alt": "NATURA: imagen de la galería",
+      "url": "/images/products/item-111178/foto-3.jpg",
+      "file": "foto-3.jpg",
+      "kind": "component",
+      "label": "Detalle 3"
+     }
+    ],
+    "lineKey": "kaiak-aero",
+    "summary": "Acorde tónico · lavanda · peonía · 100 ml",
+    "benefits": [],
+    "includes": [
+     {
+      "code": "111178",
+      "name": "NATURA",
+      "size": "100 ml",
+      "details": [
+       "Acorde tónico · lavanda · peonía"
+      ]
+     }
+    ],
+    "inventory": [
+     {
+      "sku": "111178",
+      "quantity": 1
+     }
+    ],
+    "description": "Eau de Toilette femenino de 100 ml con un acorde tónico, lavanda y peonía. Su composición evoca un perfil fresco, de aire marino."
+   }
+  },
+  {
+   "slug": "ohm-desodorante-perfumado-roll-on-20011230",
+   "name": "Ohm Desodorante Perfumado Roll on",
+   "category": "Perfumería masculina",
+   "priceCents": 1250,
+   "active": true,
+   "content": {
+    "line": "Ohm",
+    "brand": "Yanbal",
+    "notes": [],
+    "title": "Ohm Desodorante Perfumado Roll on · 50 g",
+    "usage": [
+     "Agita y distribuye sobre axilas limpias y secas. No apliques en piel irritada o lesionada."
+    ],
+    "format": "individual",
+    "images": [
+     {
+      "alt": "Ohm Desodorante Perfumado Roll on: presentación del producto",
+      "url": "/images/products/item-20011230/foto-1.jpg",
+      "file": "foto-1.jpg",
+      "kind": "component",
+      "label": "Producto"
+     }
+    ],
+    "lineKey": "ohm",
+    "summary": "Roll on sin alcohol · 50 g",
+    "benefits": [],
+    "includes": [
+     {
+      "code": "20011230",
+      "name": "Ohm Desodorante Perfumado Roll on",
+      "size": "50 g",
+      "details": [
+       "Roll on sin alcohol · 50 g"
+      ]
+     }
+    ],
+    "inventory": [
+     {
+      "sku": "20011230",
+      "quantity": 1
+     }
+    ],
+    "description": "Desodorante antitranspirante roll on de la línea Ohm. La ficha de la marca indica una fórmula sin alcohol y de secado rápido, para el cuidado diario de las axilas."
+   }
+  },
+  {
+   "slug": "ohm-now-desodorante-perfumado-roll-on-20014234",
+   "name": "Ohm Now Desodorante Perfumado Roll on",
+   "category": "Perfumería masculina",
+   "priceCents": 1250,
+   "active": true,
+   "content": {
+    "line": "Ohm Now",
+    "brand": "Yanbal",
+    "notes": [],
+    "title": "Ohm Now Desodorante Perfumado Roll on · 50 g",
+    "usage": [
+     "Agita y distribuye sobre axilas limpias y secas. No apliques en piel irritada o lesionada."
+    ],
+    "format": "individual",
+    "images": [
+     {
+      "alt": "Ohm Now Desodorante Perfumado Roll on: presentación del producto",
+      "url": "/images/products/item-20014234/foto-1.jpg",
+      "file": "foto-1.jpg",
+      "kind": "component",
+      "label": "Producto"
+     }
+    ],
+    "lineKey": "ohm-now",
+    "summary": "Roll on sin alcohol · 50 g",
+    "benefits": [],
+    "includes": [
+     {
+      "code": "20014234",
+      "name": "Ohm Now Desodorante Perfumado Roll on",
+      "size": "50 g",
+      "details": [
+       "Roll on sin alcohol · 50 g"
+      ]
+     }
+    ],
+    "inventory": [
+     {
+      "sku": "20014234",
+      "quantity": 1
+     }
+    ],
+    "description": "Desodorante antitranspirante roll on de la línea Ohm Now. La ficha de la marca indica una fórmula sin alcohol y de secado rápido, para el cuidado diario de las axilas."
+   }
+  },
+  {
+   "slug": "ohm-now-parfum-20014225",
+   "name": "Ohm Now Parfum",
+   "category": "Perfumería masculina",
+   "priceCents": 14950,
+   "active": true,
+   "content": {
+    "line": "Ohm Now",
+    "brand": "Yanbal",
+    "notes": [],
+    "title": "Ohm Now Parfum · 100 ml",
+    "usage": [
+     "Aplica en cuello, muñecas u otras zonas de pulsación.",
+     "Conserva el frasco en un lugar fresco, protegido del sol."
+    ],
+    "format": "individual",
+    "images": [
+     {
+      "alt": "Ohm Now Parfum: presentación del producto",
+      "url": "/images/products/item-20014225/foto-1.jpg",
+      "file": "foto-1.jpg",
+      "kind": "component",
+      "label": "Producto"
+     },
+     {
+      "alt": "Ohm Now Parfum: imagen de la galería",
+      "url": "/images/products/item-20014225/foto-2.jpg",
+      "file": "foto-2.jpg",
+      "kind": "component",
+      "label": "Detalle 2"
+     },
+     {
+      "alt": "Ohm Now Parfum: imagen de la galería",
+      "url": "/images/products/item-20014225/foto-3.jpg",
+      "file": "foto-3.jpg",
+      "kind": "component",
+      "label": "Detalle 3"
+     }
+    ],
+    "lineKey": "ohm-now",
+    "summary": "Higo · acorde de absenta · haba tonka · 100 ml",
+    "benefits": [],
+    "includes": [
+     {
+      "code": "20014225",
+      "name": "Ohm Now Parfum",
+      "size": "100 ml",
+      "details": [
+       "Higo · acorde de absenta · haba tonka"
+      ]
+     }
+    ],
+    "inventory": [
+     {
+      "sku": "20014225",
+      "quantity": 1
+     }
+    ],
+    "description": "Parfum maderoso herbal. El higo aporta un matiz cremoso, el acorde de absenta añade un carácter aromático y el haba tonka completa el fondo cálido."
+   }
+  },
+  {
+   "slug": "ohm-parfum-20012786",
+   "name": "Ohm Parfum",
+   "category": "Perfumería masculina",
+   "priceCents": 14950,
+   "active": true,
+   "content": {
+    "line": "Ohm",
+    "brand": "Yanbal",
+    "notes": [],
+    "title": "Ohm Parfum · 100 ml",
+    "usage": [
+     "Aplica en cuello, muñecas u otras zonas de pulsación.",
+     "Conserva el frasco en un lugar fresco, protegido del sol."
+    ],
+    "format": "individual",
+    "images": [
+     {
+      "alt": "Ohm Parfum: presentación del producto",
+      "url": "/images/products/item-20012786/foto-1.jpg",
+      "file": "foto-1.jpg",
+      "kind": "component",
+      "label": "Producto"
+     },
+     {
+      "alt": "Ohm Parfum: imagen de la galería",
+      "url": "/images/products/item-20012786/foto-2.jpg",
+      "file": "foto-2.jpg",
+      "kind": "component",
+      "label": "Detalle 2"
+     },
+     {
+      "alt": "Ohm Parfum: imagen de la galería",
+      "url": "/images/products/item-20012786/foto-3.jpg",
+      "file": "foto-3.jpg",
+      "kind": "component",
+      "label": "Detalle 3"
+     }
+    ],
+    "lineKey": "ohm",
+    "summary": "Toronja rosada · salvia · cuero · 100 ml",
+    "benefits": [],
+    "includes": [
+     {
+      "code": "20012786",
+      "name": "Ohm Parfum",
+      "size": "100 ml",
+      "details": [
+       "Toronja rosada · salvia · cuero"
+      ]
+     }
+    ],
+    "inventory": [
+     {
+      "sku": "20012786",
+      "quantity": 1
+     }
+    ],
+    "description": "Parfum herbal cítrico con toronja rosada, salvia y cuero. Reúne una salida fresca con un fondo de mayor profundidad."
+   }
+  },
+  {
+   "slug": "osadia-eau-de-parfum-hombre-20013055",
+   "name": "Osadía Eau de Parfum Hombre",
+   "category": "Perfumería masculina",
+   "priceCents": 19200,
+   "active": true,
+   "content": {
+    "line": "Osadía Hombre",
+    "brand": "Yanbal",
+    "notes": [],
+    "title": "Osadía Eau de Parfum Hombre · 75 ml",
+    "usage": [
+     "Aplica en cuello, muñecas u otras zonas de pulsación.",
+     "Conserva el frasco en un lugar fresco, protegido del sol."
+    ],
+    "format": "individual",
+    "images": [
+     {
+      "alt": "Osadía Eau de Parfum Hombre: presentación del producto",
+      "url": "/images/products/item-20013055/foto-1.jpg",
+      "file": "foto-1.jpg",
+      "kind": "component",
+      "label": "Producto"
+     }
+    ],
+    "lineKey": "osadia-hombre",
+    "summary": "Hierbabuena · café dulce · ébano · 75 ml",
+    "benefits": [],
+    "includes": [
+     {
+      "code": "20013055",
+      "name": "Osadía Eau de Parfum Hombre",
+      "size": "75 ml",
+      "details": [
+       "Hierbabuena · café dulce · ébano"
+      ]
+     }
+    ],
+    "inventory": [
+     {
+      "sku": "20013055",
+      "quantity": 1
+     }
+    ],
+    "description": "Eau de Parfum maderoso aromático con hierbabuena, café dulce y ébano. Contrasta la frescura herbal con un fondo de madera y café."
+   }
+  },
+  {
+   "slug": "osadia-infinita-eau-de-parfum-20013122",
+   "name": "Osadía Infinita Eau de Parfum",
+   "category": "Perfumería femenina",
+   "priceCents": 17400,
+   "active": true,
+   "content": {
+    "line": "Osadía Infinita",
+    "brand": "Yanbal",
+    "notes": [],
+    "title": "Osadía Infinita Eau de Parfum · 50 ml",
+    "usage": [
+     "Aplica en cuello, muñecas u otras zonas de pulsación.",
+     "Conserva el frasco en un lugar fresco, protegido del sol."
+    ],
+    "format": "individual",
+    "images": [
+     {
+      "alt": "Osadía Infinita Eau de Parfum: presentación del producto",
+      "url": "/images/products/item-20013122/foto-1.jpg",
+      "file": "foto-1.jpg",
+      "kind": "component",
+      "label": "Producto"
+     },
+     {
+      "alt": "Osadía Infinita Eau de Parfum: imagen de la galería",
+      "url": "/images/products/item-20013122/foto-2.jpg",
+      "file": "foto-2.jpg",
+      "kind": "component",
+      "label": "Detalle 2"
+     }
+    ],
+    "lineKey": "osadia-infinita",
+    "summary": "Bayas doradas · mimosa · guayacán · 50 ml",
+    "benefits": [],
+    "includes": [
+     {
+      "code": "20013122",
+      "name": "Osadía Infinita Eau de Parfum",
+      "size": "50 ml",
+      "details": [
+       "Bayas doradas · mimosa · guayacán"
+      ]
+     }
+    ],
+    "inventory": [
+     {
+      "sku": "20013122",
+      "quantity": 1
+     }
+    ],
+    "description": "Eau de Parfum floral frutal que combina bayas doradas, mimosa y madera de guayacán. Una composición con contraste entre fruta, flores y un fondo amaderado."
+   }
+  },
+  {
+   "slug": "osadia-infinita-locion-perfumada-20013264",
+   "name": "Osadía Infinita Loción Perfumada",
+   "category": "Perfumería femenina",
+   "priceCents": 17400,
+   "active": true,
+   "content": {
+    "line": "Osadía Infinita",
+    "brand": "Yanbal",
+    "notes": [
+     "Precio de venta en soles pendiente. El valor colombiano no se ha convertido."
+    ],
+    "title": "Osadía Infinita Loción Perfumada · 200 ml",
+    "usage": [
+     "Distribuye sobre el cuerpo limpio con un masaje suave."
+    ],
+    "format": "individual",
+    "images": [
+     {
+      "alt": "Osadía Infinita Loción Perfumada: presentación del producto",
+      "url": "/images/products/item-20013264/foto-1.jpg",
+      "file": "foto-1.jpg",
+      "kind": "component",
+      "label": "Producto"
+     }
+    ],
+    "lineKey": "osadia-infinita",
+    "summary": "Loción corporal de rápida absorción · 200 ml",
+    "benefits": [],
+    "includes": [
+     {
+      "code": "20013264",
+      "name": "Osadía Infinita Loción Perfumada",
+      "size": "200 ml",
+      "details": [
+       "Loción corporal de rápida absorción"
+      ]
+     }
+    ],
+    "inventory": [
+     {
+      "sku": "20013264",
+      "quantity": 1
+     }
+    ],
+    "description": "Loción perfumada para el cuerpo de textura ligera y rápida absorción. Contiene humectantes y emolientes; la marca indica hidratación hasta por 24 horas."
+   }
+  },
+  {
+   "slug": "protector-solar-total-block-ultraproteccion-spf-100-20013519",
+   "name": "Protector Solar Total Block Ultraprotección SPF 100",
+   "category": "Protección solar",
+   "priceCents": 10000,
+   "active": true,
+   "content": {
+    "line": "Total Block",
+    "brand": "Yanbal",
+    "notes": [],
+    "title": "Protector Solar Total Block Ultraprotección SPF 100 · 80 g",
+    "usage": [
+     "Aplica 15 minutos antes de la exposición al sol.",
+     "Reaplica después de nadar o sudar y según las indicaciones del envase."
+    ],
+    "format": "individual",
+    "images": [
+     {
+      "alt": "Protector Solar Total Block Ultraprotección SPF 100: presentación del producto",
+      "url": "/images/products/item-20013519/foto-1.jpg",
+      "file": "foto-1.jpg",
+      "kind": "component",
+      "label": "Producto"
+     }
+    ],
+    "lineKey": "total-block",
+    "summary": "Protector solar SPF 100 · 80 g",
+    "benefits": [],
+    "includes": [
+     {
+      "code": "20013519",
+      "name": "Protector Solar Total Block Ultraprotección SPF 100",
+      "size": "80 g",
+      "details": [
+       "Protector solar SPF 100"
+      ]
+     }
+    ],
+    "inventory": [
+     {
+      "sku": "20013519",
+      "quantity": 1
+     }
+    ],
+    "description": "Protector SPF 100 de la línea Total Block. La marca describe una fórmula hidratante, resistente al agua y al sudor, con protección UVA y UVB."
+   }
+  },
+  {
+   "slug": "shampoo-acondicionador-baby-individual",
+   "name": "Shampoo acondicionador Yanbal Baby",
+   "category": "Cuidado del bebé",
+   "priceCents": null,
+   "active": true,
+   "content": {
+    "line": "Baby",
+    "brand": "Yanbal",
+    "notes": [
+     "Los 3 sets cerrados se venden completos. Precio y disponibilidad individual pendientes."
+    ],
+    "title": "Shampoo acondicionador Yanbal Baby 400 ml",
+    "usage": [],
+    "format": "individual",
+    "images": [
+     {
+      "alt": "Set Baby: Shampoo + Jabón en Barra: presentación del producto",
+      "url": "/images/products/item-14700290/foto-1.jpg",
+      "file": "foto-1.jpg",
+      "kind": "component",
+      "label": "Producto",
+      "caption": "Referencia del set. Esta ficha corresponde solo al shampoo; el jabón no está incluido."
+     }
+    ],
+    "lineKey": "baby",
+    "summary": "400 ml · venta individual pendiente",
+    "benefits": [],
+    "includes": [
+     {
+      "code": null,
+      "name": "Shampoo acondicionador Baby",
+      "size": "400 ml",
+      "details": [
+       "Pieza del set Shampoo + Jabón."
+      ]
+     }
+    ],
+    "inventory": [
+     {
+      "sku": "BABY-SHAMPOO-SUELTO",
+      "quantity": 1
+     }
+    ],
+    "description": "Shampoo acondicionador con manzanilla, según el envase del set publicado. No hay unidades sueltas ni un precio individual confirmado en el listado."
+   }
+  },
+  {
+   "slug": "shampoo-triple-accion-vivo-yanbal-pr-45be7556",
+   "name": "Shampoo Triple Acción Vivo YANBAL",
+   "category": "Cuidado del cabello",
+   "priceCents": 2990,
+   "active": true,
+   "content": {
+    "line": "Vivo",
+    "brand": "Yanbal",
+    "notes": [
+     "Consulta las instrucciones del envase. La fuente no publica un modo de uso verificable."
+    ],
+    "title": "Shampoo Triple Acción Vivo YANBAL · 250 g",
+    "usage": [],
+    "format": "individual",
+    "images": [
+     {
+      "alt": "Shampoo Triple Acción Vivo YANBAL: presentación del producto",
+      "url": "/images/products/item-pr-45be7556/foto-1.jpg",
+      "file": "foto-1.jpg",
+      "kind": "component",
+      "label": "Producto"
+     },
+     {
+      "alt": "Shampoo Triple Acción Vivo YANBAL: imagen de la galería",
+      "url": "/images/products/item-pr-45be7556/foto-2.jpg",
+      "file": "foto-2.jpg",
+      "kind": "component",
+      "label": "Detalle 2"
+     },
+     {
+      "alt": "Shampoo Triple Acción Vivo YANBAL: imagen de la galería",
+      "url": "/images/products/item-pr-45be7556/foto-3.jpg",
+      "file": "foto-3.jpg",
+      "kind": "component",
+      "label": "Detalle 3"
+     }
+    ],
+    "lineKey": "vivo",
+    "summary": "Shampoo masculino 3 en 1 · 250 g",
+    "benefits": [],
+    "includes": [
+     {
+      "code": null,
+      "name": "Shampoo Triple Acción Vivo YANBAL",
+      "size": "250 g",
+      "details": [
+       "Shampoo masculino 3 en 1 · 250 g"
+      ]
+     }
+    ],
+    "inventory": [
+     {
+      "sku": "PR-45BE7556",
+      "quantity": 1
+     }
+    ],
+    "description": "Shampoo para hombre 3 en 1. El envase fotografiado indica limpieza profunda, acción anticaspa y anticaída; son afirmaciones del fabricante, sin resultados adicionales documentados en la página."
+   }
+  },
+  {
+   "slug": "solo-desodorante-perfumado-roll-on-20011976",
+   "name": "Solo Desodorante Perfumado Roll on",
+   "category": "Perfumería masculina",
+   "priceCents": 1250,
+   "active": true,
+   "content": {
+    "line": "Solo",
+    "brand": "Yanbal",
+    "notes": [],
+    "title": "Solo Desodorante Perfumado Roll on · 50 g",
+    "usage": [
+     "Agita y distribuye sobre axilas limpias y secas. No apliques en piel irritada o lesionada."
+    ],
+    "format": "individual",
+    "images": [
+     {
+      "alt": "Solo Desodorante Perfumado Roll on: presentación del producto",
+      "url": "/images/products/item-20011976/foto-1.jpg",
+      "file": "foto-1.jpg",
+      "kind": "component",
+      "label": "Producto"
+     }
+    ],
+    "lineKey": "solo",
+    "summary": "Roll on sin alcohol · 50 g",
+    "benefits": [],
+    "includes": [
+     {
+      "code": "20011976",
+      "name": "Solo Desodorante Perfumado Roll on",
+      "size": "50 g",
+      "details": [
+       "Roll on sin alcohol · 50 g"
+      ]
+     }
+    ],
+    "inventory": [
+     {
+      "sku": "20011976",
+      "quantity": 1
+     }
+    ],
+    "description": "Desodorante antitranspirante roll on de la línea Solo. La ficha de la marca indica una fórmula sin alcohol y de secado rápido, para el cuidado diario de las axilas."
+   }
+  },
+  {
+   "slug": "solo-jabon-en-barra",
+   "name": "Solo Jabón en Barra Perfumado",
+   "category": "Perfumería masculina",
+   "priceCents": 2000,
+   "active": true,
+   "content": {
+    "line": "Solo",
+    "brand": "Yanbal",
+    "notes": [
+     "La fotografía individual del jabón está pendiente de confirmar."
+    ],
+    "title": "Solo Jabón en Barra Perfumado",
+    "usage": [
+     "Humedece la piel, usa el jabón en barra y aclara con abundante agua."
+    ],
+    "format": "individual",
+    "images": [
+     {
+      "alt": "Fotografía del producto pendiente de confirmar",
+      "url": "/images/products/foto-pendiente.svg",
+      "file": "foto-pendiente.svg",
+      "kind": "placeholder",
+      "label": "Foto pendiente"
+     }
+    ],
+    "lineKey": "solo",
+    "summary": "90 g",
+    "benefits": [],
+    "includes": [
+     {
+      "code": "20013312",
+      "name": "Solo Jabón en Barra Perfumado",
+      "size": "90 g",
+      "details": [
+       "Limpia suavemente y perfuma delicadamente la piel, según la ficha suministrada"
+      ]
+     }
+    ],
+    "inventory": [
+     {
+      "sku": "SOLO-JABON",
+      "quantity": 1
+     }
+    ],
+    "description": "Jabón corporal perfumado de la línea Solo de Yanbal, en barra de 90 g. La ficha de la marca indica que limpia y perfuma la piel."
+   }
+  },
+  {
+   "slug": "solo-parfum-20012790",
+   "name": "Solo Parfum",
+   "category": "Perfumería masculina",
+   "priceCents": 13100,
+   "active": true,
+   "content": {
+    "line": "Solo",
+    "brand": "Yanbal",
+    "notes": [],
+    "title": "Solo Parfum",
+    "usage": [
+     "Aplica en cuello, muñecas u otras zonas de pulsación.",
+     "Conserva el frasco en un lugar fresco, protegido del sol."
+    ],
+    "format": "individual",
+    "images": [
+     {
+      "alt": "Frasco verde acanalado de Solo Parfum de Yanbal con tapa negra",
+      "url": "/images/products/set-solo-yanbal/perfume.jpg",
+      "file": "perfume.jpg",
+      "kind": "component",
+      "label": "Parfum · 80 ml",
+      "source": "20012790-01.jpg"
+     }
+    ],
+    "lineKey": "solo",
+    "summary": "80 ml",
+    "benefits": [],
+    "includes": [
+     {
+      "code": "20012790",
+      "name": "Solo Parfum",
+      "size": "80 ml",
+      "details": [
+       "Fragancia para hombre",
+       "Familia maderosa cítrica",
+       "Intensidad muy alta",
+       "Notas: cáscara de mandarina, jengibre y cuero"
+      ]
+     }
+    ],
+    "inventory": [
+     {
+      "sku": "20012790",
+      "quantity": 1
+     }
+    ],
+    "description": "Parfum masculino de perfil maderoso cítrico, con mandarina, jengibre y cuero, según la ficha suministrada anteriormente."
+   }
+  },
+  {
+   "slug": "temptation-desodorante-perfumado-roll-on-hombre-20013317",
+   "name": "Temptation Desodorante Perfumado Roll on Hombre",
+   "category": "Perfumería masculina",
+   "priceCents": 1250,
+   "active": true,
+   "content": {
+    "line": "Temptation Hombre",
+    "brand": "Yanbal",
+    "notes": [],
+    "title": "Temptation Desodorante Perfumado Roll on Hombre · 50 g",
+    "usage": [
+     "Agita y distribuye sobre axilas limpias y secas. No apliques en piel irritada o lesionada."
+    ],
+    "format": "individual",
+    "images": [
+     {
+      "alt": "Temptation Desodorante Perfumado Roll on Hombre: presentación del producto",
+      "url": "/images/products/item-20013317/foto-1.jpg",
+      "file": "foto-1.jpg",
+      "kind": "component",
+      "label": "Producto"
+     }
+    ],
+    "lineKey": "temptation-hombre",
+    "summary": "Roll on sin alcohol · 50 g",
+    "benefits": [],
+    "includes": [
+     {
+      "code": "20013317",
+      "name": "Temptation Desodorante Perfumado Roll on Hombre",
+      "size": "50 g",
+      "details": [
+       "Roll on sin alcohol · 50 g"
+      ]
+     }
+    ],
+    "inventory": [
+     {
+      "sku": "20013317",
+      "quantity": 1
+     }
+    ],
+    "description": "Desodorante antitranspirante roll on de la línea Temptation Hombre. La ficha de la marca indica una fórmula sin alcohol y de secado rápido, para el cuidado diario de las axilas."
+   }
+  },
+  {
+   "slug": "temptation-eau-de-parfum-20012785",
+   "name": "Temptation Eau de Parfum",
+   "category": "Perfumería masculina",
+   "priceCents": 9600,
+   "active": true,
+   "content": {
+    "line": "Temptation Hombre",
+    "brand": "Yanbal",
+    "notes": [],
+    "title": "Temptation Eau de Parfum · 100 ml",
+    "usage": [
+     "Aplica en cuello, muñecas u otras zonas de pulsación.",
+     "Conserva el frasco en un lugar fresco, protegido del sol."
+    ],
+    "format": "individual",
+    "images": [
+     {
+      "alt": "Temptation Eau de Parfum: presentación del producto",
+      "url": "/images/products/item-20012785/foto-1.jpg",
+      "file": "foto-1.jpg",
+      "kind": "component",
+      "label": "Producto"
+     },
+     {
+      "alt": "Temptation Eau de Parfum: imagen de la galería",
+      "url": "/images/products/item-20012785/foto-2.jpg",
+      "file": "foto-2.jpg",
+      "kind": "component",
+      "label": "Detalle 2"
+     }
+    ],
+    "lineKey": "temptation-hombre",
+    "summary": "Menta · mandarina · sándalo · 100 ml",
+    "benefits": [],
+    "includes": [
+     {
+      "code": "20012785",
+      "name": "Temptation Eau de Parfum",
+      "size": "100 ml",
+      "details": [
+       "Menta · mandarina · sándalo"
+      ]
+     }
+    ],
+    "inventory": [
+     {
+      "sku": "20012785",
+      "quantity": 1
+     }
+    ],
+    "description": "Eau de Parfum herbal maderoso que combina menta, néctar de mandarina y sándalo. Una composición masculina de apertura fresca y fondo amaderado."
+   }
+  },
+  {
+   "slug": "temptation-mujer-eau-de-parfum-20014143",
+   "name": "Temptation Mujer Eau de Parfum",
+   "category": "Perfumería femenina",
+   "priceCents": 8700,
+   "active": true,
+   "content": {
+    "line": "Temptation Mujer",
+    "brand": "Yanbal",
+    "notes": [],
+    "title": "Temptation Mujer Eau de Parfum · 50 ml",
+    "usage": [
+     "Aplica en cuello, muñecas u otras zonas de pulsación.",
+     "Conserva el frasco en un lugar fresco, protegido del sol."
+    ],
+    "format": "individual",
+    "images": [
+     {
+      "alt": "Temptation Mujer Eau de Parfum: presentación del producto",
+      "url": "/images/products/item-20014143/foto-1.jpg",
+      "file": "foto-1.jpg",
+      "kind": "component",
+      "label": "Producto"
+     },
+     {
+      "alt": "Temptation Mujer Eau de Parfum: imagen de la galería",
+      "url": "/images/products/item-20014143/foto-2.jpg",
+      "file": "foto-2.jpg",
+      "kind": "component",
+      "label": "Detalle 2"
+     },
+     {
+      "alt": "Temptation Mujer Eau de Parfum: imagen de la galería",
+      "url": "/images/products/item-20014143/foto-3.jpg",
+      "file": "foto-3.jpg",
+      "kind": "component",
+      "label": "Detalle 3"
+     },
+     {
+      "alt": "Temptation Mujer Eau de Parfum: imagen de la galería",
+      "url": "/images/products/item-20014143/foto-4.jpg",
+      "file": "foto-4.jpg",
+      "kind": "component",
+      "label": "Detalle 4"
+     }
+    ],
+    "lineKey": "temptation-mujer",
+    "summary": "Rosa búlgara · gardenia · clavo · 50 ml",
+    "benefits": [],
+    "includes": [
+     {
+      "code": "20014143",
+      "name": "Temptation Mujer Eau de Parfum",
+      "size": "50 ml",
+      "details": [
+       "Rosa búlgara · gardenia · clavo"
+      ]
+     }
+    ],
+    "inventory": [
+     {
+      "sku": "20014143",
+      "quantity": 1
+     }
+    ],
+    "description": "Eau de Parfum floral especiado con rosa búlgara, gardenia y clavo. Esta versión femenina es distinta de Temptation Hombre."
+   }
+  },
+  {
+   "slug": "total-block-compacto-spf100-claro-20013523",
+   "name": "Total Block Compacto SPF100 Claro",
+   "category": "Protección solar",
+   "priceCents": 7150,
+   "active": true,
+   "content": {
+    "line": "Total Block",
+    "brand": "Yanbal",
+    "notes": [],
+    "title": "Total Block Compacto SPF100 Claro · 9 g",
+    "usage": [
+     "Distribuye sobre el rostro con el aplicador.",
+     "Renueva la aplicación siguiendo las indicaciones del envase."
+    ],
+    "format": "individual",
+    "images": [
+     {
+      "alt": "Total Block Compacto SPF100 Claro: presentación del producto",
+      "url": "/images/products/item-20013523/foto-1.jpg",
+      "file": "foto-1.jpg",
+      "kind": "component",
+      "label": "Producto"
+     },
+     {
+      "alt": "Total Block Compacto SPF100 Claro: imagen de la galería",
+      "url": "/images/products/item-20013523/foto-2.jpg",
+      "file": "foto-2.jpg",
+      "kind": "component",
+      "label": "Detalle 2"
+     }
+    ],
+    "lineKey": "total-block",
+    "summary": "Compacto SPF 100 · tono Claro · 9 g",
+    "benefits": [],
+    "includes": [
+     {
+      "code": "20013523",
+      "name": "Total Block Compacto SPF100 Claro",
+      "size": "9 g",
+      "details": [
+       "Compacto SPF 100 · tono Claro"
+      ]
+     }
+    ],
+    "inventory": [
+     {
+      "sku": "20013523",
+      "quantity": 1
+     }
+    ],
+    "description": "Compacto con protección SPF 100 en tono Claro. Ofrece cobertura media y ayuda a controlar el brillo; contiene vitamina E y ácido hialurónico."
+   }
+  },
+  {
+   "slug": "total-block-protector-solar-matificante-con-color-spf100-20014165",
+   "name": "Total Block Protector Solar Matificante con Color SPF100",
+   "category": "Protección solar",
+   "priceCents": 4600,
+   "active": true,
+   "content": {
+    "line": "Total Block",
+    "brand": "Yanbal",
+    "notes": [
+     "Tono del producto pendiente de confirmar."
+    ],
+    "title": "Total Block Protector Solar Matificante con Color SPF100 · 50 g",
+    "usage": [
+     "Aplica 15 minutos antes de la exposición al sol.",
+     "Renueva la aplicación cada dos horas y después de nadar o sudar."
+    ],
+    "format": "individual",
+    "images": [
+     {
+      "alt": "Total Block Protector Solar Matificante con Color SPF100: presentación del producto",
+      "url": "/images/products/item-20014165/foto-1.jpg",
+      "file": "foto-1.jpg",
+      "kind": "component",
+      "label": "Producto"
+     }
+    ],
+    "lineKey": "total-block",
+    "summary": "Protector facial matificante con color · 50 g",
+    "benefits": [],
+    "includes": [
+     {
+      "code": "20014165",
+      "name": "Total Block Protector Solar Matificante con Color SPF100",
+      "size": "50 g",
+      "details": [
+       "Protector facial matificante con color"
+      ]
+     }
+    ],
+    "inventory": [
+     {
+      "sku": "20014165",
+      "quantity": 1
+     }
+    ],
+    "description": "Protector facial SPF 100 con color y acabado matificante. La fuente indica protección frente a radiación UVA y UVB; el tono específico no está indicado en el listado recibido."
+   }
+  },
+  {
+   "slug": "vibranza-blanc-perfume-de-mujer-45-ml-belcorp-vibranza-blanc",
+   "name": "Vibranza Blanc Perfume de Mujer, 45 ml",
+   "category": "Perfumería femenina",
+   "priceCents": 4900,
+   "active": true,
+   "content": {
+    "line": "Vibranza Blanc",
+    "brand": "Ésika",
+    "notes": [],
+    "title": "Vibranza Blanc Perfume de Mujer, 45 ml",
+    "usage": [
+     "Aplica en cuello, muñecas u otras zonas de pulsación.",
+     "Conserva el frasco en un lugar fresco, protegido del sol."
+    ],
+    "format": "individual",
+    "images": [
+     {
+      "alt": "Vibranza Blanc Perfume de Mujer, 45 ml: presentación del producto",
+      "url": "/images/products/item-belcorp-vibranza-blanc/foto-1.jpg",
+      "file": "foto-1.jpg",
+      "kind": "component",
+      "label": "Producto"
+     },
+     {
+      "alt": "Vibranza Blanc Perfume de Mujer, 45 ml: imagen de la galería",
+      "url": "/images/products/item-belcorp-vibranza-blanc/foto-2.jpg",
+      "file": "foto-2.jpg",
+      "kind": "component",
+      "label": "Detalle 2"
+     },
+     {
+      "alt": "Vibranza Blanc Perfume de Mujer, 45 ml: imagen de la galería",
+      "url": "/images/products/item-belcorp-vibranza-blanc/foto-3.jpg",
+      "file": "foto-3.jpg",
+      "kind": "component",
+      "label": "Detalle 3"
+     },
+     {
+      "alt": "Vibranza Blanc Perfume de Mujer, 45 ml: imagen de la galería",
+      "url": "/images/products/item-belcorp-vibranza-blanc/foto-4.jpg",
+      "file": "foto-4.jpg",
+      "kind": "component",
+      "label": "Detalle 4"
+     },
+     {
+      "alt": "Vibranza Blanc Perfume de Mujer, 45 ml: imagen de la galería",
+      "url": "/images/products/item-belcorp-vibranza-blanc/foto-5.jpg",
+      "file": "foto-5.jpg",
+      "kind": "component",
+      "label": "Detalle 5"
+     }
+    ],
+    "lineKey": "vibranza-blanc",
+    "summary": "Tuberosa · ylang ylang · 45 ml",
+    "benefits": [],
+    "includes": [
+     {
+      "code": "200098555",
+      "name": "Vibranza Blanc Perfume de Mujer, 45 ml",
+      "size": "45 ml",
+      "details": [
+       "Tuberosa · ylang ylang"
+      ]
+     }
+    ],
+    "inventory": [
+     {
+      "sku": "BELCORP-VIBRANZA-BLANC",
+      "quantity": 1
+     }
+    ],
+    "description": "Perfume floral amaderado que combina tuberosa y ylang ylang. La ficha de Ésika describe una fragancia de larga duración elaborada con su proceso Essent Tech."
+   }
+  },
+  {
+   "slug": "zentro-desodorante-perfumado-roll-on-20013321",
+   "name": "Zentro Desodorante Perfumado Roll on",
+   "category": "Perfumería masculina",
+   "priceCents": 1250,
+   "active": true,
+   "content": {
+    "line": "Zentro",
+    "brand": "Yanbal",
+    "notes": [],
+    "title": "Zentro Desodorante Perfumado Roll on · 50 g",
+    "usage": [
+     "Agita y distribuye sobre axilas limpias y secas. No apliques en piel irritada o lesionada."
+    ],
+    "format": "individual",
+    "images": [
+     {
+      "alt": "Zentro Desodorante Perfumado Roll on: presentación del producto",
+      "url": "/images/products/item-20013321/foto-1.jpg",
+      "file": "foto-1.jpg",
+      "kind": "component",
+      "label": "Producto"
+     }
+    ],
+    "lineKey": "zentro",
+    "summary": "Roll on sin alcohol · 50 g",
+    "benefits": [],
+    "includes": [
+     {
+      "code": "20013321",
+      "name": "Zentro Desodorante Perfumado Roll on",
+      "size": "50 g",
+      "details": [
+       "Roll on sin alcohol · 50 g"
+      ]
+     }
+    ],
+    "inventory": [
+     {
+      "sku": "20013321",
+      "quantity": 1
+     }
+    ],
+    "description": "Desodorante antitranspirante roll on de la línea Zentro. La ficha de la marca indica una fórmula sin alcohol y de secado rápido, para el cuidado diario de las axilas."
+   }
+  },
+  {
+   "slug": "zentro-eau-de-parfum-20012788",
+   "name": "Zentro Eau de Parfum",
+   "category": "Perfumería masculina",
+   "priceCents": 15400,
+   "active": true,
+   "content": {
+    "line": "Zentro",
+    "brand": "Yanbal",
+    "notes": [],
+    "title": "Zentro Eau de Parfum · 75 ml",
+    "usage": [
+     "Aplica en cuello, muñecas u otras zonas de pulsación.",
+     "Conserva el frasco en un lugar fresco, protegido del sol."
+    ],
+    "format": "individual",
+    "images": [
+     {
+      "alt": "Zentro Eau de Parfum: presentación del producto",
+      "url": "/images/products/item-20012788/foto-1.jpg",
+      "file": "foto-1.jpg",
+      "kind": "component",
+      "label": "Producto"
+     },
+     {
+      "alt": "Zentro Eau de Parfum: imagen de la galería",
+      "url": "/images/products/item-20012788/foto-2.jpg",
+      "file": "foto-2.jpg",
+      "kind": "component",
+      "label": "Detalle 2"
+     }
+    ],
+    "lineKey": "zentro",
+    "summary": "Yuzu · cedro · haba tonka · 75 ml",
+    "benefits": [],
+    "includes": [
+     {
+      "code": "20012788",
+      "name": "Zentro Eau de Parfum",
+      "size": "75 ml",
+      "details": [
+       "Yuzu · cedro · haba tonka"
+      ]
+     }
+    ],
+    "inventory": [
+     {
+      "sku": "20012788",
+      "quantity": 1
+     }
+    ],
+    "description": "Eau de Parfum ambarado maderoso con yuzu, cedro y haba tonka. La frescura del cítrico contrasta con el carácter de la madera y la calidez del fondo."
+   }
+  }
+ ],
+ "inventory": [
+  {
+   "sku": "111178",
+   "name": "NATURA",
+   "stock": 1
+  },
+  {
+   "sku": "14700290",
+   "name": "Set Baby: Shampoo + Jabón en Barra",
+   "stock": 3
+  },
+  {
+   "sku": "1700179827925",
+   "name": "Crema Corporal Hidratante Reparadora Yanbal 400ml Uña de Gato",
+   "stock": 1
+  },
+  {
+   "sku": "20011230",
+   "name": "Ohm Desodorante Perfumado Roll on",
+   "stock": 1
+  },
+  {
+   "sku": "20011976",
+   "name": "Solo Desodorante Perfumado Roll on",
+   "stock": 1
+  },
+  {
+   "sku": "20012785",
+   "name": "Temptation Eau de Parfum",
+   "stock": 1
+  },
+  {
+   "sku": "20012786",
+   "name": "Ohm Parfum",
+   "stock": 1
+  },
+  {
+   "sku": "20012788",
+   "name": "Zentro Eau de Parfum",
+   "stock": 1
+  },
+  {
+   "sku": "20012790",
+   "name": "Solo Parfum",
+   "stock": 1
+  },
+  {
+   "sku": "20013000",
+   "name": "Biomilk Crema Corporal Original",
+   "stock": 1
+  },
+  {
+   "sku": "20013055",
+   "name": "Osadía Eau de Parfum Hombre",
+   "stock": 1
+  },
+  {
+   "sku": "20013122",
+   "name": "Osadía Infinita Eau de Parfum",
+   "stock": 1
+  },
+  {
+   "sku": "20013264",
+   "name": "Osadía Infinita Loción Perfumada",
+   "stock": 1
+  },
+  {
+   "sku": "20013310",
+   "name": "Jabón en Barra Perfumado Cielo",
+   "stock": 1
+  },
+  {
+   "sku": "20013315",
+   "name": "Ccori Desodorante Perfumado Roll on",
+   "stock": 1
+  },
+  {
+   "sku": "20013317",
+   "name": "Temptation Desodorante Perfumado Roll on Hombre",
+   "stock": 2
+  },
+  {
+   "sku": "20013321",
+   "name": "Zentro Desodorante Perfumado Roll on",
+   "stock": 1
+  },
+  {
+   "sku": "20013411",
+   "name": "Ícono de Yanbal Eau de Parfum",
+   "stock": 2
+  },
+  {
+   "sku": "20013412",
+   "name": "Ícono Loción Perfumada",
+   "stock": 2
+  },
+  {
+   "sku": "20013519",
+   "name": "Protector Solar Total Block Ultraprotección SPF 100",
+   "stock": 1
+  },
+  {
+   "sku": "20013523",
+   "name": "Total Block Compacto SPF100 Claro",
+   "stock": 3
+  },
+  {
+   "sku": "20013558",
+   "name": "L'Essence Colonia Flor de Cerezo",
+   "stock": 1
+  },
+  {
+   "sku": "20013580",
+   "name": "Desodorante Antitranspirante Cielo",
+   "stock": 2
+  },
+  {
+   "sku": "20013588",
+   "name": "Aires del Caribe Eau Fraiche",
+   "stock": 1
+  },
+  {
+   "sku": "20013590",
+   "name": "Aires de los Andes Eau Fraiche",
+   "stock": 1
+  },
+  {
+   "sku": "20013641",
+   "name": "Cielo Eau de Parfum",
+   "stock": 2
+  },
+  {
+   "sku": "20013690",
+   "name": "Eau Vitale Té Verde Eau de Cologne",
+   "stock": 4
+  },
+  {
+   "sku": "20013697",
+   "name": "Dendur Eau de Parfum",
+   "stock": 1
+  },
+  {
+   "sku": "20013698",
+   "name": "Desodorante Antitranspirante Roll On Dendur Destiny",
+   "stock": 1
+  },
+  {
+   "sku": "20013794",
+   "name": "Hydra-Lip Labial Larga Duración Iconic 67",
+   "stock": 1
+  },
+  {
+   "sku": "20013904",
+   "name": "Ícono Intense Eau de Parfum",
+   "stock": 2
+  },
+  {
+   "sku": "20013952",
+   "name": "Agua de Colonia Yanbal Baby",
+   "stock": 1
+  },
+  {
+   "sku": "20013953",
+   "name": "Baño Líquido Yanbal Baby",
+   "stock": 2
+  },
+  {
+   "sku": "20014078",
+   "name": "Crema Hidratante Yanbal Baby",
+   "stock": 4
+  },
+  {
+   "sku": "20014140",
+   "name": "Limpiador Exfoliante en Gel Body Spa Uña de Gato",
+   "stock": 1
+  },
+  {
+   "sku": "20014143",
+   "name": "Temptation Mujer Eau de Parfum",
+   "stock": 1
+  },
+  {
+   "sku": "20014165",
+   "name": "Total Block Protector Solar Matificante con Color SPF100",
+   "stock": 2
+  },
+  {
+   "sku": "20014202",
+   "name": "Di Que Sí Eau de Parfum",
+   "stock": 1
+  },
+  {
+   "sku": "20014225",
+   "name": "Ohm Now Parfum",
+   "stock": 3
+  },
+  {
+   "sku": "20014234",
+   "name": "Ohm Now Desodorante Perfumado Roll on",
+   "stock": 1
+  },
+  {
+   "sku": "20014243",
+   "name": "Colonia para Niño Yanbal Kids",
+   "stock": 2
+  },
+  {
+   "sku": "20014332",
+   "name": "Jabón en Barra Perfumado Osadía Hombre",
+   "stock": 1
+  },
+  {
+   "sku": "BABY-JABON-SUELTO",
+   "name": "Jabón en Barra Yanbal Baby",
+   "stock": 1
+  },
+  {
+   "sku": "BABY-SHAMPOO-SUELTO",
+   "name": "Shampoo acondicionador Yanbal Baby",
+   "stock": 0
+  },
+  {
+   "sku": "BELCORP-AURA-LILA",
+   "name": "Aura Lila Perfume de Mujer, 45 ml",
+   "stock": 1
+  },
+  {
+   "sku": "BELCORP-VIBRANZA-BLANC",
+   "name": "Vibranza Blanc Perfume de Mujer, 45 ml",
+   "stock": 1
+  },
+  {
+   "sku": "PR-45BE7556",
+   "name": "Shampoo Triple Acción Vivo YANBAL",
+   "stock": 1
+  },
+  {
+   "sku": "SOLO-JABON",
+   "name": "Solo Jabón en Barra Perfumado",
+   "stock": 1
+  }
+ ]
+}
