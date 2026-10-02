@@ -90,6 +90,12 @@ enum KnowledgeSource {
   PASTE_IMPORT
 }
 
+enum StorefrontStatus {
+  DRAFT
+  PUBLISHED
+  SUSPENDED
+}
+
 enum JourneyStage {
   DISCOVER
   RECOMMEND
@@ -98,13 +104,13 @@ enum JourneyStage {
 }
 
 model User {
-  id           String       @id @default(cuid())
-  email        String       @unique
-  passwordHash String
-  fullName     String?
-  createdAt    DateTime     @default(now())
-  updatedAt    DateTime     @updatedAt
-  memberships  Membership[]
+  id            String         @id @default(cuid())
+  email         String         @unique
+  passwordHash  String
+  fullName      String?
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+  memberships   Membership[]
   refreshTokens RefreshToken[]
 }
 
@@ -118,16 +124,39 @@ model Tenant {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  memberships         Membership[]
-  salesAgents         SalesAgent[]
-  channels            Channel[]
-  products            Product[]
-  conversations       Conversation[]
-  orders              Order[]
-  payments            Payment[]
-  playgroundSessions  PlaygroundSession[]
-  knowledgeFaqs       KnowledgeFaq[]
-  journeyTemplates    JourneyTemplate[]
+  memberships        Membership[]
+  salesAgents        SalesAgent[]
+  channels           Channel[]
+  products           Product[]
+  conversations      Conversation[]
+  orders             Order[]
+  payments           Payment[]
+  playgroundSessions PlaygroundSession[]
+  knowledgeFaqs      KnowledgeFaq[]
+  journeyTemplates   JourneyTemplate[]
+  storefront         Storefront?
+}
+
+/// Public web store of a tenant, served at `{tenant.slug}.<platform domain>`.
+model Storefront {
+  id             String           @id @default(cuid())
+  tenantId       String           @unique
+  status         StorefrontStatus @default(DRAFT)
+  displayName    String
+  tagline        String?
+  logoUrl        String?
+  heroImageUrl   String?
+  brandColor     String           @default("#0b0d12")
+  accentColor    String           @default("#5b8cff")
+  whatsappPhone  String?
+  contactEmail   String?
+  seoTitle       String?
+  seoDescription String?
+  publishedAt    DateTime?
+  createdAt      DateTime         @default(now())
+  updatedAt      DateTime         @updatedAt
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
 }
 
 model Membership {
@@ -146,12 +175,12 @@ model Membership {
 }
 
 model RefreshToken {
-  id        String   @id @default(cuid())
+  id        String    @id @default(cuid())
   userId    String
-  tokenHash String   @unique
+  tokenHash String    @unique
   expiresAt DateTime
   revokedAt DateTime?
-  createdAt DateTime @default(now())
+  createdAt DateTime  @default(now())
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
@@ -159,29 +188,29 @@ model RefreshToken {
 }
 
 model SalesAgent {
-  id                    String   @id @default(cuid())
-  tenantId              String
-  name                  String
-  companyName           String?
-  companyDescription    String?
-  audienceDescription   String?
-  rulesText             String?
-  communicationStyle    String?
-  salesStyle            String?
-  responseLength        String   @default("balanced")
-  useEmojis             Boolean  @default(true)
-  emojiPalette          String?
-  wordsToAvoid          String?
-  initialMessage        String?
+  id                     String   @id @default(cuid())
+  tenantId               String
+  name                   String
+  companyName            String?
+  companyDescription     String?
+  audienceDescription    String?
+  rulesText              String?
+  communicationStyle     String?
+  salesStyle             String?
+  responseLength         String   @default("balanced")
+  useEmojis              Boolean  @default(true)
+  emojiPalette           String?
+  wordsToAvoid           String?
+  initialMessage         String?
   purchaseConfirmMessage String?
-  handoffMessage        String?
-  pauseOnHandoff        Boolean  @default(true)
-  neverOfferDiscount    Boolean  @default(true)
-  neverInventShipping   Boolean  @default(true)
-  catalogOnlyFacts      Boolean  @default(true)
-  isActive              Boolean  @default(true)
-  createdAt             DateTime @default(now())
-  updatedAt             DateTime @updatedAt
+  handoffMessage         String?
+  pauseOnHandoff         Boolean  @default(true)
+  neverOfferDiscount     Boolean  @default(true)
+  neverInventShipping    Boolean  @default(true)
+  catalogOnlyFacts       Boolean  @default(true)
+  isActive               Boolean  @default(true)
+  createdAt              DateTime @default(now())
+  updatedAt              DateTime @updatedAt
 
   tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
 
@@ -223,17 +252,17 @@ model JourneyTemplate {
 }
 
 model Channel {
-  id             String                @id @default(cuid())
+  id             String                 @id @default(cuid())
   tenantId       String
   type           ChannelType
   connectionMode ChannelConnectionMode?
-  healthStatus   ChannelHealthStatus   @default(PENDING)
+  healthStatus   ChannelHealthStatus    @default(PENDING)
   externalId     String?
   displayName    String?
   metadata       Json?
   lastActiveAt   DateTime?
-  createdAt      DateTime              @default(now())
-  updatedAt      DateTime              @updatedAt
+  createdAt      DateTime               @default(now())
+  updatedAt      DateTime               @updatedAt
 
   tenant        Tenant         @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   conversations Conversation[]
@@ -244,44 +273,51 @@ model Channel {
 }
 
 model Product {
-  id               String   @id @default(cuid())
-  tenantId         String
-  handle           String
-  name             String
-  descriptionShort String?
-  descriptionFull  String?
-  categories       String[] @default([])
-  basePriceCents   Int
-  currency         String   @default("PEN")
-  isAvailable      Boolean  @default(true)
-  stockUnlimited   Boolean  @default(true)
-  stockQty         Int?
-  createdAt        DateTime @default(now())
-  updatedAt        DateTime @updatedAt
+  id                  String   @id @default(cuid())
+  tenantId            String
+  handle              String
+  name                String
+  descriptionShort    String?
+  descriptionFull     String?
+  categories          String[] @default([])
+  basePriceCents      Int
+  currency            String   @default("PEN")
+  isAvailable         Boolean  @default(true)
+  stockUnlimited      Boolean  @default(true)
+  stockQty            Int?
+  isPublishedOnStore  Boolean  @default(false)
+  compareAtPriceCents Int?
+  brand               String?
+  sortOrder           Int      @default(0)
+  seoTitle            String?
+  seoDescription      String?
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
 
-  tenant    Tenant           @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  variants  ProductVariant[]
-  media     ProductMedia[]
+  tenant     Tenant           @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  variants   ProductVariant[]
+  media      ProductMedia[]
   orderItems OrderItem[]
 
   @@unique([tenantId, handle])
   @@index([tenantId])
+  @@index([tenantId, isPublishedOnStore])
 }
 
 model ProductVariant {
-  id             String  @id @default(cuid())
-  productId      String
-  sku            String?
-  option1Name    String?
-  option1Value   String?
-  option2Name    String?
-  option2Value   String?
-  option3Name    String?
-  option3Value   String?
-  priceCents     Int
-  isAvailable    Boolean @default(true)
-  stockQty       Int?
-  imageUrl       String?
+  id           String  @id @default(cuid())
+  productId    String
+  sku          String?
+  option1Name  String?
+  option1Value String?
+  option2Name  String?
+  option2Value String?
+  option3Name  String?
+  option3Value String?
+  priceCents   Int
+  isAvailable  Boolean @default(true)
+  stockQty     Int?
+  imageUrl     String?
 
   product    Product     @relation(fields: [productId], references: [id], onDelete: Cascade)
   orderItems OrderItem[]
@@ -303,19 +339,19 @@ model ProductMedia {
 }
 
 model Conversation {
-  id                 String             @id @default(cuid())
-  tenantId           String
-  channelId          String
-  externalThreadId   String?
-  contactName        String?
-  contactPhone       String?
-  status             ConversationStatus @default(OPEN)
-  agentEnabled       Boolean            @default(true)
-  markedAsSale       Boolean            @default(false)
-  markedUnattended   Boolean            @default(false)
-  lastInboundAt      DateTime?
-  createdAt          DateTime           @default(now())
-  updatedAt          DateTime           @updatedAt
+  id               String             @id @default(cuid())
+  tenantId         String
+  channelId        String
+  externalThreadId String?
+  contactName      String?
+  contactPhone     String?
+  status           ConversationStatus @default(OPEN)
+  agentEnabled     Boolean            @default(true)
+  markedAsSale     Boolean            @default(false)
+  markedUnattended Boolean            @default(false)
+  lastInboundAt    DateTime?
+  createdAt        DateTime           @default(now())
+  updatedAt        DateTime           @updatedAt
 
   tenant   Tenant    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   channel  Channel   @relation(fields: [channelId], references: [id], onDelete: Cascade)
@@ -358,14 +394,14 @@ model PlaygroundSession {
 }
 
 model PlaygroundMessage {
-  id        String            @id @default(cuid())
-  sessionId String
-  direction MessageDirection
+  id         String            @id @default(cuid())
+  sessionId  String
+  direction  MessageDirection
   authorType MessageAuthorType
-  body      String
+  body       String
   /// Tool traces for operator trust (why the agent replied).
   toolTraces Json?
-  createdAt DateTime          @default(now())
+  createdAt  DateTime          @default(now())
 
   session PlaygroundSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
 
@@ -379,7 +415,7 @@ model Order {
   status         OrderStatus @default(DRAFT)
   currency       String      @default("PEN")
   totalCents     Int         @default(0)
-  customerName  String?
+  customerName   String?
   customerPhone  String?
   createdAt      DateTime    @default(now())
   updatedAt      DateTime    @updatedAt
@@ -410,20 +446,20 @@ model OrderItem {
 }
 
 model Payment {
-  id               String        @id @default(cuid())
-  tenantId         String
-  orderId          String?
-  flow             PaymentFlow
-  provider         String        @default("mercadopago")
-  status           PaymentStatus @default(PENDING)
-  amountCents      Int
-  currency         String        @default("PEN")
-  externalId       String?
-  idempotencyKey   String        @unique
-  checkoutUrl      String?
-  rawPayload       Json?
-  createdAt        DateTime      @default(now())
-  updatedAt        DateTime      @updatedAt
+  id             String        @id @default(cuid())
+  tenantId       String
+  orderId        String?
+  flow           PaymentFlow
+  provider       String        @default("mercadopago")
+  status         PaymentStatus @default(PENDING)
+  amountCents    Int
+  currency       String        @default("PEN")
+  externalId     String?
+  idempotencyKey String        @unique
+  checkoutUrl    String?
+  rawPayload     Json?
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
 
   tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   order  Order? @relation(fields: [orderId], references: [id], onDelete: SetNull)

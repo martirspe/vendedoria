@@ -43,6 +43,12 @@ export class CatalogService {
           isAvailable: dto.isAvailable ?? true,
           stockUnlimited: dto.stockUnlimited ?? true,
           stockQty: dto.stockQty,
+          isPublishedOnStore: dto.isPublishedOnStore ?? false,
+          compareAtPriceCents: dto.compareAtPriceCents ?? null,
+          brand: dto.brand?.trim() || null,
+          sortOrder: dto.sortOrder ?? 0,
+          seoTitle: dto.seoTitle?.trim() || null,
+          seoDescription: dto.seoDescription?.trim() || null,
           variants: dto.variants?.length
             ? {
                 create: dto.variants.map((variant) =>
@@ -124,6 +130,12 @@ export class CatalogService {
             isAvailable: dto.isAvailable,
             stockUnlimited: dto.stockUnlimited,
             stockQty: dto.stockQty === null ? null : dto.stockQty,
+            isPublishedOnStore: dto.isPublishedOnStore,
+            compareAtPriceCents: dto.compareAtPriceCents,
+            brand: this.optionalText(dto.brand),
+            sortOrder: dto.sortOrder,
+            seoTitle: this.optionalText(dto.seoTitle),
+            seoDescription: this.optionalText(dto.seoDescription),
           },
           include: { variants: true, media: true },
         });
@@ -148,6 +160,13 @@ export class CatalogService {
       throw new NotFoundException('Product not found');
     }
     return product;
+  }
+
+  private optionalText(value: string | null | undefined) {
+    if (value === undefined) {
+      return undefined;
+    }
+    return value?.trim() || null;
   }
 
   private toVariantData(variant: ProductVariantInputDto) {

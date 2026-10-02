@@ -5,8 +5,11 @@ import {
   IsInt,
   IsOptional,
   IsString,
+  Max,
+  MaxLength,
   Min,
   MinLength,
+  ValidateIf,
   ValidateNested,
 } from 'class-validator';
 import { ApiPropertyOptional } from '@nestjs/swagger';
@@ -80,4 +83,44 @@ export class UpdateProductDto {
   @IsArray()
   @IsString({ each: true })
   mediaUrls?: string[];
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsBoolean()
+  isPublishedOnStore?: boolean;
+
+  @ApiPropertyOptional({ example: 12900 })
+  @IsOptional()
+  @ValidateIf((_, value) => value !== null)
+  @IsInt()
+  @Min(0)
+  compareAtPriceCents?: number | null;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @ValidateIf((_, value) => value !== null)
+  @IsString()
+  @MaxLength(60)
+  brand?: string | null;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsInt()
+  @Min(0)
+  @Max(9999)
+  sortOrder?: number;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @ValidateIf((_, value) => value !== null)
+  @IsString()
+  @MaxLength(70)
+  seoTitle?: string | null;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @ValidateIf((_, value) => value !== null)
+  @IsString()
+  @MaxLength(160)
+  seoDescription?: string | null;
 }

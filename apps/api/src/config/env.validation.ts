@@ -3,6 +3,7 @@ import {
   IsInt,
   IsOptional,
   IsString,
+  Matches,
   Min,
   MinLength,
   validateSync,
@@ -64,6 +65,10 @@ class EnvironmentVariables {
   @IsOptional()
   @IsString()
   MERCADOPAGO_WEBHOOK_SECRET?: string;
+
+  @IsOptional()
+  @Matches(/^https?:\/\/\{slug\}\.[a-z0-9.-]+(:\d+)?\/?$/)
+  STOREFRONT_URL_TEMPLATE?: string;
 }
 
 export function validateEnv(config: Record<string, unknown>) {

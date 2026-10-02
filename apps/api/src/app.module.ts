@@ -13,6 +13,7 @@ import { PaymentsModule } from './payments/payments.module';
 import { MetricsModule } from './metrics/metrics.module';
 import { BillingModule } from './billing/billing.module';
 import { KnowledgeModule } from './knowledge/knowledge.module';
+import { StorefrontModule } from './storefront/storefront.module';
 import { validateEnv } from './config/env.validation';
 
 @Module({
@@ -34,6 +35,7 @@ import { validateEnv } from './config/env.validation';
     OrdersModule,
     MetricsModule,
     BillingModule,
+    StorefrontModule,
   ],
 })
 export class AppModule {}
