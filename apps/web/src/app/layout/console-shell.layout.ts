@@ -58,6 +58,7 @@ export class ConsoleShellLayout {
       items: [
         { label: 'Empezar', path: '/app/get-started', icon: 'rocket' },
         { label: 'Productos', path: '/app/products', icon: 'package' },
+        { label: 'Tienda web', path: '/app/store', icon: 'store' },
         { label: 'Vendedor', path: '/app/seller', icon: 'bot' },
         { label: 'Canales', path: '/app/channels', icon: 'radio' },
         { label: 'Mensajes', path: '/app/messages', icon: 'message' },
@@ -105,6 +106,13 @@ export class ConsoleShellLayout {
       hint: 'Catálogo vendible',
       path: '/app/products',
       icon: 'package',
+    },
+    {
+      id: 'store',
+      label: 'Tienda web',
+      hint: 'Publicar catálogo en tu web',
+      path: '/app/store',
+      icon: 'store',
     },
     {
       id: 'messages',

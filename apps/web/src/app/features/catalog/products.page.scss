@@ -156,6 +156,14 @@
   font-size: 0.85rem;
 }
 
+.product-card__body .product-card__store {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  color: var(--ds-color-success, var(--ds-color-text-secondary));
+  font-weight: 600;
+}
+
 .publish {
   display: grid;
   gap: var(--ds-space-5);

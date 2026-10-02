@@ -24,6 +24,7 @@ export type DsButtonVariant = 'primary' | 'secondary' | 'ghost';
   styles: `
     .ds-button {
       display: inline-flex;
+      gap: var(--ds-space-2);
       align-items: center;
       justify-content: center;
       min-height: var(--ds-touch-target);

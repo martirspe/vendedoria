@@ -24,13 +24,25 @@ export class StoreServerBackend implements HttpBackend {
   }) as StoreRequestContext | null;
 
   handle(request: HttpRequest<unknown>): Observable<HttpEvent<unknown>> {
-    if (!this.context || !request.url.startsWith(STORE_PROXY_PREFIX)) {
+    const path = this.context ? this.proxyPath(request.url, this.context.origin) : null;
+    if (!this.context || path === null) {
       return this.fetchBackend.handle(request);
     }
-    const url = this.context.apiBase + request.url.slice(STORE_PROXY_PREFIX.length);
+    const url = this.context.apiBase + path.slice(STORE_PROXY_PREFIX.length);
     const headers = this.context.previewToken
       ? request.headers.set(PREVIEW_HEADER, this.context.previewToken)
       : request.headers;
     return this.fetchBackend.handle(request.clone({ url, headers }));
+  }
+
+  /** platform-server turns relative URLs into absolute ones on the request origin. */
+  private proxyPath(url: string, origin: string): string | null {
+    const base = new URL(origin);
+    const target = new URL(url, base);
+    if (target.host !== base.host) return null;
+    const path = target.pathname;
+    return path === STORE_PROXY_PREFIX || path.startsWith(`${STORE_PROXY_PREFIX}/`)
+      ? path + target.search
+      : null;
   }
 }

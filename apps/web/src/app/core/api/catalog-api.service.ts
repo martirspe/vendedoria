@@ -34,6 +34,9 @@ export type ProductDto = {
   isAvailable: boolean;
   stockUnlimited: boolean;
   stockQty: number | null;
+  isPublishedOnStore: boolean;
+  compareAtPriceCents: number | null;
+  brand: string | null;
   variants?: ProductVariantDto[];
   media?: ProductMediaDto[];
   createdAt: string;
@@ -64,6 +67,9 @@ export type CreateProductPayload = {
   stockQty?: number;
   variants?: VariantPayload[];
   mediaUrls?: string[];
+  isPublishedOnStore?: boolean;
+  compareAtPriceCents?: number | null;
+  brand?: string | null;
 };
 
 export type UpdateProductPayload = {
@@ -79,6 +85,9 @@ export type UpdateProductPayload = {
   stockQty?: number | null;
   variants?: VariantPayload[];
   mediaUrls?: string[];
+  isPublishedOnStore?: boolean;
+  compareAtPriceCents?: number | null;
+  brand?: string | null;
 };
 
 @Injectable({ providedIn: 'root' })

@@ -85,6 +85,9 @@ export class ProductsPage {
     isAvailable: [true],
     stockUnlimited: [true],
     stockQty: [0, [Validators.min(0)]],
+    isPublishedOnStore: [false],
+    compareAtPrice: [null as number | null, [Validators.min(0)]],
+    brand: ['', [Validators.maxLength(60)]],
   });
 
   private readonly formValues = toSignal(
@@ -190,6 +193,9 @@ export class ProductsPage {
       isAvailable: true,
       stockUnlimited: true,
       stockQty: 0,
+      isPublishedOnStore: false,
+      compareAtPrice: null,
+      brand: '',
     });
     this.productForm.controls.stockQty.disable({ emitEvent: false });
     this.editorOpen.set(true);
@@ -216,6 +222,10 @@ export class ProductsPage {
       isAvailable: product.isAvailable,
       stockUnlimited: product.stockUnlimited,
       stockQty: product.stockQty ?? 0,
+      isPublishedOnStore: product.isPublishedOnStore,
+      compareAtPrice:
+        product.compareAtPriceCents === null ? null : product.compareAtPriceCents / 100,
+      brand: product.brand ?? '',
     });
     if (product.stockUnlimited) {
       this.productForm.controls.stockQty.disable({ emitEvent: false });
@@ -329,6 +339,22 @@ export class ProductsPage {
     return this.parseCategories(this.formValues().categoriesText);
   }
 
+  private storeFields(values: {
+    isPublishedOnStore: boolean;
+    compareAtPrice: number | null;
+    brand: string;
+  }) {
+    const compareAt =
+      values.compareAtPrice === null || String(values.compareAtPrice) === ''
+        ? null
+        : toCents(Number(values.compareAtPrice));
+    return {
+      isPublishedOnStore: values.isPublishedOnStore,
+      compareAtPriceCents: compareAt && compareAt > 0 ? compareAt : null,
+      brand: values.brand.trim() || null,
+    };
+  }
+
   async saveProduct(): Promise<void> {
     if (this.productForm.invalid || !this.readinessReady()) {
       this.productForm.markAllAsTouched();
@@ -381,6 +407,7 @@ export class ProductsPage {
             stockQty: values.stockUnlimited ? null : Number(values.stockQty),
             mediaUrls: this.mediaUrls(),
             variants,
+            ...this.storeFields(values),
           })
         : await this.api.create({
             name: values.name.trim(),
@@ -399,6 +426,7 @@ export class ProductsPage {
               : Number(values.stockQty),
             mediaUrls: this.mediaUrls(),
             variants,
+            ...this.storeFields(values),
           });
       this.editorOpen.set(false);
       this.editingId.set(null);

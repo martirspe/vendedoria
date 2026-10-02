@@ -8,6 +8,7 @@ import { randomBytes } from 'node:crypto';
 import { AppModule } from '../src/app.module';
 import { PrismaService } from '../src/prisma/prisma.service';
 import { createPreviewToken } from '../src/storefront/storefront-preview';
+import { StorefrontService } from '../src/storefront/storefront.service';
 
 /**
  * Runs against the development database. Every row is created under
@@ -23,6 +24,7 @@ describe('Storefront tenant isolation (e2e)', () => {
   const tenantIds: string[] = [];
   let draftTenantId = '';
   let tenantAId = '';
+  let tenantBId = '';
 
   const get = (url: string, headers: Record<string, string> = {}) =>
     app.inject({ method: 'GET', url, headers });
@@ -77,8 +79,9 @@ describe('Storefront tenant isolation (e2e)', () => {
       { handle: 'a-visible', published: true, category: 'Solo A' },
       { handle: 'a-hidden', published: false, category: 'Oculta A' },
     ]);
-    await createStore(slugB, 'PUBLISHED', [
+    tenantBId = await createStore(slugB, 'PUBLISHED', [
       { handle: 'b-visible', published: true, category: 'Solo B' },
+      { handle: 'b-hidden', published: false, category: 'Solo B' },
     ]);
     draftTenantId = await createStore(slugDraft, 'DRAFT', [
       { handle: 'draft-visible', published: true, category: 'Borrador' },
@@ -138,5 +141,12 @@ describe('Storefront tenant isolation (e2e)', () => {
 
   it('keeps store management behind authentication', async () => {
     expect((await get('/store')).statusCode).toBe(401);
+  });
+
+  it('shows available products in bulk only for the calling tenant', async () => {
+    const view = await app.get(StorefrontService).showAvailableProducts(tenantBId);
+    expect(view.publishedProducts).toBe(2);
+    expect((await get(`/storefront/${slugB}/products/b-hidden`)).statusCode).toBe(200);
+    expect((await get(`/storefront/${slugA}/products/a-hidden`)).statusCode).toBe(404);
   });
 });

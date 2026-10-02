@@ -56,6 +56,11 @@
                 <h2>{{ product.name }}</h2>
                 <p>{{ formatPrice(product.basePriceCents, product.currency) }}</p>
                 <span>{{ stockLabel(product) }}</span>
+                @if (product.isPublishedOnStore) {
+                  <span class="product-card__store">
+                    <ds-icon name="store" [size]="0.9" /> En tienda web
+                  </span>
+                }
               </div>
             </button>
           </li>
@@ -397,6 +402,47 @@
             </label>
 
             <input type="hidden" formControlName="currency" />
+          </section>
+
+          <section class="pub-card">
+            <header class="pub-card__head pub-card__head--inline">
+              <div>
+                <h2>Tienda web</h2>
+                <p>Muéstralo en tu tienda online con botón de pedido por WhatsApp.</p>
+              </div>
+            </header>
+            <div class="avail-row">
+              <label class="switch">
+                <input type="checkbox" formControlName="isPublishedOnStore" />
+                <span class="switch__track" aria-hidden="true"></span>
+                <span class="visually-hidden">Visible en la tienda web</span>
+              </label>
+              <span
+                class="pill"
+                [class.pill--ok]="productForm.controls.isPublishedOnStore.value"
+                [class.pill--off]="!productForm.controls.isPublishedOnStore.value"
+              >
+                {{ productForm.controls.isPublishedOnStore.value ? 'Visible en tienda' : 'Oculto en tienda' }}
+              </span>
+            </div>
+            <label class="field">
+              <span class="field__label-row">
+                Precio antes (tachado)
+                <span class="pill pill--soft">Opcional</span>
+              </span>
+              <div class="price-row">
+                <span class="price-row__currency">{{ productForm.controls.currency.value }}</span>
+                <input type="number" min="0" step="0.01" formControlName="compareAtPrice" placeholder="0,00" />
+              </div>
+              <span class="field__hint">Solo se muestra si es mayor que el precio actual.</span>
+            </label>
+            <label class="field">
+              <span class="field__label-row">
+                Marca
+                <span class="pill pill--soft">Opcional</span>
+              </span>
+              <input formControlName="brand" maxlength="60" autocomplete="off" />
+            </label>
           </section>
 
           <section class="pub-card">

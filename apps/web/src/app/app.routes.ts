@@ -32,6 +32,11 @@ export const routes: Routes = [
           import('./features/catalog/products.page').then((m) => m.ProductsPage),
       },
       {
+        path: 'store',
+        loadComponent: () =>
+          import('./features/store/store.page').then((m) => m.StorePage),
+      },
+      {
         path: 'get-started',
         loadComponent: () =>
           import('./features/get-started/get-started.page').then(

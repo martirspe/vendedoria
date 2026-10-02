@@ -266,6 +266,12 @@ Se aplica en `plan-limits.service.ts`, como el resto de límites.
 - Carrito y botón "Consultar por WhatsApp".
 - Consola: sección Tienda (identidad, tema, publicar) e interruptor "Visible en tienda".
 - **Hecho cuando:** dos tenants de prueba con productos distintos se sirven en `a.localhost` y `b.localhost` sin filtración de datos (test de aislamiento automatizado) y Lighthouse SEO ≥ 95.
+- **Estado (2 oct 2026): implementada** en la rama `feature/storefront`. Diferencias con lo propuesto:
+  - El tema se guarda en columnas (`brandColor`, `accentColor`) y no en `theme Json`; `shipping` y `tracking` pasan a la fase en que se usan.
+  - Se añadió `POST /store/products/show-available` para hacer visibles en bloque los productos disponibles (los existentes nacen ocultos).
+  - Vista previa de borradores con token HMAC de 1 h (`?preview=` → cookie httpOnly → cabecera `x-store-preview`), sin caché compartida.
+  - El orden "Destacados" muestra primero los productos disponibles.
+  - Pendiente de medir: Lighthouse SEO; los nombres de opción de variantes en la consola siguen siendo genéricos ("Opción"), por lo que la tienda muestra "Opción: M" en lugar de "Talla: M".
 
 ### Fase 2 — Comercio unificado (L)
 - `MerchantPaymentAccount` con cifrado; refactor de `PaymentProviderPort` para credenciales por tenant (incluye los links del agente).

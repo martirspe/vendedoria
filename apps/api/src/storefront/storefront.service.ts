@@ -20,6 +20,7 @@ export type StorefrontChecklistItem = {
 export type StorefrontSettingsView = {
   storefront: Storefront;
   url: string;
+  totalProducts: number;
   publishedProducts: number;
   availableProducts: number;
   checklist: StorefrontChecklistItem[];
@@ -90,6 +91,15 @@ export class StorefrontService {
     return this.view(tenantId, storefront);
   }
 
+  async showAvailableProducts(tenantId: string): Promise<StorefrontSettingsView> {
+    const storefront = await this.ensure(tenantId);
+    await this.prisma.product.updateMany({
+      where: { tenantId, isAvailable: true, isPublishedOnStore: false },
+      data: { isPublishedOnStore: true },
+    });
+    return this.view(tenantId, storefront);
+  }
+
   async previewLink(tenantId: string): Promise<{ url: string; expiresAt: Date }> {
     const tenant = await this.prisma.tenant.findUniqueOrThrow({
       where: { id: tenantId },
@@ -127,11 +137,12 @@ export class StorefrontService {
     tenantId: string,
     storefront: Storefront,
   ): Promise<StorefrontSettingsView> {
-    const [tenant, publishedProducts, availableProducts] = await Promise.all([
+    const [tenant, totalProducts, publishedProducts, availableProducts] = await Promise.all([
       this.prisma.tenant.findUniqueOrThrow({
         where: { id: tenantId },
         select: { slug: true },
       }),
+      this.prisma.product.count({ where: { tenantId } }),
       this.prisma.product.count({
         where: { tenantId, isPublishedOnStore: true },
       }),
@@ -186,6 +197,7 @@ export class StorefrontService {
     return {
       storefront,
       url: storefrontUrl(this.urlTemplate(), tenant.slug),
+      totalProducts,
       publishedProducts,
       availableProducts,
       checklist,

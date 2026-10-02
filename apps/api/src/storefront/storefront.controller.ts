@@ -34,6 +34,11 @@ export class StorefrontController {
     return this.storefront.unpublish(user.tenantId);
   }
 
+  @Post('products/show-available')
+  showAvailableProducts(@CurrentUser() user: AuthUserPayload) {
+    return this.storefront.showAvailableProducts(user.tenantId);
+  }
+
   @Post('preview-link')
   previewLink(@CurrentUser() user: AuthUserPayload) {
     return this.storefront.previewLink(user.tenantId);

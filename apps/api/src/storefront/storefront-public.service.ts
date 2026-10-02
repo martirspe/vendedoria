@@ -222,7 +222,7 @@ export class StorefrontPublicService {
       case 'price-desc':
         return [{ basePriceCents: 'desc' }, { name: 'asc' }];
       default:
-        return [{ sortOrder: 'asc' }, { updatedAt: 'desc' }];
+        return [{ isAvailable: 'desc' }, { sortOrder: 'asc' }, { updatedAt: 'desc' }];
     }
   }
 }

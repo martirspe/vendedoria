@@ -1,0 +1,179 @@
+<section class="store">
+  <header class="store__header">
+    <div>
+      <p class="store__eyebrow">Vender</p>
+      <h1>Tienda web</h1>
+      <p>
+        Tu catálogo en una web propia. Cada botón de compra abre WhatsApp con tu
+        vendedor IA y el producto ya identificado.
+      </p>
+    </div>
+    @if (view(); as v) {
+      <div class="store__actions">
+        <ds-button variant="secondary" [disabled]="busyAction() !== null" (click)="openPreview()">
+          <ds-icon name="eye" />
+          {{ busyAction() === 'preview' ? 'Abriendo…' : 'Vista previa' }}
+        </ds-button>
+        @if (isPublished()) {
+          <ds-button variant="ghost" [disabled]="busyAction() !== null" (click)="unpublish()">
+            {{ busyAction() === 'unpublish' ? 'Despublicando…' : 'Despublicar' }}
+          </ds-button>
+        } @else {
+          <ds-button [disabled]="busyAction() !== null || !v.canPublish" (click)="publish()">
+            <ds-icon name="rocket" />
+            {{ busyAction() === 'publish' ? 'Publicando…' : 'Publicar tienda' }}
+          </ds-button>
+        }
+      </div>
+    }
+  </header>
+
+  @if (errorMessage(); as error) {
+    <div class="banner banner--danger" role="alert">
+      <ds-icon name="alert" />
+      <span>{{ error }}</span>
+    </div>
+  }
+  @if (successMessage(); as success) {
+    <div class="banner banner--success" role="status">
+      <ds-icon name="check" />
+      <span>{{ success }}</span>
+    </div>
+  }
+
+  @if (loading()) {
+    <div class="skeleton" aria-busy="true">Cargando tu tienda…</div>
+  } @else if (view(); as v) {
+    <div class="status-card" [class.status-card--live]="isPublished()">
+      <span class="pill" [class.pill--ok]="isPublished()">
+        {{ isPublished() ? 'Publicada' : 'Borrador' }}
+      </span>
+      <div class="status-card__body">
+        <strong>{{ v.url }}</strong>
+        <span>
+          @if (isPublished()) {
+            Visible para todos. Comparte este enlace en tu bio, estados y anuncios.
+          } @else if (requiredPending().length) {
+            Para publicar falta: {{ requiredPending().length }}
+            {{ requiredPending().length === 1 ? 'paso' : 'pasos' }}.
+          } @else {
+            Todo listo. Publica cuando quieras.
+          }
+        </span>
+      </div>
+      @if (isPublished()) {
+        <a class="status-card__link" [href]="v.url" target="_blank" rel="noopener">
+          Abrir tienda <ds-icon name="externalLink" [size]="1" />
+        </a>
+      }
+    </div>
+
+    <div class="store__grid">
+      <form class="store__form" [formGroup]="form" (ngSubmit)="save()">
+        <section class="card">
+          <h2>Identidad</h2>
+          <label>
+            Nombre de la tienda
+            <input formControlName="displayName" maxlength="80" autocomplete="organization" />
+          </label>
+          <label>
+            <span class="label-text">Frase corta <span class="optional">Opcional</span></span>
+            <input formControlName="tagline" maxlength="140" placeholder="Ej. Moda urbana con envío a todo Lima" />
+          </label>
+          <div class="row">
+            <label>
+              <span class="label-text">Logo (URL) <span class="optional">Opcional</span></span>
+              <input formControlName="logoUrl" type="url" placeholder="https://" />
+            </label>
+            <label>
+              <span class="label-text">Portada (URL) <span class="optional">Opcional</span></span>
+              <input formControlName="heroImageUrl" type="url" placeholder="https://" />
+            </label>
+          </div>
+          <div class="row">
+            <label class="color">
+              Color de marca
+              <input formControlName="brandColor" type="color" />
+            </label>
+            <label class="color">
+              Color de acento
+              <input formControlName="accentColor" type="color" />
+            </label>
+          </div>
+        </section>
+
+        <section class="card">
+          <h2>Contacto</h2>
+          <div class="row">
+            <label>
+              WhatsApp de ventas
+              <input formControlName="whatsappPhone" inputmode="tel" placeholder="51987654321" />
+              <small>Con código de país, sin espacios. Debe ser el número conectado a tu vendedor.</small>
+            </label>
+            <label>
+              <span class="label-text">Correo de contacto <span class="optional">Opcional</span></span>
+              <input formControlName="contactEmail" type="email" autocomplete="email" />
+            </label>
+          </div>
+        </section>
+
+        <section class="card">
+          <h2>Google y redes</h2>
+          <label>
+            <span class="label-text">Título <span class="optional">Opcional</span></span>
+            <input formControlName="seoTitle" maxlength="70" />
+          </label>
+          <label>
+            <span class="label-text">Descripción <span class="optional">Opcional</span></span>
+            <textarea formControlName="seoDescription" rows="3" maxlength="160"></textarea>
+            <small>{{ form.controls.seoDescription.value.length }}/160 · Aparece en Google y al compartir el enlace.</small>
+          </label>
+        </section>
+
+        <footer>
+          <ds-button type="submit" [disabled]="saving() || form.pristine">
+            {{ saving() ? 'Guardando…' : 'Guardar cambios' }}
+          </ds-button>
+        </footer>
+      </form>
+
+      <aside class="store__rail">
+        <section class="card">
+          <h2>Antes de publicar</h2>
+          <ul class="checklist">
+            @for (item of v.checklist; track item.id) {
+              <li [class.is-done]="item.done">
+                <span class="checklist__mark" aria-hidden="true">
+                  @if (item.done) { <ds-icon name="check" [size]="0.9" /> }
+                </span>
+                <div>
+                  <strong>
+                    {{ item.label }}
+                    @if (!item.required) { <span class="optional">Recomendado</span> }
+                  </strong>
+                  <span>{{ item.impact }}</span>
+                </div>
+              </li>
+            }
+          </ul>
+        </section>
+
+        <section class="card">
+          <h2>Productos en la tienda</h2>
+          <p class="metric">
+            <strong>{{ v.publishedProducts }}</strong> de {{ v.totalProducts }} visibles
+          </p>
+          @if (hiddenProducts() > 0) {
+            <ds-button variant="secondary" [disabled]="busyAction() !== null" (click)="showAvailableProducts()">
+              <ds-icon name="store" />
+              {{ busyAction() === 'products' ? 'Mostrando…' : 'Mostrar los disponibles' }}
+            </ds-button>
+          }
+          <a routerLink="/app/products" class="rail-link">
+            Elegir producto por producto <ds-icon name="chevronRight" [size]="1" />
+          </a>
+        </section>
+      </aside>
+    </div>
+  }
+</section>
