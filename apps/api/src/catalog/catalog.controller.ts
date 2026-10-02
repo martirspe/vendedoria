@@ -1,9 +1,10 @@
-import { Body, Controller, Get, Param, Post } from '@nestjs/common';
+import { Body, Controller, Get, Param, Patch, Post } from '@nestjs/common';
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 import { CurrentUser } from '../common/decorators/auth.decorators';
 import type { AuthUserPayload } from '../common/types/auth-user';
 import { CatalogService } from './catalog.service';
 import { CreateProductDto } from './dto/create-product.dto';
+import { UpdateProductDto } from './dto/update-product.dto';
 
 @ApiTags('catalog')
 @ApiBearerAuth()
@@ -27,5 +28,14 @@ export class CatalogController {
     @Param('productId') productId: string,
   ) {
     return this.catalogService.getById(user.tenantId, productId);
+  }
+
+  @Patch(':productId')
+  update(
+    @CurrentUser() user: AuthUserPayload,
+    @Param('productId') productId: string,
+    @Body() dto: UpdateProductDto,
+  ) {
+    return this.catalogService.update(user.tenantId, productId, dto);
   }
 }

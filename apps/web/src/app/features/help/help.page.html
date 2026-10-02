@@ -1,0 +1,30 @@
+<section class="help">
+  <header class="help__header">
+    <p class="help__eyebrow">Aprender</p>
+    <h1>Ayuda rápida</h1>
+    <p>
+      Guías cortas para operar VendedorIA: vender por chat, cobrar con claridad
+      y no romper las reglas de Meta.
+    </p>
+  </header>
+
+  <ul class="help__list">
+    @for (topic of topics; track topic.link) {
+      <li>
+        <article>
+          <h2>{{ topic.title }}</h2>
+          <p>{{ topic.body }}</p>
+          <a [routerLink]="topic.link">{{ topic.cta }} →</a>
+        </article>
+      </li>
+    }
+  </ul>
+
+  <aside class="help__tip">
+    <ds-icon name="circleHelp" />
+    <div>
+      <strong>Atajo</strong>
+      <p>Pulsa <kbd>Ctrl</kbd> + <kbd>K</kbd> en cualquier pantalla de la consola para saltar a una sección.</p>
+    </div>
+  </aside>
+</section>

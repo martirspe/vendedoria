@@ -5,14 +5,24 @@
         <h1>Mensajes</h1>
         <p>{{ conversations().length }} conversaciones</p>
       </div>
-      <button
-        type="button"
-        class="chip"
-        [class.chip--active]="filterUnattended()"
-        (click)="toggleUnattendedFilter()"
-      >
-        Sin atender
-      </button>
+      <div class="inbox__filters">
+        <button
+          type="button"
+          class="chip"
+          [class.chip--active]="filterUnattended()"
+          (click)="toggleUnattendedFilter()"
+        >
+          Sin atender
+        </button>
+        <button
+          type="button"
+          class="chip"
+          [class.chip--active]="filterSales()"
+          (click)="toggleSalesFilter()"
+        >
+          Ventas
+        </button>
+      </div>
     </header>
 
     <label class="search">
@@ -137,6 +147,31 @@
           </div>
         }
 
+        @if (thread.linkedOrder; as order) {
+          <aside class="commerce-panel" aria-label="Pedido en el hilo">
+            <div class="commerce-panel__head">
+              <strong>Commerce en el hilo</strong>
+              <span class="commerce-panel__badge">{{
+                orderStatusLabel(order.status)
+              }}</span>
+            </div>
+            <p>
+              {{ formatMoney(order.totalCents, order.currency) }}
+              · {{ paymentStatusLabel(order.paymentStatus) }}
+            </p>
+            <div class="commerce-panel__actions">
+              <a [routerLink]="['/app/orders']" [queryParams]="{ orderId: order.id }">
+                Ver pedido
+              </a>
+              @if (order.checkoutUrl) {
+                <a [href]="order.checkoutUrl" target="_blank" rel="noopener">
+                  Link de pago
+                </a>
+              }
+            </div>
+          </aside>
+        }
+
         @if (!thread.agentEnabled) {
           <div class="banner banner--warn">
             Respuestas automáticas OFF · el agente no responde en este chat
@@ -145,15 +180,41 @@
 
         @if (!thread.messagingWindow.canSendFreeForm) {
           <div class="banner banner--warn">
-            {{
-              thread.messagingWindow.reason ||
-                'Ventana de 24h cerrada. Meta solo permite plantillas aprobadas.'
-            }}
+            <div>
+              <strong>Ventana de 24h cerrada</strong>
+              <p>
+                {{
+                  thread.messagingWindow.reason ||
+                    'Meta solo permite plantillas aprobadas fuera de ventana.'
+                }}
+              </p>
+            </div>
+            <div class="template-box">
+              <label>
+                Plantilla
+                <select
+                  [value]="selectedTemplateId()"
+                  (change)="onTemplateChange($any($event.target).value)"
+                >
+                  @for (template of templates(); track template.id) {
+                    <option [value]="template.id">
+                      {{ template.description }}
+                    </option>
+                  }
+                </select>
+              </label>
+              <ds-button
+                type="button"
+                [disabled]="sending() || templates().length === 0"
+                (click)="sendTemplate()"
+              >
+                {{ sending() ? 'Enviando…' : 'Enviar plantilla' }}
+              </ds-button>
+            </div>
           </div>
         }
 
-        <div class="messages">
-          @for (message of thread.messages; track message.id) {
+        <div class="messages">          @for (message of thread.messages; track message.id) {
             <article
               class="bubble"
               [class.bubble--in]="message.direction === 'INBOUND'"
@@ -162,6 +223,22 @@
               [class.bubble--agent]="message.authorType === 'SALES_AGENT'"
             >
               <p>{{ message.body }}</p>
+              @if (
+                message.authorType === 'SALES_AGENT' &&
+                messageTools(message).length
+              ) {
+                <details class="bubble__why">
+                  <summary>Por qué respondió</summary>
+                  <ul>
+                    @for (tool of messageTools(message); track $index) {
+                      <li [attr.data-status]="tool.status">
+                        <strong>{{ toolLabel(tool.name) }}</strong>
+                        <span>{{ tool.summary }}</span>
+                      </li>
+                    }
+                  </ul>
+                </details>
+              }
               <footer>
                 <span>
                   {{

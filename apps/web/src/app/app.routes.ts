@@ -25,7 +25,7 @@ export const routes: Routes = [
     loadComponent: () =>
       import('./layout/console-shell.layout').then((m) => m.ConsoleShellLayout),
     children: [
-      { path: '', pathMatch: 'full', redirectTo: 'products' },
+      { path: '', pathMatch: 'full', redirectTo: 'get-started' },
       {
         path: 'products',
         loadComponent: () =>
@@ -34,12 +34,9 @@ export const routes: Routes = [
       {
         path: 'get-started',
         loadComponent: () =>
-          import('./features/shared/placeholder.page').then((m) => m.PlaceholderPage),
-        data: {
-          title: 'Empezar',
-          emptyTitle: 'Onboarding',
-          emptyBody: 'Checklist guiado hasta tu primer agente vendiendo.',
-        },
+          import('./features/get-started/get-started.page').then(
+            (m) => m.GetStartedPage,
+          ),
       },
       {
         path: 'seller',
@@ -68,22 +65,31 @@ export const routes: Routes = [
       {
         path: 'metrics',
         loadComponent: () =>
-          import('./features/shared/placeholder.page').then((m) => m.PlaceholderPage),
-        data: {
-          title: 'Métricas',
-          emptyTitle: 'Resultados',
-          emptyBody: 'Ventas, conversaciones y tasa de conversión.',
-        },
+          import('./features/metrics/metrics.page').then((m) => m.MetricsPage),
+      },
+      {
+        path: 'integrations',
+        loadComponent: () =>
+          import('./features/integrations/integrations.page').then(
+            (m) => m.IntegrationsPage,
+          ),
+      },
+      {
+        path: 'plans',
+        loadComponent: () =>
+          import('./features/billing/plans.page').then((m) => m.PlansPage),
       },
       {
         path: 'settings',
         loadComponent: () =>
-          import('./features/shared/placeholder.page').then((m) => m.PlaceholderPage),
-        data: {
-          title: 'Ajustes',
-          emptyTitle: 'Tu negocio',
-          emptyBody: 'Nombre, país, moneda y preferencias del tenant.',
-        },
+          import('./features/settings/settings.page').then(
+            (m) => m.SettingsPage,
+          ),
+      },
+      {
+        path: 'help',
+        loadComponent: () =>
+          import('./features/help/help.page').then((m) => m.HelpPage),
       },
     ],
   },

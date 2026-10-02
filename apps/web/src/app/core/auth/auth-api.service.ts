@@ -16,13 +16,30 @@ const REFRESH_KEY = 'vendedoria.refreshToken';
 @Injectable({ providedIn: 'root' })
 export class AuthApiService {
   private readonly http = inject(HttpClient);
-  readonly isAuthenticated = signal(!!this.getAccessToken());
+  readonly isAuthenticated = signal(false);
+  private refreshInFlight: Promise<AuthTokensResponse> | null = null;
+
+  constructor() {
+    this.syncFromStorage();
+  }
+
+  /** Re-read tokens from localStorage (needed after SSR / hard refresh). */
+  syncFromStorage(): void {
+    this.isAuthenticated.set(Boolean(this.getAccessToken()));
+  }
 
   getAccessToken(): string | null {
     if (typeof localStorage === 'undefined') {
       return null;
     }
     return localStorage.getItem(ACCESS_KEY);
+  }
+
+  getRefreshToken(): string | null {
+    if (typeof localStorage === 'undefined') {
+      return null;
+    }
+    return localStorage.getItem(REFRESH_KEY);
   }
 
   async register(payload: {
@@ -53,6 +70,37 @@ export class AuthApiService {
     );
     this.persist(response);
     return response;
+  }
+
+  /**
+   * Rotate access+refresh tokens. Single-flight so parallel 401s share one refresh
+   * (API revokes the previous refresh token on each successful refresh).
+   */
+  async refreshSession(): Promise<AuthTokensResponse> {
+    if (this.refreshInFlight) {
+      return this.refreshInFlight;
+    }
+
+    const refreshToken = this.getRefreshToken();
+    if (!refreshToken) {
+      throw new Error('No refresh token');
+    }
+
+    this.refreshInFlight = firstValueFrom(
+      this.http.post<AuthTokensResponse>(
+        `${environment.apiBaseUrl}/auth/refresh`,
+        { refreshToken },
+      ),
+    )
+      .then((response) => {
+        this.persist(response);
+        return response;
+      })
+      .finally(() => {
+        this.refreshInFlight = null;
+      });
+
+    return this.refreshInFlight;
   }
 
   logout(): void {

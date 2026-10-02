@@ -100,6 +100,27 @@ export class UpdateSalesAgentDto {
   @IsBoolean()
   pauseOnHandoff?: boolean;
 
+  @ApiPropertyOptional({
+    description: 'Hard limit: never invent or offer discounts',
+  })
+  @IsOptional()
+  @IsBoolean()
+  neverOfferDiscount?: boolean;
+
+  @ApiPropertyOptional({
+    description: 'Hard limit: never invent shipping promises',
+  })
+  @IsOptional()
+  @IsBoolean()
+  neverInventShipping?: boolean;
+
+  @ApiPropertyOptional({
+    description: 'Hard limit: product facts only from catalog tools',
+  })
+  @IsOptional()
+  @IsBoolean()
+  catalogOnlyFacts?: boolean;
+
   @ApiPropertyOptional()
   @IsOptional()
   @IsBoolean()

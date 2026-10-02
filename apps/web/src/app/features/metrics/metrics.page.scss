@@ -1,0 +1,126 @@
+.metrics {
+  display: grid;
+  gap: var(--ds-space-5);
+}
+
+.metrics__header {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--ds-space-6);
+  align-items: start;
+}
+
+.metrics__eyebrow {
+  margin: 0 0 var(--ds-space-2);
+  color: var(--ds-color-text-secondary);
+  font-size: 0.8rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.metrics__header h1 {
+  margin: 0;
+  font-family: var(--ds-font-display);
+  font-size: clamp(1.75rem, 2vw, 2.1rem);
+  letter-spacing: -0.04em;
+}
+
+.metrics__header p {
+  margin: var(--ds-space-2) 0 0;
+  max-width: 36rem;
+  color: var(--ds-color-text-secondary);
+}
+
+.metrics__periods {
+  display: inline-flex;
+  padding: 0.2rem;
+  border-radius: 999px;
+  background: var(--ds-color-surface);
+  border: 1px solid var(--ds-color-border);
+}
+
+.metrics__periods button {
+  min-height: 2.25rem;
+  padding: 0 var(--ds-space-3);
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  font-weight: 700;
+  color: var(--ds-color-text-secondary);
+  cursor: pointer;
+}
+
+.metrics__periods button.is-active {
+  background: var(--ds-color-ink);
+  color: #fff;
+}
+
+.metrics__grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: var(--ds-space-3);
+}
+
+.metrics__grid article {
+  display: grid;
+  gap: var(--ds-space-2);
+  padding: var(--ds-space-5);
+  border: 1px solid var(--ds-color-border);
+  border-radius: var(--ds-radius-md);
+  background: var(--ds-color-surface);
+}
+
+.metrics__grid span {
+  color: var(--ds-color-text-secondary);
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+
+.metrics__grid strong {
+  font-size: 1.6rem;
+  letter-spacing: -0.04em;
+}
+
+.metrics__footnote {
+  margin: 0;
+  color: var(--ds-color-text-secondary);
+  font-size: 0.85rem;
+}
+
+.banner {
+  display: flex;
+  gap: var(--ds-space-3);
+  align-items: center;
+  padding: var(--ds-space-4);
+  border-radius: var(--ds-radius-md);
+  flex-wrap: wrap;
+}
+
+.banner--danger {
+  background: color-mix(in srgb, var(--ds-color-danger) 12%, white);
+  color: var(--ds-color-danger);
+}
+
+.skeleton {
+  padding: var(--ds-space-8);
+  border-radius: var(--ds-radius-lg);
+  border: 1px solid var(--ds-color-border);
+  background: var(--ds-color-surface);
+}
+
+@media (max-width: 960px) {
+  .metrics__header {
+    display: grid;
+  }
+
+  .metrics__grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 560px) {
+  .metrics__grid {
+    grid-template-columns: 1fr;
+  }
+}

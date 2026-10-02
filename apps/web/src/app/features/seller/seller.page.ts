@@ -6,6 +6,7 @@ import {
   signal,
 } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
+import { ActivatedRoute } from '@angular/router';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { map, startWith } from 'rxjs';
 import { DsButtonComponent } from '../../design-system/button/ds-button.component';
@@ -13,15 +14,27 @@ import { DsIconComponent } from '../../design-system/icon/ds-icon.component';
 import {
   AgentsApiService,
   AgentQuality,
+  AgentToolTrace,
+  PlaygroundMessageDto,
+  PlaygroundSessionDto,
   SalesAgentDto,
 } from '../../core/api/agents-api.service';
+import {
+  JourneyStage,
+  JourneyTemplateDto,
+  KnowledgeApiService,
+  KnowledgeFaqDto,
+} from '../../core/api/knowledge-api.service';
 
 type SellerSectionId =
   | 'basics'
   | 'audience'
   | 'personality'
   | 'messages'
-  | 'handoff';
+  | 'handoff'
+  | 'limits'
+  | 'knowledge'
+  | 'journeys';
 
 @Component({
   selector: 'app-seller-page',
@@ -33,7 +46,9 @@ type SellerSectionId =
 })
 export class SellerPage {
   private readonly api = inject(AgentsApiService);
+  private readonly knowledgeApi = inject(KnowledgeApiService);
   private readonly fb = inject(FormBuilder);
+  private readonly route = inject(ActivatedRoute);
 
   readonly loading = signal(true);
   readonly saving = signal(false);
@@ -43,12 +58,33 @@ export class SellerPage {
   readonly quality = signal<AgentQuality | null>(null);
   readonly activeSection = signal<SellerSectionId>('basics');
 
+  readonly faqs = signal<KnowledgeFaqDto[]>([]);
+  readonly journeys = signal<JourneyTemplateDto[]>([]);
+  readonly knowledgeBusy = signal(false);
+  readonly importDraft = signal('');
+  readonly faqQuestion = signal('');
+  readonly faqAnswer = signal('');
+  readonly journeyTitle = signal('');
+  readonly journeyStage = signal<JourneyStage>('DISCOVER');
+  readonly journeyScript = signal('');
+
+  readonly playgroundOpen = signal(false);
+  readonly playgroundLoading = signal(false);
+  readonly playgroundSending = signal(false);
+  readonly playgroundError = signal<string | null>(null);
+  readonly playgroundSession = signal<PlaygroundSessionDto | null>(null);
+  readonly playgroundDraft = signal('');
+  readonly lastTools = signal<AgentToolTrace[]>([]);
+
   readonly sections: Array<{ id: SellerSectionId; label: string }> = [
     { id: 'basics', label: 'Básico' },
     { id: 'audience', label: 'Audiencia' },
     { id: 'personality', label: 'Personalidad' },
     { id: 'messages', label: 'Mensajes' },
     { id: 'handoff', label: 'Handoff' },
+    { id: 'limits', label: 'Límites' },
+    { id: 'knowledge', label: 'Conocimiento' },
+    { id: 'journeys', label: 'Recorrido' },
   ];
 
   readonly form = this.fb.nonNullable.group({
@@ -67,6 +103,9 @@ export class SellerPage {
     purchaseConfirmMessage: [''],
     handoffMessage: [''],
     pauseOnHandoff: [true],
+    neverOfferDiscount: [true],
+    neverInventShipping: [true],
+    catalogOnlyFacts: [true],
     isActive: [true],
   });
 
@@ -107,17 +146,47 @@ export class SellerPage {
     return 'Empieza por lo esencial';
   });
 
+  readonly publishedFaqCount = computed(
+    () =>
+      this.faqs().filter(
+        (item) => item.isPublished && item.reviewStatus === 'APPROVED',
+      ).length,
+  );
+
+  readonly draftFaqCount = computed(
+    () => this.faqs().filter((item) => item.reviewStatus === 'DRAFT').length,
+  );
+
+  readonly activeJourneyCount = computed(
+    () => this.journeys().filter((item) => item.isActive).length,
+  );
+
+  readonly playgroundMessages = computed(
+    () => this.playgroundSession()?.messages ?? [],
+  );
+
   constructor() {
     void this.load();
+    this.route.queryParamMap.subscribe((params) => {
+      if (params.get('playground') === '1' && !this.playgroundOpen()) {
+        void this.openPlayground();
+      }
+    });
   }
 
   async load(): Promise<void> {
     this.loading.set(true);
     this.errorMessage.set(null);
     try {
-      const agent = await this.api.getPrimary();
+      const [agent, faqs, journeys] = await Promise.all([
+        this.api.getPrimary(),
+        this.knowledgeApi.listFaqs(),
+        this.knowledgeApi.listJourneys(),
+      ]);
       this.patchForm(agent);
       this.quality.set(agent.quality);
+      this.faqs.set(faqs);
+      this.journeys.set(journeys);
       this.dirty.set(false);
     } catch {
       this.errorMessage.set(
@@ -140,7 +209,287 @@ export class SellerPage {
     el?.scrollIntoView({ behavior: 'smooth', block: 'start' });
   }
 
-  async save(): Promise<void> {
+  async openPlayground(): Promise<void> {
+    this.playgroundOpen.set(true);
+    this.playgroundError.set(null);
+    this.playgroundLoading.set(true);
+    try {
+      if (this.dirty()) {
+        await this.save(true);
+      }
+      const session = await this.api.getPlaygroundSession();
+      this.playgroundSession.set(session);
+      const lastAgent = [...session.messages]
+        .reverse()
+        .find((message) => message.authorType === 'SALES_AGENT');
+      this.lastTools.set(this.asToolTraces(lastAgent?.toolTraces));
+    } catch {
+      this.playgroundError.set(
+        'No pudimos abrir la prueba. Guarda el vendedor y reintenta.',
+      );
+    } finally {
+      this.playgroundLoading.set(false);
+    }
+  }
+
+  closePlayground(): void {
+    this.playgroundOpen.set(false);
+  }
+
+  async resetPlayground(): Promise<void> {
+    const session = this.playgroundSession();
+    if (!session) return;
+    this.playgroundSending.set(true);
+    this.playgroundError.set(null);
+    try {
+      const refreshed = await this.api.resetPlaygroundSession(session.id);
+      this.playgroundSession.set(refreshed);
+      this.lastTools.set([]);
+    } catch {
+      this.playgroundError.set('No se pudo reiniciar la prueba.');
+    } finally {
+      this.playgroundSending.set(false);
+    }
+  }
+
+  onDraftInput(value: string): void {
+    this.playgroundDraft.set(value);
+  }
+
+  async sendPlayground(): Promise<void> {
+    const session = this.playgroundSession();
+    const text = this.playgroundDraft().trim();
+    if (!session || !text) return;
+
+    this.playgroundSending.set(true);
+    this.playgroundError.set(null);
+    try {
+      const result = await this.api.sendPlaygroundMessage(session.id, text);
+      this.playgroundSession.set(result.session);
+      this.lastTools.set(result.lastAgentReply.tools);
+      this.playgroundDraft.set('');
+    } catch {
+      this.playgroundError.set(
+        'No se pudo enviar. Revisa productos/FAQs e inténtalo otra vez.',
+      );
+    } finally {
+      this.playgroundSending.set(false);
+    }
+  }
+
+  sendSuggestion(text: string): void {
+    this.playgroundDraft.set(text);
+    void this.sendPlayground();
+  }
+
+  toolLabel(name: string): string {
+    switch (name) {
+      case 'search_catalog':
+        return 'Catálogo';
+      case 'get_product_availability':
+        return 'Precio / stock';
+      case 'lookup_faq':
+        return 'FAQ';
+      case 'create_order':
+        return 'Pedido';
+      case 'create_payment_link':
+        return 'Link de pago';
+      case 'escalate':
+        return 'Handoff';
+      default:
+        return name;
+    }
+  }
+
+  isBuyer(message: PlaygroundMessageDto): boolean {
+    return message.authorType === 'BUYER';
+  }
+
+  stageLabel(stage: JourneyStage): string {
+    switch (stage) {
+      case 'DISCOVER':
+        return 'Descubrir';
+      case 'RECOMMEND':
+        return 'Recomendar';
+      case 'CLOSE':
+        return 'Cerrar';
+      case 'SUPPORT':
+        return 'Soporte';
+    }
+  }
+
+  onFaqQuestion(value: string): void {
+    this.faqQuestion.set(value);
+  }
+
+  onFaqAnswer(value: string): void {
+    this.faqAnswer.set(value);
+  }
+
+  onImportDraft(value: string): void {
+    this.importDraft.set(value);
+  }
+
+  onJourneyTitle(value: string): void {
+    this.journeyTitle.set(value);
+  }
+
+  onJourneyStage(value: string): void {
+    if (
+      value === 'DISCOVER' ||
+      value === 'RECOMMEND' ||
+      value === 'CLOSE' ||
+      value === 'SUPPORT'
+    ) {
+      this.journeyStage.set(value);
+    }
+  }
+
+  onJourneyScript(value: string): void {
+    this.journeyScript.set(value);
+  }
+
+  async addFaq(): Promise<void> {
+    const question = this.faqQuestion().trim();
+    const answer = this.faqAnswer().trim();
+    if (question.length < 4 || answer.length < 4) {
+      this.errorMessage.set('La FAQ necesita pregunta y respuesta claras.');
+      return;
+    }
+    this.knowledgeBusy.set(true);
+    this.errorMessage.set(null);
+    try {
+      const created = await this.knowledgeApi.createFaq({ question, answer });
+      this.faqs.update((list) => [created, ...list]);
+      this.faqQuestion.set('');
+      this.faqAnswer.set('');
+      this.successMessage.set('FAQ publicada. El vendedor ya puede usarla.');
+      await this.refreshQuality();
+    } catch {
+      this.errorMessage.set('No se pudo guardar la FAQ.');
+    } finally {
+      this.knowledgeBusy.set(false);
+    }
+  }
+
+  async approveFaq(faq: KnowledgeFaqDto): Promise<void> {
+    this.knowledgeBusy.set(true);
+    try {
+      const updated = await this.knowledgeApi.approveFaq(faq.id);
+      this.faqs.update((list) =>
+        list.map((item) => (item.id === faq.id ? updated : item)),
+      );
+      this.successMessage.set('FAQ aprobada y publicada.');
+      await this.refreshQuality();
+    } catch {
+      this.errorMessage.set('No se pudo aprobar la FAQ.');
+    } finally {
+      this.knowledgeBusy.set(false);
+    }
+  }
+
+  async deleteFaq(faq: KnowledgeFaqDto): Promise<void> {
+    this.knowledgeBusy.set(true);
+    try {
+      await this.knowledgeApi.deleteFaq(faq.id);
+      this.faqs.update((list) => list.filter((item) => item.id !== faq.id));
+      await this.refreshQuality();
+    } catch {
+      this.errorMessage.set('No se pudo eliminar la FAQ.');
+    } finally {
+      this.knowledgeBusy.set(false);
+    }
+  }
+
+  async importFaqs(): Promise<void> {
+    const rawText = this.importDraft().trim();
+    if (rawText.length < 8) {
+      this.errorMessage.set('Pega al menos un bloque pregunta/respuesta.');
+      return;
+    }
+    this.knowledgeBusy.set(true);
+    this.errorMessage.set(null);
+    try {
+      const result = await this.knowledgeApi.importPaste(rawText);
+      if (result.skipped || !result.created.length) {
+        this.errorMessage.set(
+          'No detectamos FAQs. Usa bloques separados o líneas Q:/A:.',
+        );
+        return;
+      }
+      this.faqs.update((list) => [...result.created, ...list]);
+      this.importDraft.set('');
+      this.successMessage.set(
+        `${result.created.length} borrador${result.created.length === 1 ? '' : 'es'} listo${result.created.length === 1 ? '' : 's'} para revisar. No se publican hasta que apruebes.`,
+      );
+      await this.refreshQuality();
+      this.scrollTo('knowledge');
+    } catch {
+      this.errorMessage.set('No se pudo importar el texto.');
+    } finally {
+      this.knowledgeBusy.set(false);
+    }
+  }
+
+  async addJourney(): Promise<void> {
+    const title = this.journeyTitle().trim();
+    const scriptText = this.journeyScript().trim();
+    if (title.length < 2 || scriptText.length < 8) {
+      this.errorMessage.set('La plantilla necesita título y guion.');
+      return;
+    }
+    this.knowledgeBusy.set(true);
+    try {
+      const created = await this.knowledgeApi.createJourney({
+        title,
+        stage: this.journeyStage(),
+        scriptText,
+      });
+      this.journeys.update((list) => [created, ...list]);
+      this.journeyTitle.set('');
+      this.journeyScript.set('');
+      this.successMessage.set('Plantilla de recorrido activa.');
+      await this.refreshQuality();
+    } catch {
+      this.errorMessage.set('No se pudo guardar la plantilla.');
+    } finally {
+      this.knowledgeBusy.set(false);
+    }
+  }
+
+  async toggleJourney(journey: JourneyTemplateDto): Promise<void> {
+    this.knowledgeBusy.set(true);
+    try {
+      const updated = await this.knowledgeApi.updateJourney(journey.id, {
+        isActive: !journey.isActive,
+      });
+      this.journeys.update((list) =>
+        list.map((item) => (item.id === journey.id ? updated : item)),
+      );
+      await this.refreshQuality();
+    } catch {
+      this.errorMessage.set('No se pudo actualizar la plantilla.');
+    } finally {
+      this.knowledgeBusy.set(false);
+    }
+  }
+
+  async deleteJourney(journey: JourneyTemplateDto): Promise<void> {
+    this.knowledgeBusy.set(true);
+    try {
+      await this.knowledgeApi.deleteJourney(journey.id);
+      this.journeys.update((list) =>
+        list.filter((item) => item.id !== journey.id),
+      );
+      await this.refreshQuality();
+    } catch {
+      this.errorMessage.set('No se pudo eliminar la plantilla.');
+    } finally {
+      this.knowledgeBusy.set(false);
+    }
+  }
+
+  async save(quiet = false): Promise<void> {
     if (this.form.invalid) {
       this.form.markAllAsTouched();
       this.errorMessage.set('Revisa el nombre del vendedor antes de guardar.');
@@ -150,7 +499,9 @@ export class SellerPage {
 
     this.saving.set(true);
     this.errorMessage.set(null);
-    this.successMessage.set(null);
+    if (!quiet) {
+      this.successMessage.set(null);
+    }
 
     try {
       const values = this.form.getRawValue();
@@ -172,7 +523,11 @@ export class SellerPage {
       this.patchForm(updated);
       this.quality.set(updated.quality);
       this.dirty.set(false);
-      this.successMessage.set('Vendedor actualizado. Los cambios aplican en el próximo mensaje.');
+      if (!quiet) {
+        this.successMessage.set(
+          'Vendedor actualizado. Los cambios aplican en el próximo mensaje.',
+        );
+      }
     } catch {
       this.errorMessage.set(
         'No se pudo guardar. Verifica los campos e inténtalo otra vez.',
@@ -180,6 +535,26 @@ export class SellerPage {
     } finally {
       this.saving.set(false);
     }
+  }
+
+  private async refreshQuality(): Promise<void> {
+    try {
+      const agent = await this.api.getPrimary();
+      this.quality.set(agent.quality);
+    } catch {
+      this.quality.set(this.estimateQuality(this.form.getRawValue()));
+    }
+  }
+
+  private asToolTraces(value: unknown): AgentToolTrace[] {
+    if (!Array.isArray(value)) return [];
+    return value.filter(
+      (item): item is AgentToolTrace =>
+        typeof item === 'object' &&
+        item !== null &&
+        'name' in item &&
+        'summary' in item,
+    );
   }
 
   private patchForm(agent: SalesAgentDto): void {
@@ -203,11 +578,16 @@ export class SellerPage {
       purchaseConfirmMessage: agent.purchaseConfirmMessage ?? '',
       handoffMessage: agent.handoffMessage ?? '',
       pauseOnHandoff: agent.pauseOnHandoff,
+      neverOfferDiscount: agent.neverOfferDiscount ?? true,
+      neverInventShipping: agent.neverInventShipping ?? true,
+      catalogOnlyFacts: agent.catalogOnlyFacts ?? true,
       isActive: agent.isActive,
     });
   }
 
-  private estimateQuality(values: ReturnType<typeof this.form.getRawValue>): AgentQuality {
+  private estimateQuality(
+    values: ReturnType<typeof this.form.getRawValue>,
+  ): AgentQuality {
     const checks: Array<{ ok: boolean; points: number; hint: string }> = [
       {
         ok: values.name.trim().length >= 2,
@@ -264,15 +644,37 @@ export class SellerPage {
         points: 10,
         hint: 'Elige la longitud de respuesta',
       },
+      {
+        ok: this.publishedFaqCount() > 0,
+        points: 25,
+        hint: 'Publica al menos 1 FAQ aprobada para políticas reales',
+      },
+      {
+        ok: this.activeJourneyCount() > 0,
+        points: 15,
+        hint: 'Activa una plantilla de recorrido de venta',
+      },
     ];
 
     const completed = checks.filter((item) => item.ok);
+    const missing = checks
+      .filter((item) => !item.ok)
+      .map((item) => item.hint);
+    if (this.draftFaqCount() > 0) {
+      missing.unshift(
+        `Revisa ${this.draftFaqCount()} FAQ${this.draftFaqCount() === 1 ? '' : 's'} en borrador (import)`,
+      );
+    }
+
     return {
-      score: completed.reduce((sum, item) => sum + item.points, 0),
-      max: 200,
+      score: Math.min(
+        completed.reduce((sum, item) => sum + item.points, 0),
+        240,
+      ),
+      max: 240,
       completedFields: completed.length,
       totalFields: checks.length,
-      missingHints: checks.filter((item) => !item.ok).map((item) => item.hint).slice(0, 4),
+      missingHints: missing.slice(0, 4),
     };
   }
 }

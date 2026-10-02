@@ -1,34 +1,442 @@
-<section class="products">
-  <header class="products__header">
-    <div>
-      <h1>Productos</h1>
-      <p>Agrega, edita o importa tu catálogo.</p>
-    </div>
-    <ds-button variant="primary">Nuevo producto</ds-button>
-  </header>
+<section class="catalog" [class.catalog--editing]="editorOpen()">
+  @if (!editorOpen()) {
+    <header class="catalog__header">
+      <div>
+        <p class="catalog__eyebrow">Catálogo</p>
+        <h1>Productos</h1>
+        <p>
+          Publica lo que tu vendedor IA puede ofrecer por chat: claro, con precio
+          y listo para pedir.
+        </p>
+      </div>
+      <ds-button type="button" (click)="openCreate()">Publicar producto</ds-button>
+    </header>
 
-  @if (loading()) {
-    <div class="products__loading" aria-busy="true">Cargando catálogo…</div>
-  } @else if (errorMessage(); as error) {
-    <ds-empty-state title="No se pudo cargar" [body]="error">
-      <ds-button variant="secondary" (click)="load()">Reintentar</ds-button>
-    </ds-empty-state>
-  } @else if (products().length === 0) {
-    <ds-empty-state
-      title="Agrega tus productos"
-      body="Aquí verás todo el catálogo. Agrega el primero para que tu agente empiece a vender."
-    >
-      <ds-button variant="primary">Nuevo producto</ds-button>
-    </ds-empty-state>
+    @if (errorMessage() && !editorOpen()) {
+      <p class="catalog__banner catalog__banner--error" role="alert">
+        {{ errorMessage() }}
+      </p>
+    }
+    @if (successMessage()) {
+      <p class="catalog__banner catalog__banner--ok" role="status">
+        {{ successMessage() }}
+      </p>
+    }
+
+    @if (loading()) {
+      <p class="catalog__muted">Cargando catálogo…</p>
+    } @else if (products().length === 0) {
+      <ds-empty-state
+        title="Aún no hay productos"
+        body="Publica el primero: nombre corto, descripción para chat, precio y una foto."
+      >
+        <ds-button type="button" (click)="openCreate()">Publicar producto</ds-button>
+      </ds-empty-state>
+    } @else {
+      <ul class="product-grid">
+        @for (product of products(); track product.id) {
+          <li class="product-card">
+            <button type="button" class="product-card__hit" (click)="openEdit(product)">
+              <div class="product-card__media">
+                @if (thumb(product); as url) {
+                  <img [src]="url" [alt]="product.name" loading="lazy" />
+                } @else {
+                  <span class="product-card__placeholder" aria-hidden="true">
+                    <ds-icon name="image" />
+                  </span>
+                }
+                <span
+                  class="product-card__badge"
+                  [class.product-card__badge--off]="!product.isAvailable"
+                >
+                  {{ product.isAvailable ? 'Disponible' : 'No disponible' }}
+                </span>
+              </div>
+              <div class="product-card__body">
+                <h2>{{ product.name }}</h2>
+                <p>{{ formatPrice(product.basePriceCents, product.currency) }}</p>
+                <span>{{ stockLabel(product) }}</span>
+              </div>
+            </button>
+          </li>
+        }
+      </ul>
+    }
   } @else {
-    <ul class="products__list">
-      @for (product of products(); track product.id) {
-        <li>
-          <strong>{{ product.name }}</strong>
-          <span>{{ product.handle }}</span>
-          <span>{{ formatPrice(product.basePriceCents, product.currency) }}</span>
-        </li>
+    <form class="publish" [formGroup]="productForm" (ngSubmit)="saveProduct()">
+      <header class="publish__top">
+        <div>
+          <button type="button" class="publish__back" (click)="closeEditor()">
+            ← Volver al catálogo
+          </button>
+          <h1>{{ isEditing() ? 'Editar producto' : 'Publicación de producto' }}</h1>
+          <p>
+            Nombre y descripción con los que tu vendedor lo presentará en el chat.
+          </p>
+        </div>
+        <div class="publish__actions">
+          <ds-button type="button" variant="secondary" (click)="closeEditor()">
+            Cancelar
+          </ds-button>
+          <ds-button
+            type="submit"
+            [disabled]="saving() || !readinessReady()"
+          >
+            {{ saving() ? 'Guardando…' : isEditing() ? 'Guardar cambios' : 'Publicar' }}
+          </ds-button>
+        </div>
+      </header>
+
+      @if (errorMessage()) {
+        <p class="catalog__banner catalog__banner--error" role="alert">
+          {{ errorMessage() }}
+        </p>
       }
-    </ul>
+
+      <div class="publish__layout">
+        <div class="publish__main">
+          <section class="pub-card">
+            <header class="pub-card__head">
+              <h2>Información del producto</h2>
+              <p>Nombre y descripción con los que tu vendedor lo presentará.</p>
+            </header>
+
+            <label class="field">
+              <span>Nombre del producto <em>*</em></span>
+              <input
+                formControlName="name"
+                maxlength="250"
+                autocomplete="off"
+                placeholder="Ej. Botín Puro Cuero 1153"
+              />
+              <span class="field__meta">
+                <span class="field__hint">Claro y corto: así lo busca el comprador.</span>
+                <span class="field__count">{{ nameCount() }}/250</span>
+              </span>
+            </label>
+
+            <label class="field">
+              <span>Identificador (handle) <em>*</em></span>
+              <input
+                formControlName="handle"
+                autocomplete="off"
+                (input)="onHandleInput()"
+              />
+              <span class="field__hint">Se genera solo; edítalo si quieres una URL estable.</span>
+            </label>
+
+            <label class="field">
+              <span>Descripción del producto <em>*</em></span>
+              <textarea
+                formControlName="descriptionShort"
+                rows="4"
+                maxlength="1000"
+                placeholder="Qué es, para quién, materiales o beneficios. Ideal para WhatsApp."
+              ></textarea>
+              <span class="field__meta">
+                <span class="field__hint">Tu vendedor usará esta info para vender tu producto.</span>
+                <span class="field__count">{{ descriptionCount() }}/1000</span>
+              </span>
+            </label>
+          </section>
+
+          <section class="pub-card pub-card--row">
+            <div>
+              <h2>Ayuda a tu vendedor</h2>
+              <p>
+                Detalles extra (tallas, cuidados, FAQs) cuando te pregunten por este
+                producto.
+              </p>
+            </div>
+            <label class="switch">
+              <input
+                type="checkbox"
+                [checked]="sellerHelpEnabled()"
+                (change)="toggleSellerHelp($any($event.target).checked)"
+              />
+              <span class="switch__track" aria-hidden="true"></span>
+              <span class="visually-hidden">Activar ayuda al vendedor</span>
+            </label>
+          </section>
+
+          @if (sellerHelpEnabled()) {
+            <section class="pub-card">
+              <label class="field">
+                <span>Detalle para el vendedor</span>
+                <textarea
+                  formControlName="descriptionFull"
+                  rows="5"
+                  maxlength="2000"
+                  placeholder="Materiales, cuidados, tallaje, políticas de cambio…"
+                ></textarea>
+              </label>
+            </section>
+          }
+
+          <section class="pub-card pub-card--row">
+            <div>
+              <h2>¿Tu producto tiene variantes?</h2>
+              <p>
+                Colores, tallas, tamaños: cada variante con su propio precio y stock.
+              </p>
+            </div>
+            <label class="switch">
+              <input
+                type="checkbox"
+                [checked]="variantsEnabled()"
+                (change)="toggleVariants($any($event.target).checked)"
+              />
+              <span class="switch__track" aria-hidden="true"></span>
+              <span class="visually-hidden">Activar variantes</span>
+            </label>
+          </section>
+
+          @if (variantsEnabled()) {
+            <section class="pub-card">
+              <header class="pub-card__head pub-card__head--inline">
+                <div>
+                  <h2>Variantes</h2>
+                  <p>Define opciones que el comprador puede elegir en el chat.</p>
+                </div>
+                <ds-button type="button" variant="secondary" (click)="addVariant()">
+                  Añadir variante
+                </ds-button>
+              </header>
+
+              <ul class="variant-list">
+                @for (variant of variantDrafts(); track $index; let i = $index) {
+                  <li class="variant-row">
+                    <label class="field">
+                      <span>Opción 1</span>
+                      <input
+                        [value]="variant.option1Value"
+                        (input)="
+                          updateVariant(i, {
+                            option1Value: $any($event.target).value,
+                          })
+                        "
+                        placeholder="Negro"
+                      />
+                    </label>
+                    <label class="field">
+                      <span>Opción 2</span>
+                      <input
+                        [value]="variant.option2Value"
+                        (input)="
+                          updateVariant(i, {
+                            option2Value: $any($event.target).value,
+                          })
+                        "
+                        placeholder="M"
+                      />
+                    </label>
+                    <label class="field">
+                      <span>Precio</span>
+                      <input
+                        type="number"
+                        min="0"
+                        step="0.01"
+                        [value]="variant.price"
+                        (input)="onVariantPriceInput(i, $any($event.target).value)"
+                      />
+                    </label>
+                    <button
+                      type="button"
+                      class="icon-btn"
+                      (click)="removeVariant(i)"
+                      aria-label="Quitar variante"
+                    >
+                      <ds-icon name="x" />
+                    </button>
+                  </li>
+                }
+              </ul>
+            </section>
+          }
+
+          <section class="pub-card">
+            <header class="pub-card__head">
+              <h2>Imágenes y videos</h2>
+              <p>La primera imagen será la principal en el catálogo.</p>
+            </header>
+
+            <div class="media-drop">
+              <ds-icon name="upload" />
+              <p>
+                Subida a S3 llega pronto. Por ahora pega la URL pública del archivo.
+              </p>
+              <div class="media-drop__row">
+                <input
+                  type="url"
+                  [value]="mediaDraft()"
+                  (input)="onMediaDraftInput($any($event.target).value)"
+                  placeholder="https://…"
+                  (keydown.enter)="$event.preventDefault(); addMediaUrl()"
+                />
+                <ds-button type="button" variant="secondary" (click)="addMediaUrl()">
+                  Importar
+                </ds-button>
+              </div>
+            </div>
+
+            @if (mediaUrls().length) {
+              <ul class="media-grid">
+                @for (url of mediaUrls(); track url; let i = $index) {
+                  <li>
+                    <img [src]="url" alt="" loading="lazy" />
+                    @if (i === 0) {
+                      <span class="media-grid__main">Principal</span>
+                    }
+                    <button
+                      type="button"
+                      class="icon-btn media-grid__remove"
+                      (click)="removeMediaUrl(i)"
+                      aria-label="Quitar media"
+                    >
+                      <ds-icon name="x" />
+                    </button>
+                  </li>
+                }
+              </ul>
+            }
+
+            <p class="field__hint">
+              Máximo 8 archivos. Pesos objetivo: 5&nbsp;MB imgs / 16&nbsp;MB videos
+              (JPEG, PNG, MP4).
+            </p>
+          </section>
+        </div>
+
+        <aside class="publish__rail">
+          <section class="pub-card">
+            <h2>¿Listo para guardar?</h2>
+            <ul class="ready-list">
+              @for (item of readiness(); track item.id) {
+                <li [class.ready-list__item--done]="item.done">
+                  <span class="ready-list__dot" aria-hidden="true">
+                    @if (item.done) {
+                      <ds-icon name="check" />
+                    }
+                  </span>
+                  {{ item.label }}
+                </li>
+              }
+            </ul>
+          </section>
+
+          <section class="pub-card">
+            <header class="pub-card__head pub-card__head--inline">
+              <div>
+                <h2>Disponibilidad</h2>
+                <p>Tus clientes pueden ver y pedir este producto.</p>
+              </div>
+            </header>
+            <div class="avail-row">
+              <label class="switch">
+                <input type="checkbox" formControlName="isAvailable" />
+                <span class="switch__track" aria-hidden="true"></span>
+                <span class="visually-hidden">Producto disponible</span>
+              </label>
+              <span
+                class="pill"
+                [class.pill--ok]="productForm.controls.isAvailable.value"
+                [class.pill--off]="!productForm.controls.isAvailable.value"
+              >
+                {{
+                  productForm.controls.isAvailable.value
+                    ? 'Disponible'
+                    : 'No disponible'
+                }}
+              </span>
+            </div>
+          </section>
+
+          <section class="pub-card">
+            <h2>Precio y stock</h2>
+            <label class="field">
+              <span>Precio <em>*</em></span>
+              <div class="price-row">
+                <span class="price-row__currency">{{ productForm.controls.currency.value }}</span>
+                <input
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  formControlName="price"
+                  placeholder="0,00"
+                />
+              </div>
+            </label>
+
+            <label class="field">
+              <span class="field__label-row">
+                Stock
+                <span class="pill pill--soft">Opcional</span>
+              </span>
+              <div class="stock-row">
+                <input
+                  type="number"
+                  min="0"
+                  step="1"
+                  formControlName="stockQty"
+                  [placeholder]="
+                    productForm.controls.stockUnlimited.value
+                      ? 'uds. Ilimitado'
+                      : 'Cantidad'
+                  "
+                />
+                <label class="switch switch--compact">
+                  <input type="checkbox" formControlName="stockUnlimited" />
+                  <span class="switch__track" aria-hidden="true"></span>
+                  <span class="visually-hidden">Stock ilimitado</span>
+                </label>
+              </div>
+              <span class="field__hint">
+                Se descuenta con cada pedido. Si el pedido se cancela, las unidades
+                vuelven.
+              </span>
+            </label>
+
+            <input type="hidden" formControlName="currency" />
+          </section>
+
+          <section class="pub-card">
+            <h2>Categorías</h2>
+            <div class="chips">
+              @for (cat of categoryChips(); track cat) {
+                <button
+                  type="button"
+                  class="chip"
+                  (click)="removeCategory(cat)"
+                  [attr.aria-label]="'Quitar ' + cat"
+                >
+                  {{ cat }}
+                  <ds-icon name="x" />
+                </button>
+              }
+            </div>
+            <div class="media-drop__row">
+              <input
+                type="text"
+                [value]="categoryDraft()"
+                (input)="onCategoryDraftInput($any($event.target).value)"
+                placeholder="Selecciona o crea categorías"
+                (keydown.enter)="$event.preventDefault(); addCategoryFromDraft()"
+              />
+              <ds-button
+                type="button"
+                variant="secondary"
+                (click)="addCategoryFromDraft()"
+              >
+                Añadir
+              </ds-button>
+            </div>
+            <span class="field__hint">
+              Reutiliza tus categorías o crea nuevas al escribir.
+            </span>
+            <input type="hidden" formControlName="categoriesText" />
+          </section>
+        </aside>
+      </div>
+    </form>
   }
 </section>

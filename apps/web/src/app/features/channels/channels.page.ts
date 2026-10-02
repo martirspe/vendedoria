@@ -10,6 +10,7 @@ import { DsEmptyStateComponent } from '../../design-system/empty-state/ds-empty-
 import { DsIconComponent } from '../../design-system/icon/ds-icon.component';
 import {
   ChannelDto,
+  ChannelDiagnostics,
   MessagingApiService,
 } from '../../core/api/messaging-api.service';
 
@@ -39,6 +40,8 @@ export class ChannelsPage {
     callbackUrl: string;
     verifyTokenHint: string;
   } | null>(null);
+  readonly diagnostics = signal<ChannelDiagnostics | null>(null);
+  readonly diagnosticsLoading = signal(false);
 
   readonly connectForm = this.fb.nonNullable.group({
     phoneNumberId: ['', [Validators.required, Validators.minLength(3)]],
@@ -66,10 +69,33 @@ export class ChannelsPage {
     this.errorMessage.set(null);
     try {
       this.channels.set(await this.api.listChannels());
+      await this.loadDiagnostics();
     } catch {
       this.errorMessage.set('No pudimos cargar los canales.');
     } finally {
       this.loading.set(false);
+    }
+  }
+
+  async loadDiagnostics(): Promise<void> {
+    this.diagnosticsLoading.set(true);
+    try {
+      this.diagnostics.set(await this.api.getWhatsAppDiagnostics());
+    } catch {
+      this.diagnostics.set(null);
+    } finally {
+      this.diagnosticsLoading.set(false);
+    }
+  }
+
+  checkStatusLabel(status: 'ok' | 'warn' | 'error'): string {
+    switch (status) {
+      case 'ok':
+        return 'OK';
+      case 'warn':
+        return 'Revisar';
+      case 'error':
+        return 'Error';
     }
   }
 
@@ -89,6 +115,7 @@ export class ChannelsPage {
       });
       this.successMessage.set('WhatsApp conectado. Configura el webhook en Meta.');
       await this.load();
+      await this.loadDiagnostics();
     } catch {
       this.errorMessage.set(
         'No se pudo conectar WhatsApp. Revisa Phone Number ID y access token.',

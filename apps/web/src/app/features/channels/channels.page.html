@@ -26,6 +26,48 @@
   @if (loading()) {
     <div class="skeleton" aria-busy="true">Cargando canales…</div>
   } @else {
+    @if (diagnostics(); as diag) {
+      <article class="panel panel--diagnostics">
+        <div class="panel__head">
+          <div>
+            <h2>Diagnóstico del canal</h2>
+            <p>Qué falló y el siguiente paso accionable.</p>
+          </div>
+          <span
+            class="status"
+            [class.status--ok]="diag.healthStatus === 'CONNECTED'"
+            [class.status--warn]="diag.healthStatus !== 'CONNECTED'"
+          >
+            {{ statusLabel(diag.healthStatus) }}
+          </span>
+        </div>
+
+        @if (diagnosticsLoading()) {
+          <p class="skeleton">Revisando canal…</p>
+        } @else {
+          <ul class="diag-list">
+            @for (check of diag.checks; track check.id) {
+              <li [attr.data-status]="check.status">
+                <span class="diag-list__label">{{ check.label }}</span>
+                <span class="diag-list__badge">{{
+                  checkStatusLabel(check.status)
+                }}</span>
+                <p>{{ check.detail }}</p>
+              </li>
+            }
+          </ul>
+          <div class="diag-next">
+            <strong>Siguiente paso</strong>
+            <ul>
+              @for (step of diag.nextSteps; track step) {
+                <li>{{ step }}</li>
+              }
+            </ul>
+          </div>
+        }
+      </article>
+    }
+
     <div class="channels__grid">
       <article class="panel">
         <div class="panel__head">

@@ -1,0 +1,64 @@
+<section class="started">
+  <header class="started__header">
+    <div>
+      <p class="started__eyebrow">Onboarding</p>
+      <h1>Empezar a vender</h1>
+      <p>
+        Checklist de capacidad de venta — no solo campos llenados. Completa
+        estos pasos para tu primer cobro de prueba.
+      </p>
+    </div>
+    <div class="started__progress" role="img" [attr.aria-label]="'Progreso ' + progressPercent() + ' por ciento'">
+      <strong>{{ progressPercent() }}%</strong>
+      <span>{{ completedCount() }} de {{ items().length }} listos</span>
+    </div>
+  </header>
+
+  @if (errorMessage(); as error) {
+    <div class="banner banner--danger" role="alert">
+      <ds-icon name="alert" />
+      <span>{{ error }}</span>
+      <ds-button type="button" variant="secondary" (click)="load()">Reintentar</ds-button>
+    </div>
+  }
+
+  @if (loading()) {
+    <div class="skeleton" aria-busy="true">Midiendo tu readiness…</div>
+  } @else {
+    @if (readyToSell()) {
+      <div class="banner banner--success" role="status">
+        <ds-icon name="check" />
+        <span>Listo para el smoke: canal, catálogo, agente y cobro de prueba.</span>
+      </div>
+    }
+
+    <ol class="checklist">
+      @for (item of items(); track item.id) {
+        <li [class.is-done]="item.done">
+          <div class="checklist__mark" aria-hidden="true">
+            @if (item.done) {
+              <ds-icon name="check" />
+            } @else {
+              <span></span>
+            }
+          </div>
+          <div class="checklist__body">
+            <h2>{{ item.title }}</h2>
+            <p>{{ item.body }}</p>
+          </div>
+          <a [routerLink]="item.link">
+            <ds-button type="button" [variant]="item.done ? 'ghost' : 'primary'">
+              {{ item.done ? 'Revisar' : item.cta }}
+            </ds-button>
+          </a>
+        </li>
+      }
+    </ol>
+
+    <p class="started__hint">
+      Score del vendedor ahora: {{ agentScore() }}/200. Usa
+      <a routerLink="/app/seller">Probar vendedor</a>
+      sin contaminar producción.
+    </p>
+  }
+</section>

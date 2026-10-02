@@ -1,6 +1,6 @@
 import type { SalesAgent } from '@prisma/client';
 
-export const AGENT_QUALITY_MAX = 200;
+export const AGENT_QUALITY_MAX = 240;
 
 type QualityKey =
   | 'name'
@@ -81,6 +81,12 @@ const QUALITY_FIELDS: QualityField[] = [
   },
 ];
 
+export type AgentQualityExtras = {
+  publishedFaqs?: number;
+  activeJourneys?: number;
+  draftFaqs?: number;
+};
+
 export type AgentQuality = {
   score: number;
   max: number;
@@ -91,6 +97,7 @@ export type AgentQuality = {
 
 export function computeAgentQuality(
   agent: Pick<SalesAgent, QualityKey>,
+  extras: AgentQualityExtras = {},
 ): AgentQuality {
   let score = 0;
   let completedFields = 0;
@@ -108,11 +115,36 @@ export function computeAgentQuality(
     }
   }
 
+  const publishedFaqs = extras.publishedFaqs ?? 0;
+  const activeJourneys = extras.activeJourneys ?? 0;
+  const draftFaqs = extras.draftFaqs ?? 0;
+  const totalFields = QUALITY_FIELDS.length + 2;
+
+  if (publishedFaqs > 0) {
+    score += 25;
+    completedFields += 1;
+  } else {
+    missingHints.push('Publica al menos 1 FAQ aprobada para políticas reales');
+  }
+
+  if (activeJourneys > 0) {
+    score += 15;
+    completedFields += 1;
+  } else {
+    missingHints.push('Activa una plantilla de recorrido de venta');
+  }
+
+  if (draftFaqs > 0) {
+    missingHints.unshift(
+      `Revisa ${draftFaqs} FAQ${draftFaqs === 1 ? '' : 's'} en borrador (import)`,
+    );
+  }
+
   return {
-    score,
+    score: Math.min(score, AGENT_QUALITY_MAX),
     max: AGENT_QUALITY_MAX,
     completedFields,
-    totalFields: QUALITY_FIELDS.length,
+    totalFields,
     missingHints: missingHints.slice(0, 4),
   };
 }

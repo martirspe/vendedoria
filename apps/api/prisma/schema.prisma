@@ -80,6 +80,23 @@ enum PaymentStatus {
   CANCELLED
 }
 
+enum KnowledgeReviewStatus {
+  DRAFT
+  APPROVED
+}
+
+enum KnowledgeSource {
+  MANUAL
+  PASTE_IMPORT
+}
+
+enum JourneyStage {
+  DISCOVER
+  RECOMMEND
+  CLOSE
+  SUPPORT
+}
+
 model User {
   id           String       @id @default(cuid())
   email        String       @unique
@@ -101,13 +118,16 @@ model Tenant {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  memberships   Membership[]
-  salesAgents   SalesAgent[]
-  channels      Channel[]
-  products      Product[]
-  conversations Conversation[]
-  orders        Order[]
-  payments      Payment[]
+  memberships         Membership[]
+  salesAgents         SalesAgent[]
+  channels            Channel[]
+  products            Product[]
+  conversations       Conversation[]
+  orders              Order[]
+  payments            Payment[]
+  playgroundSessions  PlaygroundSession[]
+  knowledgeFaqs       KnowledgeFaq[]
+  journeyTemplates    JourneyTemplate[]
 }
 
 model Membership {
@@ -156,6 +176,9 @@ model SalesAgent {
   purchaseConfirmMessage String?
   handoffMessage        String?
   pauseOnHandoff        Boolean  @default(true)
+  neverOfferDiscount    Boolean  @default(true)
+  neverInventShipping   Boolean  @default(true)
+  catalogOnlyFacts      Boolean  @default(true)
   isActive              Boolean  @default(true)
   createdAt             DateTime @default(now())
   updatedAt             DateTime @updatedAt
@@ -163,6 +186,40 @@ model SalesAgent {
   tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
 
   @@index([tenantId])
+}
+
+model KnowledgeFaq {
+  id           String                @id @default(cuid())
+  tenantId     String
+  question     String
+  answer       String
+  tags         String[]              @default([])
+  source       KnowledgeSource       @default(MANUAL)
+  reviewStatus KnowledgeReviewStatus @default(APPROVED)
+  isPublished  Boolean               @default(true)
+  sortOrder    Int                   @default(0)
+  createdAt    DateTime              @default(now())
+  updatedAt    DateTime              @updatedAt
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId, isPublished, reviewStatus])
+}
+
+model JourneyTemplate {
+  id         String       @id @default(cuid())
+  tenantId   String
+  title      String
+  stage      JourneyStage @default(DISCOVER)
+  scriptText String
+  isActive   Boolean      @default(true)
+  sortOrder  Int          @default(0)
+  createdAt  DateTime     @default(now())
+  updatedAt  DateTime     @updatedAt
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId, isActive])
 }
 
 model Channel {
@@ -278,11 +335,41 @@ model Message {
   authorType     MessageAuthorType
   body           String
   externalId     String?
+  metadata       Json?
   createdAt      DateTime          @default(now())
 
   conversation Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
 
   @@index([conversationId, createdAt])
+}
+
+/// Isolated agent test thread — never appears in production inbox/metrics.
+model PlaygroundSession {
+  id        String   @id @default(cuid())
+  tenantId  String
+  title     String   @default("Prueba del vendedor")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  tenant   Tenant              @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  messages PlaygroundMessage[]
+
+  @@index([tenantId, updatedAt])
+}
+
+model PlaygroundMessage {
+  id        String            @id @default(cuid())
+  sessionId String
+  direction MessageDirection
+  authorType MessageAuthorType
+  body      String
+  /// Tool traces for operator trust (why the agent replied).
+  toolTraces Json?
+  createdAt DateTime          @default(now())
+
+  session PlaygroundSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+
+  @@index([sessionId, createdAt])
 }
 
 model Order {

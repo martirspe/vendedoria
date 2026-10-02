@@ -1,0 +1,86 @@
+<section class="plans">
+  <header class="plans__header">
+    <div>
+      <p class="plans__eyebrow">Flujo A · Suscripción SaaS</p>
+      <h1>Planes y cuotas</h1>
+      <p>
+        Esto es lo que paga el merchant por usar VendedorIA. No confundir con el
+        cobro al comprador (flujo B) en Pedidos.
+      </p>
+    </div>
+  </header>
+
+  @if (errorMessage(); as error) {
+    <div class="banner banner--danger" role="alert">
+      <ds-icon name="alert" />
+      <span>{{ error }}</span>
+    </div>
+  }
+  @if (successMessage(); as success) {
+    <div class="banner banner--success" role="status">
+      <ds-icon name="check" />
+      <span>{{ success }}</span>
+    </div>
+  }
+
+  @if (loading()) {
+    <div class="skeleton" aria-busy="true">Cargando planes…</div>
+  } @else if (overview(); as data) {
+    <div class="usage">
+      <div>
+        <span>Plan actual</span>
+        <strong>{{ data.currentPlan.name }}</strong>
+      </div>
+      <div>
+        <span>Conversaciones del mes</span>
+        <strong>
+          {{
+            quotaLabel(
+              data.usage.conversationsUsed,
+              data.usage.conversationQuota
+            )
+          }}
+        </strong>
+      </div>
+      <div>
+        <span>Productos en catálogo</span>
+        <strong>
+          {{ quotaLabel(data.usage.productsUsed, data.usage.productQuota) }}
+        </strong>
+      </div>
+    </div>
+
+    <p class="plans__notice">{{ data.notice }}</p>
+    <p class="plans__hint">{{ data.checkoutHint }}</p>
+
+    <ul class="plan-grid">
+      @for (plan of data.plans; track plan.id) {
+        <li [class.is-current]="plan.id === data.currentPlan.id">
+          <header>
+            <h2>{{ plan.name }}</h2>
+            <strong>{{ plan.priceLabel }}</strong>
+          </header>
+          <ul>
+            @for (item of plan.highlights; track item) {
+              <li>{{ item }}</li>
+            }
+          </ul>
+          <ds-button
+            type="button"
+            [variant]="plan.id === data.currentPlan.id ? 'ghost' : 'primary'"
+            [disabled]="saving() || plan.id === data.currentPlan.id"
+            (click)="selectPlan(plan)"
+          >
+            {{
+              plan.id === data.currentPlan.id
+                ? 'Plan actual'
+                : saving()
+                  ? 'Cambiando…'
+                  : 'Elegir plan'
+            }}
+          </ds-button>
+        </li>
+      }
+    </ul>
+  }
+</section>

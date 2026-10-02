@@ -1,0 +1,56 @@
+<section class="integrations">
+  <header class="integrations__header">
+    <div>
+      <p class="integrations__eyebrow">Conectores</p>
+      <h1>Integraciones</h1>
+      <p>
+        Catálogo honesto: qué está vivo, qué está listo y qué está en waitlist.
+        Nunca prometemos un canal o sync que aún no existe.
+      </p>
+    </div>
+  </header>
+
+  @if (errorMessage(); as error) {
+    <div class="banner banner--danger" role="alert">
+      <ds-icon name="alert" />
+      <span>{{ error }}</span>
+      <ds-button type="button" variant="secondary" (click)="load()">Reintentar</ds-button>
+    </div>
+  }
+
+  <div class="filters" role="tablist" aria-label="Categoría">
+    @for (category of categories; track category) {
+      <button
+        type="button"
+        role="tab"
+        [attr.aria-selected]="filter() === category"
+        [class.is-active]="filter() === category"
+        (click)="setFilter(category)"
+      >
+        {{ category === 'ALL' ? 'Todas' : category }}
+      </button>
+    }
+  </div>
+
+  @if (loading()) {
+    <div class="skeleton" aria-busy="true">Cargando conectores…</div>
+  } @else {
+    <ul class="grid">
+      @for (card of cards(); track card.id) {
+        <li [attr.data-status]="card.status">
+          <div class="grid__top">
+            <h2>{{ card.name }}</h2>
+            <span class="status">{{ statusLabel(card.status) }}</span>
+          </div>
+          <p>{{ card.summary }}</p>
+          <p class="next">{{ card.nextStep }}</p>
+          @if (card.link) {
+            <a [routerLink]="card.link">
+              <ds-button type="button" variant="secondary">Abrir</ds-button>
+            </a>
+          }
+        </li>
+      }
+    </ul>
+  }
+</section>

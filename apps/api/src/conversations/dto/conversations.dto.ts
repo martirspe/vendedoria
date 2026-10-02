@@ -36,3 +36,18 @@ export class SendMessageDto {
   @MinLength(1)
   text!: string;
 }
+
+export class SendTemplateDto {
+  @ApiProperty({ example: 'hello_reengagement' })
+  @IsString()
+  @MinLength(2)
+  templateId!: string;
+
+  @ApiPropertyOptional({
+    type: [String],
+    description: 'Variables {{1}}, {{2}}…',
+  })
+  @IsOptional()
+  @IsString({ each: true })
+  variables?: string[];
+}

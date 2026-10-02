@@ -1,4 +1,5 @@
 import {
+  BadRequestException,
   ForbiddenException,
   Injectable,
   Logger,
@@ -7,8 +8,14 @@ import {
 import { ChannelType, Prisma } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { SalesAgentRuntimeService } from '../agent-runtime/sales-agent-runtime.service';
+import { PlanLimitsService } from '../billing/plan-limits.service';
 import { MetaWhatsAppClient } from '../channels/meta-whatsapp.client';
 import { asWhatsAppMetadata } from '../channels/whatsapp-metadata';
+import {
+  findMessageTemplate,
+  MESSAGE_TEMPLATES,
+  renderTemplateBody,
+} from './message-templates';
 
 const WINDOW_MS = 24 * 60 * 60 * 1000;
 
@@ -20,6 +27,7 @@ export class ConversationsService {
     private readonly prisma: PrismaService,
     private readonly agentRuntime: SalesAgentRuntimeService,
     private readonly metaWhatsApp: MetaWhatsAppClient,
+    private readonly planLimits: PlanLimitsService,
   ) {}
 
   list(
@@ -81,9 +89,30 @@ export class ConversationsService {
       throw new NotFoundException('Conversation not found');
     }
 
+    const linkedOrder = await this.prisma.order.findFirst({
+      where: { tenantId, conversationId: conversation.id },
+      orderBy: { createdAt: 'desc' },
+      include: {
+        items: { take: 3 },
+        payments: { orderBy: { createdAt: 'desc' }, take: 1 },
+      },
+    });
+
     return {
       ...conversation,
       messagingWindow: this.getMessagingWindow(conversation.lastInboundAt),
+      linkedOrder: linkedOrder
+        ? {
+            id: linkedOrder.id,
+            status: linkedOrder.status,
+            totalCents: linkedOrder.totalCents,
+            currency: linkedOrder.currency,
+            itemCount: linkedOrder.items.length,
+            paymentStatus: linkedOrder.payments[0]?.status ?? null,
+            checkoutUrl: linkedOrder.payments[0]?.checkoutUrl ?? null,
+            updatedAt: linkedOrder.updatedAt,
+          }
+        : null,
     };
   }
 
@@ -171,6 +200,93 @@ export class ConversationsService {
     };
   }
 
+  listTemplates() {
+    return MESSAGE_TEMPLATES;
+  }
+
+  async sendOperatorTemplate(
+    tenantId: string,
+    conversationId: string,
+    templateId: string,
+    variables: string[] = [],
+  ) {
+    const conversation = await this.getById(tenantId, conversationId);
+    const template = findMessageTemplate(templateId);
+    if (!template) {
+      throw new BadRequestException('Unknown message template');
+    }
+
+    const rendered = renderTemplateBody(
+      template,
+      variables.length
+        ? variables
+        : [conversation.contactName || 'cliente'],
+    );
+
+    const metadata = asWhatsAppMetadata(conversation.channel.metadata);
+    let externalId: string | undefined;
+    let dryRun = false;
+
+    if (
+      conversation.channel.type === 'WHATSAPP' &&
+      metadata &&
+      conversation.contactPhone
+    ) {
+      const send = await this.metaWhatsApp.sendTemplateMessage({
+        phoneNumberId: metadata.phoneNumberId,
+        accessToken: metadata.accessToken,
+        toPhone: conversation.contactPhone,
+        templateName: template.name,
+        languageCode: template.language,
+        bodyParameters: variables.length
+          ? variables
+          : [conversation.contactName || 'cliente'],
+      });
+      if (!send.ok) {
+        this.logger.warn(`Template outbound failed: ${send.error}`);
+        throw new BadRequestException(
+          send.error || 'No se pudo enviar la plantilla por Meta',
+        );
+      }
+      externalId = send.messageId;
+      dryRun = Boolean(send.dryRun);
+    }
+
+    const [message] = await this.prisma.$transaction([
+      this.prisma.message.create({
+        data: {
+          conversationId,
+          direction: 'OUTBOUND',
+          authorType: 'HUMAN_OPERATOR',
+          body: rendered,
+          externalId,
+          metadata: {
+            templateId: template.id,
+            templateName: template.name,
+            dryRun,
+          } as Prisma.InputJsonValue,
+        },
+      }),
+      this.prisma.conversation.update({
+        where: { id: conversationId },
+        data: {
+          agentEnabled: false,
+          status: 'PAUSED',
+          markedUnattended: false,
+        },
+      }),
+    ]);
+
+    return {
+      message,
+      agentEnabled: false,
+      dryRun,
+      notice: dryRun
+        ? 'Plantilla registrada en local (token placeholder · sin Graph API). El agente quedó pausado.'
+        : 'Plantilla enviada. El vendedor IA se pausó en esta conversación.',
+    };
+  }
+
   async ingestInboundWhatsApp(params: {
     phoneNumberId: string;
     fromPhone: string;
@@ -202,6 +318,19 @@ export class ConversationsService {
     }
 
     const now = new Date();
+    const existingConversation = await this.prisma.conversation.findUnique({
+      where: {
+        channelId_externalThreadId: {
+          channelId: channel.id,
+          externalThreadId: params.fromPhone,
+        },
+      },
+    });
+
+    if (!existingConversation) {
+      await this.planLimits.assertCanStartConversation(channel.tenantId);
+    }
+
     const conversation = await this.prisma.conversation.upsert({
       where: {
         channelId_externalThreadId: {
@@ -254,6 +383,9 @@ export class ConversationsService {
       tenantId: channel.tenantId,
       conversationId: conversation.id,
       inboundText: params.text,
+      mode: 'production',
+      customerName: conversation.contactName,
+      customerPhone: conversation.contactPhone ?? params.fromPhone,
     });
 
     const metadata = asWhatsAppMetadata(channel.metadata);
@@ -279,6 +411,13 @@ export class ConversationsService {
         authorType: 'SALES_AGENT',
         body: agentResult.replyText,
         externalId: outboundExternalId,
+        metadata: {
+          tools: agentResult.tools,
+          usedCatalog: agentResult.usedCatalog,
+          escalate: agentResult.escalate,
+          orderId: agentResult.orderId ?? null,
+          checkoutUrl: agentResult.checkoutUrl ?? null,
+        } as Prisma.InputJsonValue,
       },
     });
 

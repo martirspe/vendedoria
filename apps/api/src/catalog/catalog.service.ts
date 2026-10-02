@@ -1,10 +1,23 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import {
+  ConflictException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
+import { Prisma } from '@prisma/client';
+import { PlanLimitsService } from '../billing/plan-limits.service';
 import { PrismaService } from '../prisma/prisma.service';
-import { CreateProductDto } from './dto/create-product.dto';
+import {
+  CreateProductDto,
+  ProductVariantInputDto,
+} from './dto/create-product.dto';
+import { UpdateProductDto } from './dto/update-product.dto';
 
 @Injectable()
 export class CatalogService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly planLimits: PlanLimitsService,
+  ) {}
 
   list(tenantId: string) {
     return this.prisma.product.findMany({
@@ -14,22 +27,116 @@ export class CatalogService {
     });
   }
 
-  create(tenantId: string, dto: CreateProductDto) {
-    return this.prisma.product.create({
-      data: {
-        tenantId,
-        handle: dto.handle,
-        name: dto.name,
-        descriptionShort: dto.descriptionShort,
-        descriptionFull: dto.descriptionFull,
-        categories: dto.categories ?? [],
-        basePriceCents: dto.basePriceCents,
-        currency: dto.currency ?? 'PEN',
-        isAvailable: dto.isAvailable ?? true,
-        stockUnlimited: dto.stockUnlimited ?? true,
-        stockQty: dto.stockQty,
-      },
-    });
+  async create(tenantId: string, dto: CreateProductDto) {
+    await this.planLimits.assertCanCreateProduct(tenantId);
+    try {
+      return await this.prisma.product.create({
+        data: {
+          tenantId,
+          handle: dto.handle,
+          name: dto.name,
+          descriptionShort: dto.descriptionShort,
+          descriptionFull: dto.descriptionFull,
+          categories: dto.categories ?? [],
+          basePriceCents: dto.basePriceCents,
+          currency: dto.currency ?? 'PEN',
+          isAvailable: dto.isAvailable ?? true,
+          stockUnlimited: dto.stockUnlimited ?? true,
+          stockQty: dto.stockQty,
+          variants: dto.variants?.length
+            ? {
+                create: dto.variants.map((variant) =>
+                  this.toVariantData(variant),
+                ),
+              }
+            : undefined,
+          media: dto.mediaUrls?.length
+            ? {
+                create: dto.mediaUrls
+                  .map((url) => url.trim())
+                  .filter(Boolean)
+                  .slice(0, 8)
+                  .map((url, index) => ({
+                    url,
+                    kind: 'image',
+                    sortOrder: index,
+                  })),
+              }
+            : undefined,
+        },
+        include: { variants: true, media: true },
+      });
+    } catch (error) {
+      if (
+        error instanceof Prisma.PrismaClientKnownRequestError &&
+        error.code === 'P2002'
+      ) {
+        throw new ConflictException('Product handle already exists');
+      }
+      throw error;
+    }
+  }
+
+  async update(tenantId: string, productId: string, dto: UpdateProductDto) {
+    await this.getById(tenantId, productId);
+    try {
+      return await this.prisma.$transaction(async (tx) => {
+        if (dto.variants) {
+          await tx.productVariant.deleteMany({ where: { productId } });
+          if (dto.variants.length) {
+            await tx.productVariant.createMany({
+              data: dto.variants.map((variant) => ({
+                productId,
+                ...this.toVariantData(variant),
+              })),
+            });
+          }
+        }
+
+        if (dto.mediaUrls) {
+          await tx.productMedia.deleteMany({ where: { productId } });
+          const urls = dto.mediaUrls
+            .map((url) => url.trim())
+            .filter(Boolean)
+            .slice(0, 8);
+          if (urls.length) {
+            await tx.productMedia.createMany({
+              data: urls.map((url, index) => ({
+                productId,
+                url,
+                kind: 'image',
+                sortOrder: index,
+              })),
+            });
+          }
+        }
+
+        return tx.product.update({
+          where: { id: productId },
+          data: {
+            handle: dto.handle,
+            name: dto.name,
+            descriptionShort: dto.descriptionShort,
+            descriptionFull: dto.descriptionFull,
+            categories: dto.categories,
+            basePriceCents: dto.basePriceCents,
+            currency: dto.currency,
+            isAvailable: dto.isAvailable,
+            stockUnlimited: dto.stockUnlimited,
+            stockQty: dto.stockQty === null ? null : dto.stockQty,
+          },
+          include: { variants: true, media: true },
+        });
+      });
+    } catch (error) {
+      if (
+        error instanceof Prisma.PrismaClientKnownRequestError &&
+        error.code === 'P2002'
+      ) {
+        throw new ConflictException('Product handle already exists');
+      }
+      throw error;
+    }
   }
 
   async getById(tenantId: string, productId: string) {
@@ -41,5 +148,18 @@ export class CatalogService {
       throw new NotFoundException('Product not found');
     }
     return product;
+  }
+
+  private toVariantData(variant: ProductVariantInputDto) {
+    return {
+      sku: variant.sku,
+      option1Name: variant.option1Name,
+      option1Value: variant.option1Value,
+      option2Name: variant.option2Name,
+      option2Value: variant.option2Value,
+      priceCents: variant.priceCents,
+      isAvailable: variant.isAvailable ?? true,
+      stockQty: variant.stockQty ?? null,
+    };
   }
 }

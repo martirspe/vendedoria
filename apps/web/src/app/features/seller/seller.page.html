@@ -8,9 +8,14 @@
         cambios aplican en el próximo hilo, sin contaminar historial pasado.
       </p>
     </div>
-    <div class="seller__status" [class.seller__status--on]="form.controls.isActive.value">
-      <span class="seller__status-dot" aria-hidden="true"></span>
-      {{ form.controls.isActive.value ? 'Activo' : 'Pausado' }}
+    <div class="seller__header-actions">
+      <ds-button type="button" variant="secondary" (click)="openPlayground()">
+        Probar vendedor
+      </ds-button>
+      <div class="seller__status" [class.seller__status--on]="form.controls.isActive.value">
+        <span class="seller__status-dot" aria-hidden="true"></span>
+        {{ form.controls.isActive.value ? 'Activo' : 'Pausado' }}
+      </div>
     </div>
   </header>
 
@@ -272,6 +277,251 @@
           </div>
         </section>
 
+        <section class="block" id="seller-limits">
+          <header class="block__head">
+            <h2>Límites duros</h2>
+            <p>
+              Guardrails que el runtime aplica siempre — aunque el LLM se equivoque.
+            </p>
+          </header>
+          <div class="fields">
+            <label class="toggle fields__full">
+              <input type="checkbox" formControlName="catalogOnlyFacts" />
+              <span>
+                <strong>Solo hechos de catálogo</strong>
+                <small>No inventa productos, precios ni stock.</small>
+              </span>
+            </label>
+            <label class="toggle fields__full">
+              <input type="checkbox" formControlName="neverOfferDiscount" />
+              <span>
+                <strong>Sin descuentos inventados</strong>
+                <small>No ofrece promociones que no configuraste.</small>
+              </span>
+            </label>
+            <label class="toggle fields__full">
+              <input type="checkbox" formControlName="neverInventShipping" />
+              <span>
+                <strong>Sin envíos inventados</strong>
+                <small>Plazos y costos solo desde FAQs o handoff.</small>
+              </span>
+            </label>
+          </div>
+        </section>
+
+        <section class="block" id="seller-knowledge">
+          <header class="block__head">
+            <h2>Base de conocimiento</h2>
+            <p>
+              FAQs publicadas alimentan al vendedor (sin RAG). El import queda en
+              borrador hasta que lo apruebes.
+            </p>
+          </header>
+
+          <div class="knowledge-stats" aria-live="polite">
+            <span>{{ publishedFaqCount() }} publicadas</span>
+            <span>{{ draftFaqCount() }} en revisión</span>
+          </div>
+
+          <div class="fields">
+            <label class="fields__full">
+              Pregunta
+              <input
+                [value]="faqQuestion()"
+                (input)="onFaqQuestion($any($event.target).value)"
+                maxlength="300"
+                placeholder="¿Hacen envíos a provincia?"
+              />
+            </label>
+            <label class="fields__full">
+              Respuesta
+              <textarea
+                rows="3"
+                maxlength="2000"
+                [value]="faqAnswer()"
+                (input)="onFaqAnswer($any($event.target).value)"
+                placeholder="Sí, enviamos a todo el Perú en 2–5 días hábiles."
+              ></textarea>
+            </label>
+            <div class="inline-actions">
+              <ds-button
+                type="button"
+                [disabled]="knowledgeBusy()"
+                (click)="addFaq()"
+              >
+                Publicar FAQ
+              </ds-button>
+            </div>
+          </div>
+
+          <div class="import-box">
+            <h3>Importar con revisión</h3>
+            <p>
+              Pega texto en bloques (pregunta + respuesta) o líneas
+              <code>Q:</code> / <code>A:</code>. Se crean borradores — tú apruebas.
+            </p>
+            <textarea
+              rows="5"
+              [value]="importDraft()"
+              (input)="onImportDraft($any($event.target).value)"
+              placeholder="Q: ¿Cuál es el horario de atención?&#10;A: De lunes a sábado de 9 a 18.&#10;&#10;Q: ¿Puedo cambiar una talla?&#10;A: Sí, dentro de 7 días con etiqueta."
+            ></textarea>
+            <ds-button
+              type="button"
+              variant="secondary"
+              [disabled]="knowledgeBusy()"
+              (click)="importFaqs()"
+            >
+              Crear borradores
+            </ds-button>
+          </div>
+
+          @if (faqs().length === 0) {
+            <p class="empty-note">
+              Aún no hay FAQs. Sin ellas el agente no puede afirmar políticas.
+            </p>
+          } @else {
+            <ul class="faq-list">
+              @for (faq of faqs(); track faq.id) {
+                <li>
+                  <div>
+                    <div class="faq-list__meta">
+                      @if (faq.reviewStatus === 'DRAFT') {
+                        <span class="pill pill--warn">Borrador</span>
+                      } @else if (faq.isPublished) {
+                        <span class="pill pill--ok">Publicada</span>
+                      }
+                      @if (faq.source === 'PASTE_IMPORT') {
+                        <span class="pill">Import</span>
+                      }
+                    </div>
+                    <strong>{{ faq.question }}</strong>
+                    <p>{{ faq.answer }}</p>
+                  </div>
+                  <div class="faq-list__actions">
+                    @if (faq.reviewStatus === 'DRAFT') {
+                      <ds-button
+                        type="button"
+                        [disabled]="knowledgeBusy()"
+                        (click)="approveFaq(faq)"
+                      >
+                        Aprobar
+                      </ds-button>
+                    }
+                    <ds-button
+                      type="button"
+                      variant="ghost"
+                      [disabled]="knowledgeBusy()"
+                      (click)="deleteFaq(faq)"
+                    >
+                      Eliminar
+                    </ds-button>
+                  </div>
+                </li>
+              }
+            </ul>
+          }
+        </section>
+
+        <section class="block" id="seller-journeys">
+          <header class="block__head">
+            <h2>Plantillas de recorrido</h2>
+            <p>
+              Guiones cortos por etapa (descubrir → recomendar → cerrar) que el
+              agente usa como guía, no como copy rígido.
+            </p>
+          </header>
+
+          <div class="fields">
+            <label>
+              Título
+              <input
+                [value]="journeyTitle()"
+                (input)="onJourneyTitle($any($event.target).value)"
+                maxlength="120"
+                placeholder="Cierre con link de pago"
+              />
+            </label>
+            <label>
+              Etapa
+              <select
+                [value]="journeyStage()"
+                (change)="onJourneyStage($any($event.target).value)"
+              >
+                <option value="DISCOVER">Descubrir</option>
+                <option value="RECOMMEND">Recomendar</option>
+                <option value="CLOSE">Cerrar</option>
+                <option value="SUPPORT">Soporte</option>
+              </select>
+            </label>
+            <label class="fields__full">
+              Guion
+              <textarea
+                rows="3"
+                maxlength="2000"
+                [value]="journeyScript()"
+                (input)="onJourneyScript($any($event.target).value)"
+                placeholder="Confirma el producto, resume precio y ofrece el link de pago."
+              ></textarea>
+            </label>
+            <div class="inline-actions">
+              <ds-button
+                type="button"
+                [disabled]="knowledgeBusy()"
+                (click)="addJourney()"
+              >
+                Guardar plantilla
+              </ds-button>
+            </div>
+          </div>
+
+          @if (journeys().length === 0) {
+            <p class="empty-note">
+              Sin plantillas, el agente improvisa el cierre. Añade al menos una de
+              cierre.
+            </p>
+          } @else {
+            <ul class="faq-list">
+              @for (journey of journeys(); track journey.id) {
+                <li>
+                  <div>
+                    <div class="faq-list__meta">
+                      <span class="pill">{{ stageLabel(journey.stage) }}</span>
+                      <span
+                        class="pill"
+                        [class.pill--ok]="journey.isActive"
+                        [class.pill--warn]="!journey.isActive"
+                      >
+                        {{ journey.isActive ? 'Activa' : 'Pausada' }}
+                      </span>
+                    </div>
+                    <strong>{{ journey.title }}</strong>
+                    <p>{{ journey.scriptText }}</p>
+                  </div>
+                  <div class="faq-list__actions">
+                    <ds-button
+                      type="button"
+                      variant="secondary"
+                      [disabled]="knowledgeBusy()"
+                      (click)="toggleJourney(journey)"
+                    >
+                      {{ journey.isActive ? 'Pausar' : 'Activar' }}
+                    </ds-button>
+                    <ds-button
+                      type="button"
+                      variant="ghost"
+                      [disabled]="knowledgeBusy()"
+                      (click)="deleteJourney(journey)"
+                    >
+                      Eliminar
+                    </ds-button>
+                  </div>
+                </li>
+              }
+            </ul>
+          }
+        </section>
+
         <div class="seller__actions" [class.is-dirty]="dirty()">
           <p>
             @if (dirty()) {
@@ -285,6 +535,148 @@
           </ds-button>
         </div>
       </form>
+    </div>
+  }
+
+  @if (playgroundOpen()) {
+    <div
+      class="playground"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="playground-title"
+    >
+      <div class="playground__panel">
+        <header class="playground__head">
+          <div>
+            <p class="seller__eyebrow">Sin métricas de producción</p>
+            <h2 id="playground-title">Probar vendedor</h2>
+            <p>
+              Chatea como comprador. Ves qué tools usó (catálogo, stock, pedido,
+              link). No contamina Mensajes ni Pedidos.
+            </p>
+          </div>
+          <div class="playground__head-actions">
+            <ds-button
+              type="button"
+              variant="ghost"
+              [disabled]="playgroundSending() || !playgroundSession()"
+              (click)="resetPlayground()"
+            >
+              Reiniciar
+            </ds-button>
+            <button type="button" class="icon-btn" (click)="closePlayground()">
+              Cerrar
+            </button>
+          </div>
+        </header>
+
+        @if (playgroundError(); as error) {
+          <div class="banner banner--danger" role="alert">
+            <ds-icon name="alert" />
+            <span>{{ error }}</span>
+          </div>
+        }
+
+        <div class="playground__body">
+          <div class="playground__thread" aria-live="polite">
+            @if (playgroundLoading()) {
+              <div class="skeleton">Abriendo prueba…</div>
+            } @else if (playgroundMessages().length === 0) {
+              <div class="playground__empty">
+                <ds-icon name="sparkles" />
+                <strong>Escribe como un comprador</strong>
+                <p>
+                  Prueba saludo, un producto de tu catálogo o “quiero comprar
+                  [producto]” para ver pedido + link simulados.
+                </p>
+                <div class="playground__suggestions">
+                  <button
+                    type="button"
+                    (click)="sendSuggestion('Hola')"
+                    [disabled]="playgroundSending()"
+                  >
+                    Hola
+                  </button>
+                  <button
+                    type="button"
+                    (click)="sendSuggestion('¿Qué productos tienen?')"
+                    [disabled]="playgroundSending()"
+                  >
+                    ¿Qué productos tienen?
+                  </button>
+                  <button
+                    type="button"
+                    (click)="sendSuggestion('Quiero hablar con un humano')"
+                    [disabled]="playgroundSending()"
+                  >
+                    Quiero un humano
+                  </button>
+                </div>
+              </div>
+            } @else {
+              @for (message of playgroundMessages(); track message.id) {
+                <div
+                  class="pg-bubble"
+                  [class.pg-bubble--buyer]="isBuyer(message)"
+                  [class.pg-bubble--agent]="!isBuyer(message)"
+                >
+                  <span class="pg-bubble__label">
+                    {{ isBuyer(message) ? 'Comprador' : 'Vendedor IA' }}
+                  </span>
+                  <p>{{ message.body }}</p>
+                </div>
+              }
+            }
+          </div>
+
+          <aside class="playground__explain" aria-label="Por qué respondió">
+            <h3>Por qué respondió</h3>
+            <p class="playground__explain-lead">
+              Tools tipadas · precio y stock solo del catálogo
+            </p>
+            @if (lastTools().length === 0) {
+              <p class="playground__explain-empty">
+                Aún no hay tools. Envía un mensaje para auditar la respuesta.
+              </p>
+            } @else {
+              <ul class="tool-list">
+                @for (tool of lastTools(); track $index) {
+                  <li [attr.data-status]="tool.status">
+                    <strong>{{ toolLabel(tool.name) }}</strong>
+                    <span>{{ tool.summary }}</span>
+                  </li>
+                }
+              </ul>
+            }
+          </aside>
+        </div>
+
+        <form
+          class="playground__composer"
+          (submit)="$event.preventDefault(); sendPlayground()"
+        >
+          <label class="sr-only" for="playground-input">Mensaje de prueba</label>
+          <input
+            id="playground-input"
+            type="text"
+            [value]="playgroundDraft()"
+            (input)="onDraftInput($any($event.target).value)"
+            placeholder="Escribe como comprador…"
+            [disabled]="playgroundSending() || playgroundLoading()"
+            autocomplete="off"
+          />
+          <ds-button
+            type="submit"
+            [disabled]="
+              playgroundSending() ||
+              playgroundLoading() ||
+              !playgroundDraft().trim()
+            "
+          >
+            {{ playgroundSending() ? 'Enviando…' : 'Enviar' }}
+          </ds-button>
+        </form>
+      </div>
     </div>
   }
 </section>

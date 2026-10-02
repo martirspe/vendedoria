@@ -1,0 +1,84 @@
+<section class="metrics">
+  <header class="metrics__header">
+    <div>
+      <p class="metrics__eyebrow">Resultados</p>
+      <h1>Métricas</h1>
+      <p>
+        Números core sin paywall: conversaciones, pedidos pagados y conversión
+        del período.
+      </p>
+    </div>
+    <div class="metrics__periods" role="group" aria-label="Período">
+      @for (period of [7, 30]; track period) {
+        <button
+          type="button"
+          [class.is-active]="days() === period"
+          (click)="load(period)"
+        >
+          {{ period }} días
+        </button>
+      }
+    </div>
+  </header>
+
+  @if (errorMessage(); as error) {
+    <div class="banner banner--danger" role="alert">
+      <ds-icon name="alert" />
+      <span>{{ error }}</span>
+      <ds-button type="button" variant="secondary" (click)="load()">Reintentar</ds-button>
+    </div>
+  }
+
+  @if (loading()) {
+    <div class="skeleton" aria-busy="true">Cargando métricas…</div>
+  } @else if (summary(); as data) {
+    @if (isEmpty(data)) {
+      <ds-empty-state
+        title="Aún no hay movimiento"
+        body="Simula un mensaje, crea un pedido y usa Simular pago para ver números aquí."
+      >
+        <a routerLink="/app/get-started">
+          <ds-button type="button">Ver Empezar</ds-button>
+        </a>
+      </ds-empty-state>
+    } @else {
+      <div class="metrics__grid">
+        <article>
+          <span>Conversaciones</span>
+          <strong>{{ data.conversations }}</strong>
+        </article>
+        <article>
+          <span>Mensajes entrantes</span>
+          <strong>{{ data.inboundMessages }}</strong>
+        </article>
+        <article>
+          <span>Respuestas del agente</span>
+          <strong>{{ data.agentMessages }}</strong>
+        </article>
+        <article>
+          <span>Pedidos creados</span>
+          <strong>{{ data.ordersCreated }}</strong>
+        </article>
+        <article>
+          <span>Pedidos pagados</span>
+          <strong>{{ data.paidOrders }}</strong>
+        </article>
+        <article>
+          <span>Ingresos</span>
+          <strong>{{ formatMoney(data.revenueCents, data.currency) }}</strong>
+        </article>
+        <article>
+          <span>Conversión chat → pago</span>
+          <strong>{{ data.conversionRate }}%</strong>
+        </article>
+        <article>
+          <span>Sin atender ahora</span>
+          <strong>{{ data.unattendedOpen }}</strong>
+        </article>
+      </div>
+      <p class="metrics__footnote">
+        Período: últimos {{ data.periodDays }} días · sin métricas de playground.
+      </p>
+    }
+  }
+</section>

@@ -32,6 +32,21 @@ export type ConversationListItem = {
   messages: Array<{ body: string; createdAt: string; authorType: string }>;
 };
 
+export type AgentToolTrace = {
+  name: string;
+  status: 'ok' | 'error' | 'skipped';
+  summary: string;
+  data?: Record<string, unknown>;
+};
+
+export type MessageMetadata = {
+  tools?: AgentToolTrace[];
+  usedCatalog?: boolean;
+  escalate?: boolean;
+  orderId?: string | null;
+  checkoutUrl?: string | null;
+};
+
 export type ConversationDetail = ConversationListItem & {
   messages: Array<{
     id: string;
@@ -39,12 +54,42 @@ export type ConversationDetail = ConversationListItem & {
     createdAt: string;
     direction: string;
     authorType: string;
+    metadata?: MessageMetadata | null;
   }>;
   messagingWindow: {
     canSendFreeForm: boolean;
     closesAt: string | null;
     reason: string | null;
   };
+  linkedOrder: {
+    id: string;
+    status: string;
+    totalCents: number;
+    currency: string;
+    itemCount: number;
+    paymentStatus: string | null;
+    checkoutUrl: string | null;
+    updatedAt: string;
+  } | null;
+};
+
+export type ChannelDiagnostics = {
+  connected: boolean;
+  healthStatus: 'CONNECTED' | 'DEGRADED' | 'DISCONNECTED' | 'PENDING';
+  channel?: {
+    id: string;
+    displayName: string | null;
+    externalId: string | null;
+    connectionMode: string | null;
+    lastActiveAt: string | null;
+  };
+  checks: Array<{
+    id: string;
+    label: string;
+    status: 'ok' | 'warn' | 'error';
+    detail: string;
+  }>;
+  nextSteps: string[];
 };
 
 @Injectable({ providedIn: 'root' })
@@ -54,6 +99,14 @@ export class MessagingApiService {
   listChannels() {
     return firstValueFrom(
       this.http.get<ChannelDto[]>(`${environment.apiBaseUrl}/channels`),
+    );
+  }
+
+  getWhatsAppDiagnostics() {
+    return firstValueFrom(
+      this.http.get<ChannelDiagnostics>(
+        `${environment.apiBaseUrl}/channels/whatsapp/diagnostics`,
+      ),
     );
   }
 
@@ -91,11 +144,13 @@ export class MessagingApiService {
   listConversations(filters?: {
     q?: string;
     unattended?: boolean;
+    salesOnly?: boolean;
     channelType?: string;
   }) {
     let params = new HttpParams();
     if (filters?.q) params = params.set('q', filters.q);
     if (filters?.unattended) params = params.set('unattended', 'true');
+    if (filters?.salesOnly) params = params.set('salesOnly', 'true');
     if (filters?.channelType)
       params = params.set('channelType', filters.channelType);
     return firstValueFrom(
@@ -133,6 +188,37 @@ export class MessagingApiService {
         message: unknown;
         notice: string;
       }>(`${environment.apiBaseUrl}/conversations/${id}/messages`, { text }),
+    );
+  }
+
+  listTemplates() {
+    return firstValueFrom(
+      this.http.get<
+        Array<{
+          id: string;
+          name: string;
+          language: string;
+          category: string;
+          body: string;
+          description: string;
+        }>
+      >(`${environment.apiBaseUrl}/conversations/templates`),
+    );
+  }
+
+  sendTemplate(
+    conversationId: string,
+    payload: { templateId: string; variables?: string[] },
+  ) {
+    return firstValueFrom(
+      this.http.post<{
+        message: unknown;
+        notice: string;
+        dryRun?: boolean;
+      }>(
+        `${environment.apiBaseUrl}/conversations/${conversationId}/templates`,
+        payload,
+      ),
     );
   }
 }

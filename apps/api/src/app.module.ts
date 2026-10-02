@@ -10,6 +10,9 @@ import { ChannelsModule } from './channels/channels.module';
 import { ConversationsModule } from './conversations/conversations.module';
 import { OrdersModule } from './orders/orders.module';
 import { PaymentsModule } from './payments/payments.module';
+import { MetricsModule } from './metrics/metrics.module';
+import { BillingModule } from './billing/billing.module';
+import { KnowledgeModule } from './knowledge/knowledge.module';
 import { validateEnv } from './config/env.validation';
 
 @Module({
@@ -23,11 +26,14 @@ import { validateEnv } from './config/env.validation';
     AuthModule,
     TenantsModule,
     AgentsModule,
+    KnowledgeModule,
     CatalogModule,
     ConversationsModule,
     ChannelsModule,
     PaymentsModule,
     OrdersModule,
+    MetricsModule,
+    BillingModule,
   ],
 })
 export class AppModule {}

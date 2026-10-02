@@ -1,0 +1,58 @@
+<section class="settings">
+  <header class="settings__header">
+    <div>
+      <p class="settings__eyebrow">Negocio</p>
+      <h1>Ajustes</h1>
+      <p>
+        Nombre, país y moneda del tenant. El catálogo y los pedidos usan esta
+        moneda por defecto.
+      </p>
+    </div>
+  </header>
+
+  @if (errorMessage(); as error) {
+    <div class="banner banner--danger" role="alert">
+      <ds-icon name="alert" />
+      <span>{{ error }}</span>
+    </div>
+  }
+  @if (successMessage(); as success) {
+    <div class="banner banner--success" role="status">
+      <ds-icon name="check" />
+      <span>{{ success }}</span>
+    </div>
+  }
+
+  @if (loading()) {
+    <div class="skeleton" aria-busy="true">Cargando ajustes…</div>
+  } @else {
+    <form class="settings__form" [formGroup]="form" (ngSubmit)="save()">
+      <label>
+        Nombre del negocio
+        <input formControlName="name" maxlength="120" autocomplete="organization" />
+      </label>
+      <div class="settings__row">
+        <label>
+          País (ISO)
+          <input formControlName="country" maxlength="2" placeholder="PE" />
+        </label>
+        <label>
+          Moneda
+          <select formControlName="currency">
+            <option value="PEN">PEN</option>
+            <option value="USD">USD</option>
+            <option value="MXN">MXN</option>
+            <option value="COP">COP</option>
+            <option value="CLP">CLP</option>
+            <option value="ARS">ARS</option>
+          </select>
+        </label>
+      </div>
+      <footer>
+        <ds-button type="submit" [disabled]="saving() || form.pristine">
+          {{ saving() ? 'Guardando…' : 'Guardar cambios' }}
+        </ds-button>
+      </footer>
+    </form>
+  }
+</section>

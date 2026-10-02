@@ -12,6 +12,7 @@ import {
   ConnectWhatsAppDto,
   SimulateInboundDto,
 } from './dto/channels.dto';
+import { MetaWhatsAppClient } from './meta-whatsapp.client';
 import { asWhatsAppMetadata } from './whatsapp-metadata';
 
 @Injectable()
@@ -20,6 +21,7 @@ export class ChannelsService {
     private readonly prisma: PrismaService,
     private readonly config: ConfigService,
     private readonly conversations: ConversationsService,
+    private readonly metaWhatsApp: MetaWhatsAppClient,
   ) {}
 
   list(tenantId: string) {
@@ -120,6 +122,169 @@ export class ChannelsService {
         updatedAt: true,
       },
     });
+  }
+
+  async getWhatsAppDiagnostics(tenantId: string) {
+    const channel = await this.prisma.channel.findFirst({
+      where: { tenantId, type: 'WHATSAPP' },
+    });
+
+    const publicBase =
+      this.config.get<string>('PUBLIC_API_BASE_URL') ??
+      'http://localhost:3000/api/v1';
+    const verifyToken = this.config.get<string>('META_VERIFY_TOKEN');
+    const appSecret = this.config.get<string>('META_APP_SECRET');
+    const callbackUrl = `${publicBase}/webhooks/meta/whatsapp`;
+
+    if (!channel) {
+      return {
+        connected: false,
+        healthStatus: 'PENDING' as const,
+        checks: [
+          {
+            id: 'channel',
+            label: 'Canal WhatsApp',
+            status: 'error' as const,
+            detail: 'Aún no conectaste Phone Number ID ni token.',
+          },
+        ],
+        nextSteps: [
+          'Completa el formulario de conexión con Meta Cloud API.',
+          'Configura META_VERIFY_TOKEN en el servidor.',
+          `Registra el webhook: ${callbackUrl}`,
+        ],
+      };
+    }
+
+    const metadata = asWhatsAppMetadata(channel.metadata);
+    const hasToken = Boolean(metadata?.accessToken);
+    const checks: Array<{
+      id: string;
+      label: string;
+      status: 'ok' | 'warn' | 'error';
+      detail: string;
+    }> = [
+      {
+        id: 'channel',
+        label: 'Canal registrado',
+        status: 'ok',
+        detail: `${channel.displayName ?? 'WhatsApp'} · ${channel.externalId ?? 'sin ID'}`,
+      },
+      {
+        id: 'token',
+        label: 'Access token',
+        status: hasToken ? 'ok' : 'error',
+        detail: hasToken
+          ? 'Token guardado en el canal.'
+          : 'Falta access token de Meta.',
+      },
+      {
+        id: 'verify',
+        label: 'Verify token (servidor)',
+        status: verifyToken ? 'ok' : 'warn',
+        detail: verifyToken
+          ? 'META_VERIFY_TOKEN configurado.'
+          : 'Configura META_VERIFY_TOKEN para que Meta verifique el webhook.',
+      },
+      {
+        id: 'signature',
+        label: 'Firma webhook (opcional)',
+        status: appSecret ? 'ok' : 'warn',
+        detail: appSecret
+          ? 'META_APP_SECRET activo para validar POST.'
+          : 'Sin META_APP_SECRET: los POST del webhook no se firman.',
+      },
+      {
+        id: 'webhook',
+        label: 'Webhook URL',
+        status: 'ok',
+        detail: callbackUrl,
+      },
+    ];
+
+    if (metadata?.accessToken && metadata.phoneNumberId) {
+      const tokenCheck = await this.metaWhatsApp.verifyCredentials({
+        phoneNumberId: metadata.phoneNumberId,
+        accessToken: metadata.accessToken,
+      });
+      checks.push({
+        id: 'graph',
+        label: 'Token válido (Graph API)',
+        status: tokenCheck.ok ? 'ok' : 'error',
+        detail: tokenCheck.ok
+          ? tokenCheck.displayName
+            ? `Conectado como ${tokenCheck.displayName}`
+            : 'Meta respondió OK.'
+          : tokenCheck.error ?? 'Token rechazado por Meta.',
+      });
+    }
+
+    const hoursSinceActivity = channel.lastActiveAt
+      ? (Date.now() - channel.lastActiveAt.getTime()) / (1000 * 60 * 60)
+      : null;
+    checks.push({
+      id: 'activity',
+      label: 'Última actividad',
+      status:
+        hoursSinceActivity === null
+          ? 'warn'
+          : hoursSinceActivity > 72
+            ? 'warn'
+            : 'ok',
+      detail: channel.lastActiveAt
+        ? `Hace ${Math.round(hoursSinceActivity ?? 0)} h · ${channel.lastActiveAt.toISOString()}`
+        : 'Sin mensajes entrantes aún. Simula uno o espera webhook.',
+    });
+
+    const hasError = checks.some((item) => item.status === 'error');
+    const hasWarn = checks.some((item) => item.status === 'warn');
+    const healthStatus = hasError
+      ? 'DISCONNECTED'
+      : hasWarn
+        ? 'DEGRADED'
+        : 'CONNECTED';
+
+    if (channel.healthStatus !== healthStatus) {
+      await this.prisma.channel.update({
+        where: { id: channel.id },
+        data: { healthStatus },
+      });
+    }
+
+    const nextSteps: string[] = [];
+    if (!verifyToken) {
+      nextSteps.push('Añade META_VERIFY_TOKEN al .env del API y reinicia.');
+    }
+    if (!hasToken) {
+      nextSteps.push('Pega un access token válido y guarda la conexión.');
+    }
+    if (checks.find((item) => item.id === 'graph')?.status === 'error') {
+      nextSteps.push(
+        'Regenera el token en Meta Business · permisos whatsapp_business_messaging.',
+      );
+    }
+    if (hoursSinceActivity === null || (hoursSinceActivity ?? 0) > 72) {
+      nextSteps.push(
+        'Envía un mensaje de prueba (simular inbound) para confirmar el flujo.',
+      );
+    }
+    if (!nextSteps.length) {
+      nextSteps.push('Canal sano. Revisa Mensajes cuando llegue tráfico real.');
+    }
+
+    return {
+      connected: true,
+      healthStatus,
+      channel: {
+        id: channel.id,
+        displayName: channel.displayName,
+        externalId: channel.externalId,
+        connectionMode: channel.connectionMode,
+        lastActiveAt: channel.lastActiveAt,
+      },
+      checks,
+      nextSteps,
+    };
   }
 
   verifyMetaWebhook(mode?: string, token?: string, challenge?: string) {

@@ -1,3 +1,4 @@
+import { Type } from 'class-transformer';
 import {
   IsArray,
   IsBoolean,
@@ -6,8 +7,57 @@ import {
   IsString,
   Min,
   MinLength,
+  ValidateNested,
 } from 'class-validator';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+
+export class ProductVariantInputDto {
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  id?: string;
+
+  @ApiPropertyOptional({ example: 'SKU-NEGRO-M' })
+  @IsOptional()
+  @IsString()
+  sku?: string;
+
+  @ApiPropertyOptional({ example: 'Color' })
+  @IsOptional()
+  @IsString()
+  option1Name?: string;
+
+  @ApiPropertyOptional({ example: 'Negro' })
+  @IsOptional()
+  @IsString()
+  option1Value?: string;
+
+  @ApiPropertyOptional({ example: 'Talla' })
+  @IsOptional()
+  @IsString()
+  option2Name?: string;
+
+  @ApiPropertyOptional({ example: 'M' })
+  @IsOptional()
+  @IsString()
+  option2Value?: string;
+
+  @ApiProperty({ example: 8900 })
+  @IsInt()
+  @Min(0)
+  priceCents!: number;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsBoolean()
+  isAvailable?: boolean;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsInt()
+  @Min(0)
+  stockQty?: number | null;
+}
 
 export class CreateProductDto {
   @ApiProperty({ example: 'polo-basico' })
@@ -61,4 +111,20 @@ export class CreateProductDto {
   @IsInt()
   @Min(0)
   stockQty?: number;
+
+  @ApiPropertyOptional({ type: [ProductVariantInputDto] })
+  @IsOptional()
+  @IsArray()
+  @ValidateNested({ each: true })
+  @Type(() => ProductVariantInputDto)
+  variants?: ProductVariantInputDto[];
+
+  @ApiPropertyOptional({
+    type: [String],
+    description: 'Public media URLs (S3 upload comes later)',
+  })
+  @IsOptional()
+  @IsArray()
+  @IsString({ each: true })
+  mediaUrls?: string[];
 }

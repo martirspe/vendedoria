@@ -14,6 +14,7 @@ import type { AuthUserPayload } from '../common/types/auth-user';
 import { ConversationsService } from './conversations.service';
 import {
   SendMessageDto,
+  SendTemplateDto,
   UpdateConversationDto,
 } from './dto/conversations.dto';
 
@@ -22,6 +23,11 @@ import {
 @Controller('conversations')
 export class ConversationsController {
   constructor(private readonly conversationsService: ConversationsService) {}
+
+  @Get('templates')
+  listTemplates() {
+    return this.conversationsService.listTemplates();
+  }
 
   @Get()
   list(
@@ -70,6 +76,20 @@ export class ConversationsController {
       user.tenantId,
       conversationId,
       dto.text,
+    );
+  }
+
+  @Post(':conversationId/templates')
+  sendTemplate(
+    @CurrentUser() user: AuthUserPayload,
+    @Param('conversationId') conversationId: string,
+    @Body() dto: SendTemplateDto,
+  ) {
+    return this.conversationsService.sendOperatorTemplate(
+      user.tenantId,
+      conversationId,
+      dto.templateId,
+      dto.variables ?? [],
     );
   }
 }

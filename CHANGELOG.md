@@ -2,7 +2,19 @@
 
 ## [Unreleased]
 
+### Added
+- Help/Learn page (`/app/help`) with in-app guides and Ctrl+K hint
+- Console command palette (Ctrl+K): quick nav + Connect WhatsApp + Test seller
+- Plan quota enforcement (products + new conversations) with `/billing/usage` banner
+- WhatsApp channel diagnostics API + actionable checks UI on Canales
+- Inbox: Sale filter, URL-synced filters, commerce-in-thread panel (order + payment status)
+- Knowledge module: FAQs + journey templates API (`/knowledge`), paste-import as draft with human approve
+- Seller console: knowledge base, journey scripts, and hard agent limits (catalog-only / no fake discounts / no invented shipping)
+- Sales-agent runtime tool `lookup_faq` + FAQ/journey context in LLM prompt and deterministic fallback
+- Agent quality score now includes published FAQs and active journeys (max 240)
+
 ### Changed
+- Console shell: Lucide icons in sidebar, Vender/Negocio groups, sticky branded rail, denser active states
 - Project Constitution: competitive thesis — category parity is the floor; every module must ship a clear “one step beyond” wedge vs. YaVendió-class referents (no clone)
 
 ### Added

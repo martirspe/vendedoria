@@ -1,11 +1,15 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
+import { KnowledgeService } from '../knowledge/knowledge.service';
 import { computeAgentQuality } from './agent-quality';
 import { UpdateSalesAgentDto } from './dto/update-sales-agent.dto';
 
 @Injectable()
 export class AgentsService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly knowledge: KnowledgeService,
+  ) {}
 
   async getPrimary(tenantId: string) {
     const agent = await this.prisma.salesAgent.findFirst({
@@ -15,7 +19,7 @@ export class AgentsService {
     if (!agent) {
       throw new NotFoundException('Sales agent not found');
     }
-    return this.toResponse(agent);
+    return this.toResponse(tenantId, agent);
   }
 
   async updatePrimary(tenantId: string, dto: UpdateSalesAgentDto) {
@@ -31,13 +35,17 @@ export class AgentsService {
       where: { id: agent.id },
       data: dto,
     });
-    return this.toResponse(updated);
+    return this.toResponse(tenantId, updated);
   }
 
-  private toResponse<T extends object>(agent: T) {
+  private async toResponse<T extends object>(tenantId: string, agent: T) {
+    const extras = await this.knowledge.getQualityExtras(tenantId);
     return {
       ...agent,
-      quality: computeAgentQuality(agent as Parameters<typeof computeAgentQuality>[0]),
+      quality: computeAgentQuality(
+        agent as Parameters<typeof computeAgentQuality>[0],
+        extras,
+      ),
     };
   }
 }

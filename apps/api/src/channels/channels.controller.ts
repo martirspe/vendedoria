@@ -39,6 +39,12 @@ export class ChannelsController {
   }
 
   @ApiBearerAuth()
+  @Get('channels/whatsapp/diagnostics')
+  whatsappDiagnostics(@CurrentUser() user: AuthUserPayload) {
+    return this.channelsService.getWhatsAppDiagnostics(user.tenantId);
+  }
+
+  @ApiBearerAuth()
   @Post('channels/:channelId/disconnect')
   disconnect(
     @CurrentUser() user: AuthUserPayload,

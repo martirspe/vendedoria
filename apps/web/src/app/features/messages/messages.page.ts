@@ -7,7 +7,7 @@ import {
 } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { DatePipe } from '@angular/common';
-import { RouterLink } from '@angular/router';
+import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { DsButtonComponent } from '../../design-system/button/ds-button.component';
 import { DsEmptyStateComponent } from '../../design-system/empty-state/ds-empty-state.component';
 import { DsIconComponent } from '../../design-system/icon/ds-icon.component';
@@ -40,6 +40,8 @@ export class MessagesPage {
   private readonly api = inject(MessagingApiService);
   private readonly ordersApi = inject(OrdersApiService);
   private readonly fb = inject(FormBuilder);
+  private readonly route = inject(ActivatedRoute);
+  private readonly router = inject(Router);
 
   readonly conversations = signal<ConversationListItem[]>([]);
   readonly selected = signal<ConversationDetail | null>(null);
@@ -50,10 +52,22 @@ export class MessagesPage {
   readonly creatingOrder = signal(false);
   readonly orderModalOpen = signal(false);
   readonly filterUnattended = signal(false);
+  readonly filterSales = signal(false);
   readonly query = signal('');
   readonly errorMessage = signal<string | null>(null);
   readonly notice = signal<string | null>(null);
   readonly lastOrderId = signal<string | null>(null);
+  readonly templates = signal<
+    Array<{
+      id: string;
+      name: string;
+      language: string;
+      category: string;
+      body: string;
+      description: string;
+    }>
+  >([]);
+  readonly selectedTemplateId = signal('');
 
   readonly composer = this.fb.nonNullable.group({
     text: ['', [Validators.required, Validators.minLength(1)]],
@@ -72,8 +86,28 @@ export class MessagesPage {
   });
 
   constructor() {
-    void this.loadList();
+    this.route.queryParamMap.subscribe((params) => {
+      this.filterUnattended.set(params.get('unattended') === '1');
+      this.filterSales.set(params.get('sale') === '1');
+      this.query.set(params.get('q') ?? '');
+      void this.loadList();
+      const openId = params.get('conversation');
+      if (openId) {
+        void this.openConversation(openId);
+      }
+    });
     void this.loadProducts();
+    void this.loadTemplates();
+  }
+
+  async loadTemplates(): Promise<void> {
+    try {
+      const data = await this.api.listTemplates();
+      this.templates.set(data);
+      this.selectedTemplateId.set(data[0]?.id ?? '');
+    } catch {
+      this.templates.set([]);
+    }
   }
 
   async loadProducts(): Promise<void> {
@@ -93,6 +127,7 @@ export class MessagesPage {
       const data = await this.api.listConversations({
         q: this.query() || undefined,
         unattended: this.filterUnattended() || undefined,
+        salesOnly: this.filterSales() || undefined,
       });
       this.conversations.set(data);
       const current = this.selected();
@@ -115,6 +150,7 @@ export class MessagesPage {
     this.errorMessage.set(null);
     try {
       this.selected.set(await this.api.getConversation(id));
+      this.syncFiltersToUrl(id);
     } catch {
       this.errorMessage.set('No pudimos abrir la conversación.');
     } finally {
@@ -249,14 +285,99 @@ export class MessagesPage {
     }
   }
 
+  onTemplateChange(value: string): void {
+    this.selectedTemplateId.set(value);
+  }
+
+  async sendTemplate(): Promise<void> {
+    const thread = this.selected();
+    const templateId = this.selectedTemplateId();
+    if (!thread || !templateId) return;
+    this.sending.set(true);
+    this.errorMessage.set(null);
+    try {
+      const result = await this.api.sendTemplate(thread.id, {
+        templateId,
+        variables: [thread.contactName || 'cliente'],
+      });
+      this.notice.set(result.notice);
+      await this.openConversation(thread.id);
+      await this.loadList();
+    } catch {
+      this.errorMessage.set(
+        'No se pudo enviar la plantilla. Revisa el canal WhatsApp.',
+      );
+    } finally {
+      this.sending.set(false);
+    }
+  }
+
   onSearch(value: string): void {
     this.query.set(value);
+    this.syncFiltersToUrl(this.selected()?.id);
     void this.loadList();
   }
 
   toggleUnattendedFilter(): void {
     this.filterUnattended.update((value) => !value);
+    this.syncFiltersToUrl(this.selected()?.id);
     void this.loadList();
+  }
+
+  toggleSalesFilter(): void {
+    this.filterSales.update((value) => !value);
+    this.syncFiltersToUrl(this.selected()?.id);
+    void this.loadList();
+  }
+
+  orderStatusLabel(status: string): string {
+    switch (status) {
+      case 'DRAFT':
+        return 'Borrador';
+      case 'PENDING_PAYMENT':
+        return 'Pago pendiente';
+      case 'PAID':
+        return 'Pagado';
+      case 'FULFILLING':
+        return 'Preparando';
+      case 'SHIPPED':
+        return 'Enviado';
+      case 'COMPLETED':
+        return 'Completado';
+      case 'CANCELLED':
+        return 'Cancelado';
+      default:
+        return status;
+    }
+  }
+
+  paymentStatusLabel(status: string | null): string {
+    switch (status) {
+      case 'PENDING':
+        return 'Cobro pendiente';
+      case 'SUCCEEDED':
+        return 'Cobro confirmado';
+      case 'FAILED':
+        return 'Cobro fallido';
+      case 'CANCELLED':
+        return 'Cobro cancelado';
+      default:
+        return 'Sin pago';
+    }
+  }
+
+  private syncFiltersToUrl(conversationId?: string): void {
+    void this.router.navigate([], {
+      relativeTo: this.route,
+      queryParams: {
+        unattended: this.filterUnattended() ? '1' : null,
+        sale: this.filterSales() ? '1' : null,
+        q: this.query() || null,
+        conversation: conversationId ?? null,
+      },
+      queryParamsHandling: 'merge',
+      replaceUrl: true,
+    });
   }
 
   preview(item: ConversationListItem): string {
@@ -266,5 +387,38 @@ export class MessagesPage {
   initials(item: ConversationListItem | ConversationDetail): string {
     const source = item.contactName || item.contactPhone || '?';
     return source.slice(0, 2).toUpperCase();
+  }
+
+  messageTools(
+    message: ConversationDetail['messages'][number],
+  ): Array<{ name: string; status: string; summary: string }> {
+    const tools = message.metadata?.tools;
+    if (!Array.isArray(tools)) return [];
+    return tools.filter(
+      (tool) =>
+        tool &&
+        typeof tool === 'object' &&
+        typeof tool.name === 'string' &&
+        typeof tool.summary === 'string',
+    );
+  }
+
+  toolLabel(name: string): string {
+    switch (name) {
+      case 'search_catalog':
+        return 'Catálogo';
+      case 'get_product_availability':
+        return 'Precio / stock';
+      case 'create_order':
+        return 'Pedido';
+      case 'create_payment_link':
+        return 'Link de pago';
+      case 'lookup_faq':
+        return 'FAQ';
+      case 'escalate':
+        return 'Handoff';
+      default:
+        return name;
+    }
   }
 }
