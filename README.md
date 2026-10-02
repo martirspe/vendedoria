@@ -2,7 +2,7 @@
 
 Premium AI Sales Agents SaaS — WhatsApp/Instagram sales agents from greeting to payment.
 
-Authority document: [`Project constitution for VendedorIA.md`](./Project%20constitution%20for%20VendedorIA.md)
+Authority document: [`PROJECT CONSTITUTION.md`](./PROJECT%20CONSTITUTION.md) · Agent instructions: [`AGENTS.md`](./AGENTS.md)
 
 ## Stack
 

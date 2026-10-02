@@ -1,0 +1,8 @@
+---
+description: Prisma schema and migration edits in apps/api/prisma
+globs:
+  - "apps/api/prisma/**"
+alwaysApply: false
+---
+
+Before editing the schema or any migration, read `.agents/skills/vendedoria-data/SKILL.md` and follow its Invariants and Procedure. Never modify an existing migration directory.

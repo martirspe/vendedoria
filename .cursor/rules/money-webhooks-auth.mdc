@@ -1,0 +1,14 @@
+---
+description: Auth, payments, billing, Meta channel and public store endpoints in the API
+globs:
+  - "apps/api/src/auth/**"
+  - "apps/api/src/payments/**"
+  - "apps/api/src/billing/**"
+  - "apps/api/src/channels/**"
+  - "apps/api/src/storefront/storefront-public.*"
+  - "apps/api/src/storefront/storefront-preview.ts"
+  - "apps/store/src/server.ts"
+alwaysApply: false
+---
+
+These files guard money, credentials or tenant isolation. Before changing them, read `.agents/skills/vendedoria-security/SKILL.md` and check every invariant your diff touches.
