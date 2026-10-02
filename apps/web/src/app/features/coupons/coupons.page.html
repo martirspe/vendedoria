@@ -1,0 +1,246 @@
+<section class="store">
+  <header class="store__header">
+    <div>
+      <p class="store__eyebrow">Vender</p>
+      <h1>Cupones</h1>
+      <p>
+        Crea códigos de descuento para tu tienda web: porcentaje, monto fijo, envío gratis o
+        «compra X, lleva Y». El descuento se calcula siempre en el servidor.
+      </p>
+    </div>
+    @if (editing() === null) {
+      <div class="store__actions">
+        <ds-button (click)="startCreate()">
+          <ds-icon name="plus" [size]="1" /> Nuevo cupón
+        </ds-button>
+      </div>
+    }
+  </header>
+
+  @if (errorMessage(); as error) {
+    <div class="banner banner--danger" role="alert">
+      <ds-icon name="alert" />
+      <span>{{ error }}</span>
+    </div>
+  }
+  @if (successMessage(); as success) {
+    <div class="banner banner--success" role="status">
+      <ds-icon name="check" />
+      <span>{{ success }}</span>
+    </div>
+  }
+
+  @if (editing() !== null) {
+    <form class="store__form" [formGroup]="form" (ngSubmit)="save()">
+      <section class="card">
+        <h2>{{ editing() === 'new' ? 'Nuevo cupón' : 'Editar cupón' }}</h2>
+        <div class="row">
+          <label>
+            Código
+            <input formControlName="code" class="code-input" autocomplete="off" spellcheck="false" placeholder="VERANO10" />
+            <small>3 a 30 letras, números, guion o guion bajo.</small>
+          </label>
+          <label>
+            Nombre visible
+            <input formControlName="label" placeholder="10 % en toda la tienda" />
+          </label>
+        </div>
+
+        <fieldset class="mode mode--grid">
+          <legend>Tipo de descuento</legend>
+          @for (k of kinds; track k) {
+            <label class="mode__option">
+              <input type="radio" formControlName="kind" [value]="k" />
+              <span><strong>{{ kindLabels[k] }}</strong></span>
+            </label>
+          }
+        </fieldset>
+
+        @switch (kind()) {
+          @case ('PERCENT') {
+            <div class="row">
+              <label>
+                Porcentaje
+                <input type="number" formControlName="value" min="1" max="90" inputmode="numeric" />
+                <small>Entre 1 y 90 %.</small>
+              </label>
+              <label>
+                <span class="label-text">Tope de descuento (S/) <span class="optional">Opcional</span></span>
+                <input type="number" formControlName="maxDiscount" min="1" step="0.01" inputmode="decimal" />
+              </label>
+            </div>
+          }
+          @case ('FIXED') {
+            <label>
+              Monto del descuento (S/)
+              <input type="number" formControlName="value" min="0.01" step="0.01" inputmode="decimal" />
+            </label>
+          }
+          @case ('BUY_X_GET_Y') {
+            <div class="row row--3">
+              <label>
+                Paga
+                <input type="number" formControlName="buyQuantity" min="1" max="20" inputmode="numeric" />
+              </label>
+              <label>
+                Lleva con beneficio
+                <input type="number" formControlName="getQuantity" min="1" max="20" inputmode="numeric" />
+              </label>
+              <label>
+                Beneficio (%)
+                <input type="number" formControlName="value" min="1" max="100" inputmode="numeric" />
+              </label>
+            </div>
+            <div class="row">
+              <label>
+                <span class="label-text">Máximo de veces por pedido <span class="optional">Opcional</span></span>
+                <input type="number" formControlName="maxApplications" min="1" max="50" inputmode="numeric" />
+              </label>
+              <label>
+                <span class="label-text">Tope de descuento (S/) <span class="optional">Opcional</span></span>
+                <input type="number" formControlName="maxDiscount" min="1" step="0.01" inputmode="decimal" />
+              </label>
+            </div>
+            <small>Ejemplo 2x1: paga 2, lleva 1 con 100 %. Se descuentan las unidades más baratas.</small>
+          }
+          @default {
+            <small>El cliente no paga el envío si cumple las condiciones del cupón.</small>
+          }
+        }
+      </section>
+
+      <section class="card">
+        <h2>Productos participantes</h2>
+        <label>
+          Aplica a
+          <select formControlName="scope">
+            <option value="ALL">Toda la tienda</option>
+            <option value="CATEGORY">Categorías</option>
+            <option value="BRAND">Marcas</option>
+            <option value="PRODUCTS">Productos específicos</option>
+          </select>
+        </label>
+        @if (scope() !== 'ALL') {
+          @if (targetOptions().length) {
+            <div class="targets" role="group" aria-label="Elige a qué aplica">
+              @for (option of targetOptions(); track option.value) {
+                <label class="target">
+                  <input
+                    type="checkbox"
+                    [checked]="selectedTargets().includes(option.value)"
+                    (change)="toggleTarget(option.value, $any($event.target).checked)"
+                  />
+                  <span>{{ option.label }}</span>
+                </label>
+              }
+            </div>
+          } @else {
+            <small>Aún no tienes valores para elegir. Complétalos en tus productos.</small>
+          }
+        }
+      </section>
+
+      <section class="card">
+        <h2>Condiciones y límites</h2>
+        <div class="row">
+          <label>
+            <span class="label-text">Compra mínima (S/) <span class="optional">Opcional</span></span>
+            <input type="number" formControlName="minSubtotal" min="0" step="0.01" inputmode="decimal" />
+          </label>
+          <label>
+            <span class="label-text">Unidades mínimas <span class="optional">Opcional</span></span>
+            <input type="number" formControlName="minItems" min="0" max="100" inputmode="numeric" />
+          </label>
+        </div>
+        <div class="row">
+          <label>
+            <span class="label-text">Desde <span class="optional">Opcional</span></span>
+            <input type="datetime-local" formControlName="startsAt" />
+          </label>
+          <label>
+            <span class="label-text">Hasta <span class="optional">Opcional</span></span>
+            <input type="datetime-local" formControlName="endsAt" />
+          </label>
+        </div>
+        <div class="row">
+          <label>
+            <span class="label-text">Usos totales <span class="optional">Opcional</span></span>
+            <input type="number" formControlName="usageLimit" min="1" inputmode="numeric" />
+          </label>
+          <label>
+            <span class="label-text">Usos por cliente <span class="optional">Opcional</span></span>
+            <input type="number" formControlName="perCustomerLimit" min="1" inputmode="numeric" />
+            <small>Se controla por correo electrónico.</small>
+          </label>
+        </div>
+        <label class="check">
+          <input type="checkbox" formControlName="firstOrderOnly" />
+          <span>Solo para la primera compra del cliente</span>
+        </label>
+        <label class="check">
+          <input type="checkbox" formControlName="isActive" />
+          <span>Activo</span>
+        </label>
+        <label>
+          <span class="label-text">Nota interna <span class="optional">Opcional</span></span>
+          <textarea formControlName="note" rows="2" maxlength="300"></textarea>
+        </label>
+      </section>
+
+      <footer class="editor-actions">
+        <ds-button type="button" variant="ghost" (click)="cancel()">Cancelar</ds-button>
+        <ds-button type="submit" [disabled]="saving()">
+          {{ saving() ? 'Guardando…' : 'Guardar cupón' }}
+        </ds-button>
+      </footer>
+    </form>
+  }
+
+  @if (loading()) {
+    <div class="skeleton" aria-busy="true">Cargando cupones…</div>
+  } @else if (!coupons().length && editing() === null) {
+    <div class="card empty">
+      <ds-icon name="ticket" [size]="2" />
+      <h2>Aún no tienes cupones</h2>
+      <p>Crea tu primer código y compártelo en redes o por WhatsApp.</p>
+      <ds-button (click)="startCreate()">Crear cupón</ds-button>
+    </div>
+  } @else if (coupons().length) {
+    <ul class="coupon-list">
+      @for (coupon of coupons(); track coupon.id) {
+        @let st = status(coupon);
+        <li class="card coupon">
+          <div class="coupon__main">
+            <div class="coupon__title">
+              <code>{{ coupon.code }}</code>
+              <span class="pill" [class.pill--ok]="st.ok">{{ st.label }}</span>
+            </div>
+            <strong>{{ coupon.label }}</strong>
+            <span class="coupon__meta">{{ summary(coupon) }}</span>
+          </div>
+          <dl class="coupon__stats">
+            <div>
+              <dt>Usos</dt>
+              <dd>{{ coupon.usedCount }}{{ coupon.usageLimit !== null ? ' / ' + coupon.usageLimit : '' }}</dd>
+            </div>
+            <div>
+              <dt>Descontado</dt>
+              <dd>{{ formatSoles(coupon.discountGivenCents) }}</dd>
+            </div>
+          </dl>
+          <div class="coupon__actions">
+            <ds-button variant="secondary" (click)="startEdit(coupon)">Editar</ds-button>
+            <ds-button variant="ghost" (click)="toggleActive(coupon)">
+              {{ coupon.isActive ? 'Desactivar' : 'Activar' }}
+            </ds-button>
+            @if (coupon.usedCount === 0) {
+              <ds-button variant="ghost" (click)="remove(coupon)" [label]="'Eliminar cupón ' + coupon.code">
+                <ds-icon name="trash" [size]="1" />
+              </ds-button>
+            }
+          </div>
+        </li>
+      }
+    </ul>
+  }
+</section>

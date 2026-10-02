@@ -59,6 +59,7 @@ export class ConsoleShellLayout {
         { label: 'Empezar', path: '/app/get-started', icon: 'rocket' },
         { label: 'Productos', path: '/app/products', icon: 'package' },
         { label: 'Tienda web', path: '/app/store', icon: 'store' },
+        { label: 'Cupones', path: '/app/coupons', icon: 'ticket' },
         { label: 'Vendedor', path: '/app/seller', icon: 'bot' },
         { label: 'Canales', path: '/app/channels', icon: 'radio' },
         { label: 'Mensajes', path: '/app/messages', icon: 'message' },
@@ -70,6 +71,7 @@ export class ConsoleShellLayout {
       label: 'Negocio',
       items: [
         { label: 'Métricas', path: '/app/metrics', icon: 'chartColumn' },
+        { label: 'Cobros', path: '/app/payments', icon: 'wallet' },
         { label: 'Integraciones', path: '/app/integrations', icon: 'plug' },
         { label: 'Planes', path: '/app/plans', icon: 'creditCard' },
         { label: 'Ajustes', path: '/app/settings', icon: 'settings' },
@@ -85,6 +87,13 @@ export class ConsoleShellLayout {
       hint: 'Checklist para vender',
       path: '/app/get-started',
       icon: 'rocket',
+    },
+    {
+      id: 'payments',
+      label: 'Conectar Mercado Pago',
+      hint: 'Cobros · tarjeta y Yape',
+      path: '/app/payments',
+      icon: 'wallet',
     },
     {
       id: 'whatsapp',
@@ -113,6 +122,13 @@ export class ConsoleShellLayout {
       hint: 'Publicar catálogo en tu web',
       path: '/app/store',
       icon: 'store',
+    },
+    {
+      id: 'coupons',
+      label: 'Cupones',
+      hint: 'Descuentos y promociones',
+      path: '/app/coupons',
+      icon: 'ticket',
     },
     {
       id: 'messages',

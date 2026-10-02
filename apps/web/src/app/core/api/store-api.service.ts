@@ -18,10 +18,33 @@ export type StorefrontDto = {
   seoTitle: string | null;
   seoDescription: string | null;
   publishedAt: string | null;
+  legalName: string | null;
+  ruc: string | null;
+  legalAddress: string | null;
+  complaintsBookUrl: string | null;
+  dataBankCode: string | null;
+  exchangeDays: number;
+  deliveryEnabled: boolean;
+  shippingLimaCents: number | null;
+  shippingProvinceCents: number | null;
+  freeShippingFromCents: number | null;
+  deliveryDaysLima: string | null;
+  deliveryDaysProvince: string | null;
+  pickupEnabled: boolean;
+  pickupAddress: string | null;
 };
 
 export type StoreChecklistItem = {
-  id: 'name' | 'whatsapp' | 'products' | 'logo' | 'email' | 'seo';
+  id:
+    | 'name'
+    | 'whatsapp'
+    | 'products'
+    | 'legal'
+    | 'complaints'
+    | 'email'
+    | 'delivery'
+    | 'logo'
+    | 'seo';
   label: string;
   done: boolean;
   required: boolean;
@@ -49,6 +72,20 @@ export type UpdateStorePayload = Partial<{
   contactEmail: string | null;
   seoTitle: string | null;
   seoDescription: string | null;
+  legalName: string | null;
+  ruc: string | null;
+  legalAddress: string | null;
+  complaintsBookUrl: string | null;
+  dataBankCode: string | null;
+  exchangeDays: number;
+  deliveryEnabled: boolean;
+  shippingLimaCents: number | null;
+  shippingProvinceCents: number | null;
+  freeShippingFromCents: number | null;
+  deliveryDaysLima: string | null;
+  deliveryDaysProvince: string | null;
+  pickupEnabled: boolean;
+  pickupAddress: string | null;
 }>;
 
 @Injectable({ providedIn: 'root' })

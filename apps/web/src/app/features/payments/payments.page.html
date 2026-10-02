@@ -1,0 +1,125 @@
+<section class="store">
+  <header class="store__header">
+    <div>
+      <p class="store__eyebrow">Negocio</p>
+      <h1>Cobros</h1>
+      <p>
+        Conecta tu propia cuenta de Mercado Pago. Lo que pagan tus clientes en la tienda
+        y en los links del vendedor llega directo a tu cuenta.
+      </p>
+    </div>
+  </header>
+
+  @if (errorMessage(); as error) {
+    <div class="banner banner--danger" role="alert">
+      <ds-icon name="alert" />
+      <span>{{ error }}</span>
+    </div>
+  }
+  @if (successMessage(); as success) {
+    <div class="banner banner--success" role="status">
+      <ds-icon name="check" />
+      <span>{{ success }}</span>
+    </div>
+  }
+
+  @if (loading()) {
+    <div class="skeleton" aria-busy="true">Cargando tus cobros…</div>
+  } @else if (view(); as v) {
+    <div class="status-card" [class.status-card--live]="v.connected">
+      <span class="pill" [class.pill--ok]="v.connected">
+        {{ v.connected ? (v.liveMode ? 'Producción' : 'Pruebas') : 'Sin conectar' }}
+      </span>
+      <div class="status-card__body">
+        <strong>Mercado Pago</strong>
+        <span>
+          @if (v.connected && v.hasWebhookSecret) {
+            Cuenta {{ v.externalUserId }} verificada. La tienda ya puede cobrar con tarjeta y Yape.
+          } @else if (v.connected) {
+            Cuenta verificada. Falta la clave del webhook para activar el pago en la tienda.
+          } @else if (v.simulatorAvailable) {
+            En desarrollo los links de pago usan un simulador hasta que conectes tu cuenta.
+          } @else {
+            Sin cuenta conectada: la tienda funciona en modo "pedir por WhatsApp".
+          }
+        </span>
+      </div>
+      @if (v.connected) {
+        <ds-button variant="ghost" [disabled]="saving()" (click)="disconnect()">Desconectar</ds-button>
+      }
+    </div>
+
+    @if (!v.encryptionConfigured) {
+      <div class="banner banner--danger" role="alert">
+        <ds-icon name="alert" />
+        <span>El servidor no tiene configurada la clave de cifrado de credenciales. Avisa a soporte.</span>
+      </div>
+    }
+
+    <div class="store__grid">
+      <form class="store__form" [formGroup]="form" (ngSubmit)="save()">
+        <section class="card">
+          <h2>Credenciales</h2>
+          <fieldset class="mode">
+            <legend>Tipo de credenciales</legend>
+            <label class="mode__option">
+              <input type="radio" formControlName="liveMode" [value]="false" />
+              <span><strong>De prueba</strong> Para hacer compras de prueba sin dinero real.</span>
+            </label>
+            <label class="mode__option">
+              <input type="radio" formControlName="liveMode" [value]="true" />
+              <span><strong>De producción</strong> Cobros reales a tus clientes.</span>
+            </label>
+          </fieldset>
+          <label>
+            Public Key
+            <input formControlName="publicKey" autocomplete="off" spellcheck="false" placeholder="APP_USR-…" />
+          </label>
+          <label>
+            <span class="label-text">
+              Access Token
+              @if (v.connected) { <span class="optional">Déjalo vacío para mantener el actual</span> }
+            </span>
+            <input formControlName="accessToken" type="password" autocomplete="off" spellcheck="false" placeholder="APP_USR-…" />
+            <small>Se guarda cifrado y nunca vuelve a mostrarse.</small>
+          </label>
+          <label>
+            <span class="label-text">
+              Clave secreta del webhook
+              @if (v.hasWebhookSecret) { <span class="optional">Configurada · déjala vacía para mantenerla</span> }
+            </span>
+            <input formControlName="webhookSecret" type="password" autocomplete="off" spellcheck="false" />
+          </label>
+        </section>
+        <footer>
+          <ds-button type="submit" [disabled]="saving() || !v.encryptionConfigured">
+            {{ saving() ? 'Verificando…' : v.connected ? 'Guardar y verificar' : 'Conectar cuenta' }}
+          </ds-button>
+        </footer>
+      </form>
+
+      <aside class="store__rail">
+        <section class="card">
+          <h2>Cómo conectarla</h2>
+          <ol class="steps">
+            <li>
+              En <a href="https://www.mercadopago.com.pe/developers/panel/app" target="_blank" rel="noopener">Tus integraciones</a>
+              crea una aplicación de tipo <em>Checkout API</em>.
+            </li>
+            <li>En <em>Credenciales</em> copia la Public Key y el Access Token del mismo tipo (prueba o producción).</li>
+            <li>
+              En <em>Webhooks</em> pega esta URL, marca el evento <strong>Order</strong> y <strong>Pagos</strong>, guarda y copia la clave secreta:
+              <span class="webhook">
+                <code>{{ v.webhookUrl }}</code>
+                <ds-button type="button" variant="secondary" (click)="copyWebhook(v.webhookUrl)">
+                  {{ copied() ? 'Copiada' : 'Copiar' }}
+                </ds-button>
+              </span>
+            </li>
+          </ol>
+          <small>Las credenciales, el webhook y su clave deben ser del mismo tipo (prueba o producción).</small>
+        </section>
+      </aside>
+    </div>
+  }
+</section>

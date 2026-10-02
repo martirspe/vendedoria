@@ -86,14 +86,16 @@ export class IntegrationsPage {
         id: 'mercadopago',
         name: 'Mercado Pago',
         category: 'Payments',
-        status: this.paymentsMock() ? 'ready' : 'connected',
+        status: this.paymentsProvider() === 'mercadopago' ? 'connected' : 'ready',
         summary: this.paymentsMock()
-          ? `Provider ${this.paymentsProvider()} · checkout mock (flujo B).`
-          : 'Checkout live vía Mercado Pago (flujo B).',
-        nextStep: this.paymentsMock()
-          ? 'Deja el token vacío para mock o configura MERCADOPAGO_ACCESS_TOKEN.'
-          : 'Webhooks de pago activos en Pedidos.',
-        link: '/app/orders',
+          ? 'Sin cuenta conectada · los links de pago usan el simulador de desarrollo.'
+          : this.paymentsProvider() === 'mercadopago'
+            ? 'Cobros con tu propia cuenta: tienda web (tarjeta y Yape) y links del vendedor.'
+            : 'Sin cuenta conectada · la tienda funciona en modo "pedir por WhatsApp".',
+        nextStep: this.paymentsProvider() === 'mercadopago'
+          ? 'Revisa credenciales y webhook en Cobros.'
+          : 'Conecta tu cuenta de Mercado Pago en Cobros.',
+        link: '/app/payments',
       },
       {
         id: 'shopify',

@@ -4,8 +4,8 @@
       <p class="store__eyebrow">Vender</p>
       <h1>Tienda web</h1>
       <p>
-        Tu catálogo en una web propia. Cada botón de compra abre WhatsApp con tu
-        vendedor IA y el producto ya identificado.
+        Tu catálogo en una web propia. Con Mercado Pago conectado tus clientes pagan con
+        tarjeta o Yape; sin él, el pedido llega a tu WhatsApp con el vendedor IA.
       </p>
     </div>
     @if (view(); as v) {
@@ -111,8 +111,91 @@
               <small>Con código de país, sin espacios. Debe ser el número conectado a tu vendedor.</small>
             </label>
             <label>
-              <span class="label-text">Correo de contacto <span class="optional">Opcional</span></span>
+              Correo de contacto
               <input formControlName="contactEmail" type="email" autocomplete="email" />
+              <small>Recibe reclamos, solicitudes de devolución y pedidos sobre datos personales.</small>
+            </label>
+          </div>
+        </section>
+
+        <section class="card">
+          <h2>Entregas</h2>
+          <label class="check">
+            <input type="checkbox" formControlName="deliveryEnabled" />
+            <span>Hago envíos a domicilio</span>
+          </label>
+          @if (form.controls.deliveryEnabled.value) {
+            <div class="row">
+              <label>
+                <span class="label-text">Costo en Lima (S/) <span class="optional">Vacío = no envío a Lima</span></span>
+                <input formControlName="shippingLima" type="number" min="0" max="1000" step="0.10" inputmode="decimal" />
+              </label>
+              <label>
+                <span class="label-text">Plazo en Lima <span class="optional">Opcional</span></span>
+                <input formControlName="deliveryDaysLima" maxlength="60" placeholder="1 a 2 días hábiles" />
+              </label>
+            </div>
+            <div class="row">
+              <label>
+                <span class="label-text">Costo a provincias (S/) <span class="optional">Vacío = no envío a provincias</span></span>
+                <input formControlName="shippingProvince" type="number" min="0" max="1000" step="0.10" inputmode="decimal" />
+              </label>
+              <label>
+                <span class="label-text">Plazo a provincias <span class="optional">Opcional</span></span>
+                <input formControlName="deliveryDaysProvince" maxlength="60" placeholder="3 a 5 días hábiles" />
+              </label>
+            </div>
+            <label>
+              <span class="label-text">Envío gratis desde (S/) <span class="optional">Opcional</span></span>
+              <input formControlName="freeShippingFrom" type="number" min="1" step="1" inputmode="decimal" />
+              <small>Se calcula sobre el total después de descuentos.</small>
+            </label>
+          }
+          <label class="check">
+            <input type="checkbox" formControlName="pickupEnabled" />
+            <span>Ofrezco recojo en tienda (gratis)</span>
+          </label>
+          @if (form.controls.pickupEnabled.value) {
+            <label>
+              Dirección y horario de recojo
+              <input formControlName="pickupAddress" maxlength="240" placeholder="Av. Larco 123, Miraflores · Lun a Sáb 10 a 7 p. m." />
+            </label>
+          }
+        </section>
+
+        <section class="card">
+          <h2>Datos legales</h2>
+          <p class="hint">
+            Se muestran en el pie de página y en los términos de tu tienda. Son obligatorios para
+            vender online en Perú.
+          </p>
+          <div class="row">
+            <label>
+              Razón social o nombre completo
+              <input formControlName="legalName" maxlength="160" autocomplete="organization" />
+            </label>
+            <label>
+              RUC
+              <input formControlName="ruc" inputmode="numeric" maxlength="11" placeholder="20123456789" />
+            </label>
+          </div>
+          <label>
+            Dirección fiscal
+            <input formControlName="legalAddress" maxlength="240" autocomplete="street-address" />
+          </label>
+          <label>
+            Libro de Reclamaciones virtual (URL)
+            <input formControlName="complaintsBookUrl" type="url" placeholder="https://" />
+            <small>El enlace de tu libro (por ejemplo, de ReclamoFácil). Debe empezar con https://</small>
+          </label>
+          <div class="row">
+            <label>
+              <span class="label-text">Plazo para cambios (días) <span class="optional">0 = solo garantía legal</span></span>
+              <input formControlName="exchangeDays" type="number" min="0" max="60" inputmode="numeric" />
+            </label>
+            <label>
+              <span class="label-text">Código del banco de datos (ANPD) <span class="optional">Opcional</span></span>
+              <input formControlName="dataBankCode" maxlength="60" />
             </label>
           </div>
         </section>

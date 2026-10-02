@@ -73,6 +73,16 @@ export const routes: Routes = [
           import('./features/metrics/metrics.page').then((m) => m.MetricsPage),
       },
       {
+        path: 'coupons',
+        loadComponent: () =>
+          import('./features/coupons/coupons.page').then((m) => m.CouponsPage),
+      },
+      {
+        path: 'payments',
+        loadComponent: () =>
+          import('./features/payments/payments.page').then((m) => m.PaymentsPage),
+      },
+      {
         path: 'integrations',
         loadComponent: () =>
           import('./features/integrations/integrations.page').then(

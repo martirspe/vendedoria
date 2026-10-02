@@ -16,6 +16,9 @@ import {
 } from '../../core/api/store-api.service';
 
 const HEX_COLOR = /^#[0-9a-fA-F]{6}$/;
+const toCents = (soles: number | null) =>
+  soles === null || Number.isNaN(soles) ? null : Math.round(soles * 100);
+const toSoles = (cents: number | null) => (cents === null ? null : cents / 100);
 
 @Component({
   selector: 'app-store-page',
@@ -56,6 +59,20 @@ export class StorePage {
     contactEmail: ['', [Validators.email, Validators.maxLength(160)]],
     seoTitle: ['', [Validators.maxLength(70)]],
     seoDescription: ['', [Validators.maxLength(160)]],
+    deliveryEnabled: [true],
+    shippingLima: [null as number | null, [Validators.min(0), Validators.max(1000)]],
+    shippingProvince: [null as number | null, [Validators.min(0), Validators.max(1000)]],
+    freeShippingFrom: [null as number | null, [Validators.min(1)]],
+    deliveryDaysLima: ['', [Validators.maxLength(60)]],
+    deliveryDaysProvince: ['', [Validators.maxLength(60)]],
+    pickupEnabled: [false],
+    pickupAddress: ['', [Validators.maxLength(240)]],
+    legalName: ['', [Validators.maxLength(160)]],
+    ruc: ['', [Validators.pattern(/^(10|15|16|17|20)\d{9}$/)]],
+    legalAddress: ['', [Validators.maxLength(240)]],
+    complaintsBookUrl: ['', [Validators.pattern(/^https:\/\/\S+$/), Validators.maxLength(500)]],
+    exchangeDays: [0, [Validators.min(0), Validators.max(60)]],
+    dataBankCode: ['', [Validators.maxLength(60)]],
   });
 
   constructor() {
@@ -92,6 +109,20 @@ export class StorePage {
       contactEmail: values.contactEmail.trim() || null,
       seoTitle: values.seoTitle.trim() || null,
       seoDescription: values.seoDescription.trim() || null,
+      deliveryEnabled: values.deliveryEnabled,
+      shippingLimaCents: toCents(values.shippingLima),
+      shippingProvinceCents: toCents(values.shippingProvince),
+      freeShippingFromCents: toCents(values.freeShippingFrom),
+      deliveryDaysLima: values.deliveryDaysLima.trim() || null,
+      deliveryDaysProvince: values.deliveryDaysProvince.trim() || null,
+      pickupEnabled: values.pickupEnabled,
+      pickupAddress: values.pickupAddress.trim() || null,
+      legalName: values.legalName.trim() || null,
+      ruc: values.ruc.trim() || null,
+      legalAddress: values.legalAddress.trim() || null,
+      complaintsBookUrl: values.complaintsBookUrl.trim() || null,
+      exchangeDays: values.exchangeDays ?? 0,
+      dataBankCode: values.dataBankCode.trim() || null,
     };
     this.saving.set(true);
     this.clearMessages();
@@ -176,6 +207,20 @@ export class StorePage {
       contactEmail: store.contactEmail ?? '',
       seoTitle: store.seoTitle ?? '',
       seoDescription: store.seoDescription ?? '',
+      deliveryEnabled: store.deliveryEnabled,
+      shippingLima: toSoles(store.shippingLimaCents),
+      shippingProvince: toSoles(store.shippingProvinceCents),
+      freeShippingFrom: toSoles(store.freeShippingFromCents),
+      deliveryDaysLima: store.deliveryDaysLima ?? '',
+      deliveryDaysProvince: store.deliveryDaysProvince ?? '',
+      pickupEnabled: store.pickupEnabled,
+      pickupAddress: store.pickupAddress ?? '',
+      legalName: store.legalName ?? '',
+      ruc: store.ruc ?? '',
+      legalAddress: store.legalAddress ?? '',
+      complaintsBookUrl: store.complaintsBookUrl ?? '',
+      exchangeDays: store.exchangeDays,
+      dataBankCode: store.dataBankCode ?? '',
     });
   }
 
@@ -188,6 +233,7 @@ export class StorePage {
     if (error instanceof HttpErrorResponse && error.status === 400) {
       const message = error.error?.message;
       if (typeof message === 'string') return message;
+      if (Array.isArray(message) && typeof message[0] === 'string') return message[0];
     }
     return fallback;
   }

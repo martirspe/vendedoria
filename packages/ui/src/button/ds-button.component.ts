@@ -17,6 +17,7 @@ export type DsButtonVariant = 'primary' | 'secondary' | 'ghost';
       [class.ds-button--ghost]="variant() === 'ghost'"
       [disabled]="disabled()"
       [attr.type]="type()"
+      [attr.aria-label]="label()"
     >
       <ng-content />
     </button>
@@ -70,5 +71,7 @@ export type DsButtonVariant = 'primary' | 'secondary' | 'ghost';
 export class DsButtonComponent {
   readonly variant = input<DsButtonVariant>('primary');
   readonly disabled = input(false);
+  /** Accessible name for icon-only buttons. */
+  readonly label = input<string | null>(null);
   readonly type = input<'button' | 'submit' | 'reset'>('button');
 }
