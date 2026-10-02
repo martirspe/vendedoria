@@ -1,0 +1,259 @@
+@if (product(); as p) {
+  <div class="wrap pdp">
+    <a routerLink="/" class="breadcrumb"><app-icon name="back" /> Volver a la selección</a>
+    <div class="pdp-main">
+      <section class="gallery" aria-label="Galería del producto">
+        <div class="gallery-main">
+          <button class="zoom-image" (click)="dialog.showModal()" aria-label="Ampliar imagen">
+            @if (selected() < 0) {
+              <app-product-image [product]="p" />
+            } @else if (photos()[selected()]; as photo) {
+              <app-photo [src]="photo.url" [alt]="photo.alt || p.name" />
+            }
+          </button>
+          <div class="gallery-controls">
+            <button (click)="step(-1)" [disabled]="totalPhotos() <= 1" aria-label="Imagen anterior"><app-icon name="prev" /></button>
+            <span>{{ selected() + 1 + (montage() ? 1 : 0) }} / {{ totalPhotos() || 1 }}</span>
+            <button (click)="step(1)" [disabled]="totalPhotos() <= 1" aria-label="Imagen siguiente"><app-icon name="next" /></button>
+          </div>
+        </div>
+        <p class="image-caption">{{ caption() }}</p>
+        <div class="thumbs">
+          @if (montage()) {
+            <button (click)="selected.set(-1)" [class.selected]="selected() < 0" aria-label="Vista del set" [attr.aria-pressed]="selected() < 0"><app-product-image [product]="p" /></button>
+          }
+          @for (photo of photos(); track photo.url; let i = $index) {
+            <button (click)="selected.set(i)" [class.selected]="selected() === i" [attr.aria-label]="'Foto ' + (i + 1)" [attr.aria-pressed]="selected() === i"><app-photo [src]="photo.url" [alt]="photo.alt || p.name" /></button>
+          }
+        </div>
+        <dialog #dialog (keydown.arrowleft)="step(-1)" (keydown.arrowright)="step(1)">
+          <button class="dialog-close" (click)="dialog.close()" aria-label="Cerrar imagen"><app-icon name="close" /></button>
+          @if (selected() < 0) {
+            <div class="dialog-set"><app-product-image [product]="p" /></div>
+          } @else if (photos()[selected()]; as photo) {
+            <div class="dialog-photo"><app-photo [src]="photo.url" [alt]="photo.alt || p.name" /></div>
+          }
+          <p>{{ caption() }}</p>
+        </dialog>
+      </section>
+
+      <section class="product-info">
+        <p class="eyebrow">{{ categoryOf(p) }}@if (p.brand) { · {{ p.brand }}} · {{ p.format === 'set' ? 'Set' : 'Individual' }}</p>
+        <h1>{{ p.name }}</h1>
+        <p class="summary">{{ p.descriptionShort }}</p>
+        <p class="price">
+          {{ price() | money }}
+          @if (p.format === 'set' && saving(p) > 0) {
+            <s class="was">{{ p.priceCents + saving(p) | money }}</s>
+          } @else if (p.compareAtPriceCents && p.compareAtPriceCents > price()) {
+            <s class="was">{{ p.compareAtPriceCents | money }}</s>
+          }
+        </p>
+        @if (p.format === 'set' && saving(p) > 0) {
+          <p class="set-saving">Ahorras <strong>{{ saving(p) | money }}</strong> frente a comprar las {{ p.includes.length }} piezas por separado.</p>
+        }
+        <p class="availability" [class.low]="scarcity(p)" [class.out]="!p.isAvailable">
+          <span class="stock-dot" aria-hidden="true"></span>
+          @if (!p.isAvailable) {
+            Agotado por ahora
+          } @else if (p.stockLeft === 1) {
+            <strong>Última unidad disponible</strong>{{ online() ? ' · se reserva para ti al continuar al pago' : '' }}
+          } @else if (scarcity(p)) {
+            <strong>Solo quedan {{ p.stockLeft }} unidades</strong>{{ online() ? ' · se reservan al continuar al pago' : '' }}
+          } @else {
+            Disponible para envío o recojo
+          }
+        </p>
+        @if (p.descriptionFull) {
+          <p class="description">{{ p.descriptionFull }}</p>
+        }
+        @if (p.details.family) {
+          <div class="fragrance-tags">
+            <span>{{ p.details.family }}</span>
+            @if (p.details.intensity) {
+              <span>Intensidad {{ p.details.intensity.toLowerCase() }}</span>
+            }
+          </div>
+        }
+        @if (p.details.benefits.length) {
+          <ul class="benefits">
+            @for (b of p.details.benefits; track b) {
+              <li><app-icon name="check" />{{ b }}</li>
+            }
+          </ul>
+        }
+        @if (p.hasVariants) {
+          <label class="select-field">
+            <span>Elige una opción</span>
+            <select aria-label="Opción del producto" (change)="pickVariant($any($event.target).value)">
+              @for (v of p.variants; track v.id) {
+                <option [value]="v.id" [selected]="variantId() === v.id" [disabled]="!v.isAvailable">{{ v.label }}{{ v.isAvailable ? '' : ' · agotado' }}</option>
+              }
+            </select>
+          </label>
+        }
+        @if (canBuy()) {
+          <div class="buy-row">
+            <div class="quantity">
+              <button (click)="qty.set(qty() - 1)" [disabled]="qty() <= 1" aria-label="Reducir cantidad"><app-icon name="minus" /></button>
+              <span>{{ qty() }}</span>
+              <button (click)="qty.set(qty() + 1)" [disabled]="qty() >= maxUnits(p)" aria-label="Aumentar cantidad"><app-icon name="plus" /></button>
+            </div>
+            @if (online()) {
+              <a class="button" [routerLink]="['/checkout']" [queryParams]="buyParams()">Comprar ahora <app-icon name="arrow" /></a>
+            } @else {
+              <button class="button" (click)="add(p)"><app-icon name="bag" />Agregar a mi bolsa</button>
+            }
+          </div>
+          @if (online()) {
+            <button class="button secondary full" (click)="add(p)"><app-icon name="bag" />Agregar a mi bolsa</button>
+          }
+        }
+        <div class="added-panel" role="status" [class.show]="added()">
+          @if (added()) {
+            <app-icon name="success" /><span>{{ added() }}</span>
+            <a routerLink="/carrito" class="text-link">Ver mi bolsa ({{ cart.count() }}) <app-icon name="arrow" /></a>
+          }
+        </div>
+        @if (upsell(); as s) {
+          <aside class="offer-card">
+            <p class="offer-kicker">COMPLETA EL RITUAL</p>
+            <a class="offer-main" [routerLink]="['/producto', s.handle]">
+              <span class="offer-thumb"><app-product-image [product]="s" /></span>
+              <span class="offer-copy">
+                <strong class="offer-name">{{ s.name }}</strong>
+                <small>Esta pieza + {{ s.includes.length - 1 }} {{ s.includes.length === 2 ? 'pieza' : 'piezas' }} más de la misma línea, reunidas en un solo pedido.</small>
+                <span class="offer-price">
+                  {{ s.priceCents | money }}
+                  @if (saving(s) > 0) {
+                    <em>Ahorras {{ saving(s) | money }}</em>
+                  } @else if (saving(s) === 0) {
+                    <em class="neutral">Mismo precio que por separado</em>
+                  }
+                </span>
+              </span>
+            </a>
+            <button type="button" class="button secondary full" (click)="quickAdd(s)"><app-icon name="bag" />Agregar el set a mi bolsa</button>
+          </aside>
+        }
+        @if (pieces().length) {
+          <aside class="offer-card">
+            <p class="offer-kicker">{{ p.isAvailable ? '¿PREFIERES EMPEZAR POR UNA PIEZA?' : 'EL SET SE AGOTÓ, SUS PIEZAS NO' }}</p>
+            @for (x of pieces(); track x.handle) {
+              <div class="offer-line">
+                <a class="offer-thumb" [routerLink]="['/producto', x.handle]" [attr.aria-label]="x.name"><app-product-image [product]="x" /></a>
+                <a class="offer-copy" [routerLink]="['/producto', x.handle]"><strong class="offer-name">{{ x.name }}</strong><span class="offer-price">{{ x.priceCents | money }}</span></a>
+                <button type="button" class="offer-add" (click)="quickAdd(x)" [attr.aria-label]="'Agregar ' + x.name + ' a mi bolsa'"><app-icon name="plus" />Agregar</button>
+              </div>
+            }
+          </aside>
+        }
+        @if (whatsapp(); as href) {
+          <a class="text-link" [href]="href" target="_blank" rel="noopener"><app-icon name="whatsapp" />Consultar por WhatsApp</a>
+        }
+        <div class="pdp-trust">
+          @if (online()) {
+            <span><img src="/brands/yape-logo.svg" alt="Yape" width="63" height="80" />Yape</span>
+            <span><app-icon name="card" />Tarjetas</span>
+          }
+          <span><app-icon name="truck" />{{ freeLabel() ? 'Envío gratis desde ' + freeLabel() : 'Envíos a todo el Perú' }}</span>
+          <span><app-icon name="shield" />Compra como invitado</span>
+        </div>
+      </section>
+    </div>
+
+    <section class="product-details">
+      <div>
+        @if (p.includes.length) {
+          <p class="eyebrow">CADA DETALLE CUENTA</p>
+          <h2>{{ p.format === 'set' ? 'Las piezas de tu set.' : 'Presentación y detalles.' }}</h2>
+          @for (c of p.includes; track $index) {
+            <article class="included">
+              <div><app-icon name="package" /></div>
+              <section>
+                <h3>{{ c.quantity > 1 ? c.quantity + ' × ' : '' }}{{ c.name }}</h3>
+                @if (c.size || c.code) {
+                  <p>{{ c.size }}@if (c.size && c.code) { · }@if (c.code) {Código {{ c.code }}}</p>
+                }
+                <ul>
+                  @for (d of c.details; track d) {
+                    <li>{{ d }}</li>
+                  }
+                </ul>
+                @if (c.handle && c.handle !== p.handle) {
+                  <a class="text-link" [routerLink]="['/producto', c.handle]">Ver esta pieza individual <app-icon name="arrow" /></a>
+                }
+              </section>
+            </article>
+          }
+        }
+      </div>
+      <div>
+        @if (p.details.scent.length) {
+          <p class="eyebrow">SU FIRMA OLFATIVA</p>
+          <h2>Un aroma con carácter.</h2>
+          <div class="scent-list">
+            @for (s of p.details.scent; track s.name) {
+              <div><h3>{{ s.name }}</h3><p>{{ s.description }}</p></div>
+            }
+          </div>
+        }
+        @if (p.details.usage.length) {
+          <h2>Cómo disfrutarlo.</h2>
+          <ol class="usage">
+            @for (u of p.details.usage; track u) {
+              <li>{{ u }}</li>
+            }
+          </ol>
+        }
+        @for (n of p.details.notes; track n) {
+          <p class="notice">{{ n }}</p>
+        }
+        @for (photo of relatedPhotos(); track photo.url) {
+          <div class="related-note">
+            <img [src]="photo.url" [alt]="photo.alt || ''" width="100" height="100" loading="lazy" />
+            <p>{{ photo.caption || 'Referencia de la línea. No está incluido en este set.' }}</p>
+          </div>
+        }
+      </div>
+    </section>
+
+    @if (related().length) {
+      <section class="related-products" aria-roledescription="carrusel" aria-labelledby="related-title" (mouseenter)="hovering.set(true)" (mouseleave)="hovering.set(false)" (focusin)="hovering.set(true)" (focusout)="hovering.set(false)">
+        <div class="related-head">
+          <div>
+            <p class="eyebrow">ELIGE TU PRESENTACIÓN</p>
+            <h2 id="related-title">{{ p.format === 'set' ? 'También por separado.' : 'Más de esta colección.' }}</h2>
+          </div>
+          @if (canSlide()) {
+            <div class="slider-nav">
+              <button type="button" class="slider-btn" (click)="manual(-1)" aria-label="Productos anteriores"><app-icon name="prev" /></button>
+              <button type="button" class="slider-btn" (click)="manual(1)" aria-label="Productos siguientes"><app-icon name="next" /></button>
+            </div>
+          }
+        </div>
+        <div class="related-track" #track (pointerdown)="userTook.set(true)">
+          @for (r of related(); track r.handle) {
+            <article class="product-card slide" role="group" aria-roledescription="diapositiva" [attr.aria-label]="$index + 1 + ' de ' + related().length">
+              <a class="card-image" [routerLink]="['/producto', r.handle]"><app-product-image [product]="r" /></a>
+              <p class="eyebrow">{{ r.format === 'set' ? 'Set' : 'Individual' }}</p>
+              <a [routerLink]="['/producto', r.handle]"><h3>{{ r.name }}</h3></a>
+              <strong>{{ r.priceCents | money }}</strong>
+            </article>
+          }
+        </div>
+      </section>
+    }
+  </div>
+  @if (canBuy() && online()) {
+    <div class="mobile-buy">
+      <strong>{{ price() | money }}</strong>
+      <a class="button" [routerLink]="['/checkout']" [queryParams]="buyParams()">Comprar ahora <app-icon name="arrow" /></a>
+    </div>
+  }
+} @else {
+  <section class="wrap empty">
+    <h1>Producto no disponible.</h1>
+    <a routerLink="/">Volver al catálogo</a>
+  </section>
+}

@@ -1,0 +1,221 @@
+<section class="wrap checkout-page">
+  <a routerLink="/" class="breadcrumb"><app-icon name="back" />Seguir eligiendo</a>
+  <div class="checkout-title">
+    <div>
+      <p class="eyebrow">YA CASI ES TUYO</p>
+      <h1>Un paso hacia<br /><em>tu próximo ritual.</em></h1>
+    </div>
+    <p><app-icon name="lock" />Compra como invitado<br />Sin crear una cuenta.</p>
+  </div>
+  @if (!ready()) {
+    <p class="muted" aria-busy="true">Cargando tu selección…</p>
+  } @else if (!online()) {
+    <div class="empty">
+      <h2>Los pedidos de esta tienda se coordinan por WhatsApp.</h2>
+      <a class="button" routerLink="/carrito">Ir a mi bolsa</a>
+    </div>
+  } @else if (lines().length) {
+    <div class="checkout-layout">
+      <div class="checkout-form">
+        <form [formGroup]="form" (ngSubmit)="prepare()" novalidate>
+          <section class="checkout-section">
+            <h2><span>01</span>Tus datos</h2>
+            <p>Usaremos tu correo para enviarte la confirmación.</p>
+            <label>Nombre y apellido<input formControlName="name" autocomplete="name" placeholder="Como figura en tu documento" maxlength="100" /></label>
+            @if (invalid('name')) {
+              <small class="field-error">Escribe tu nombre y apellido.</small>
+            }
+            <div class="form-grid">
+              <div>
+                <label>Correo electrónico<input type="email" formControlName="email" autocomplete="email" placeholder="tu@correo.com" maxlength="160" /></label>
+                @if (invalid('email')) {
+                  <small class="field-error">Revisa tu correo electrónico.</small>
+                }
+              </div>
+              <div>
+                <label>Celular<input type="tel" formControlName="phone" autocomplete="tel-national" inputmode="numeric" placeholder="9 dígitos" maxlength="9" /></label>
+                @if (invalid('phone')) {
+                  <small class="field-error">Debe empezar con 9 y tener 9 dígitos.</small>
+                }
+              </div>
+            </div>
+          </section>
+
+          <section class="checkout-section">
+            <h2><span>02</span>Tu entrega</h2>
+            @if (!options().length) {
+              <p class="notice" role="alert">Esta tienda aún no configuró sus formas de entrega.</p>
+            }
+            @if (homeOptions().length && pickupOption()) {
+              <div class="delivery-tabs">
+                <button type="button" [class.active]="!pickup()" (click)="setPickup(false)"><app-icon name="truck" />A domicilio</button>
+                <button type="button" [class.active]="pickup()" (click)="setPickup(true)"><app-icon name="store" />Recojo en tienda</button>
+              </div>
+            }
+            @if (pickup()) {
+              <p class="notice">Recojo sin costo@if (pickupOption()?.eta; as place) { en {{ place }}}. Te avisaremos por correo cuando tu pedido esté listo para recoger.</p>
+            } @else if (homeOptions().length) {
+              @switch (ubigeoState()) {
+                @case ('error') {
+                  <p class="notice" role="alert">No pudimos cargar la lista de distritos. <button type="button" class="text-link" (click)="loadUbigeos()">Reintentar</button></p>
+                }
+                @case ('loading') {
+                  <p class="muted" aria-busy="true">Cargando distritos…</p>
+                }
+                @default {
+                  <div class="form-grid">
+                    <label>Departamento<select formControlName="department" autocomplete="address-level1" (change)="departmentChanged()"><option value="">Selecciona</option>@for (d of departments(); track d) {<option [value]="d">{{ d }}</option>}</select></label>
+                    <label>Provincia<select formControlName="province" autocomplete="address-level2" (change)="provinceChanged()"><option value="">Selecciona</option>@for (p of provinces(); track p) {<option [value]="p">{{ p }}</option>}</select></label>
+                  </div>
+                  <label>Distrito<select formControlName="ubigeo" autocomplete="address-level3" (change)="districtChanged()"><option value="">Selecciona tu distrito</option>@for (d of districtsHere(); track d.code) {<option [value]="d.code">{{ d.district }}</option>}</select></label>
+                  @if (invalid('ubigeo')) {
+                    <small class="field-error">Selecciona el departamento, la provincia y el distrito.</small>
+                  }
+                }
+              }
+              <label>Dirección<input formControlName="address" autocomplete="street-address" placeholder="Calle, número, piso o departamento" maxlength="200" /></label>
+              @if (invalid('address')) {
+                <small class="field-error">Indica una dirección completa (mínimo 8 caracteres).</small>
+              }
+              <label>Referencia <span class="optional">(opcional)</span><input formControlName="reference" placeholder="Un punto cercano para encontrar tu dirección" maxlength="180" /></label>
+              @if (choices().length) {
+                <div class="carrier-options">
+                  @for (c of choices(); track c.mode) {
+                    <label class="carrier" [class.chosen]="mode() === c.mode">
+                      <input type="radio" name="carrier" [checked]="mode() === c.mode" (change)="mode.set(c.mode)" />
+                      <span><strong>{{ c.label }}</strong><small>{{ c.note }}</small></span>
+                      <b>
+                        @if (freeShip() || couponShip()) {
+                          <s>{{ c.cents | money }}</s> Gratis
+                        } @else {
+                          {{ c.cents === 0 ? 'Gratis' : (c.cents | money) }}
+                        }
+                      </b>
+                    </label>
+                  }
+                </div>
+              }
+              @if (quoteState() === 'loading') {
+                <p class="muted" aria-busy="true">Calculando la tarifa a tu distrito…</p>
+              } @else if (quoteState() === 'error') {
+                <p class="notice" role="alert">No pudimos calcular la tarifa. Elige el distrito otra vez.</p>
+              } @else if (carrierChosen()) {
+                <label class="check-label"><input type="checkbox" formControlName="shippingAcknowledged" /><span>Acepto la tarifa referencial. La cobertura se coordinará antes del despacho y cualquier diferencia requerirá mi aprobación.</span></label>
+              } @else if (!ubigeo()) {
+                <p class="muted">Selecciona tu distrito para ver las opciones de envío.</p>
+              } @else if (!choices().length) {
+                <p class="notice">No hay envío disponible a este distrito.@if (pickupOption()) { Puedes elegir el recojo en tienda.}</p>
+              }
+            }
+          </section>
+
+          <label class="check-label terms-check">
+            <input type="checkbox" formControlName="consent" />
+            <span>Soy mayor de edad y acepto los <a routerLink="/terminos-y-condiciones" target="_blank">Términos y Condiciones</a> y la <a routerLink="/cambios-y-devoluciones" target="_blank">Política de Cambios y Devoluciones</a>. He leído la <a routerLink="/politica-de-privacidad" target="_blank">Política de Privacidad</a>.</span>
+          </label>
+          @if (bumpOffer(); as b) {
+            <label class="order-bump" [class.on]="bump() === b.handle">
+              <input type="checkbox" [checked]="bump() === b.handle" (change)="bump.set($any($event.target).checked ? b.handle : null)" />
+              <span class="bump-thumb"><app-product-image [product]="b" /></span>
+              <span class="bump-copy">
+                <strong>Sí, agrégalo a mi pedido por {{ b.priceCents | money }}</strong>
+                <span>{{ b.name }}@if (b.descriptionShort) { · {{ b.descriptionShort }}}</span>
+                <small>Viaja en el mismo pedido, sin costo de entrega adicional.@if (b.stockLeft === 1) { Es la última unidad.}</small>
+              </span>
+            </label>
+          }
+          <button class="button full" type="submit" [disabled]="busy() || !choice()">{{ busy() ? 'Reservando tu selección…' : 'Continuar al pago' }}<app-icon name="arrow" /></button>
+          @if (store()?.checkout?.simulator) {
+            <p class="notice">Modo de prueba: esta tienda aún no conectó Mercado Pago. El pago será simulado y no se cobra dinero.</p>
+          }
+        </form>
+
+        <section class="checkout-section payment-section">
+          <h2><span>03</span>Tu pago</h2>
+          <p>Procesado de forma segura por Mercado Pago.</p>
+          <div class="payment-tabs">
+            <button disabled><img src="/brands/yape-logo.svg" alt="Yape" width="63" height="80" /><span>Pagar con Yape</span></button>
+            <button disabled><app-icon name="card" /><span>Tarjeta de crédito o débito</span></button>
+          </div>
+          <p class="muted">Completa tus datos y entrega para continuar al pago.</p>
+          <p class="secure"><app-icon name="shield" />Tu código de Yape y los datos de tarjeta no se guardan en esta tienda.</p>
+        </section>
+        @if (error()) {
+          <div class="error-box" role="alert">{{ error() }}</div>
+        }
+      </div>
+
+      <aside class="order-summary">
+        <p class="eyebrow">ELEGIDO POR TI</p>
+        <h2>Tu selección.</h2>
+        @for (l of lines(); track l.handle + (l.variantId ?? '')) {
+          <div class="summary-product">
+            @if (l.product) {
+              <app-product-image [product]="l.product" />
+            }
+            <div>
+              <h3>{{ l.name }}@if (l.variantLabel) { · {{ l.variantLabel }}}</h3>
+              <p>{{ l.quantity }} unidad(es)</p>
+              <strong>{{ l.unitCents * l.quantity | money }}</strong>
+            </div>
+          </div>
+        }
+        @if (couponsEnabled()) {
+          <div class="coupon-box">
+            @if (coupon(); as c) {
+              <div class="coupon-applied" role="status">
+                <app-icon name="coupon" />
+                <span><strong>{{ c.code }}</strong><small>{{ c.label }}</small></span>
+                <button type="button" class="coupon-remove" (click)="removeCoupon()" [attr.aria-label]="'Quitar el cupón ' + c.code">Quitar</button>
+              </div>
+            } @else if (couponOpen()) {
+              <form class="coupon-form" (submit)="$event.preventDefault(); applyCoupon()">
+                <label for="coupon-code">Código de cupón</label>
+                <div class="coupon-row">
+                  <input id="coupon-code" [value]="couponInput()" (input)="couponInput.set($any($event.target).value)" autocomplete="off" autocapitalize="characters" spellcheck="false" maxlength="30" placeholder="Escribe tu código" [attr.aria-invalid]="!!couponError()" aria-describedby="coupon-error" />
+                  <button class="button secondary" type="submit" [disabled]="couponBusy() || !couponInput().trim()">{{ couponBusy() ? 'Validando…' : 'Aplicar' }}</button>
+                </div>
+                @if (couponError()) {
+                  <small id="coupon-error" class="field-error" role="alert">{{ couponError() }}</small>
+                }
+              </form>
+            } @else {
+              <button type="button" class="coupon-toggle" (click)="openCoupon()"><app-icon name="coupon" />¿Tienes un cupón de descuento?</button>
+            }
+          </div>
+        }
+        <div class="total-line"><span>Productos</span><span>{{ subtotal() | money }}</span></div>
+        @if (discount() > 0) {
+          <div class="total-line discount-line"><span>Descuento · {{ coupon()?.code }}</span><span>−{{ discount() | money }}</span></div>
+        }
+        <div class="total-line">
+          <span>Entrega {{ choice()?.label }}</span>
+          <span>
+            @if (choice(); as c) {
+              @if (pickup() || shippingCents() === 0) {
+                @if (!pickup() && c.cents > 0) {<s>{{ c.cents | money }}</s> }<strong class="free-tag">Gratis</strong>
+              } @else {
+                {{ shippingCents() | money }}
+              }
+            } @else if (freeShip()) {
+              <strong class="free-tag">Gratis</strong>
+            } @else {
+              Por calcular
+            }
+          </span>
+        </div>
+        @if (freeFrom() > 0 && missing() > 0 && !pickup() && !couponShip()) {
+          <p class="free-nudge"><app-icon name="truck" /><span>Agrega <strong>{{ missing() | money }}</strong> más y tu envío es gratis.</span></p>
+        }
+        <div class="total-line grand-total"><strong>Total en soles</strong><strong>{{ total() | money }}</strong></div>
+        <p>Sin cargos ocultos. El total se confirma antes de pagar.</p>
+        <div class="summary-trust"><app-icon name="package" /><span>Tu pedido queda reservado durante 15 minutos al continuar al pago.</span></div>
+      </aside>
+    </div>
+  } @else {
+    <div class="empty">
+      <h2>Elige tu próximo favorito.</h2>
+      <a class="button" routerLink="/">Volver al catálogo</a>
+    </div>
+  }
+</section>

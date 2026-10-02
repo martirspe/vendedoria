@@ -1,0 +1,99 @@
+<section class="wrap cart-page">
+  <p class="eyebrow">TUS FAVORITOS, JUNTOS</p>
+  <h1>Mi bolsa.</h1>
+  @if (!cart.ready()) {
+    <p class="muted" aria-busy="true">Cargando tu bolsa…</p>
+  } @else if (rows().length) {
+    <div class="cart-layout">
+      <div>
+        @for (row of rows(); track row.line.key) {
+          <article class="cart-row">
+            <a [routerLink]="['/producto', row.line.handle]">
+              @if (row.product) {
+                <app-product-image [product]="row.product" />
+              }
+            </a>
+            <div>
+              <h3>{{ row.line.name }}@if (row.line.variantLabel) { · {{ row.line.variantLabel }}}</h3>
+              <p>{{ row.product?.descriptionShort }}</p>
+              <strong>{{ row.line.unitCents | money }}</strong>
+              <div class="quantity">
+                <button (click)="change(row.line, -1)" aria-label="Reducir cantidad"><app-icon name="minus" /></button>
+                <span>{{ row.line.quantity }}</span>
+                <button (click)="change(row.line, 1)" [disabled]="row.line.quantity >= row.max" aria-label="Aumentar cantidad"><app-icon name="plus" /></button>
+              </div>
+              @if (row.max === 0) {
+                <p class="error">Este producto ya no está disponible. Retíralo antes de continuar.</p>
+              } @else if (row.line.quantity > row.max) {
+                <p class="error">Disponibles: {{ row.max }}. Ajusta la cantidad.</p>
+              }
+            </div>
+            <button class="icon-button" (click)="cart.remove(row.line.key)" aria-label="Quitar producto"><app-icon name="trash" /></button>
+          </article>
+        }
+        @if (extras().length) {
+          <section class="cross-sell" aria-labelledby="cross-sell-title">
+            <p class="eyebrow">EL TOQUE FINAL</p>
+            <h2 id="cross-sell-title">Complétalo con.</h2>
+            <div class="cross-sell-list">
+              @for (x of extras(); track x.handle) {
+                <article class="cross-sell-item">
+                  <a class="cross-sell-thumb" [routerLink]="['/producto', x.handle]" [attr.aria-label]="x.name"><app-product-image [product]="x" /></a>
+                  <div>
+                    <a [routerLink]="['/producto', x.handle]"><h3>{{ x.name }}</h3></a>
+                    <p>{{ x.descriptionShort }}</p>
+                    @if (scarcity(x)) {
+                      <small class="card-stock"><span class="stock-dot" aria-hidden="true"></span>{{ scarcity(x) }}</small>
+                    }
+                  </div>
+                  <button type="button" class="offer-add" (click)="addExtra(x)" [attr.aria-label]="'Agregar ' + x.name + ' por ' + (x.priceCents | money)"><app-icon name="plus" />{{ x.priceCents | money }}</button>
+                </article>
+              }
+            </div>
+          </section>
+        }
+      </div>
+      <aside class="order-summary">
+        <h2>Tu selección.</h2>
+        <div class="total-line"><span>Productos ({{ cart.count() }})</span><strong>{{ total() | money }}</strong></div>
+        @if (freeFrom() > 0) {
+          <div class="free-ship" [class.done]="missing() <= 0">
+            <p>
+              @if (missing() > 0) {
+                <app-icon name="truck" /><span>Te faltan <strong>{{ missing() | money }}</strong> para tu envío gratis</span>
+              } @else {
+                <app-icon name="success" /><span><strong>¡Tu envío a domicilio es gratis!</strong></span>
+              }
+            </p>
+            <div class="free-ship-bar" role="progressbar" aria-label="Avance hacia el envío gratis" aria-valuemin="0" aria-valuemax="100" [attr.aria-valuenow]="progress()"><span [style.width.%]="progress()"></span></div>
+            <small>Envío gratis@if (carrierNames()) { con {{ carrierNames() }}} en pedidos desde {{ freeFrom() | money }}.</small>
+          </div>
+        }
+        @if (online()) {
+          <p>
+            @if (freeFrom() <= 0 || missing() > 0) {
+              Escoge tu distrito para calcular el envío en el siguiente paso.
+            } @else {
+              Solo elige tu distrito en el siguiente paso; el envío corre por nuestra cuenta.
+            }
+          </p>
+          <a class="button full" routerLink="/checkout" [class.disabled]="invalid()">Ir al checkout <app-icon name="arrow" /></a>
+          <p class="secure"><app-icon name="lock" />Compra sin crear cuenta</p>
+          <div class="summary-trust"><app-icon name="package" /><span>Las unidades se reservan para ti 15 minutos al continuar al pago.</span></div>
+        } @else if (orderHref(); as href) {
+          <p>Te confirmamos el stock, el envío y el pago por WhatsApp.</p>
+          <a class="button full" [href]="href" target="_blank" rel="noopener" [class.disabled]="invalid()"><app-icon name="whatsapp" />Enviar pedido por WhatsApp</a>
+        } @else {
+          <p class="notice">Esta tienda aún no configuró su canal de pedidos.</p>
+        }
+      </aside>
+    </div>
+  } @else {
+    <div class="empty">
+      <app-icon name="bag" />
+      <h2>Tu próximo favorito te espera.</h2>
+      <p>Añade un producto o compra directamente desde su ficha.</p>
+      <a class="button" routerLink="/">Explorar la selección <app-icon name="arrow" /></a>
+    </div>
+  }
+</section>

@@ -1,0 +1,108 @@
+<ng-template #inline let-parts>@for (part of parts; track $index) {@if (asObject(part); as o) {@if (o.route) {<a [routerLink]="o.route">{{ o.text }}</a>} @else if (o.href) {<a [href]="o.href" target="_blank" rel="noopener">{{ o.text }}</a>} @else if (o.missing) {<mark>{{ o.text }}</mark>} @else {<strong>{{ o.text }}</strong>}} @else {<ng-container>{{ part }}</ng-container>}}</ng-template>
+
+@if (store(); as s) {
+  <section class="wrap legal-page">
+    @if (doc(); as d) {
+      <nav class="breadcrumb" aria-label="Ruta"><a routerLink="/legal">Información legal</a><app-icon name="next" /><span>{{ d.title }}</span></nav>
+      <header class="legal-head">
+        <p class="eyebrow">INFORMACIÓN LEGAL</p>
+        <h1>{{ d.title }}</h1>
+        <p>Última actualización: {{ updated() }}</p>
+        <button class="text-link legal-print" type="button" (click)="print()"><app-icon name="print" />Imprimir o guardar en PDF</button>
+      </header>
+      <div class="legal-layout">
+        <aside class="legal-toc" aria-label="Contenido">
+          <p>Contenido</p>
+          <ol>
+            @for (section of d.sections; track section.id) {
+              <li><a [href]="'#' + section.id">{{ section.title }}</a></li>
+            }
+          </ol>
+        </aside>
+        <article class="legal-body">
+          <div class="legal-summary">
+            <h2>En resumen</h2>
+            <ul>
+              @for (item of d.summary; track $index) {
+                <li><ng-container *ngTemplateOutlet="inline; context: { $implicit: item }" /></li>
+              }
+            </ul>
+            <p>Este resumen es informativo; el texto completo prevalece.</p>
+          </div>
+          @for (section of d.sections; track section.id; let i = $index) {
+            <section [id]="section.id">
+              <h2><span>{{ i + 1 }}.</span>{{ section.title }}</h2>
+              @for (block of section.blocks; track $index) {
+                @switch (block.kind) {
+                  @case ('p') {
+                    <p><ng-container *ngTemplateOutlet="inline; context: { $implicit: $any(block).parts }" /></p>
+                  }
+                  @case ('ul') {
+                    <ul>
+                      @for (item of $any(block).items; track $index) {
+                        <li><ng-container *ngTemplateOutlet="inline; context: { $implicit: item }" /></li>
+                      }
+                    </ul>
+                  }
+                  @case ('table') {
+                    <table>
+                      <thead>
+                        <tr>
+                          @for (cell of $any(block).head; track $index) {
+                            <th scope="col">{{ cell }}</th>
+                          }
+                        </tr>
+                      </thead>
+                      <tbody>
+                        @for (row of $any(block).rows; track $index) {
+                          <tr>
+                            @for (cell of row; track $index) {
+                              <td><ng-container *ngTemplateOutlet="inline; context: { $implicit: [cell] }" /></td>
+                            }
+                          </tr>
+                        }
+                      </tbody>
+                    </table>
+                  }
+                }
+              }
+            </section>
+          }
+        </article>
+      </div>
+      <nav class="legal-more" aria-label="Otros documentos legales">
+        @for (o of others(); track o.slug) {
+          <a [routerLink]="'/' + o.slug">{{ o.title }}<app-icon name="arrow" /></a>
+        }
+        @if (s.legal.complaintsBookUrl) {
+          <a [href]="s.legal.complaintsBookUrl" target="_blank" rel="noopener noreferrer"><span><app-icon name="book" />Libro de Reclamaciones</span><app-icon name="external" /></a>
+        }
+      </nav>
+    } @else {
+      <header class="legal-head">
+        <p class="eyebrow">INFORMACIÓN LEGAL</p>
+        <h1>Compra con<br /><em>toda la información.</em></h1>
+        <p>Reglas claras sobre tu compra, tus datos y tus derechos como consumidor, conforme a la legislación peruana.</p>
+      </header>
+      <div class="legal-index">
+        @for (o of docs(); track o.slug) {
+          <a [routerLink]="'/' + o.slug"><h2>{{ o.title }}</h2><p>{{ o.description }}</p><span>Leer<app-icon name="arrow" /></span></a>
+        }
+        @if (s.legal.complaintsBookUrl) {
+          <a [href]="s.legal.complaintsBookUrl" target="_blank" rel="noopener noreferrer" class="legal-index-book">
+            <app-icon name="book" />
+            <h2>Libro de Reclamaciones</h2>
+            <p>Registra un reclamo o una queja. Te responderemos en un máximo de 15 días hábiles.</p>
+            <span>Registrar<app-icon name="external" /></span>
+          </a>
+        } @else {
+          <div class="legal-index-book">
+            <app-icon name="book" />
+            <h2>Libro de Reclamaciones</h2>
+            <p><mark>Por configurar</mark></p>
+          </div>
+        }
+      </div>
+    }
+  </section>
+}

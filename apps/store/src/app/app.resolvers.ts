@@ -1,9 +1,10 @@
 import { inject } from '@angular/core';
-import { ResolveFn } from '@angular/router';
+import { CanMatchFn, ResolveFn } from '@angular/router';
 import type {
   PublicProductDetail,
   PublicProductList,
   PublicProductSort,
+  StoreTemplate,
   StorefrontView,
 } from '@vendedoria/contracts';
 import { StoreApiService } from './core/store-api.service';
@@ -12,15 +13,27 @@ import { StoreStateService } from './core/store-state.service';
 export const CATALOG_PAGE_SIZE = 24;
 const SORTS: PublicProductSort[] = ['featured', 'newest', 'price-asc', 'price-desc'];
 
-export const storeResolver: ResolveFn<StorefrontView | null> = async () => {
+/** Loads the store of this host once; call it inside an injection context. */
+function loadStore(): Promise<StorefrontView | null> {
   const state = inject(StoreStateService);
-  if (state.store()) {
-    return state.store();
+  const api = inject(StoreApiService);
+  const current = state.store();
+  if (current) {
+    return Promise.resolve(current);
   }
-  const store = await inject(StoreApiService).store();
-  state.store.set(store);
-  return store;
-};
+  return api.store().then((store) => {
+    state.store.set(store);
+    return store;
+  });
+}
+
+export const storeResolver: ResolveFn<StorefrontView | null> = () => loadStore();
+
+/** Routes of a store template match only when the store uses that template. */
+export const templateMatch =
+  (template: StoreTemplate): CanMatchFn =>
+  async () =>
+    (await loadStore())?.template === template;
 
 export const featuredResolver: ResolveFn<PublicProductList> = () =>
   inject(StoreApiService).products({ sort: 'featured', pageSize: 8 });

@@ -1,0 +1,172 @@
+@if (copy(); as c) {
+  <section class="hero">
+    <div class="hero-copy">
+      <p class="eyebrow">{{ c.heroEyebrow }}</p>
+      <h1>@for (line of c.heroTitle; track $index) {{{ line }}<br />}<em>{{ c.heroEmphasis }}</em></h1>
+      <p>{{ c.heroText }}</p>
+      <a class="button" href="#coleccion">Encuentra el tuyo <app-icon name="arrow" /></a>
+      <div class="hero-note"><span class="line"></span>{{ c.heroNote }}</div>
+    </div>
+    <div class="hero-photo">
+      @if (heroImage(); as src) {
+        <img [src]="src" [alt]="store()?.displayName" width="1024" height="1024" fetchpriority="high" />
+      }
+      <span class="photo-note">EL ARTE DE CUIDARTE</span>
+    </div>
+  </section>
+
+  <div class="trust-strip">
+    <span><app-icon name="shield" />{{ online() ? 'Compra sin crear cuenta' : 'Pide sin crear cuenta' }}</span>
+    @if (online()) {
+      <span><img class="yape-mini" src="/brands/yape-logo.svg" alt="Yape" width="63" height="80" />Yape y tarjetas con Mercado Pago</span>
+    } @else {
+      <span><app-icon name="whatsapp" />Pedido y pago coordinados por WhatsApp</span>
+    }
+    <span><app-icon name="truck" />{{ freeLabel() ? 'Envío gratis desde ' + freeLabel() : 'Envíos a todo el Perú' }}</span>
+  </div>
+
+  <section id="coleccion" class="collection wrap">
+    <div class="section-heading">
+      <div>
+        <p class="eyebrow">ELEGIDOS PARA TI</p>
+        <h2>Tu esencia, tu elección.</h2>
+      </div>
+      <p>Sets para regalar.<br />Favoritos para quedarte.</p>
+    </div>
+    <div class="catalog-tools" role="search">
+      <label class="search">
+        <app-icon name="search" />
+        <input type="search" placeholder="Busca por nombre, línea o marca" aria-label="Buscar productos" enterkeyhint="search" autocomplete="off" [value]="search()" (input)="filter(search, $any($event.target).value)" />
+        @if (search()) {
+          <button type="button" class="search-clear" aria-label="Borrar búsqueda" (click)="filter(search, '')"><app-icon name="close" /></button>
+        }
+      </label>
+      <div class="catalog-controls">
+        <div class="segmented" role="group" aria-label="Presentación">
+          @for (f of formats; track f.value) {
+            <button type="button" [class.active]="format() === f.value" [attr.aria-pressed]="format() === f.value" (click)="filter(format, f.value)">{{ f.label }}</button>
+          }
+        </div>
+        @if (brandOptions().length > 2) {
+          <label class="select-field">
+            <span>Marca</span>
+            <select aria-label="Marca del producto" (change)="filter(brand, $any($event.target).value)">
+              @for (b of brandOptions(); track b) {
+                <option [value]="b" [selected]="brand() === b">{{ b === 'Todo' ? 'Todas' : b }}</option>
+              }
+            </select>
+          </label>
+        }
+      </div>
+    </div>
+    <div class="pills" role="group" aria-label="Categoría">
+      @for (cat of categories(); track cat) {
+        <button type="button" [class.active]="category() === cat" [class.empty-pill]="!categoryCounts()[cat]" [attr.aria-pressed]="category() === cat" (click)="filter(category, cat)">
+          {{ cat }}<span class="pill-count">{{ categoryCounts()[cat] || 0 }}</span>
+        </button>
+      }
+    </div>
+    <div class="catalog-meta">
+      <p aria-live="polite"><strong>{{ filtered().length }}</strong> {{ filtered().length === 1 ? 'producto' : 'productos' }}@if (search()) { para «{{ search() }}»}</p>
+      @if (activeFilters()) {
+        <button type="button" class="clear-filters" (click)="clearFilters()"><app-icon name="close" />Limpiar filtros ({{ activeFilters() }})</button>
+      }
+    </div>
+    <div class="product-grid">
+      @for (p of visible(); track p.handle) {
+        <article class="product-card">
+          <a [routerLink]="['/producto', p.handle]" class="card-image">
+            <app-product-image [product]="p" />
+            @if (!p.isAvailable) {
+              <span class="badge">Agotado</span>
+            } @else {
+              <span class="badge">{{ p.format === 'set' ? 'Set de ' + p.includes.length + ' piezas' : 'Individual' }}</span>
+            }
+            <span class="image-arrow"><app-icon name="arrow" /></span>
+          </a>
+          <p class="eyebrow">@if (p.brand) {{{ p.brand }} · }{{ categoryOf(p) }}</p>
+          <a [routerLink]="['/producto', p.handle]"><h3>{{ p.name }}</h3></a>
+          <p class="card-summary">{{ p.descriptionShort }}</p>
+          @if (p.isAvailable && scarcity(p)) {
+            <p class="card-stock"><span class="stock-dot" aria-hidden="true"></span>{{ scarcity(p) }}</p>
+          }
+          <div class="card-bottom">
+            <div class="card-price">
+              <strong>@if (p.priceVaries) {Desde }{{ p.priceCents | money }}</strong>
+              @if (saving(p) > 0) {
+                <s class="was">{{ p.priceCents + saving(p) | money }}</s>
+                <small class="card-saving">Ahorras {{ saving(p) | money }}</small>
+              } @else if (p.compareAtPriceCents && p.compareAtPriceCents > p.priceCents) {
+                <s class="was">{{ p.compareAtPriceCents | money }}</s>
+              }
+            </div>
+            @if (directBuy(p)) {
+              <a [routerLink]="['/checkout']" [queryParams]="{ producto: p.handle }" class="card-cta">Comprar ahora <app-icon name="arrow" /></a>
+            } @else {
+              <a [routerLink]="['/producto', p.handle]" class="card-cta secondary">Ver detalle <app-icon name="arrow" /></a>
+            }
+          </div>
+        </article>
+      } @empty {
+        <div class="catalog-empty">
+          <app-icon name="search" />
+          @if (failed()) {
+            <h3>No pudimos cargar el catálogo.</h3>
+            <p>Revisa tu conexión y vuelve a cargar la página.</p>
+          } @else if (!products().length) {
+            <h3>Muy pronto, nuevos favoritos.</h3>
+            <p>Estamos preparando la selección de esta tienda.</p>
+          } @else {
+            <h3>No encontramos coincidencias.</h3>
+            <p>Prueba con otra palabra o quita algún filtro para ver más opciones.</p>
+            <button type="button" class="button secondary" (click)="clearFilters()">Ver todo el catálogo</button>
+          }
+        </div>
+      }
+    </div>
+    @if (visible().length < filtered().length) {
+      <button class="button secondary load-more" (click)="limit.set(limit() + 18)">Ver más productos <app-icon name="plus" /></button>
+    }
+  </section>
+
+  <section class="ritual-banner wrap">
+    <div>
+      <p class="eyebrow">{{ c.bannerEyebrow }}</p>
+      <h2>@for (line of c.bannerTitle; track $index; let last = $last) {@if (last && c.bannerTitle.length > 1) {<em>{{ line }}</em>} @else {{{ line }}<br />}}</h2>
+      <p>{{ c.bannerText }}</p>
+      <a class="text-link" href="#coleccion">Explorar la selección <app-icon name="arrow" /></a>
+    </div>
+    @if (bannerImage(); as src) {
+      <img [src]="src" alt="" width="1024" height="1024" loading="lazy" />
+    }
+  </section>
+
+  <section class="faq wrap" aria-labelledby="faq-title">
+    <header class="faq-intro">
+      <p class="eyebrow">COMPRA CON CLARIDAD</p>
+      <h2 id="faq-title">Antes de elegir,<br /><em>todo claro.</em></h2>
+      <p>Pago, envío y entrega explicados en un minuto, para que compres con total tranquilidad.</p>
+      @if (whatsapp(); as href) {
+        <div class="faq-help">
+          <span class="faq-help-icon"><app-icon name="whatsapp" /></span>
+          <strong>¿Te quedó alguna duda?</strong>
+          <span>Te respondemos por WhatsApp, sin compromiso.</span>
+          <a class="text-link" [href]="href" target="_blank" rel="noopener">Escríbenos <app-icon name="arrow" /></a>
+        </div>
+      }
+      <a class="faq-terms" routerLink="/legal">Términos, envíos, cambios y privacidad</a>
+    </header>
+    <div class="faq-list">
+      @for (f of c.faq; track f.question; let i = $index) {
+        <details name="faq" [attr.open]="i === 0 ? '' : null">
+          <summary>
+            <span class="faq-num" aria-hidden="true">{{ (i + 1).toString().padStart(2, '0') }}</span>
+            <span class="faq-q">{{ f.question }}</span>
+            <span class="faq-toggle" aria-hidden="true"></span>
+          </summary>
+          <div class="faq-a"><p>{{ f.answer }}</p></div>
+        </details>
+      }
+    </div>
+  </section>
+}

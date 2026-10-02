@@ -3,6 +3,12 @@
 ## [Unreleased]
 
 ### Added
+- Store templates by industry: the merchant picks the business industry and a template in Tienda; the first one, Selecta (Belleza y cuidado personal), brings the full Selecta storefront (home, product page, bag, checkout, order/payment page, legal center, 404) with editable texts per store
+- Product sets with shared inventory (pieces per SKU, reserved and released with the set), set offers on the product page, complements in the bag and an order bump in checkout
+- Coupons by product line, option to exclude sets, and campaign links (`?cupon=`) applied at checkout
+- Courier rates by distance (Olva/Shalom) from the store origin ubigeo, with explicit acceptance of the reference rate by the buyer
+- Order logistics: ready for pickup, delivered and tracking code in the console, order page and emails; payment reconciliation with the Mercado Pago reference and email preview
+- Console Inventario page (stock per SKU) and product photo upload
 - Rate limiting per client IP (HMAC-hashed, Postgres-backed) on store checkout, coupon preview, payment, order actions, login and register; 429 with a Spanish message
 - Peruvian ubigeos (INEI 2025, 1 892 districts) in the store checkout: department → province → district selects; the server validates the district and that Lima Metropolitana/Callao use the Lima rate
 - Web store checkout per tenant: Mercado Pago Card Brick and Yape with per-tenant encrypted credentials and webhook, stock reservation with 15-minute expiry, idempotent orders, coupons, shipping rules, order page and confirmation email

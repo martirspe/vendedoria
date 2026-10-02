@@ -1,0 +1,9 @@
+@if (montage()) {
+  <div class="product-montage" [class.many]="photos().length > 3" [class.three]="photos().length === 3" role="img" [attr.aria-label]="product().name">
+    @for (photo of photos(); track photo.url) {
+      <app-photo [src]="photo.url" [alt]="photo.alt || product().name" />
+    }
+  </div>
+} @else if (photos()[0]; as photo) {
+  <app-photo [src]="photo.url" [alt]="photo.alt || product().name" />
+}

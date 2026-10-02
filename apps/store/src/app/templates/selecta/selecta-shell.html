@@ -1,0 +1,77 @@
+@if (store(); as s) {
+  <a class="skip" href="#main">Saltar al contenido</a>
+  @if (s.isPreview) {
+    <div class="announcement" role="status">Vista previa: esta tienda aún no está publicada. Solo tú puedes verla con este enlace.</div>
+  }
+  <div class="announcement">
+    @if (freeFrom() > 0) {
+      <strong>Envío gratis</strong> en pedidos desde {{ freeLabel() }}@if (s.checkout.mode === 'online') { · Paga con Yape o tarjeta}
+    } @else {
+      {{ s.tagline || 'Una selección para regalar. Un ritual para ti.' }}
+    }
+  </div>
+  <header class="header">
+    <a routerLink="/" class="brand" [attr.aria-label]="s.displayName + ', ir al inicio'">
+      <span class="brand-symbol" aria-hidden="true">{{ symbol() }}</span>
+      <span class="brand-word">{{ s.displayName }}</span>
+    </a>
+    <nav aria-label="Principal">
+      <a routerLink="/" fragment="coleccion">Catálogo</a>
+      <a routerLink="/carrito" class="cart-link">
+        <app-icon name="bag" />
+        <span>Mi bolsa</span>
+        <b>{{ cart.count() }}</b>
+      </a>
+    </nav>
+  </header>
+  <main id="main"><router-outlet /></main>
+  <footer>
+    <a routerLink="/" class="brand" [attr.aria-label]="s.displayName + ', ir al inicio'">
+      <span class="brand-symbol" aria-hidden="true">{{ symbol() }}</span>
+      <span class="brand-word">{{ s.displayName }}</span>
+    </a>
+    <p>{{ copy()?.closingPhrase }}</p>
+    <nav class="footer-links" aria-label="Información legal">
+      <a routerLink="/terminos-y-condiciones">Términos y condiciones</a>
+      <a routerLink="/politica-de-privacidad">Privacidad</a>
+      <a routerLink="/politica-de-cookies">Cookies</a>
+      <a routerLink="/envios-y-entregas">Envíos y entregas</a>
+      <a routerLink="/cambios-y-devoluciones">Cambios y devoluciones</a>
+      <a routerLink="/promociones-y-cupones">Promociones</a>
+    </nav>
+    @if (s.legal.complaintsBookUrl) {
+      <a class="complaints-book" [href]="s.legal.complaintsBookUrl" target="_blank" rel="noopener noreferrer">
+        <app-icon name="book" /><span>Libro de Reclamaciones</span>
+      </a>
+    } @else {
+      <a class="complaints-book" routerLink="/legal"><app-icon name="book" /><span>Libro de Reclamaciones</span></a>
+    }
+    @if (s.legal.legalName) {
+      <small class="footer-identity">{{ s.legal.legalName }}@if (s.legal.ruc) { · RUC {{ s.legal.ruc }}}@if (s.legal.legalAddress) { · {{ s.legal.legalAddress }}}</small>
+    }
+    @if (copy()?.footerNote; as note) {
+      <small>{{ note }}</small>
+    }
+    @if (s.showPlatformBadge) {
+      <small>Tienda creada con VendedorIA</small>
+    }
+  </footer>
+  @if (whatsapp(); as href) {
+    <a class="chat-float" [href]="href" [class.on-product]="onProduct()" target="_blank" rel="noopener" aria-label="Consultar por WhatsApp">
+      <app-icon name="whatsapp" />
+    </a>
+  }
+  <button
+    type="button"
+    class="to-top"
+    [class.show]="showTop()"
+    [class.with-chat]="!!whatsapp()"
+    [class.on-product]="onProduct()"
+    [attr.aria-hidden]="!showTop()"
+    [attr.tabindex]="showTop() ? 0 : -1"
+    (click)="toTop()"
+    aria-label="Volver arriba"
+  >
+    <app-icon name="up" />
+  </button>
+}

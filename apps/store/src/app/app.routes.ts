@@ -4,11 +4,18 @@ import {
   featuredResolver,
   productResolver,
   storeResolver,
+  templateMatch,
 } from './app.resolvers';
 import { LEGAL_SLUGS } from './features/legal/legal-slugs';
 import { StoreShellLayout } from './layout/store-shell.layout';
 
 export const routes: Routes = [
+  {
+    path: '',
+    canMatch: [templateMatch('selecta')],
+    loadChildren: () =>
+      import('./templates/selecta/selecta.routes').then((m) => m.SELECTA_ROUTES),
+  },
   {
     path: '',
     component: StoreShellLayout,

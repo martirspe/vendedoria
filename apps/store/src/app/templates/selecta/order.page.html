@@ -1,0 +1,134 @@
+@if (loading()) {
+  <section class="wrap confirmation"><p class="muted" aria-busy="true">Cargando tu pedido…</p></section>
+} @else if (notFound()) {
+  <section class="wrap not-found">
+    <p class="eyebrow">TU PEDIDO</p>
+    <h1>No encontramos<br /><em>este pedido.</em></h1>
+    <p>Revisa que el enlace esté completo. Lo encuentras en el correo de confirmación.</p>
+    <a class="button" routerLink="/">Ir al catálogo</a>
+  </section>
+} @else if (order(); as o) {
+  @if (canPay()) {
+    <section class="wrap checkout-page">
+      <div class="checkout-title">
+        <div>
+          <p class="eyebrow">PEDIDO {{ o.code }}</p>
+          <h1>Un paso hacia<br /><em>tu próximo ritual.</em></h1>
+        </div>
+        <p><app-icon name="lock" />Compra como invitado<br />Sin crear una cuenta.</p>
+      </div>
+      <div class="checkout-layout">
+        <div class="checkout-form">
+          <section class="checkout-section payment-section">
+            <h2><span>03</span>Tu pago</h2>
+            <p>Procesado de forma segura por Mercado Pago.</p>
+            <p class="reserve-timer" [class.urgent]="secondsLeft() < 180" role="timer">
+              <app-icon name="package" /><span>Tu selección está reservada para ti por <strong>{{ countdown() }}</strong></span>
+            </p>
+            @if (checkout()?.simulator) {
+              <p class="notice">Modo de prueba: esta tienda aún no conectó Mercado Pago. El pago es simulado y no se cobra dinero.</p>
+              <button type="button" class="button full" [disabled]="busy()" (click)="simulate()">{{ busy() ? 'Procesando…' : 'Pagar ' + (o.totalCents | money) + ' (simulado)' }}<app-icon name="lock" /></button>
+            } @else if (sdkError()) {
+              <div class="error-box" role="alert">No pudimos cargar el formulario de pago. Revisa tu conexión y recarga la página.</div>
+            } @else {
+              <div class="payment-tabs" role="tablist" aria-label="Elige cómo pagar">
+                <button type="button" role="tab" [attr.aria-selected]="method() === 'yape'" [class.active]="method() === 'yape'" [disabled]="busy()" (click)="selectMethod('yape')"><img src="/brands/yape-logo.svg" alt="Yape" width="63" height="80" /><span>Pagar con Yape</span></button>
+                <button type="button" role="tab" [attr.aria-selected]="method() === 'card'" [class.active]="method() === 'card'" [disabled]="busy()" (click)="selectMethod('card')"><app-icon name="card" /><span>Tarjeta de crédito o débito</span></button>
+              </div>
+              @if (method() === 'yape') {
+                <form class="yape-form" (ngSubmit)="payWithYape()">
+                  <p>En tu app Yape, abre <strong>Código de aprobación</strong>. Ese código autoriza esta compra.</p>
+                  <label>Celular de Yape<input name="yapePhone" [(ngModel)]="yapePhone" type="tel" inputmode="numeric" maxlength="9" autocomplete="tel-national" placeholder="9 dígitos" /></label>
+                  <label>Código de aprobación<input name="yapeOtp" [(ngModel)]="yapeOtp" type="password" inputmode="numeric" maxlength="6" autocomplete="one-time-code" placeholder="6 dígitos" /></label>
+                  <button class="button full" type="submit" [disabled]="busy()">{{ busy() ? 'Verificando pago…' : 'Pagar ' + (o.totalCents | money) }}<app-icon name="lock" /></button>
+                </form>
+              } @else {
+                <div id="mp-card-brick"></div>
+              }
+              @if (checkout() && !checkout()!.liveMode) {
+                <p class="muted">Credenciales de prueba: no se cobra dinero real.</p>
+              }
+            }
+            <p class="secure"><app-icon name="shield" />Tu código de Yape y los datos de tarjeta no se guardan en esta tienda.</p>
+            <button class="text-link" type="button" [disabled]="busy()" (click)="cancel()">Cancelar mi pedido</button>
+          </section>
+          @if (rejection(); as text) {
+            <div class="error-box" role="alert">{{ text }}</div>
+          }
+          @if (errorMessage(); as text) {
+            <div class="error-box" role="alert">{{ text }}</div>
+          }
+        </div>
+        <aside class="order-summary">
+          <p class="eyebrow">ELEGIDO POR TI</p>
+          <h2>Tu selección.</h2>
+          @for (item of o.items; track $index) {
+            <div class="summary-product">
+              @if (product(item.handle); as p) {
+                <app-product-image [product]="p" />
+              }
+              <div>
+                <h3>{{ item.title }}</h3>
+                <p>{{ item.quantity }} unidad(es)</p>
+                <strong>{{ item.totalCents | money }}</strong>
+              </div>
+            </div>
+          }
+          <div class="total-line"><span>Productos</span><span>{{ o.subtotalCents | money }}</span></div>
+          @if (o.discountCents > 0) {
+            <div class="total-line discount-line"><span>Descuento@if (o.couponCode) { · {{ o.couponCode }}}</span><span>−{{ o.discountCents | money }}</span></div>
+          }
+          <div class="total-line"><span>Entrega {{ o.delivery.label }}</span><span>@if (o.shippingCents === 0) {<strong class="free-tag">Gratis</strong>} @else {{{ o.shippingCents | money }}}</span></div>
+          <div class="total-line grand-total"><strong>Total en soles</strong><strong>{{ o.totalCents | money }}</strong></div>
+          <div class="summary-trust"><app-icon name="package" /><span>Tu pedido queda reservado durante 15 minutos al continuar al pago.</span></div>
+        </aside>
+      </div>
+    </section>
+  } @else {
+    <section class="wrap confirmation">
+      <div class="status-icon"><app-icon [name]="statusIcon()" /></div>
+      <p class="eyebrow">TU PEDIDO</p>
+      <h1>{{ title() }}</h1>
+      <p aria-live="polite">{{ message() }}</p>
+      <p class="order-reference">{{ o.code }}</p>
+      <div class="confirmation-card">
+        @for (item of o.items; track $index) {
+          <div class="total-line"><span>{{ item.title }} × {{ item.quantity }}</span><strong>{{ item.totalCents | money }}</strong></div>
+        }
+        @if (o.discountCents > 0) {
+          <div class="total-line discount-line"><span>Descuento@if (o.couponCode) { · {{ o.couponCode }}}</span><strong>−{{ o.discountCents | money }}</strong></div>
+        }
+        <div class="total-line"><span>Entrega · {{ o.delivery.label }}</span><strong>{{ o.shippingCents === 0 ? 'Gratis' : (o.shippingCents | money) }}</strong></div>
+        <div class="total-line grand-total"><strong>Total</strong><strong>{{ o.totalCents | money }}</strong></div>
+        @if (paid()) {
+          <h3>Tu entrega</h3>
+          @if (o.delivery.address) {
+            <p>{{ o.delivery.address }}</p>
+          }
+          @if (o.delivery.eta) {
+            <p>{{ o.delivery.eta }}</p>
+          }
+          <p>Confirmación para {{ o.customer.email }}</p>
+          @if (o.trackingCode) {
+            <p>Seguimiento: {{ o.trackingCode }}</p>
+          }
+          @if (logistics(); as step) {
+            <p>{{ step }}</p>
+          }
+        }
+        @if (o.paymentState === 'paid_late') {
+          <p class="notice">Recibimos un pago después de la cancelación. La tienda te contactará para coordinar la entrega o la devolución.</p>
+        }
+      </div>
+      @if (ended()) {
+        <a class="button" routerLink="/carrito">Volver a mi bolsa <app-icon name="arrow" /></a>
+      }
+      @if (errorMessage(); as text) {
+        <p class="error" role="alert">{{ text }}</p>
+      }
+      <a class="text-link" routerLink="/">Volver a la selección <app-icon name="arrow" /></a>
+    </section>
+  }
+} @else if (errorMessage(); as text) {
+  <section class="wrap confirmation"><p class="error" role="alert">{{ text }}</p></section>
+}
