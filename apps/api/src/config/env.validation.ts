@@ -60,11 +60,25 @@ class EnvironmentVariables {
 
   @IsOptional()
   @IsString()
-  MERCADOPAGO_ACCESS_TOKEN?: string;
+  NODE_ENV?: string;
+
+  /** 32 bytes (64 hex chars or base64) encrypting each tenant's payment credentials. */
+  @IsOptional()
+  @Matches(/^([0-9a-fA-F]{64}|[A-Za-z0-9+/_-]{43}=?)$/)
+  PAYMENT_CREDENTIALS_KEY?: string;
+
+  /** preview: orders record the email without sending it; live: sent with Resend. */
+  @IsOptional()
+  @Matches(/^(preview|live)$/)
+  EMAIL_MODE?: string;
 
   @IsOptional()
   @IsString()
-  MERCADOPAGO_WEBHOOK_SECRET?: string;
+  RESEND_API_KEY?: string;
+
+  @IsOptional()
+  @IsString()
+  EMAIL_FROM?: string;
 
   @IsOptional()
   @Matches(/^https?:\/\/\{slug\}\.[a-z0-9.-]+(:\d+)?\/?$/)

@@ -1,3 +1,5 @@
+import type { MerchantCredentials } from './merchant-accounts.service';
+
 export type CreateCheckoutInput = {
   idempotencyKey: string;
   orderId: string;
@@ -27,17 +29,12 @@ export type NormalizedWebhookEvent = {
   raw: unknown;
 };
 
-export const PAYMENT_PROVIDER = Symbol('PAYMENT_PROVIDER');
-
+/** Hosted checkout links (sent by the agent or the console). */
 export abstract class PaymentProviderPort {
   abstract readonly name: string;
 
   abstract createCheckout(
     input: CreateCheckoutInput,
+    credentials: MerchantCredentials | null,
   ): Promise<CreateCheckoutResult>;
-
-  abstract parseWebhook(
-    payload: unknown,
-    headers: Record<string, string | undefined>,
-  ): Promise<NormalizedWebhookEvent>;
 }

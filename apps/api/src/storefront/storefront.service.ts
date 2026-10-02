@@ -2,7 +2,8 @@ import { BadRequestException, Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { Storefront } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
-import { UpdateStorefrontDto } from './dto/update-storefront.dto';
+import { RUC, UpdateStorefrontDto } from './dto/update-storefront.dto';
+import { shippingOptions } from './shipping';
 import {
   DEFAULT_STOREFRONT_URL_TEMPLATE,
   storefrontUrl,
@@ -10,7 +11,16 @@ import {
 import { createPreviewToken } from './storefront-preview';
 
 export type StorefrontChecklistItem = {
-  id: 'name' | 'whatsapp' | 'products' | 'logo' | 'email' | 'seo';
+  id:
+    | 'name'
+    | 'whatsapp'
+    | 'products'
+    | 'legal'
+    | 'complaints'
+    | 'email'
+    | 'delivery'
+    | 'logo'
+    | 'seo';
   label: string;
   done: boolean;
   required: boolean;
@@ -57,6 +67,20 @@ export class StorefrontService {
         contactEmail: this.optionalText(dto.contactEmail)?.toLowerCase(),
         seoTitle: this.optionalText(dto.seoTitle),
         seoDescription: this.optionalText(dto.seoDescription),
+        legalName: this.optionalText(dto.legalName),
+        ruc: this.optionalText(dto.ruc),
+        legalAddress: this.optionalText(dto.legalAddress),
+        complaintsBookUrl: this.optionalText(dto.complaintsBookUrl),
+        dataBankCode: this.optionalText(dto.dataBankCode),
+        exchangeDays: dto.exchangeDays,
+        deliveryEnabled: dto.deliveryEnabled,
+        shippingLimaCents: dto.shippingLimaCents,
+        shippingProvinceCents: dto.shippingProvinceCents,
+        freeShippingFromCents: dto.freeShippingFromCents,
+        deliveryDaysLima: this.optionalText(dto.deliveryDaysLima),
+        deliveryDaysProvince: this.optionalText(dto.deliveryDaysProvince),
+        pickupEnabled: dto.pickupEnabled,
+        pickupAddress: this.optionalText(dto.pickupAddress),
       },
     });
     return this.view(tenantId, storefront);
@@ -173,18 +197,44 @@ export class StorefrontService {
         impact: 'Una tienda sin productos disponibles no puede vender.',
       },
       {
-        id: 'logo',
-        label: 'Logo',
-        done: Boolean(storefront.logoUrl),
-        required: false,
-        impact: 'Aumenta la confianza y hace reconocible la marca.',
+        id: 'legal',
+        label: 'Razón social, RUC y dirección',
+        done: Boolean(
+          storefront.legalName &&
+            storefront.ruc &&
+            RUC.test(storefront.ruc) &&
+            storefront.legalAddress,
+        ),
+        required: true,
+        impact: 'La ley de protección al consumidor exige identificar al proveedor en la tienda.',
+      },
+      {
+        id: 'complaints',
+        label: 'Libro de Reclamaciones virtual',
+        done: Boolean(storefront.complaintsBookUrl),
+        required: true,
+        impact: 'Obligatorio para vender online en Perú; se enlaza en el pie de página.',
       },
       {
         id: 'email',
         label: 'Correo de contacto',
         done: Boolean(storefront.contactEmail),
+        required: true,
+        impact: 'Canal formal para reclamos, devoluciones y derechos sobre datos personales.',
+      },
+      {
+        id: 'delivery',
+        label: 'Formas de entrega',
+        done: shippingOptions(storefront).length > 0,
+        required: true,
+        impact: 'El comprador elige cómo recibe su pedido y ve el costo antes de pagar.',
+      },
+      {
+        id: 'logo',
+        label: 'Logo',
+        done: Boolean(storefront.logoUrl),
         required: false,
-        impact: 'Canal formal para compradores; será obligatorio al activar pagos web.',
+        impact: 'Aumenta la confianza y hace reconocible la marca.',
       },
       {
         id: 'seo',

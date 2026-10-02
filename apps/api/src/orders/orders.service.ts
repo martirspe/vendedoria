@@ -3,9 +3,10 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
-import { OrderStatus, Prisma } from '@prisma/client';
+import { OrderChannel, OrderStatus, Prisma } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { PaymentsService } from '../payments/payments.service';
+import { releaseOrder, settlePaidOrder } from './settlement';
 import {
   CreateOrderDto,
   CreatePaymentLinkDto,
@@ -117,12 +118,15 @@ export class OrdersService {
 
     let customerName = dto.customerName;
     let customerPhone = dto.customerPhone;
+    let channel: OrderChannel = 'MANUAL';
     if (dto.conversationId) {
       const conversation = await this.prisma.conversation.findFirst({
         where: { id: dto.conversationId, tenantId },
+        include: { channel: { select: { type: true } } },
       });
       customerName = customerName ?? conversation?.contactName ?? undefined;
       customerPhone = customerPhone ?? conversation?.contactPhone ?? undefined;
+      channel = conversation?.channel.type ?? 'MANUAL';
     }
 
     const order = await this.prisma.order.create({
@@ -130,7 +134,9 @@ export class OrdersService {
         tenantId,
         conversationId: dto.conversationId,
         status: 'DRAFT',
+        channel,
         currency,
+        subtotalCents: totalCents,
         totalCents,
         customerName,
         customerPhone,
@@ -194,34 +200,20 @@ export class OrdersService {
   ) {
     const order = await this.getById(tenantId, orderId);
     this.assertTransition(order.status, dto.status);
+    if (order.status === dto.status) {
+      return order;
+    }
 
-    const updated = await this.prisma.$transaction(async (tx) => {
-      if (dto.status === 'CANCELLED' && order.status === 'PAID') {
-        await this.releaseStock(tx, order.items);
+    await this.prisma.$transaction(async (tx) => {
+      if (dto.status === 'CANCELLED') {
+        await releaseOrder(tx, order, 'Cancelado desde la consola');
+      } else if (dto.status === 'PAID') {
+        await settlePaidOrder(tx, order, 'Marcado como pagado en la consola');
+      } else {
+        await tx.order.update({ where: { id: order.id }, data: { status: dto.status } });
       }
-
-      if (
-        dto.status === 'PAID' &&
-        order.status !== 'PAID' &&
-        order.status !== 'CANCELLED'
-      ) {
-        await this.decrementStock(tx, order.items);
-        if (order.conversationId) {
-          await tx.conversation.update({
-            where: { id: order.conversationId },
-            data: { markedAsSale: true },
-          });
-        }
-      }
-
-      return tx.order.update({
-        where: { id: order.id },
-        data: { status: dto.status },
-        include: ORDER_INCLUDE,
-      });
     });
-
-    return updated;
+    return this.getById(tenantId, orderId);
   }
 
   private assertTransition(from: OrderStatus, to: OrderStatus) {
@@ -239,44 +231,6 @@ export class OrdersService {
       throw new BadRequestException(
         `Invalid status transition from ${from} to ${to}`,
       );
-    }
-  }
-
-  private async decrementStock(
-    tx: Prisma.TransactionClient,
-    items: Array<{ productId: string | null; quantity: number }>,
-  ) {
-    for (const item of items) {
-      if (!item.productId) continue;
-      const product = await tx.product.findUnique({
-        where: { id: item.productId },
-      });
-      if (!product || product.stockUnlimited || product.stockQty == null) {
-        continue;
-      }
-      await tx.product.update({
-        where: { id: product.id },
-        data: { stockQty: Math.max(0, product.stockQty - item.quantity) },
-      });
-    }
-  }
-
-  private async releaseStock(
-    tx: Prisma.TransactionClient,
-    items: Array<{ productId: string | null; quantity: number }>,
-  ) {
-    for (const item of items) {
-      if (!item.productId) continue;
-      const product = await tx.product.findUnique({
-        where: { id: item.productId },
-      });
-      if (!product || product.stockUnlimited || product.stockQty == null) {
-        continue;
-      }
-      await tx.product.update({
-        where: { id: product.id },
-        data: { stockQty: product.stockQty + item.quantity },
-      });
     }
   }
 }

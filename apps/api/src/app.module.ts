@@ -14,6 +14,8 @@ import { MetricsModule } from './metrics/metrics.module';
 import { BillingModule } from './billing/billing.module';
 import { KnowledgeModule } from './knowledge/knowledge.module';
 import { StorefrontModule } from './storefront/storefront.module';
+import { CouponsModule } from './coupons/coupons.module';
+import { CheckoutModule } from './checkout/checkout.module';
 import { validateEnv } from './config/env.validation';
 
 @Module({
@@ -36,6 +38,8 @@ import { validateEnv } from './config/env.validation';
     MetricsModule,
     BillingModule,
     StorefrontModule,
+    CouponsModule,
+    CheckoutModule,
   ],
 })
 export class AppModule {}

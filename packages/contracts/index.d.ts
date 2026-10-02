@@ -27,6 +27,49 @@ export type StorefrontView = {
   status: StorefrontStatus;
   isPreview: boolean;
   showPlatformBadge: boolean;
+  shipping: StorefrontShipping;
+  legal: StorefrontLegal;
+  checkout: StorefrontCheckout;
+};
+
+export type ShippingMode = 'LIMA' | 'PROVINCE' | 'PICKUP';
+
+export type ShippingOption = {
+  mode: ShippingMode;
+  label: string;
+  /** Base price before the free shipping threshold or coupons. */
+  cents: number;
+  /** Delivery estimate, or the pickup address for PICKUP. */
+  eta: string | null;
+};
+
+export type StorefrontShipping = {
+  options: ShippingOption[];
+  freeShippingFromCents: number | null;
+};
+
+export type StorefrontLegal = {
+  legalName: string | null;
+  ruc: string | null;
+  legalAddress: string | null;
+  complaintsBookUrl: string | null;
+  dataBankCode: string | null;
+  /** 0 = only legal guarantee (defects); otherwise days to request an exchange. */
+  exchangeDays: number;
+  /** Last change to the store settings the legal pages are generated from. */
+  updatedAt: string;
+};
+
+export type StorefrontCheckout = {
+  /** `online`: card and Yape on the site. `whatsapp`: the order is sent through WhatsApp. */
+  mode: 'online' | 'whatsapp';
+  /** Mercado Pago public key of the merchant when `mode` is `online`. */
+  publicKey: string | null;
+  liveMode: boolean;
+  /** Development only: online checkout without credentials, paid with a simulated payment. */
+  simulator: boolean;
+  /** True when the store has at least one active coupon. */
+  couponsEnabled: boolean;
 };
 
 export type PublicProductCard = {
@@ -75,6 +118,79 @@ export type PublicProductList = {
   total: number;
   page: number;
   pageSize: number;
+};
+
+export type CheckoutItemInput = {
+  handle: string;
+  variantId?: string;
+  quantity: number;
+};
+
+export type CouponPreviewResult = {
+  code: string;
+  label: string;
+  discountCents: number;
+  freeShipping: boolean;
+};
+
+export type CheckoutRequest = {
+  checkoutKey: string;
+  items: CheckoutItemInput[];
+  customer: { name: string; email: string; phone: string; document?: string };
+  delivery: {
+    mode: ShippingMode;
+    address?: string;
+    district?: string;
+    city?: string;
+    reference?: string;
+  };
+  couponCode?: string;
+  acceptTerms: true;
+};
+
+export type PublicOrderStatus = 'PENDING_PAYMENT' | 'PAID' | 'FULFILLING' | 'SHIPPED' | 'COMPLETED' | 'CANCELLED';
+
+export type PublicOrderItem = {
+  title: string;
+  handle: string | null;
+  quantity: number;
+  unitCents: number;
+  totalCents: number;
+};
+
+export type PublicOrder = {
+  id: string;
+  code: string;
+  /** Capability token: required to read, pay or cancel the order. */
+  token: string;
+  status: PublicOrderStatus;
+  /** `processing` while a payment is in flight, `rejected` after a declined attempt. */
+  paymentState: string | null;
+  paymentDetail: string | null;
+  currency: string;
+  items: PublicOrderItem[];
+  subtotalCents: number;
+  discountCents: number;
+  couponCode: string | null;
+  shippingCents: number;
+  totalCents: number;
+  customer: { name: string; email: string; phone: string };
+  delivery: { mode: ShippingMode; label: string; address: string | null; eta: string | null };
+  expiresAt: string | null;
+  cancelReason: string | null;
+  createdAt: string;
+};
+
+export type PayOrderRequest = {
+  token: string;
+  paymentKey: string;
+  method: 'card' | 'yape';
+  cardToken: string;
+  paymentMethodId?: string;
+  paymentType?: string;
+  phone?: string;
+  identificationType?: 'DNI' | 'CE';
+  identificationNumber?: string;
 };
 
 export type SitemapEntry = {

@@ -59,6 +59,7 @@ services:
       CORS_ORIGIN: https://${CONSOLE_HOST:?Define CONSOLE_HOST en .env}
       PUBLIC_API_BASE_URL: https://${CONSOLE_HOST}/api/v1
       STOREFRONT_URL_TEMPLATE: https://{slug}.${STORE_BASE_DOMAIN:?Define STORE_BASE_DOMAIN en .env}
+      PAYMENT_CREDENTIALS_KEY: ${PAYMENT_CREDENTIALS_KEY:?Define PAYMENT_CREDENTIALS_KEY en .env}
       NODE_OPTIONS: ${API_NODE_OPTIONS:---max-old-space-size=384}
     deploy:
       resources:

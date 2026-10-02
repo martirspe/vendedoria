@@ -7,9 +7,12 @@ import type {
   PublicProductSort,
   SitemapEntry,
   StoreResolveResult,
+  StorefrontCheckout,
   StorefrontView,
 } from '@vendedoria/contracts';
+import { MerchantAccountsService } from '../payments/merchant-accounts.service';
 import { PrismaService } from '../prisma/prisma.service';
+import { shippingOptions } from './shipping';
 import {
   DEFAULT_STOREFRONT_URL_TEMPLATE,
   isValidStoreSlug,
@@ -47,6 +50,7 @@ export class StorefrontPublicService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly config: ConfigService,
+    private readonly accounts: MerchantAccountsService,
   ) {
     this.baseDomain = storefrontBaseDomain(
       this.config.get<string>('STOREFRONT_URL_TEMPLATE') ??
@@ -122,6 +126,35 @@ export class StorefrontPublicService {
       status: storefront.status,
       isPreview: access.isPreview,
       showPlatformBadge: BADGE_PLANS.includes(tenant.planTier),
+      shipping: {
+        options: shippingOptions(storefront),
+        freeShippingFromCents: storefront.freeShippingFromCents,
+      },
+      legal: {
+        legalName: storefront.legalName,
+        ruc: storefront.ruc,
+        legalAddress: storefront.legalAddress,
+        complaintsBookUrl: storefront.complaintsBookUrl,
+        dataBankCode: storefront.dataBankCode,
+        exchangeDays: storefront.exchangeDays,
+        updatedAt: storefront.updatedAt.toISOString(),
+      },
+      checkout: await this.checkout(access.tenantId),
+    };
+  }
+
+  async checkout(tenantId: string): Promise<StorefrontCheckout> {
+    const [account, activeCoupons] = await Promise.all([
+      this.accounts.publicCheckout(tenantId),
+      this.prisma.coupon.count({ where: { tenantId, isActive: true } }),
+    ]);
+    const simulator = !account && this.accounts.simulatorAllowed();
+    return {
+      mode: account || simulator ? 'online' : 'whatsapp',
+      publicKey: account?.publicKey ?? null,
+      liveMode: account?.liveMode ?? false,
+      simulator,
+      couponsEnabled: activeCoupons > 0,
     };
   }
 
