@@ -1,0 +1,165 @@
+<section class="store-container checkout">
+  <a class="back" routerLink="/carrito"><ds-icon name="arrowLeft" [size]="1" /> Volver al carrito</a>
+  <h1>Finalizar compra</h1>
+
+  @if (!cart.ready()) {
+    <p aria-busy="true">Cargando tu carrito…</p>
+  } @else if (store(); as s) {
+    <form class="checkout__layout" [formGroup]="form" (ngSubmit)="submit()" novalidate>
+      <div class="checkout__main">
+        <fieldset class="panel">
+          <legend>1. Tus datos</legend>
+          <label class="field">
+            <span>Nombre y apellido</span>
+            <input formControlName="name" autocomplete="name" maxlength="100" />
+            @if (form.controls.name.touched && form.controls.name.invalid) {
+              <small class="field__error">Escribe tu nombre completo.</small>
+            }
+          </label>
+          <div class="row">
+            <label class="field">
+              <span>Correo</span>
+              <input formControlName="email" type="email" autocomplete="email" maxlength="160" />
+              @if (form.controls.email.touched && form.controls.email.invalid) {
+                <small class="field__error">Escribe un correo válido.</small>
+              }
+            </label>
+            <label class="field">
+              <span>Celular</span>
+              <input formControlName="phone" type="tel" inputmode="numeric" autocomplete="tel-national" maxlength="9" placeholder="987654321" />
+              @if (form.controls.phone.touched && form.controls.phone.invalid) {
+                <small class="field__error">9 dígitos, empieza con 9.</small>
+              }
+            </label>
+          </div>
+          <label class="field">
+            <span>DNI o CE <em>Opcional</em></span>
+            <input formControlName="document" inputmode="numeric" maxlength="12" />
+          </label>
+        </fieldset>
+
+        <fieldset class="panel">
+          <legend>2. Entrega</legend>
+          @if (!options().length) {
+            <p class="warning" role="alert">Esta tienda aún no configuró sus formas de entrega.</p>
+          }
+          <div class="options">
+            @for (option of options(); track option.mode) {
+              <label class="option">
+                <input type="radio" formControlName="mode" [value]="option.mode" />
+                <span class="option__body">
+                  <strong>{{ option.label }}</strong>
+                  @if (option.eta) { <small>{{ option.eta }}</small> }
+                </span>
+                <span class="option__price">{{ option.cents === 0 ? 'Gratis' : (option.cents | money) }}</span>
+              </label>
+            }
+          </div>
+          @if (s.shipping.freeShippingFromCents && missingForFree() > 0) {
+            <p class="hint">Te faltan {{ missingForFree() | money }} para el envío gratis.</p>
+          }
+          @if (mode() === 'LIMA' || mode() === 'PROVINCE') {
+            <label class="field">
+              <span>Dirección</span>
+              <input formControlName="address" autocomplete="street-address" maxlength="200" placeholder="Av., calle, número, dpto." />
+              @if (form.controls.address.touched && form.controls.address.invalid) {
+                <small class="field__error">Escribe la dirección de entrega.</small>
+              }
+            </label>
+            <div class="row">
+              <label class="field">
+                <span>Distrito</span>
+                <input formControlName="district" autocomplete="address-level3" maxlength="80" />
+                @if (form.controls.district.touched && form.controls.district.invalid) {
+                  <small class="field__error">Indica el distrito.</small>
+                }
+              </label>
+              @if (mode() === 'PROVINCE') {
+                <label class="field">
+                  <span>Provincia y departamento</span>
+                  <input formControlName="city" autocomplete="address-level2" maxlength="80" placeholder="Arequipa, Arequipa" />
+                  @if (form.controls.city.touched && form.controls.city.invalid) {
+                    <small class="field__error">Indica la provincia.</small>
+                  }
+                </label>
+              }
+            </div>
+          }
+          <label class="field">
+            <span>Referencia o indicaciones <em>Opcional</em></span>
+            <input formControlName="reference" maxlength="180" />
+          </label>
+        </fieldset>
+      </div>
+
+      <aside class="summary" aria-labelledby="summary-title">
+        <h2 id="summary-title">Tu pedido</h2>
+        <ul class="summary__items">
+          @for (line of cart.lines(); track line.key) {
+            <li>
+              <span>{{ line.quantity }} × {{ line.name }}@if (line.variantLabel) { · {{ line.variantLabel }} }</span>
+              <span>{{ line.unitCents * line.quantity | money }}</span>
+            </li>
+          }
+        </ul>
+
+        @if (s.checkout.couponsEnabled) {
+          <div class="coupon">
+            @if (coupon(); as c) {
+              <p class="coupon__applied">
+                <ds-icon name="check" [size]="1" />
+                <span><strong>{{ c.code }}</strong> · {{ c.label }}</span>
+                <button type="button" (click)="removeCoupon()">Quitar</button>
+              </p>
+            } @else {
+              <label class="visually-hidden" for="coupon-code">Cupón de descuento</label>
+              <div class="coupon__row">
+                <input id="coupon-code" formControlName="couponCode" placeholder="Cupón de descuento" maxlength="40" autocomplete="off" />
+                <button type="button" class="store-btn store-btn--secondary" [disabled]="applyingCoupon()" (click)="applyCoupon()">
+                  {{ applyingCoupon() ? '…' : 'Aplicar' }}
+                </button>
+              </div>
+              @if (couponError(); as error) {
+                <small class="field__error" role="alert">{{ error }}</small>
+              }
+            }
+          </div>
+        }
+
+        <dl>
+          <div><dt>Subtotal</dt><dd>{{ cart.subtotalCents() | money }}</dd></div>
+          @if (discountCents() > 0) {
+            <div class="summary__discount"><dt>Descuento</dt><dd>−{{ discountCents() | money }}</dd></div>
+          }
+          <div>
+            <dt>Envío</dt>
+            <dd>{{ !selectedOption() ? 'Elige una opción' : shippingCents() === 0 ? 'Gratis' : (shippingCents() | money) }}</dd>
+          </div>
+          <div class="summary__total"><dt>Total</dt><dd>{{ totalCents() | money }}</dd></div>
+        </dl>
+
+        <label class="consent">
+          <input type="checkbox" formControlName="acceptTerms" />
+          <span>
+            Soy mayor de edad y acepto los <a routerLink="/terminos-y-condiciones" target="_blank">Términos y Condiciones</a> y la
+            <a routerLink="/cambios-y-devoluciones" target="_blank">Política de Cambios y Devoluciones</a>. He leído la
+            <a routerLink="/politica-de-privacidad" target="_blank">Política de Privacidad</a>.
+          </span>
+        </label>
+        @if (form.controls.acceptTerms.touched && form.controls.acceptTerms.invalid) {
+          <small class="field__error">Debes aceptar para continuar.</small>
+        }
+
+        @if (errorMessage(); as error) {
+          <p class="warning" role="alert">{{ error }}</p>
+        }
+
+        <button type="submit" class="store-btn store-btn--primary store-btn--block" [disabled]="submitting() || !options().length">
+          <ds-icon name="lock" [size]="1.05" />
+          {{ submitting() ? 'Reservando tu pedido…' : 'Continuar al pago' }}
+        </button>
+        <p class="summary__note">Reservamos tus productos por 15 minutos mientras pagas.</p>
+      </aside>
+    </form>
+  }
+</section>

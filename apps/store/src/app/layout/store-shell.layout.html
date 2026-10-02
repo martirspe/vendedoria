@@ -72,8 +72,23 @@
             </li>
           }
         </ul>
+        <nav class="footer__docs" aria-label="Información legal">
+          <a routerLink="/legal">Centro legal</a>
+          @for (doc of legalLinks; track doc.slug) {
+            <a [routerLink]="'/' + doc.slug">{{ doc.label }}</a>
+          }
+        </nav>
+        @if (s.legal.complaintsBookUrl) {
+          <a class="footer__book" [href]="s.legal.complaintsBookUrl" target="_blank" rel="noopener">
+            <ds-icon name="book" [size]="1.1" /> Libro de Reclamaciones
+          </a>
+        }
         <div class="footer__legal">
-          <span>© {{ year }} {{ s.displayName }}</span>
+          <span>
+            © {{ year }} {{ s.legal.legalName ?? s.displayName }}
+            @if (s.legal.ruc) { · RUC {{ s.legal.ruc }} }
+            @if (s.legal.legalAddress) { · {{ s.legal.legalAddress }} }
+          </span>
           @if (s.showPlatformBadge) {
             <span class="footer__badge">Tienda creada con VendedorIA</span>
           }

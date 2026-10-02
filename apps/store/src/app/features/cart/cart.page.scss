@@ -184,6 +184,22 @@
   font-weight: 600;
 }
 
+.summary__alt {
+  display: inline-flex;
+  gap: var(--ds-space-2);
+  align-items: center;
+  justify-content: center;
+  min-height: var(--ds-touch-target, 2.75rem);
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--store-muted);
+}
+
+.summary__alt:hover {
+  color: inherit;
+  text-decoration: underline;
+}
+
 .summary__links {
   display: flex;
   justify-content: space-between;

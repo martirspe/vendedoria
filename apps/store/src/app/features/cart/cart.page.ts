@@ -18,6 +18,7 @@ export class CartPage {
   private readonly state = inject(StoreStateService);
   readonly cart = inject(CartService);
   readonly store = this.state.store;
+  readonly onlineCheckout = computed(() => this.store()?.checkout.mode === 'online');
 
   /** The order message carries one product reference per line for the sales agent. */
   readonly orderHref = computed(() => {
@@ -29,7 +30,8 @@ export class CartPage {
     const items = lines.map((line) => {
       const variant = line.variantLabel ? ` (${line.variantLabel})` : '';
       const total = this.state.formatMoney(line.unitCents * line.quantity, line.currency);
-      return `• ${line.quantity} × ${line.name}${variant} — ${total} [P-${line.handle}]`;
+      const ref = line.variantId ? `${line.handle}:${line.variantId}` : line.handle;
+      return `• ${line.quantity} × ${line.name}${variant} — ${total} [P-${ref}]`;
     });
     const text = [
       `Hola ${store.displayName}, quiero hacer este pedido:`,

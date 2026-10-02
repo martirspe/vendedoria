@@ -12,6 +12,7 @@ import { markNotFound } from '../core/not-found-status';
 import { StoreStateService } from '../core/store-state.service';
 import { readableTextOn } from '../core/theme';
 import { whatsappUrl } from '../core/whatsapp';
+import { LEGAL_LINKS } from '../features/legal/legal-slugs';
 
 @Component({
   selector: 'store-shell',
@@ -27,6 +28,7 @@ export class StoreShellLayout {
 
   readonly store = this.state.store;
   readonly year = new Date().getFullYear();
+  readonly legalLinks = LEGAL_LINKS;
   readonly onBrand = computed(() => readableTextOn(this.store()?.brandColor ?? ''));
   readonly whatsappHref = computed(() => {
     const store = this.store();

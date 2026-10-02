@@ -12,6 +12,7 @@ import {
   STORE_PROXY_PREFIX,
   StoreRequestContext,
 } from './app/core/store-context';
+import { LEGAL_SLUGS } from './app/features/legal/legal-slugs';
 
 const API_URL = (process.env['STORE_API_URL'] ?? 'http://localhost:3000/api/v1').replace(/\/$/, '');
 const ALLOWED_HOSTS = (process.env['STORE_ALLOWED_HOSTS'] ?? 'localhost,*.localhost')
@@ -22,19 +23,25 @@ const PREVIEW_COOKIE = 'store_preview';
 const PREVIEW_TOKEN = /^\d{10}\.[A-Za-z0-9_-]{43}$/;
 const RESOLVE_TTL_MS = 60_000;
 const UPSTREAM_TIMEOUT_MS = 8_000;
-/** Only these read endpoints of the tenant store are reachable through the proxy. */
-const PROXY_PATH = /^(products(\/[^/]+)?)?$/;
+/** Paying waits for Mercado Pago (12 s) plus our own work. */
+const PAY_TIMEOUT_MS = 25_000;
+/** Only these endpoints of the tenant store are reachable through the proxy. */
+const PROXY_GET = /^(products(\/[^/]+)?|orders\/[a-z0-9]{20,40})?$/;
+const PROXY_POST = /^(checkout|coupons\/preview|orders\/[a-z0-9]{20,40}\/(pay|cancel|simulate))$/;
 
+/** Mercado Pago SDK, Card Payment Brick and Yape tokenization. */
+const MP = 'https://*.mercadopago.com https://*.mercadopago.com.pe https://*.mercadolibre.com https://*.mlstatic.com';
 const CONTENT_SECURITY_POLICY = [
   "default-src 'self'",
-  "script-src 'self' 'unsafe-inline'",
-  "style-src 'self' 'unsafe-inline'",
+  `script-src 'self' 'unsafe-inline' https://sdk.mercadopago.com ${MP}`,
+  `style-src 'self' 'unsafe-inline' https://*.mlstatic.com`,
   "img-src 'self' https: data:",
-  "font-src 'self' https://fonts.gstatic.com",
-  "connect-src 'self'",
+  "font-src 'self' https://fonts.gstatic.com https://*.mlstatic.com",
+  `connect-src 'self' https://api.mercadopago.com ${MP}`,
+  `frame-src https://sdk.mercadopago.com ${MP}`,
   "frame-ancestors 'self'",
   "base-uri 'self'",
-  "form-action 'self'",
+  "form-action 'self' https://*.mercadopago.com",
   "object-src 'none'",
 ].join('; ');
 
@@ -112,22 +119,33 @@ app.use(async (req: Request, res: Response, next: NextFunction) => {
   next();
 });
 
-app.use(STORE_PROXY_PREFIX, async (req: Request, res: Response) => {
-  if (req.method !== 'GET') {
+app.use(STORE_PROXY_PREFIX, express.json({ limit: '32kb' }), async (req: Request, res: Response) => {
+  const path = req.path.replace(/^\/+|\/+$/g, '');
+  const post = req.method === 'POST';
+  if (!post && req.method !== 'GET') {
     res.status(405).end();
     return;
   }
-  const path = req.path.replace(/^\/+|\/+$/g, '');
-  if (!PROXY_PATH.test(path)) {
+  if (!(post ? PROXY_POST : PROXY_GET).test(path)) {
     res.status(404).json({ message: 'Not found' });
+    return;
+  }
+  if (post && !sameOrigin(req)) {
+    res.status(403).json({ message: 'Forbidden' });
     return;
   }
   const store = res.locals['store'] as ResolvedStore;
   const query = req.originalUrl.includes('?') ? req.originalUrl.slice(req.originalUrl.indexOf('?')) : '';
   try {
     const upstream = await fetch(`${API_URL}/storefront/${store.slug}${path ? `/${path}` : ''}${query}`, {
-      headers: previewHeaders(store),
-      signal: AbortSignal.timeout(UPSTREAM_TIMEOUT_MS),
+      method: req.method,
+      headers: {
+        ...previewHeaders(store),
+        ...(post ? { 'content-type': 'application/json' } : {}),
+        ...(req.ip ? { 'x-forwarded-for': req.ip } : {}),
+      },
+      ...(post ? { body: JSON.stringify(req.body ?? {}) } : {}),
+      signal: AbortSignal.timeout(post ? PAY_TIMEOUT_MS : UPSTREAM_TIMEOUT_MS),
     });
     res.status(upstream.status);
     for (const header of ['content-type', 'cache-control']) {
@@ -141,7 +159,7 @@ app.use(STORE_PROXY_PREFIX, async (req: Request, res: Response) => {
 });
 
 app.get('/robots.txt', (req: Request, res: Response) => {
-  res.type('text/plain').send(`User-agent: *\nAllow: /\nDisallow: /carrito\n\nSitemap: ${origin(req)}/sitemap.xml\n`);
+  res.type('text/plain').send(`User-agent: *\nAllow: /\nDisallow: /carrito\nDisallow: /checkout\nDisallow: /pedido/\n\nSitemap: ${origin(req)}/sitemap.xml\n`);
 });
 
 app.get('/sitemap.xml', async (req: Request, res: Response) => {
@@ -159,6 +177,7 @@ app.get('/sitemap.xml', async (req: Request, res: Response) => {
     const urls = [
       `<url><loc>${base}/</loc></url>`,
       `<url><loc>${base}/productos</loc></url>`,
+      ...['legal', ...LEGAL_SLUGS].map((slug) => `<url><loc>${base}/${slug}</loc></url>`),
       ...entries.map(
         (entry) =>
           `<url><loc>${base}/producto/${encodeURIComponent(entry.handle)}</loc><lastmod>${entry.updatedAt}</lastmod></url>`,
@@ -222,6 +241,17 @@ function previewHeaders(store: ResolvedStore): Record<string, string> {
 
 function origin(req: Request): string {
   return `${req.protocol}://${req.get('host')}`;
+}
+
+/** Writes must come from pages of the same store (blocks cross-site form posts). */
+function sameOrigin(req: Request): boolean {
+  const source = req.get('origin') ?? req.get('referer');
+  if (!source) return false;
+  try {
+    return new URL(source).host === req.get('host');
+  } catch {
+    return false;
+  }
 }
 
 function readCookie(req: Request, name: string): string | undefined {

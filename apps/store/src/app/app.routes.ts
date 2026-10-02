@@ -5,6 +5,7 @@ import {
   productResolver,
   storeResolver,
 } from './app.resolvers';
+import { LEGAL_SLUGS } from './features/legal/legal-slugs';
 import { StoreShellLayout } from './layout/store-shell.layout';
 
 export const routes: Routes = [
@@ -38,6 +39,25 @@ export const routes: Routes = [
         loadComponent: () =>
           import('./features/cart/cart.page').then((m) => m.CartPage),
       },
+      {
+        path: 'checkout',
+        loadComponent: () =>
+          import('./features/checkout/checkout.page').then((m) => m.CheckoutPage),
+      },
+      {
+        path: 'pedido/:id',
+        loadComponent: () =>
+          import('./features/order/order.page').then((m) => m.OrderPage),
+      },
+      {
+        path: 'legal',
+        loadComponent: () => import('./features/legal/legal.page').then((m) => m.LegalPage),
+      },
+      ...LEGAL_SLUGS.map((slug) => ({
+        path: slug,
+        data: { slug },
+        loadComponent: () => import('./features/legal/legal.page').then((m) => m.LegalPage),
+      })),
       {
         path: '**',
         loadComponent: () =>

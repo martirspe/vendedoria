@@ -2,6 +2,11 @@ import { Injectable, inject } from '@angular/core';
 import { HttpClient, HttpErrorResponse, HttpParams } from '@angular/common/http';
 import { Observable, firstValueFrom } from 'rxjs';
 import type {
+  CheckoutItemInput,
+  CheckoutRequest,
+  CouponPreviewResult,
+  PayOrderRequest,
+  PublicOrder,
   PublicProductDetail,
   PublicProductList,
   PublicProductSort,
@@ -44,6 +49,50 @@ export class StoreApiService {
       this.http.get<PublicProductDetail>(
         `${STORE_PROXY_PREFIX}/products/${encodeURIComponent(handle)}`,
       ),
+    );
+  }
+
+  previewCoupon(body: {
+    items: CheckoutItemInput[];
+    code: string;
+    email?: string;
+  }): Promise<CouponPreviewResult> {
+    return firstValueFrom(
+      this.http.post<CouponPreviewResult>(`${STORE_PROXY_PREFIX}/coupons/preview`, body),
+    );
+  }
+
+  checkout(body: CheckoutRequest): Promise<PublicOrder> {
+    return firstValueFrom(this.http.post<PublicOrder>(`${STORE_PROXY_PREFIX}/checkout`, body));
+  }
+
+  order(id: string, token: string): Promise<PublicOrder | null> {
+    return this.orNull(
+      this.http.get<PublicOrder>(`${STORE_PROXY_PREFIX}/orders/${encodeURIComponent(id)}`, {
+        params: { token },
+      }),
+    );
+  }
+
+  pay(id: string, body: PayOrderRequest): Promise<PublicOrder> {
+    return firstValueFrom(
+      this.http.post<PublicOrder>(`${STORE_PROXY_PREFIX}/orders/${encodeURIComponent(id)}/pay`, body),
+    );
+  }
+
+  cancel(id: string, token: string): Promise<PublicOrder> {
+    return firstValueFrom(
+      this.http.post<PublicOrder>(`${STORE_PROXY_PREFIX}/orders/${encodeURIComponent(id)}/cancel`, {
+        token,
+      }),
+    );
+  }
+
+  simulate(id: string, token: string): Promise<PublicOrder> {
+    return firstValueFrom(
+      this.http.post<PublicOrder>(`${STORE_PROXY_PREFIX}/orders/${encodeURIComponent(id)}/simulate`, {
+        token,
+      }),
     );
   }
 
