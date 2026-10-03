@@ -33,7 +33,7 @@ Multi-tenant SaaS: AI sales agents on WhatsApp/Instagram ("del hola al pago") pl
 - S3/CloudFront media, SES email, AWS IAM and deliverability: `vendedoria-aws`
 - Reviewing a diff or PR: `vendedoria-review`
 - Full release pass (cleanup + security + copy + prod config): `vendedoria-production-readiness`, which runs `vendedoria-dead-code-cleanup`, `vendedoria-security-audit` and `vendedoria-copy-audit` (each also usable alone)
-- Docker/deploy: `docker-compose*.yml`, `Dockerfile`, `docker/nginx/`, `scripts/docker.mjs`, README "Producción".
+- Docker/deploy: `docker-compose*.yml`, `Dockerfile`, `docker/nginx/`, `scripts/docker.mjs`, `scripts/deploy.sh`, `docs/DEPLOY.md`.
 
 ## Canonical commands (repo root)
 - `npm run dev` · `npm run docker:logs` · `npm run docker:down` (dev stack with hot reload)
@@ -50,4 +50,4 @@ Multi-tenant SaaS: AI sales agents on WhatsApp/Instagram ("del hola al pago") pl
 ## Documentation
 - Product/UX authority: `PROJECT CONSTITUTION.md` (read by section)
 - Store integration plan (proposal; code wins): `docs/plan-tienda-web.md`
-- Ports, setup, production deploy: `README.md`
+- Ports, setup: `README.md` · Production deploy (automatic and manual): `docs/DEPLOY.md`

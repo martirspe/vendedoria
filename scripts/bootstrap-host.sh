@@ -6,6 +6,7 @@
 # abre ufw 80/443, instala el vhost y obtiene los certificados (como Reclamo Fácil):
 #   - comodín STORE_BASE_DOMAIN + *.STORE_BASE_DOMAIN por DNS-01 con CLOUDFLARE_API_TOKEN
 #     (Zone · DNS · Edit). Cubre también la consola si es app.STORE_BASE_DOMAIN.
+#   - sin token: HTTP-01 para STORE_BASE_DOMAIN, www y la consola (las tiendas quedan en HTTP).
 #   - consola en otro dominio: Let's Encrypt HTTP-01.
 #   STORE_BASE_DOMAIN sirve la web comercial; www.STORE_BASE_DOMAIN redirige a ella.
 #
@@ -83,17 +84,33 @@ SSL_GLOBAL_CANONICAL="${ROOT}/infra/nginx/host-ssl-global.conf"
 SSL_GLOBAL_DEST="/etc/nginx/conf.d/00-ssl-global.conf"
 UPSTREAM="${SITE_NAME//-/_}_docker"
 
+# Wildcard (DNS-01, needs CLOUDFLARE_API_TOKEN): base + *.base, console included.
 STORE_CERT_NAME="${SITE_NAME}-stores"
+# Without the token: HTTP-01 for the bare domain, www and the console so they still get HTTPS.
+SITE_CERT_NAME="${SITE_NAME}-site"
 CF_INI="/etc/letsencrypt/cloudflare-${SITE_NAME}.ini"
 # app.marrso.com under marrso.com: the wildcard certificate already covers the console.
 CONSOLE_IN_WILDCARD=false
-CONSOLE_CERT_NAME="${CONSOLE_HOST}"
 if [[ "$CONSOLE_HOST" == *".${STORE_BASE_DOMAIN}" && "${CONSOLE_HOST%".${STORE_BASE_DOMAIN}"}" != *.* ]]; then
   CONSOLE_IN_WILDCARD=true
-  CONSOLE_CERT_NAME="${STORE_CERT_NAME}"
 fi
 cert_dir() { printf '/etc/letsencrypt/live/%s' "$1"; }
 has_cert() { [[ -f "$(cert_dir "$1")/fullchain.pem" && -f "$(cert_dir "$1")/privkey.pem" ]]; }
+
+# Name of the first certificate whose SANs cover host ("*.base" asks for the wildcard itself).
+cert_for() {
+  local host="$1" name sans
+  for name in "$STORE_CERT_NAME" "$SITE_CERT_NAME" "$CONSOLE_HOST"; do
+    has_cert "$name" || continue
+    sans="$(openssl x509 -in "$(cert_dir "$name")/fullchain.pem" -noout -text 2>/dev/null \
+      | grep -o 'DNS:[^,[:space:]]*' || true)"
+    if grep -qxF "DNS:${host}" <<<"$sans" || grep -qxF "DNS:*.${host#*.}" <<<"$sans"; then
+      printf '%s' "$name"
+      return 0
+    fi
+  done
+  return 1
+}
 
 # `http2 on` needs nginx >= 1.25.1; older versions take the flag on `listen`.
 HTTP2_DIRECTIVE="    http2 on;"
@@ -133,8 +150,10 @@ NGINX
 }
 
 tls_block() {
-  local dir
+  local dir hsts="max-age=63072000"
   dir="$(cert_dir "$1")"
+  # includeSubDomains on the bare domain would force HTTPS on stores still served over HTTP.
+  [[ "${2:-}" == subdomains ]] && hsts="${hsts}; includeSubDomains"
   cat <<NGINX
     listen 443 ssl${LISTEN_HTTP2};
     listen [::]:443 ssl${LISTEN_HTTP2};
@@ -142,14 +161,87 @@ ${HTTP2_DIRECTIVE}
     ssl_certificate     ${dir}/fullchain.pem;
     ssl_certificate_key ${dir}/privkey.pem;
     ssl_protocols TLSv1.2 TLSv1.3;
-    add_header Strict-Transport-Security "max-age=63072000; includeSubDomains" always;
+    add_header Strict-Transport-Security "${hsts}" always;
 NGINX
+}
+
+# Port 80 + (when a certificate covers the names) port 443 for one group of hosts.
+# $1 server_name, $2 certificate name or "", $3 client_max_body_size,
+# $4 redirect target host ("" = proxy to Docker), $5 "subdomains" for HSTS includeSubDomains.
+site_servers() {
+  local names="$1" cert="$2" body="$3" target="$4" hsts="${5:-}"
+  local http_action
+  if [[ -n "$target" && -n "$cert" ]]; then
+    http_action="        return 301 https://${target}\$request_uri;"
+  elif [[ -n "$target" ]]; then
+    http_action="        return 301 http://${target}\$request_uri;"
+  elif [[ -n "$cert" ]]; then
+    http_action="        return 301 https://\$host\$request_uri;"
+  fi
+
+  if [[ -n "${http_action:-}" ]]; then
+    cat <<NGINX
+server {
+    listen 80;
+    listen [::]:80;
+    server_name ${names};
+
+$(acme_location)
+    location / {
+${http_action}
+    }
+}
+
+NGINX
+  else
+    cat <<NGINX
+server {
+    listen 80;
+    listen [::]:80;
+    server_name ${names};
+    client_max_body_size ${body};
+
+$(acme_location)
+$(proxy_location)
+}
+
+NGINX
+  fi
+
+  [[ -n "$cert" ]] || return 0
+  if [[ -n "$target" ]]; then
+    cat <<NGINX
+server {
+    server_name ${names};
+$(tls_block "$cert" "$hsts")
+    return 301 https://${target}\$request_uri;
+}
+
+NGINX
+  else
+    cat <<NGINX
+server {
+    server_name ${names};
+$(tls_block "$cert" "$hsts")
+    client_max_body_size ${body};
+
+$(proxy_location)
+}
+
+NGINX
+  fi
 }
 
 # Security headers and CSP come from the stack (internal nginx for the console, the store
 # server for stores); the host only terminates TLS and adds HSTS.
 generate_vhost() {
-  local generated
+  local generated console_cert apex_cert www_cert stores_cert apex_hsts=""
+  console_cert="$(cert_for "$CONSOLE_HOST" || true)"
+  apex_cert="$(cert_for "$STORE_BASE_DOMAIN" || true)"
+  www_cert="$(cert_for "www.${STORE_BASE_DOMAIN}" || true)"
+  stores_cert="$(cert_for "*.${STORE_BASE_DOMAIN}" || true)"
+  [[ -n "$stores_cert" ]] && apex_hsts=subdomains
+
   generated="$(mktemp)"
   {
     echo "# VendedorIA — nginx del VPS → Docker (generado por scripts/bootstrap-host.sh)"
@@ -162,111 +254,19 @@ upstream ${UPSTREAM} {
 }
 
 NGINX
-
-    if has_cert "$CONSOLE_CERT_NAME"; then
-      cat <<NGINX
-server {
-    listen 80;
-    listen [::]:80;
-    server_name ${CONSOLE_HOST};
-
-$(acme_location)
-    location / {
-        return 301 https://\$host\$request_uri;
-    }
-}
-
-server {
-    server_name ${CONSOLE_HOST};
-$(tls_block "$CONSOLE_CERT_NAME")
-    client_max_body_size 10m;
-
-$(proxy_location)
-}
-
-NGINX
-    else
-      cat <<NGINX
-server {
-    listen 80;
-    listen [::]:80;
-    server_name ${CONSOLE_HOST};
-    client_max_body_size 10m;
-
-$(acme_location)
-$(proxy_location)
-}
-
-NGINX
-    fi
-
-    if has_cert "$STORE_CERT_NAME"; then
-      cat <<NGINX
-server {
-    listen 80;
-    listen [::]:80;
-    server_name ${STORE_BASE_DOMAIN} *.${STORE_BASE_DOMAIN};
-    return 301 https://\$host\$request_uri;
-}
-
-server {
-    server_name *.${STORE_BASE_DOMAIN};
-$(tls_block "$STORE_CERT_NAME")
-    client_max_body_size 1m;
-
-$(proxy_location)
-}
-
-server {
-    server_name ${STORE_BASE_DOMAIN};
-$(tls_block "$STORE_CERT_NAME")
-    client_max_body_size 1m;
-
-$(proxy_location)
-}
-
-server {
-    server_name www.${STORE_BASE_DOMAIN};
-$(tls_block "$STORE_CERT_NAME")
-    return 301 https://${STORE_BASE_DOMAIN}\$request_uri;
-}
-NGINX
-    else
-      cat <<NGINX
-server {
-    listen 80;
-    listen [::]:80;
-    server_name *.${STORE_BASE_DOMAIN};
-    client_max_body_size 1m;
-
-$(proxy_location)
-}
-
-server {
-    listen 80;
-    listen [::]:80;
-    server_name ${STORE_BASE_DOMAIN};
-    client_max_body_size 1m;
-
-$(proxy_location)
-}
-
-server {
-    listen 80;
-    listen [::]:80;
-    server_name www.${STORE_BASE_DOMAIN};
-    return 301 http://${STORE_BASE_DOMAIN}\$request_uri;
-}
-NGINX
-    fi
+    site_servers "$CONSOLE_HOST" "$console_cert" 10m ""
+    site_servers "$STORE_BASE_DOMAIN" "$apex_cert" 1m "" "$apex_hsts"
+    site_servers "www.${STORE_BASE_DOMAIN}" "$www_cert" 1m "$STORE_BASE_DOMAIN"
+    site_servers "*.${STORE_BASE_DOMAIN}" "$stores_cert" 1m ""
   } >"$generated"
 
   install -d "$GENERATED_DIR"
   install -m 644 "$generated" "$OUTPUT_FILE"
   rm -f "$generated"
 
-  log "Console:  ${CONSOLE_HOST} ($(has_cert "$CONSOLE_CERT_NAME" && echo https || echo 'http only'))"
-  log "Stores:   *.${STORE_BASE_DOMAIN} ($(has_cert "$STORE_CERT_NAME" && echo https || echo 'http only'))"
+  log "Console:  ${CONSOLE_HOST} (${console_cert:-http only})"
+  log "Site:     ${STORE_BASE_DOMAIN} (${apex_cert:-http only}), www (${www_cert:-http only})"
+  log "Stores:   *.${STORE_BASE_DOMAIN} (${stores_cert:-http only})"
   log "Upstream: 127.0.0.1:${WEB_PORT}"
   log "Generated: ${OUTPUT_FILE}"
 }
@@ -345,7 +345,7 @@ ensure_packages() {
   fi
   log "Installing host packages (nginx, certbot)..."
   apt-get update -qq
-  apt-get install -y -qq nginx certbot curl ca-certificates
+  apt-get install -y -qq nginx certbot curl ca-certificates openssl
   install -d "$ACME_WEBROOT"
   systemctl enable nginx >/dev/null 2>&1 || true
   systemctl start nginx
@@ -367,19 +367,54 @@ ensure_firewall() {
   warn "If the cloud panel has its own firewall, allow TCP 80 and 443 there too."
 }
 
+webroot_cert() {
+  local name="$1"
+  shift
+  local domains=() d
+  for d in "$@"; do domains+=(-d "$d"); done
+  certbot certonly --webroot -w "$ACME_WEBROOT" --non-interactive --agree-tos --email "$CERTBOT_EMAIL" \
+    --cert-name "$name" "${domains[@]}" --deploy-hook "systemctl reload nginx"
+}
+
+# Without the wildcard, the bare domain, www and the console still need HTTPS: otherwise nginx
+# answers them on 443 with another site's certificate (its default server).
+obtain_site_tls() {
+  if cert_for "*.${STORE_BASE_DOMAIN}" >/dev/null; then
+    return 0
+  fi
+  local domains=("$STORE_BASE_DOMAIN")
+  [[ "$CONSOLE_IN_WILDCARD" == true ]] && domains+=("$CONSOLE_HOST")
+  local missing=false d
+  for d in "${domains[@]}" "www.${STORE_BASE_DOMAIN}"; do
+    cert_for "$d" >/dev/null || missing=true
+  done
+  if [[ "$missing" != true ]]; then
+    log "TLS certificate already present for ${STORE_BASE_DOMAIN}, www and ${CONSOLE_HOST}"
+    return 0
+  fi
+  log "Requesting Let's Encrypt certificate for ${domains[*]} www.${STORE_BASE_DOMAIN} (HTTP-01)..."
+  if webroot_cert "$SITE_CERT_NAME" "${domains[@]}" "www.${STORE_BASE_DOMAIN}"; then
+    return 0
+  fi
+  warn "www.${STORE_BASE_DOMAIN} failed validation (its DNS record must be DNS-only and point here)."
+  warn "Retrying without www..."
+  if ! webroot_cert "$SITE_CERT_NAME" "${domains[@]}"; then
+    warn "Certbot failed for ${domains[*]}: check the A records point here, ports 80/443 are open"
+    warn "and the records are DNS-only (grey cloud). HTTP stays active."
+  fi
+}
+
 obtain_console_tls() {
   if [[ "$CONSOLE_IN_WILDCARD" == true ]]; then
     return 0
   fi
-  if has_cert "$CONSOLE_CERT_NAME"; then
+  if cert_for "$CONSOLE_HOST" >/dev/null; then
     log "TLS certificate already present for ${CONSOLE_HOST}"
     return 0
   fi
   log "Requesting Let's Encrypt certificate for ${CONSOLE_HOST} (HTTP-01)..."
   set +e
-  certbot certonly --webroot -w "$ACME_WEBROOT" --non-interactive --agree-tos --email "$CERTBOT_EMAIL" \
-    --cert-name "$CONSOLE_CERT_NAME" -d "$CONSOLE_HOST" \
-    --deploy-hook "systemctl reload nginx"
+  webroot_cert "$CONSOLE_HOST" "$CONSOLE_HOST"
   local rc=$?
   set -e
   if [[ $rc -ne 0 ]]; then
@@ -394,7 +429,7 @@ obtain_store_tls() {
     return 0
   fi
   if [[ -z "$CLOUDFLARE_API_TOKEN" ]]; then
-    warn "CLOUDFLARE_API_TOKEN empty: no wildcard certificate, stores stay on HTTP and store links (https) fail."
+    warn "CLOUDFLARE_API_TOKEN empty: no wildcard certificate, stores ({slug}.${STORE_BASE_DOMAIN}) stay on HTTP."
     warn "Create a Cloudflare API token (Zone · DNS · Edit on ${STORE_BASE_DOMAIN}), add it to .env and re-run."
     return 0
   fi
@@ -425,15 +460,18 @@ elif [[ -z "$CERTBOT_EMAIL" ]]; then
   warn "No CERTBOT_EMAIL (or EMAIL_FROM) in .env — skipping certbot."
   warn "Add CERTBOT_EMAIL=tu@correo.com and re-run: sudo bash scripts/bootstrap-host.sh"
 else
-  obtain_console_tls
   obtain_store_tls
+  obtain_site_tls
+  obtain_console_tls
   log "Refreshing nginx vhost with the certificates found..."
   generate_vhost
   install_vhost
 fi
 
+scheme_for() { cert_for "$1" >/dev/null && echo https || echo http; }
 echo
 log "Done."
 log "  Local upstream: http://127.0.0.1:${WEB_PORT}"
-log "  Console:        $(has_cert "$CONSOLE_CERT_NAME" && echo https || echo http)://${CONSOLE_HOST}/"
-log "  Stores:         $(has_cert "$STORE_CERT_NAME" && echo https || echo http)://{slug}.${STORE_BASE_DOMAIN}/"
+log "  Site:           $(scheme_for "$STORE_BASE_DOMAIN")://${STORE_BASE_DOMAIN}/"
+log "  Console:        $(scheme_for "$CONSOLE_HOST")://${CONSOLE_HOST}/"
+log "  Stores:         $(scheme_for "*.${STORE_BASE_DOMAIN}")://{slug}.${STORE_BASE_DOMAIN}/"

@@ -21,7 +21,7 @@ Jump table from domain to paths. API paths are under `apps/api/src/`, console pa
 | Design system | — | `packages/ui/`, `packages/design-tokens/`, `apps/web/src/styles.scss` | ui |
 | Schema / migrations | `apps/api/prisma/` | — | data |
 | AWS media (S3 + CloudFront) and email (SES) | `catalog/media.service.ts`, `checkout/order-email.service.ts`, `config/env.validation.ts`, `infra/aws/media-cdn.yaml` (CloudFormation: bucket + CloudFront + IAM) | — | aws |
-| Docker / deploy | `Dockerfile`, `docker-compose.yml` (prod), `docker-compose.dev.yml`, `docker/nginx/`, `scripts/docker.mjs`, `.env.production.example` | — | — |
+| Docker / deploy | `Dockerfile`, `docker-compose.yml` (prod), `docker-compose.dev.yml`, `docker/nginx/`, `scripts/docker.mjs`, `scripts/{deploy,bootstrap-host,backup,restore-backup}.sh`, `.env.production.example`, guide `docs/DEPLOY.md` | — | — |
 
 ## Discrepancies (code wins; constitution items marked PLANNED)
 - Webhooks (Meta, Mercado Pago) are processed synchronously in the request; queues/DLQ are PLANNED.

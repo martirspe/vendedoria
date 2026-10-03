@@ -48,6 +48,8 @@ npm run test:docker    # tests unitarios + e2e en una base aislada vendedoria_te
 
 ## Producción (Docker)
 
+Guía completa paso a paso (automática y manual, servicios externos, actualizaciones, backups y problemas frecuentes): [`docs/DEPLOY.md`](./docs/DEPLOY.md). Resumen:
+
 VPS Ubuntu/Debian con Docker 24+ y Compose v2, mismo patrón que gohabix (puede convivir en el mismo servidor):
 
 ```text
