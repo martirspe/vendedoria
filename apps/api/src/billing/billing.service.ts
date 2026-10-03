@@ -15,13 +15,17 @@ import { MercadoPagoPaymentProvider } from '../payments/mercadopago.provider';
 import type { NormalizedWebhookEvent } from '../payments/payment-provider.port';
 import { PrismaService } from '../prisma/prisma.service';
 import {
-  effectivePlanTier,
   getPlanDefinition,
+  INCLUDED_IN_ALL_PLANS,
   isPurchasable,
   PLAN_CATALOG,
   PLAN_CURRENCY,
+  PLAN_NOTES,
   PLAN_PERIOD_DAYS,
+  PLAN_TRIAL_DAYS,
+  resolvePlanState,
 } from './plan-catalog';
+import { PlanLimitsService } from './plan-limits.service';
 
 const MANAGER_ROLES = ['OWNER', 'ADMIN'];
 const DAY_MS = 24 * 60 * 60 * 1000;
@@ -41,6 +45,7 @@ export class BillingService {
     private readonly prisma: PrismaService,
     private readonly config: ConfigService,
     private readonly mercadoPago: MercadoPagoPaymentProvider,
+    private readonly planLimits: PlanLimitsService,
   ) {}
 
   async getOverview(tenantId: string) {
@@ -51,53 +56,26 @@ export class BillingService {
       throw new NotFoundException('Negocio no encontrado.');
     }
 
-    const monthStart = new Date();
-    monthStart.setDate(1);
-    monthStart.setHours(0, 0, 0, 0);
-
-    const [conversationsUsed, productsUsed] = await Promise.all([
-      this.prisma.conversation.count({
-        where: { tenantId, createdAt: { gte: monthStart } },
-      }),
-      this.prisma.product.count({ where: { tenantId } }),
-    ]);
-
-    const current = getPlanDefinition(effectivePlanTier(tenant));
+    const state = resolvePlanState(tenant);
+    const usage = await this.planLimits.getUsage(tenantId);
     const checkoutMode = this.checkoutMode();
 
     return {
-      notice:
-        'Este es el plan de tu negocio en VendedorIA. Es independiente de los pagos que recibes de tus compradores.',
-      currentPlan: current,
-      currentPeriodEnd: current.id === tenant.planTier ? tenant.planExpiresAt : null,
-      usage: {
-        conversationsUsed,
-        conversationQuota: current.conversationQuota,
-        productsUsed,
-        productQuota: current.productQuota,
-        periodStart: monthStart.toISOString(),
-      },
+      currentPlan: state.plan,
+      planStatus: state.status,
+      currentPeriodEnd: tenant.planExpiresAt,
+      trialDays: PLAN_TRIAL_DAYS,
+      usage,
       plans: PLAN_CATALOG,
+      includedInAllPlans: INCLUDED_IN_ALL_PLANS,
+      notes: PLAN_NOTES,
       checkoutEnabled: checkoutMode !== 'unavailable',
       checkoutSimulated: checkoutMode === 'simulated',
       checkoutHint:
         checkoutMode === 'unavailable'
-          ? 'El pago de planes no está disponible en este momento. Escríbenos a soporte para cambiar de plan.'
-          : `Cada pago activa el plan por ${PLAN_PERIOD_DAYS} días. Si renuevas el mismo plan, los días se suman.`,
+          ? 'Por ahora no puedes pagar tu plan desde aquí. Escríbenos desde Ayuda y lo activamos por ti.'
+          : `Pagas mes a mes, sin contratos ni cobros automáticos. Cada pago activa tu plan por ${PLAN_PERIOD_DAYS} días. Si pagas el mismo plan antes de que termine (también durante la prueba de Starter), los días se suman. Si eliges otro plan, empieza el día del pago y reemplaza al actual.`,
     };
-  }
-
-  /** Paid plans are only granted by a confirmed payment; this only moves a tenant back to FREE. */
-  async updatePlan(user: AuthUserPayload, planTier: PlanTier) {
-    this.assertManager(user);
-    if (planTier !== 'FREE') {
-      throw new BadRequestException('Para cambiar a un plan pagado, completa el pago desde Planes.');
-    }
-    await this.prisma.tenant.update({
-      where: { id: user.tenantId },
-      data: { planTier: 'FREE', planExpiresAt: null },
-    });
-    return this.getOverview(user.tenantId);
   }
 
   async createCheckout(user: AuthUserPayload, planTier: PlanTier) {
@@ -282,12 +260,17 @@ export class BillingService {
       if (moved.count !== 1) return;
       const tenant = await tx.tenant.findUniqueOrThrow({ where: { id: payment.tenantId } });
       const now = new Date();
+      // Same plan still running (including the Starter trial): the new days are added at the end.
       const renewing =
         tenant.planTier === planTier && tenant.planExpiresAt && tenant.planExpiresAt > now;
       const start = renewing && tenant.planExpiresAt ? tenant.planExpiresAt : now;
       await tx.tenant.update({
         where: { id: tenant.id },
-        data: { planTier, planExpiresAt: new Date(start.getTime() + PLAN_PERIOD_DAYS * DAY_MS) },
+        data: {
+          planTier,
+          planTrial: false,
+          planExpiresAt: new Date(start.getTime() + PLAN_PERIOD_DAYS * DAY_MS),
+        },
       });
     });
     return { status: 'active' };

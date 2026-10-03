@@ -51,7 +51,7 @@ export class PlansPage {
     try {
       this.overview.set(await this.api.getPlans());
     } catch {
-      this.errorMessage.set('No pudimos cargar planes y cuotas.');
+      this.errorMessage.set('No pudimos cargar tus planes. Revisa tu conexión y vuelve a abrir esta página.');
     } finally {
       this.loading.set(false);
     }
@@ -60,10 +60,6 @@ export class PlansPage {
   async selectPlan(plan: PlanDefinition): Promise<void> {
     const data = this.overview();
     if (!data || !this.canSelect(plan, data)) return;
-    if (plan.id === 'FREE') {
-      await this.downgrade(plan);
-      return;
-    }
     this.saving.set(true);
     this.clearMessages();
     try {
@@ -77,7 +73,9 @@ export class PlansPage {
       }
       this.document.defaultView?.location.assign(checkout.checkoutUrl);
     } catch (error) {
-      this.errorMessage.set(this.messageFrom(error, 'No pudimos iniciar el pago del plan.'));
+      this.errorMessage.set(
+        this.messageFrom(error, 'No pudimos abrir el pago de tu plan. Inténtalo de nuevo en unos minutos.'),
+      );
     } finally {
       this.saving.set(false);
     }
@@ -101,26 +99,45 @@ export class PlansPage {
 
   canSelect(plan: PlanDefinition, data: BillingOverview): boolean {
     if (this.saving()) return false;
-    if (plan.id === 'FREE') return data.currentPlan.id !== 'FREE';
     return plan.priceCents != null && data.checkoutEnabled;
   }
 
   buttonLabel(plan: PlanDefinition, data: BillingOverview): string {
-    const isCurrent = plan.id === data.currentPlan.id;
-    if (isCurrent && plan.id === 'FREE') return 'Plan actual';
     if (this.saving()) return 'Procesando…';
-    if (plan.id === 'FREE') return 'Cambiar a Free';
-    return isCurrent ? 'Renovar plan' : 'Elegir y pagar';
+    if (plan.id !== data.currentPlan.id) return `Elegir ${plan.name}`;
+    return data.planStatus === 'TRIAL' ? `Pagar ${plan.name}` : `Renovar ${plan.name}`;
   }
 
-  periodEndLabel(value: string | null): string | null {
+  /** Plan name with its state, e.g. "Starter · prueba gratis". */
+  currentPlanLabel(data: BillingOverview): string {
+    if (data.planStatus === 'TRIAL') return `${data.currentPlan.name} (prueba gratis)`;
+    if (data.planStatus === 'EXPIRED') return `${data.currentPlan.name} (vencido)`;
+    return data.currentPlan.name;
+  }
+
+  periodLabel(data: BillingOverview): string | null {
+    const end = this.periodEndLabel(data.currentPeriodEnd);
+    if (!end) return null;
+    switch (data.planStatus) {
+      case 'TRIAL':
+        return `Tu prueba gratis termina el ${end}`;
+      case 'EXPIRED':
+        return `Venció el ${end}`;
+      default:
+        return `Pagado hasta el ${end}`;
+    }
+  }
+
+  private periodEndLabel(value: string | null): string | null {
     if (!value) return null;
     return new Intl.DateTimeFormat('es-PE', { dateStyle: 'long' }).format(new Date(value));
   }
 
-  quotaLabel(used: number, quota: number | null): string {
-    if (quota == null) return `${used} · sin tope fijo`;
-    return `${used} / ${quota}`;
+  /** "12 de 300"; without a limit (or with an expired plan) only the amount used. */
+  usageLabel(data: BillingOverview, used: number, quota: number | null): string {
+    if (quota == null) return `${used} · sin límite`;
+    if (data.planStatus === 'EXPIRED' && quota === 0) return `${used}`;
+    return `${used} de ${quota}`;
   }
 
   private async init(): Promise<void> {
@@ -155,36 +172,22 @@ export class PlansPage {
       this.showResult(await this.api.confirmPayment(providerPaymentId));
     } catch (error) {
       this.errorMessage.set(
-        this.messageFrom(error, 'No pudimos confirmar tu pago. Si se descontó, escríbenos a soporte.'),
+        this.messageFrom(
+          error,
+          'No pudimos confirmar tu pago. Si ya se descontó de tu cuenta, escríbenos desde Ayuda y lo revisamos.',
+        ),
       );
-    }
-  }
-
-  private async downgrade(plan: PlanDefinition): Promise<void> {
-    const accepted = this.document.defaultView?.confirm(
-      'Al cambiar a Free pierdes los días que te quedan del plan actual y se aplican sus límites. ¿Continuar?',
-    );
-    if (!accepted) return;
-    this.saving.set(true);
-    this.clearMessages();
-    try {
-      this.overview.set(await this.api.updatePlan(plan.id));
-      this.successMessage.set(`Plan ${plan.name} activo.`);
-    } catch (error) {
-      this.errorMessage.set(this.messageFrom(error, 'No se pudo cambiar el plan.'));
-    } finally {
-      this.saving.set(false);
     }
   }
 
   private showResult(result: PlanPaymentResult): void {
     switch (result.status) {
       case 'active':
-        this.successMessage.set('Pago confirmado. Tu plan ya está activo.');
+        this.successMessage.set('¡Listo! Recibimos tu pago y tu plan ya está activo.');
         break;
       case 'pending':
         this.infoMessage.set(
-          'Tu pago está en proceso. Activaremos el plan en cuanto Mercado Pago lo confirme.',
+          'Tu pago está en proceso. Activaremos tu plan apenas Mercado Pago lo confirme; no necesitas hacer nada más.',
         );
         break;
       case 'failed':
@@ -192,7 +195,7 @@ export class PlansPage {
         break;
       case 'review':
         this.errorMessage.set(
-          'Recibimos tu pago, pero necesitamos revisarlo. Escríbenos a soporte si el plan no se activa pronto.',
+          'Recibimos tu pago, pero necesitamos revisarlo antes de activar tu plan. Si no se activa en unas horas, escríbenos desde Ayuda.',
         );
         break;
     }

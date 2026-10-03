@@ -12,6 +12,7 @@ import { Test } from '@nestjs/testing';
 import { randomBytes } from 'node:crypto';
 import { AppModule } from '../src/app.module';
 import { BillingService } from '../src/billing/billing.service';
+import { CouponsService } from '../src/coupons/coupons.service';
 import { PlanLimitsService } from '../src/billing/plan-limits.service';
 import type { AuthUserPayload } from '../src/common/types/auth-user';
 import { PrismaService } from '../src/prisma/prisma.service';
@@ -74,12 +75,21 @@ describe('Plan billing (e2e)', () => {
     await app?.close();
   });
 
+  it('starts every business on a 30-day Starter trial with the trial limits', async () => {
+    const tenant = await prisma.tenant.findUniqueOrThrow({ where: { id: owner.tenantId } });
+    expect(tenant).toMatchObject({ planTier: 'STARTER', planTrial: true });
+    const expected = Date.now() + 30 * DAY_MS;
+    expect(Math.abs((tenant.planExpiresAt?.getTime() ?? 0) - expected)).toBeLessThan(60_000);
+
+    const usage = await app.get(PlanLimitsService).getUsage(owner.tenantId);
+    expect(usage).toMatchObject({ planStatus: 'TRIAL', conversationQuota: 100, productQuota: 20 });
+  });
+
   it('never switches to a paid plan without a payment', async () => {
-    await expect(billing.updatePlan(owner, 'BUSINESS')).rejects.toThrow(BadRequestException);
-    await expect(billing.createCheckout(owner, 'BUSINESS')).rejects.toThrow(BadRequestException);
+    await expect(billing.createCheckout(owner, 'ENTERPRISE')).rejects.toThrow(BadRequestException);
     await expect(billing.createCheckout(agent, 'STARTER')).rejects.toThrow(ForbiddenException);
     const tenant = await prisma.tenant.findUniqueOrThrow({ where: { id: owner.tenantId } });
-    expect(tenant.planTier).toBe('FREE');
+    expect(tenant.planTrial).toBe(true);
   });
 
   it('activates the plan once, only for the paying tenant', async () => {
@@ -89,7 +99,7 @@ describe('Plan billing (e2e)', () => {
     expect(payment).toMatchObject({
       flow: 'BILLING_SUBSCRIPTION',
       planTier: 'STARTER',
-      amountCents: 7_900,
+      amountCents: 6_900,
       status: 'PENDING',
     });
     expect((await billing.createCheckout(owner, 'STARTER')).paymentId).toBe(checkout.paymentId);
@@ -98,18 +108,26 @@ describe('Plan billing (e2e)', () => {
       NotFoundException,
     );
 
+    const trial = await prisma.tenant.findUniqueOrThrow({ where: { id: owner.tenantId } });
     await expect(billing.simulatePayment(owner, checkout.paymentId)).resolves.toEqual({ status: 'active' });
     const first = await prisma.tenant.findUniqueOrThrow({ where: { id: owner.tenantId } });
-    expect(first.planTier).toBe('STARTER');
-    const expected = Date.now() + 30 * DAY_MS;
-    expect(Math.abs((first.planExpiresAt?.getTime() ?? 0) - expected)).toBeLessThan(60_000);
+    expect(first).toMatchObject({ planTier: 'STARTER', planTrial: false });
+    // Paying Starter during the trial keeps the remaining trial days.
+    expect(first.planExpiresAt?.getTime()).toBe((trial.planExpiresAt?.getTime() ?? 0) + 30 * DAY_MS);
+    const usage = await app.get(PlanLimitsService).getUsage(owner.tenantId);
+    expect(usage).toMatchObject({
+      planStatus: 'ACTIVE',
+      conversationQuota: 300,
+      productQuota: 100,
+      couponQuota: 3,
+    });
 
     await expect(billing.simulatePayment(owner, checkout.paymentId)).resolves.toEqual({ status: 'active' });
     const again = await prisma.tenant.findUniqueOrThrow({ where: { id: owner.tenantId } });
     expect(again.planExpiresAt).toEqual(first.planExpiresAt);
 
     const other = await prisma.tenant.findUniqueOrThrow({ where: { id: otherOwner.tenantId } });
-    expect(other.planTier).toBe('FREE');
+    expect(other.planTrial).toBe(true);
   });
 
   it('adds the days when the same plan is renewed', async () => {
@@ -120,15 +138,43 @@ describe('Plan billing (e2e)', () => {
     expect(after.planExpiresAt?.getTime()).toBe((before.planExpiresAt?.getTime() ?? 0) + 30 * DAY_MS);
   });
 
-  it('applies FREE limits once the paid period ends', async () => {
+  it('caps active coupons by plan, counting reactivations', async () => {
+    const coupons = app.get(CouponsService);
+    const coupon = (code: string, isActive = true) =>
+      coupons.create(owner.tenantId, { code, label: code, kind: 'PERCENT', value: 10, isActive });
+    for (const code of ['UNO', 'DOS', 'TRES']) await coupon(`${code}${run}`);
+    await expect(coupon(`CUATRO${run}`)).rejects.toThrow(ForbiddenException);
+    const paused = await coupon(`PAUSA${run}`, false);
+    await expect(coupons.update(owner.tenantId, paused.id, { isActive: true })).rejects.toThrow(
+      ForbiddenException,
+    );
+    await expect(
+      coupons.update(owner.tenantId, paused.id, { label: 'Sigue pausado' }),
+    ).resolves.toMatchObject({ isActive: false });
+  });
+
+  it('blocks new conversations and products once the period ends', async () => {
     await prisma.tenant.update({
       where: { id: owner.tenantId },
       data: { planExpiresAt: new Date(Date.now() - 1000) },
     });
-    const usage = await app.get(PlanLimitsService).getUsage(owner.tenantId);
-    expect(usage.planTier).toBe('FREE');
-    expect(usage.productQuota).toBe(20);
-    expect((await billing.getOverview(owner.tenantId)).currentPlan.id).toBe('FREE');
+    const limits = app.get(PlanLimitsService);
+    const usage = await limits.getUsage(owner.tenantId);
+    expect(usage).toMatchObject({ planStatus: 'EXPIRED', conversationQuota: 0, productQuota: 0 });
+    await expect(limits.assertCanCreateProduct(owner.tenantId)).rejects.toThrow(ForbiddenException);
+    await expect(limits.assertCanStartConversation(owner.tenantId)).rejects.toThrow(ForbiddenException);
+    expect((await billing.getOverview(owner.tenantId)).planStatus).toBe('EXPIRED');
+  });
+
+  it('ends an expired trial with the first payment', async () => {
+    await prisma.tenant.update({
+      where: { id: otherOwner.tenantId },
+      data: { planExpiresAt: new Date(Date.now() - 1000) },
+    });
+    const checkout = await billing.createCheckout(otherOwner, 'PRO');
+    await billing.simulatePayment(otherOwner, checkout.paymentId);
+    const usage = await app.get(PlanLimitsService).getUsage(otherOwner.tenantId);
+    expect(usage).toMatchObject({ planTier: 'PRO', planStatus: 'ACTIVE', productQuota: 500 });
   });
 
   it('rejects plan webhooks without a valid platform signature', async () => {

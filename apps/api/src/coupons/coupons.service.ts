@@ -6,6 +6,7 @@ import {
 } from '@nestjs/common';
 import { createHash } from 'node:crypto';
 import { type Coupon, OrderStatus, Prisma } from '@prisma/client';
+import { PlanLimitsService } from '../billing/plan-limits.service';
 import { PrismaService } from '../prisma/prisma.service';
 import {
   type CouponLine,
@@ -34,7 +35,10 @@ export const couponCustomerKey = (email: string) =>
 
 @Injectable()
 export class CouponsService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly planLimits: PlanLimitsService,
+  ) {}
 
   async list(tenantId: string) {
     const [coupons, usage] = await Promise.all([
@@ -79,6 +83,9 @@ export class CouponsService {
   async create(tenantId: string, dto: CreateCouponDto) {
     const data = this.toData(dto);
     this.assertRules(data);
+    if (data.isActive !== false) {
+      await this.planLimits.assertCanActivateCoupon(tenantId);
+    }
     try {
       return await this.prisma.coupon.create({ data: { ...data, tenantId } });
     } catch (error) {
@@ -90,6 +97,9 @@ export class CouponsService {
     const current = await this.getById(tenantId, id);
     const data = { ...current, ...this.toData(dto) };
     this.assertRules(data);
+    if (data.isActive && !current.isActive) {
+      await this.planLimits.assertCanActivateCoupon(tenantId);
+    }
     try {
       return await this.prisma.coupon.update({
         where: { id },

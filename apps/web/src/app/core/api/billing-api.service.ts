@@ -4,27 +4,47 @@ import { firstValueFrom } from 'rxjs';
 import { environment } from '../../../environments/environment';
 
 export type PlanDefinition = {
-  id: 'FREE' | 'STARTER' | 'PRO' | 'BUSINESS';
+  id: 'STARTER' | 'PRO' | 'BUSINESS' | 'ENTERPRISE';
   name: string;
   priceLabel: string;
   priceCents: number | null;
   conversationQuota: number | null;
   productQuota: number | null;
+  couponQuota: number | null;
+  platformBadge: boolean;
+  description: string;
+  note: string | null;
   highlights: string[];
 };
 
+/** TRIAL: Starter trial with reduced limits. EXPIRED: no new conversations or products until paying. */
+export type PlanStatus = 'TRIAL' | 'ACTIVE' | 'EXPIRED';
+
+export type PlanUsage = {
+  planTier: PlanDefinition['id'];
+  planStatus: PlanStatus;
+  planExpiresAt: string | null;
+  conversationsUsed: number;
+  conversationQuota: number | null;
+  productsUsed: number;
+  productQuota: number | null;
+  couponsActive: number;
+  couponQuota: number | null;
+  conversationAtLimit: boolean;
+  productAtLimit: boolean;
+  couponAtLimit: boolean;
+  periodStart: string;
+};
+
 export type BillingOverview = {
-  notice: string;
   currentPlan: PlanDefinition;
+  planStatus: PlanStatus;
   currentPeriodEnd: string | null;
-  usage: {
-    conversationsUsed: number;
-    conversationQuota: number | null;
-    productsUsed: number;
-    productQuota: number | null;
-    periodStart: string;
-  };
+  trialDays: number;
+  usage: PlanUsage;
   plans: PlanDefinition[];
+  includedInAllPlans: string[];
+  notes: string[];
   checkoutEnabled: boolean;
   checkoutSimulated: boolean;
   checkoutHint: string;
@@ -50,35 +70,9 @@ export class BillingApiService {
     );
   }
 
-  getUsage(): Promise<{
-    planTier: string;
-    conversationsUsed: number;
-    conversationQuota: number | null;
-    productsUsed: number;
-    productQuota: number | null;
-    conversationAtLimit: boolean;
-    productAtLimit: boolean;
-    periodStart: string;
-  }> {
+  getUsage(): Promise<PlanUsage> {
     return firstValueFrom(
-      this.http.get<{
-        planTier: string;
-        conversationsUsed: number;
-        conversationQuota: number | null;
-        productsUsed: number;
-        productQuota: number | null;
-        conversationAtLimit: boolean;
-        productAtLimit: boolean;
-        periodStart: string;
-      }>(`${environment.apiBaseUrl}/billing/usage`),
-    );
-  }
-
-  updatePlan(planTier: PlanDefinition['id']): Promise<BillingOverview> {
-    return firstValueFrom(
-      this.http.patch<BillingOverview>(`${environment.apiBaseUrl}/billing/plan`, {
-        planTier,
-      }),
+      this.http.get<PlanUsage>(`${environment.apiBaseUrl}/billing/usage`),
     );
   }
 

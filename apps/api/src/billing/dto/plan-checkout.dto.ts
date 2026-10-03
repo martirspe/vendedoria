@@ -3,8 +3,8 @@ import { PlanTier } from '@prisma/client';
 import { IsIn, Matches } from 'class-validator';
 
 export class CreatePlanCheckoutDto {
-  @ApiProperty({ enum: ['STARTER', 'PRO'] })
-  @IsIn(['STARTER', 'PRO'])
+  @ApiProperty({ enum: ['STARTER', 'PRO', 'BUSINESS'] })
+  @IsIn(['STARTER', 'PRO', 'BUSINESS'])
   planTier!: PlanTier;
 }
 

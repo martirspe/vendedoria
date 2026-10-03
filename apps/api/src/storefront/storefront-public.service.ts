@@ -1,6 +1,6 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { PlanTier, Prisma } from '@prisma/client';
+import { Prisma } from '@prisma/client';
 import type {
   PublicProductDetail,
   PublicProductList,
@@ -11,7 +11,7 @@ import type {
   StorefrontCheckout,
   StorefrontView,
 } from '@vendedoria/contracts';
-import { effectivePlanTier } from '../billing/plan-catalog';
+import { resolvePlanState } from '../billing/plan-catalog';
 import { MerchantAccountsService } from '../payments/merchant-accounts.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { TurnstileService } from '../turnstile/turnstile.service';
@@ -58,8 +58,6 @@ const PRODUCT_INCLUDE = {
 
 const MAX_PAGE_SIZE = 48;
 const MAX_CATALOG = 500;
-const BADGE_PLANS: PlanTier[] = [PlanTier.FREE, PlanTier.STARTER];
-
 export type StoreAccess = {
   tenantId: string;
   isPreview: boolean;
@@ -162,7 +160,7 @@ export class StorefrontPublicService {
       categories: await this.categories(access.tenantId),
       status: storefront.status,
       isPreview: access.isPreview,
-      showPlatformBadge: BADGE_PLANS.includes(effectivePlanTier(tenant)),
+      showPlatformBadge: resolvePlanState(tenant).platformBadge,
       shipping: {
         options: shippingOptions(storefront),
         freeShippingFromCents: storefront.freeShippingFromCents,

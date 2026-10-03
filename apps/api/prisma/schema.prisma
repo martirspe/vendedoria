@@ -11,10 +11,11 @@ datasource db {
 }
 
 enum PlanTier {
-  FREE
   STARTER
   PRO
   BUSINESS
+  /// Custom plan quoted and granted by the team.
+  ENTERPRISE
 }
 
 enum MembershipRole {
@@ -148,9 +149,12 @@ model Tenant {
   slug      String   @unique
   country   String   @default("PE")
   currency  String   @default("PEN")
-  planTier  PlanTier @default(FREE)
-  /// End of the paid plan period; after it the limits fall back to FREE. Null: no expiry (FREE or granted by the team).
-  planExpiresAt DateTime?
+  /// New businesses start a 30-day Starter trial.
+  planTier  PlanTier @default(STARTER)
+  /// Trial period: Starter with the reduced trial limits until planExpiresAt. Cleared by the first paid plan.
+  planTrial Boolean  @default(true)
+  /// End of the trial or paid period; after it the plan is expired. Null: no expiry (granted by the team).
+  planExpiresAt DateTime? @default(dbgenerated("(now() + '30 days'::interval)"))
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 

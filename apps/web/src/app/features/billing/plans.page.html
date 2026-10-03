@@ -1,11 +1,11 @@
 <section class="plans">
   <header class="plans__header">
     <div>
-      <p class="plans__eyebrow">Tu suscripción</p>
-      <h1>Planes y límites</h1>
+      <p class="plans__eyebrow">Tu plan en VendedorIA</p>
+      <h1>Planes</h1>
       <p>
-        Elige el plan de VendedorIA que mejor se adapte a tu negocio y revisa
-        cuánto has usado este mes.
+        Revisa cuánto usaste este mes y elige el plan que va con el tamaño de
+        tu negocio. Pagas mes a mes, sin contratos.
       </p>
     </div>
   </header>
@@ -42,42 +42,69 @@
   @if (loading()) {
     <div class="skeleton" aria-busy="true">Cargando planes…</div>
   } @else if (overview(); as data) {
+    @if (data.planStatus === 'EXPIRED') {
+      <div class="banner banner--danger" role="alert">
+        <ds-icon name="alert" />
+        <span>
+          Tu plan venció. Tu vendedor IA no atiende chats nuevos y no puedes
+          publicar productos. Tus clientes actuales, tus cupones y tu tienda siguen
+          funcionando. Renueva o elige un plan para volver a la normalidad.
+        </span>
+      </div>
+    }
+
+    <h2 class="plans__section-title">Tu uso</h2>
     <div class="usage">
       <div>
         <span>Plan actual</span>
-        <strong>{{ data.currentPlan.name }}</strong>
-        @if (periodEndLabel(data.currentPeriodEnd); as periodEnd) {
-          <small>Activo hasta el {{ periodEnd }}</small>
+        <strong>{{ currentPlanLabel(data) }}</strong>
+        @if (periodLabel(data); as period) {
+          <small>{{ period }}</small>
         }
       </div>
       <div>
-        <span>Conversaciones del mes</span>
+        <span>Chats nuevos este mes</span>
         <strong>
           {{
-            quotaLabel(
+            usageLabel(
+              data,
               data.usage.conversationsUsed,
               data.usage.conversationQuota
             )
           }}
         </strong>
+        <small>Se reinicia el 1 de cada mes</small>
       </div>
       <div>
-        <span>Productos en catálogo</span>
+        <span>Productos publicados</span>
         <strong>
-          {{ quotaLabel(data.usage.productsUsed, data.usage.productQuota) }}
+          {{ usageLabel(data, data.usage.productsUsed, data.usage.productQuota) }}
+        </strong>
+      </div>
+      <div>
+        <span>Cupones activos</span>
+        <strong>
+          {{ usageLabel(data, data.usage.couponsActive, data.usage.couponQuota) }}
         </strong>
       </div>
     </div>
 
-    <p class="plans__notice">{{ data.notice }}</p>
-    <p class="plans__hint">{{ data.checkoutHint }}</p>
-
+    <h2 class="plans__section-title">Elige tu plan</h2>
     <ul class="plan-grid">
       @for (plan of data.plans; track plan.id) {
         <li [class.is-current]="plan.id === data.currentPlan.id">
           <header>
-            <h2>{{ plan.name }}</h2>
+            <div class="plan-grid__title">
+              <h3>{{ plan.name }}</h3>
+              @if (plan.id === data.currentPlan.id) {
+                <span class="plan-grid__pill">Tu plan</span>
+              }
+            </div>
+            <p class="plan-grid__description">{{ plan.description }}</p>
             <strong>{{ plan.priceLabel }}</strong>
+            @if (plan.note) {
+              <p class="plan-grid__note">{{ plan.note }}</p>
+            }
           </header>
           <ul>
             @for (item of plan.highlights; track item) {
@@ -85,14 +112,13 @@
             }
           </ul>
           @if (plan.priceCents == null) {
-            <p class="plan-grid__contact">
-              Pídenos una cotización desde
-              <a routerLink="/app/help">Ayuda</a>.
-            </p>
+            <a class="plan-grid__contact" routerLink="/app/help">
+              <ds-button type="button" variant="secondary">Pedir cotización</ds-button>
+            </a>
           } @else {
             <ds-button
               type="button"
-              [variant]="plan.id === data.currentPlan.id ? 'ghost' : 'primary'"
+              [variant]="plan.id === data.currentPlan.id && data.planStatus === 'ACTIVE' ? 'ghost' : 'primary'"
               [disabled]="!canSelect(plan, data)"
               (click)="selectPlan(plan)"
             >
@@ -102,5 +128,25 @@
         </li>
       }
     </ul>
+
+    <div class="plans__details">
+      <section>
+        <h2 class="plans__section-title">Todos los planes incluyen</h2>
+        <ul class="plans__list">
+          @for (item of data.includedInAllPlans; track item) {
+            <li><ds-icon name="check" /><span>{{ item }}</span></li>
+          }
+        </ul>
+      </section>
+      <section>
+        <h2 class="plans__section-title">Antes de elegir</h2>
+        <ul class="plans__list plans__list--notes">
+          <li><span>{{ data.checkoutHint }}</span></li>
+          @for (note of data.notes; track note) {
+            <li><span>{{ note }}</span></li>
+          }
+        </ul>
+      </section>
+    </div>
   }
 </section>

@@ -255,7 +255,7 @@ Acciones globales frecuentes: **Connect WhatsApp**, command palette (`Ctrl+K`), 
 
 ## Billing (flujo A)
 
-**Piso:** Free con cuota visible; Starter / Pro / Business; ciclos; trial; overage explícito.
+**Piso:** sin plan gratuito: prueba de 30 días en Starter con cuota reducida y visible; Starter / Pro / Business; ciclos; overage explícito.
 
 **Cuña:** cuotas y overage **transparentes** antes del bloqueo; copy que no confunda A con B.
 

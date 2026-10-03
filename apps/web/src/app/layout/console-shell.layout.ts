@@ -199,20 +199,33 @@ export class ConsoleShellLayout {
   async loadQuotaWarning(): Promise<void> {
     try {
       const usage = await this.billing.getUsage();
-      if (usage.conversationAtLimit) {
+      const daysLeft = usage.planExpiresAt
+        ? Math.ceil((new Date(usage.planExpiresAt).getTime() - Date.now()) / 86_400_000)
+        : null;
+      if (usage.planStatus === 'EXPIRED') {
         this.quotaWarning.set(
-          `Límite mensual de conversaciones alcanzado (${usage.conversationsUsed}/${usage.conversationQuota}).`,
+          'Tu plan venció: tu vendedor IA no atiende chats nuevos. Renueva tu plan para volver a la normalidad.',
+        );
+      } else if (usage.planStatus === 'TRIAL' && daysLeft !== null && daysLeft <= 7) {
+        this.quotaWarning.set(
+          daysLeft <= 1
+            ? 'Tu prueba gratis termina hoy. Elige un plan para que tu vendedor IA siga atendiendo chats nuevos.'
+            : `Tu prueba gratis termina en ${daysLeft} días. Elige un plan para no detener tus ventas.`,
+        );
+      } else if (usage.conversationAtLimit) {
+        this.quotaWarning.set(
+          `Usaste tus ${usage.conversationQuota} chats nuevos de este mes. Tu vendedor IA sigue atendiendo a quienes ya te escribieron.`,
         );
       } else if (usage.productAtLimit) {
         this.quotaWarning.set(
-          `Límite de productos alcanzado (${usage.productsUsed}/${usage.productQuota}).`,
+          `Llegaste al máximo de ${usage.productQuota} productos de tu plan.`,
         );
       } else if (
         usage.conversationQuota &&
         usage.conversationsUsed / usage.conversationQuota >= 0.85
       ) {
         this.quotaWarning.set(
-          `Cerca del límite de conversaciones (${usage.conversationsUsed}/${usage.conversationQuota}).`,
+          `Usaste ${usage.conversationsUsed} de tus ${usage.conversationQuota} chats nuevos de este mes.`,
         );
       } else {
         this.quotaWarning.set(null);
