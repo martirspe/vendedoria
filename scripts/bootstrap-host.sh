@@ -437,6 +437,8 @@ obtain_store_tls() {
   apt-get install -y -qq python3-certbot-dns-cloudflare
   log "Requesting wildcard certificate for *.${STORE_BASE_DOMAIN} (DNS-01, Cloudflare)..."
   set +e
+  # Ubuntu's python3-cloudflare 2.20 prints a harmless deprecation banner on every run.
+  PYTHONWARNINGS="ignore::PendingDeprecationWarning" \
   certbot certonly --dns-cloudflare --dns-cloudflare-credentials "$CF_INI" \
     --dns-cloudflare-propagation-seconds 30 --non-interactive --agree-tos --email "$CERTBOT_EMAIL" \
     --cert-name "$STORE_CERT_NAME" -d "$STORE_BASE_DOMAIN" -d "*.${STORE_BASE_DOMAIN}" \
