@@ -153,12 +153,12 @@
               ></textarea>
             </label>
             <label class="fields__full">
-              Reglas ALWAYS / NEVER
+              Reglas: siempre / nunca
               <textarea
                 formControlName="rulesText"
                 rows="5"
                 maxlength="4000"
-                placeholder="ALWAYS: confirmar stock antes de cerrar.&#10;NEVER: inventar descuentos ni prometer fechas de envío."
+                placeholder="Siempre: confirmar stock antes de cerrar.&#10;Nunca: inventar descuentos ni prometer fechas de envío."
               ></textarea>
             </label>
           </div>
@@ -249,15 +249,15 @@
 
         <section class="block" id="seller-handoff">
           <header class="block__head">
-            <h2>Handoff humano</h2>
+            <h2>Derivar a un asesor</h2>
             <p>
-              Cuando el comprador pide una persona, el agente escala y puede
-              pausarse solo.
+              Cuando el comprador pide hablar con una persona, tu vendedor lo
+              deriva y puede pausarse solo.
             </p>
           </header>
           <div class="fields">
             <label class="fields__full">
-              Mensaje de handoff
+              Mensaje al derivar
               <textarea
                 formControlName="handoffMessage"
                 rows="3"
@@ -268,9 +268,9 @@
             <label class="toggle fields__full">
               <input type="checkbox" formControlName="pauseOnHandoff" />
               <span>
-                <strong>Pausar IA al escalar</strong>
+                <strong>Pausar la IA al derivar</strong>
                 <small>
-                  Evita que agente y humano respondan a la vez en el mismo hilo.
+                  Evita que tu vendedor y un asesor respondan a la vez en la misma conversación.
                 </small>
               </span>
             </label>
@@ -281,7 +281,7 @@
           <header class="block__head">
             <h2>Límites duros</h2>
             <p>
-              Guardrails que el runtime aplica siempre — aunque el LLM se equivoque.
+              Reglas que tu vendedor cumple siempre, sin excepciones.
             </p>
           </header>
           <div class="fields">
@@ -303,7 +303,7 @@
               <input type="checkbox" formControlName="neverInventShipping" />
               <span>
                 <strong>Sin envíos inventados</strong>
-                <small>Plazos y costos solo desde FAQs o handoff.</small>
+                <small>Plazos y costos solo desde tus preguntas frecuentes o un asesor.</small>
               </span>
             </label>
           </div>
@@ -587,7 +587,7 @@
                 <strong>Escribe como un comprador</strong>
                 <p>
                   Prueba saludo, un producto de tu catálogo o “quiero comprar
-                  [producto]” para ver pedido + link simulados.
+                  [producto]” para ver el pedido y el link de pago de prueba.
                 </p>
                 <div class="playground__suggestions">
                   <button

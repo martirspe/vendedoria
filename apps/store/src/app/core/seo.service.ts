@@ -61,6 +61,26 @@ export class SeoService {
     }
     this.canonical(url);
     this.jsonLd(input.jsonLd ?? null);
+    this.preconnect(image);
+  }
+
+  /** Photos come from the media CDN (CloudFront): open that connection before the hero image is parsed. */
+  private preconnect(image: string | null): void {
+    let origin: string;
+    try {
+      origin = image ? new URL(image).origin : '';
+    } catch {
+      return;
+    }
+    if (!origin.startsWith('https://') || origin === this.origin()) return;
+    let link = this.document.head.querySelector<HTMLLinkElement>('link[rel="preconnect"][data-media]');
+    if (!link) {
+      link = this.document.createElement('link');
+      link.rel = 'preconnect';
+      link.setAttribute('data-media', '');
+      this.document.head.appendChild(link);
+    }
+    link.href = origin;
   }
 
   private tag(attr: 'name' | 'property', key: string, content: string): void {

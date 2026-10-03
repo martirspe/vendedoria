@@ -5,6 +5,7 @@ import type { ShippingQuote, UbigeoDistrict } from '@vendedoria/contracts';
 import { Public } from '../common/decorators/auth.decorators';
 import { RateLimit } from '../rate-limit/rate-limit.decorator';
 import { StorefrontPublicService } from '../storefront/storefront-public.service';
+import { Turnstile } from '../turnstile/turnstile.decorator';
 import { UBIGEO_DISTRICTS } from '../ubigeo/ubigeo';
 import { CheckoutService } from './checkout.service';
 import {
@@ -64,6 +65,7 @@ export class CheckoutController {
 
   @Post('checkout')
   @RateLimit('store-checkout', 10)
+  @Turnstile('checkout')
   async create(
     @Param('slug') slug: string,
     @Body() dto: CreateCheckoutDto,

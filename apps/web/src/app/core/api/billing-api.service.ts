@@ -7,15 +7,16 @@ export type PlanDefinition = {
   id: 'FREE' | 'STARTER' | 'PRO' | 'BUSINESS';
   name: string;
   priceLabel: string;
+  priceCents: number | null;
   conversationQuota: number | null;
   productQuota: number | null;
   highlights: string[];
 };
 
 export type BillingOverview = {
-  flow: 'A';
   notice: string;
   currentPlan: PlanDefinition;
+  currentPeriodEnd: string | null;
   usage: {
     conversationsUsed: number;
     conversationQuota: number | null;
@@ -25,7 +26,18 @@ export type BillingOverview = {
   };
   plans: PlanDefinition[];
   checkoutEnabled: boolean;
+  checkoutSimulated: boolean;
   checkoutHint: string;
+};
+
+export type PlanCheckout = {
+  paymentId: string;
+  checkoutUrl: string;
+  simulated: boolean;
+};
+
+export type PlanPaymentResult = {
+  status: 'active' | 'pending' | 'failed' | 'review';
 };
 
 @Injectable({ providedIn: 'root' })
@@ -67,6 +79,32 @@ export class BillingApiService {
       this.http.patch<BillingOverview>(`${environment.apiBaseUrl}/billing/plan`, {
         planTier,
       }),
+    );
+  }
+
+  createCheckout(planTier: PlanDefinition['id']): Promise<PlanCheckout> {
+    return firstValueFrom(
+      this.http.post<PlanCheckout>(`${environment.apiBaseUrl}/billing/checkout`, {
+        planTier,
+      }),
+    );
+  }
+
+  confirmPayment(providerPaymentId: string): Promise<PlanPaymentResult> {
+    return firstValueFrom(
+      this.http.post<PlanPaymentResult>(
+        `${environment.apiBaseUrl}/billing/checkout/confirm`,
+        { providerPaymentId },
+      ),
+    );
+  }
+
+  simulatePayment(paymentId: string): Promise<PlanPaymentResult> {
+    return firstValueFrom(
+      this.http.post<PlanPaymentResult>(
+        `${environment.apiBaseUrl}/billing/payments/${encodeURIComponent(paymentId)}/simulate`,
+        {},
+      ),
     );
   }
 }

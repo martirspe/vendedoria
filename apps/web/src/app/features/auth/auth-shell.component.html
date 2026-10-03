@@ -1,0 +1,31 @@
+<main class="auth-shell">
+  <div class="auth-shell__stage">
+    <header class="auth-shell__header">
+      <a class="auth-shell__back" href="/" aria-label="Volver al inicio">
+        <ds-icon name="arrowLeft" [size]="1.1" />
+      </a>
+      <a class="auth-shell__brand" href="/" aria-label="VendedorIA, inicio">
+        <span class="auth-shell__brand-mark" aria-hidden="true">
+          <ds-icon name="sparkles" [size]="1.05" />
+        </span>
+        <span class="auth-shell__brand-text" aria-hidden="true">VendedorIA</span>
+      </a>
+    </header>
+
+    <section class="auth-card" aria-labelledby="auth-title">
+      <header class="auth-card__head">
+        <h1 id="auth-title" class="auth-card__title">{{ title() }}</h1>
+        @if (lead(); as leadText) {
+          <p class="auth-card__lead">{{ leadText }}</p>
+        }
+      </header>
+      <ng-content />
+    </section>
+
+    <ng-content select="[authFooter]" />
+  </div>
+
+  <footer class="auth-shell__footer">
+    <p>© {{ year }} VendedorIA</p>
+  </footer>
+</main>

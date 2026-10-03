@@ -6,7 +6,6 @@
   "main": "index.ts",
   "types": "index.ts",
   "dependencies": {
-    "@tabler/icons": "^3.48.0",
-    "@tabler/icons-angular": "^3.48.0"
+    "@lucide/angular": "^1.50.0"
   }
 }

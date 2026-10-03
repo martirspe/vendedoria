@@ -24,7 +24,9 @@ import { INDUSTRIES, MAX_TEMPLATE_FAQ, TEMPLATES } from '../store-templates';
 
 const HEX_COLOR = /^#[0-9a-fA-F]{6}$/;
 export const RUC = /^(10|15|16|17|20)\d{9}$/;
-const URL_OPTIONS = { protocols: ['https', 'http'], require_protocol: true };
+/** Same rule as product photos: uploads served by the API itself live on hosts without a TLD (localhost) in dev. */
+const URL_OPTIONS = { protocols: ['https', 'http'], require_protocol: true, require_tld: false };
+const IMAGE_URL_MESSAGE = { message: 'Usa un enlace de imagen válido que empiece con https://.' };
 
 /** Five tiers in cents: ≤20 km, ≤100 km, ≤400 km, ≤900 km, farther. */
 export class CarrierRatesDto {
@@ -77,7 +79,7 @@ export class TemplateCopyDto {
   @ApiPropertyOptional()
   @IsOptional()
   @ValidateIf((_, value) => value !== '')
-  @IsUrl(URL_OPTIONS)
+  @IsUrl(URL_OPTIONS, IMAGE_URL_MESSAGE)
   @MaxLength(500)
   bannerImageUrl?: string;
 
@@ -111,14 +113,14 @@ export class UpdateStorefrontDto {
   @ApiPropertyOptional()
   @IsOptional()
   @ValidateIf((_, value) => value !== null)
-  @IsUrl(URL_OPTIONS)
+  @IsUrl(URL_OPTIONS, IMAGE_URL_MESSAGE)
   @MaxLength(500)
   logoUrl?: string | null;
 
   @ApiPropertyOptional()
   @IsOptional()
   @ValidateIf((_, value) => value !== null)
-  @IsUrl(URL_OPTIONS)
+  @IsUrl(URL_OPTIONS, IMAGE_URL_MESSAGE)
   @MaxLength(500)
   heroImageUrl?: string | null;
 

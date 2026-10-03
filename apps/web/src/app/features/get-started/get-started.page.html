@@ -1,11 +1,11 @@
 <section class="started">
   <header class="started__header">
     <div>
-      <p class="started__eyebrow">Onboarding</p>
+      <p class="started__eyebrow">Primeros pasos</p>
       <h1>Empezar a vender</h1>
       <p>
-        Checklist de capacidad de venta — no solo campos llenados. Completa
-        estos pasos para tu primer cobro de prueba.
+        Completa estos pasos y deja tu negocio listo para recibir su primer
+        pedido pagado.
       </p>
     </div>
     <div class="started__progress" role="img" [attr.aria-label]="'Progreso ' + progressPercent() + ' por ciento'">
@@ -23,12 +23,12 @@
   }
 
   @if (loading()) {
-    <div class="skeleton" aria-busy="true">Midiendo tu readiness…</div>
+    <div class="skeleton" aria-busy="true">Revisando tu avance…</div>
   } @else {
     @if (readyToSell()) {
       <div class="banner banner--success" role="status">
         <ds-icon name="check" />
-        <span>Listo para el smoke: canal, catálogo, agente y cobro de prueba.</span>
+        <span>Todo listo para vender: canal, catálogo, vendedor y cobros.</span>
       </div>
     }
 
@@ -56,9 +56,9 @@
     </ol>
 
     <p class="started__hint">
-      Score del vendedor ahora: {{ agentScore() }}/200. Usa
+      Puntaje de tu vendedor: {{ agentScore() }}/200. Usa
       <a routerLink="/app/seller">Probar vendedor</a>
-      sin contaminar producción.
+      para ensayar sin escribir a clientes reales.
     </p>
   }
 </section>

@@ -16,7 +16,7 @@ import type {
   StorefrontView,
   UbigeoDistrict,
 } from '@vendedoria/contracts';
-import { STORE_PROXY_PREFIX } from './store-context';
+import { STORE_PROXY_PREFIX, TURNSTILE_HEADER } from './store-context';
 
 export type ProductListParams = {
   category?: string | null;
@@ -83,8 +83,15 @@ export class StoreApiService {
     );
   }
 
-  checkout(body: CheckoutRequest): Promise<PublicOrder> {
-    return firstValueFrom(this.http.post<PublicOrder>(`${STORE_PROXY_PREFIX}/checkout`, body));
+  /** `turnstileToken` is required when the store view carries `checkout.turnstileSiteKey`. */
+  checkout(body: CheckoutRequest, turnstileToken?: string): Promise<PublicOrder> {
+    return firstValueFrom(
+      this.http.post<PublicOrder>(
+        `${STORE_PROXY_PREFIX}/checkout`,
+        body,
+        turnstileToken ? { headers: { [TURNSTILE_HEADER]: turnstileToken } } : {},
+      ),
+    );
   }
 
   order(id: string, token: string): Promise<PublicOrder | null> {

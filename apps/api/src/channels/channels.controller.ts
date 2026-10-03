@@ -6,10 +6,12 @@ import {
   Param,
   Post,
   Query,
+  Req,
   Res,
+  type RawBodyRequest,
 } from '@nestjs/common';
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
-import type { FastifyReply } from 'fastify';
+import type { FastifyReply, FastifyRequest } from 'fastify';
 import { CurrentUser, Public } from '../common/decorators/auth.decorators';
 import type { AuthUserPayload } from '../common/types/auth-user';
 import { ChannelsService } from './channels.service';
@@ -82,9 +84,10 @@ export class ChannelsController {
   @Post('webhooks/meta/whatsapp')
   async receiveWebhook(
     @Body() body: Record<string, unknown>,
+    @Req() request: RawBodyRequest<FastifyRequest>,
     @Headers('x-hub-signature-256') signature?: string,
   ) {
-    this.channelsService.assertMetaSignature(JSON.stringify(body), signature);
+    this.channelsService.assertMetaSignature(request.rawBody, signature);
     return this.channelsService.handleMetaWebhook(
       body as Parameters<ChannelsService['handleMetaWebhook']>[0],
     );

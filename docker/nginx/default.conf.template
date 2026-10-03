@@ -65,7 +65,38 @@ server {
         include /etc/nginx/snippets/proxy-params.conf;
     }
 
+    # The marketing site lives on the bare domain.
+    location = / {
+        return 302 https://${STORE_BASE_DOMAIN}/;
+    }
+
     location / {
+        set $web_upstream web:4000;
+        proxy_pass http://$web_upstream;
+        include /etc/nginx/snippets/proxy-params.conf;
+    }
+}
+
+# Web comercial en el dominio raíz (${STORE_BASE_DOMAIN}): mismas páginas prerenderizadas de la
+# consola; entrar, crear cuenta y la consola viven solo en ${CONSOLE_HOST} (sesión en un único origen).
+server {
+    listen 80;
+    server_name ${STORE_BASE_DOMAIN};
+
+    client_max_body_size 1m;
+
+    include /etc/nginx/snippets/security-headers.conf;
+
+    location ~ ^/(app|auth)(/|$) {
+        return 301 https://${CONSOLE_HOST}$request_uri;
+    }
+
+    location /api/ {
+        return 404;
+    }
+
+    location / {
+        limit_req zone=store_pages burst=120 nodelay;
         set $web_upstream web:4000;
         proxy_pass http://$web_upstream;
         include /etc/nginx/snippets/proxy-params.conf;

@@ -10,6 +10,7 @@ apps/api/.env
 apps/api/uploads/
 .local/
 backups/
+docker/nginx/generated/
 *.log
 coverage/
 .DS_Store

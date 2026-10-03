@@ -285,7 +285,7 @@ export class CreateProductDto extends ProductExtrasDto {
 
   @ApiPropertyOptional({
     type: [String],
-    description: 'Public media URLs (S3 upload comes later)',
+    description: 'Public media URLs (from POST /catalog/media)',
   })
   @IsOptional()
   @IsArray()

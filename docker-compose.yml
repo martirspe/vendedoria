@@ -89,8 +89,8 @@ services:
       TZ: ${TZ:-America/Lima}
       NODE_ENV: production
       PORT: '4000'
-      NG_ALLOWED_HOSTS: ${CONSOLE_HOST}
-      NG_TRUST_PROXY_HEADERS: 'true'
+      NG_ALLOWED_HOSTS: ${CONSOLE_HOST},${STORE_BASE_DOMAIN}
+      NG_TRUST_PROXY_HEADERS: x-forwarded-host,x-forwarded-proto
       NODE_OPTIONS: ${WEB_NODE_OPTIONS:---max-old-space-size=256}
     deploy:
       resources:
@@ -119,7 +119,7 @@ services:
       PORT: '4300'
       STORE_API_URL: http://api:3000/api/v1
       STORE_ALLOWED_HOSTS: '*.${STORE_BASE_DOMAIN}'
-      NG_TRUST_PROXY_HEADERS: 'true'
+      NG_TRUST_PROXY_HEADERS: x-forwarded-host,x-forwarded-proto
       NODE_OPTIONS: ${STORE_NODE_OPTIONS:---max-old-space-size=384}
     deploy:
       resources:

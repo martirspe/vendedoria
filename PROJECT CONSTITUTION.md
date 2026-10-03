@@ -508,7 +508,7 @@ Nunca hardcodear colores ni espaciados en features.
 
 ## Iconografía
 
-Únicamente **Tabler Icons** (`@tabler/icons-angular`) vía el registro del Design System (`ds-icon`).
+Únicamente **Lucide** (`@lucide/angular`) vía el registro del Design System (`ds-icon`). Los logos de marca (WhatsApp, etc.) usan su SVG oficial, registrado en el mismo `ds-icon`.
 
 Nunca mezclar librerías de iconos.
 

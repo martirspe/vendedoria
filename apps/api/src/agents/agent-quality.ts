@@ -40,7 +40,7 @@ const QUALITY_FIELDS: QualityField[] = [
   {
     key: 'rulesText',
     points: 25,
-    hint: 'Agrega reglas ALWAYS / NEVER',
+    hint: 'Agrega reglas de qué hacer siempre y qué nunca',
     minLength: 12,
   },
   {

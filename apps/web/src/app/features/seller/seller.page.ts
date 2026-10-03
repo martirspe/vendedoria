@@ -81,7 +81,7 @@ export class SellerPage {
     { id: 'audience', label: 'Audiencia' },
     { id: 'personality', label: 'Personalidad' },
     { id: 'messages', label: 'Mensajes' },
-    { id: 'handoff', label: 'Handoff' },
+    { id: 'handoff', label: 'Derivar' },
     { id: 'limits', label: 'Límites' },
     { id: 'knowledge', label: 'Conocimiento' },
     { id: 'journeys', label: 'Recorrido' },
@@ -190,7 +190,7 @@ export class SellerPage {
       this.dirty.set(false);
     } catch {
       this.errorMessage.set(
-        'No pudimos cargar tu vendedor IA. Revisa la API e inténtalo de nuevo.',
+        'No pudimos cargar tu vendedor IA. Revisa tu conexión e inténtalo de nuevo.',
       );
     } finally {
       this.loading.set(false);
@@ -295,7 +295,7 @@ export class SellerPage {
       case 'create_payment_link':
         return 'Link de pago';
       case 'escalate':
-        return 'Handoff';
+        return 'Derivó a asesor';
       default:
         return name;
     }
@@ -612,7 +612,7 @@ export class SellerPage {
       {
         ok: values.rulesText.trim().length >= 12,
         points: 25,
-        hint: 'Agrega reglas ALWAYS / NEVER',
+        hint: 'Agrega reglas de qué hacer siempre y qué nunca',
       },
       {
         ok: values.communicationStyle.trim().length >= 4,

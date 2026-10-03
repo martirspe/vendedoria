@@ -208,6 +208,10 @@
           <small class="field__error">Debes aceptar para continuar.</small>
         }
 
+        @if (s.checkout.turnstileSiteKey; as siteKey) {
+          <ds-turnstile [siteKey]="siteKey" action="checkout" theme="light" />
+        }
+
         @if (errorMessage(); as error) {
           <p class="warning" role="alert">{{ error }}</p>
         }

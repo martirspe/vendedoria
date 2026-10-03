@@ -416,7 +416,7 @@ export class MessagesPage {
       case 'lookup_faq':
         return 'FAQ';
       case 'escalate':
-        return 'Handoff';
+        return 'Derivó a asesor';
       default:
         return name;
     }

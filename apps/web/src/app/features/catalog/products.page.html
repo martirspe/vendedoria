@@ -80,6 +80,17 @@
           </p>
         </div>
         <div class="publish__actions">
+          @if (isEditing()) {
+            <ds-button
+              type="button"
+              variant="ghost"
+              [disabled]="saving() || deleting()"
+              (click)="deleteProduct()"
+            >
+              <ds-icon name="trash" [size]="1" />
+              {{ deleting() ? 'Eliminando…' : 'Eliminar' }}
+            </ds-button>
+          }
           <ds-button type="button" variant="secondary" (click)="closeEditor()">
             Cancelar
           </ds-button>

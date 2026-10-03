@@ -20,6 +20,16 @@ type IntegrationCategory =
   | 'ERP'
   | 'Marketing';
 
+const CATEGORY_LABELS: Record<IntegrationCategory, string> = {
+  ALL: 'Todas',
+  Channel: 'Canales',
+  Payments: 'Cobros',
+  'E-commerce': 'E-commerce',
+  Shipping: 'Envíos',
+  ERP: 'ERP',
+  Marketing: 'Marketing',
+};
+
 type IntegrationCard = {
   id: string;
   name: string;
@@ -67,10 +77,10 @@ export class IntegrationsPage {
         category: 'Channel',
         status: this.whatsappConnected() ? 'connected' : 'ready',
         summary: this.whatsappConnected()
-          ? 'Canal conectado · webhook y simulación local disponibles.'
-          : 'Listo para conectar Phone Number ID + token.',
+          ? 'Canal conectado: tu vendedor responde los mensajes de WhatsApp.'
+          : 'Conecta tu número con el Phone Number ID y el token de Meta.',
         nextStep: this.whatsappConnected()
-          ? 'Revisa salud en Canales o simula un inbound.'
+          ? 'Revisa el estado del canal en Canales.'
           : 'Conecta WhatsApp para empezar a vender.',
         link: '/app/channels',
       },
@@ -79,8 +89,8 @@ export class IntegrationsPage {
         name: 'Instagram Direct',
         category: 'Channel',
         status: 'waitlist',
-        summary: 'Adapter Meta en roadmap. El enum ya existe en dominio.',
-        nextStep: 'Únete a la waitlist interna · sin promesas falsas.',
+        summary: 'Responde los mensajes directos de Instagram con tu vendedor.',
+        nextStep: 'Muy pronto. Te avisaremos cuando esté disponible.',
       },
       {
         id: 'mercadopago',
@@ -88,7 +98,7 @@ export class IntegrationsPage {
         category: 'Payments',
         status: this.paymentsProvider() === 'mercadopago' ? 'connected' : 'ready',
         summary: this.paymentsMock()
-          ? 'Sin cuenta conectada · los links de pago usan el simulador de desarrollo.'
+          ? 'Sin cuenta conectada · los links de pago son simulados (modo de prueba).'
           : this.paymentsProvider() === 'mercadopago'
             ? 'Cobros con tu propia cuenta: tienda web (tarjeta y Yape) y links del vendedor.'
             : 'Sin cuenta conectada · la tienda funciona en modo "pedir por WhatsApp".',
@@ -102,32 +112,32 @@ export class IntegrationsPage {
         name: 'Shopify',
         category: 'E-commerce',
         status: 'waitlist',
-        summary: 'Sync de catálogo y stock vía conector versionado.',
-        nextStep: 'Roadmap honesto · aún no hay sync automático.',
+        summary: 'Sincroniza tu catálogo y stock desde tu tienda Shopify.',
+        nextStep: 'Aún no disponible. Mientras tanto, carga tus productos en Productos.',
       },
       {
         id: 'shipping',
         name: 'Envíos',
         category: 'Shipping',
         status: 'waitlist',
-        summary: 'Etiquetas y tracking sin acoplar el dominio al courier.',
-        nextStep: 'Próximo: waitlist de operadores logísticos.',
+        summary: 'Genera etiquetas y comparte el seguimiento de cada envío.',
+        nextStep: 'Muy pronto. Hoy puedes registrar el código de seguimiento en Pedidos.',
       },
       {
         id: 'erp',
         name: 'ERP / stock',
         category: 'ERP',
         status: 'waitlist',
-        summary: 'Inventario externo como fuente de verdad.',
-        nextStep: 'Mientras tanto usa stock del catálogo VendedorIA.',
+        summary: 'Usa el inventario de tu sistema de gestión como fuente de stock.',
+        nextStep: 'Mientras tanto, administra tu stock en Inventario.',
       },
       {
         id: 'ads',
-        name: 'Ads / remarketing',
+        name: 'Anuncios y remarketing',
         category: 'Marketing',
         status: 'waitlist',
-        summary: 'Campañas y audiencias sin clonar stacks ajenos.',
-        nextStep: 'Fuera del smoke path actual.',
+        summary: 'Conecta tus campañas y audiencias con tus ventas.',
+        nextStep: 'Aún no disponible.',
       },
     ];
 
@@ -175,7 +185,11 @@ export class IntegrationsPage {
       case 'ready':
         return 'Listo';
       default:
-        return 'Waitlist';
+        return 'Próximamente';
     }
+  }
+
+  categoryLabel(category: IntegrationCategory): string {
+    return CATEGORY_LABELS[category];
   }
 }

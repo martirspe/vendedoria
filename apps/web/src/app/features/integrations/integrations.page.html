@@ -4,8 +4,8 @@
       <p class="integrations__eyebrow">Conectores</p>
       <h1>Integraciones</h1>
       <p>
-        Catálogo honesto: qué está vivo, qué está listo y qué está en waitlist.
-        Nunca prometemos un canal o sync que aún no existe.
+        Conecta VendedorIA con tus canales y cobros. Te mostramos qué está
+        conectado, qué puedes activar hoy y qué llegará pronto.
       </p>
     </div>
   </header>
@@ -27,7 +27,7 @@
         [class.is-active]="filter() === category"
         (click)="setFilter(category)"
       >
-        {{ category === 'ALL' ? 'Todas' : category }}
+        {{ categoryLabel(category) }}
       </button>
     }
   </div>

@@ -3,7 +3,8 @@
 // node scripts/seed-selecta-catalog.mjs <tenant-slug>
 //
 // Re-running refreshes names, texts, photos and set pieces. Price, stock, availability and
-// publication of products that already exist are kept, so sales and console edits survive.
+// publication of products that already exist are kept, so sales and console edits survive;
+// only a product still without price (loaded before Selecta priced it) takes the new price.
 // The store gets Selecta's free shipping threshold; origin and courier rates only when unset.
 import { createHash } from 'node:crypto';
 import { constants } from 'node:fs';
@@ -106,6 +107,7 @@ try {
   const summary = await prisma.$transaction(
     async (tx) => {
       const ids = new Map();
+      const newlyPriced = [];
       let created = 0;
       for (const { p, media, sortOrder } of prepared) {
         const c = p.content;
@@ -125,10 +127,17 @@ try {
         };
         const existing = await tx.product.findUnique({
           where: { tenantId_handle: { tenantId: tenant.id, handle: p.slug } },
-          select: { id: true },
+          select: { id: true, basePriceCents: true, isPublishedOnStore: true },
         });
+        const priced =
+          existing && existing.basePriceCents === 0 && !existing.isPublishedOnStore && p.active && p.priceCents !== null;
+        if (priced) newlyPriced.push(p.slug);
         const product = existing
-          ? await tx.product.update({ where: { id: existing.id }, data: content, select: { id: true } })
+          ? await tx.product.update({
+              where: { id: existing.id },
+              data: priced ? { ...content, basePriceCents: p.priceCents, isPublishedOnStore: true } : content,
+              select: { id: true },
+            })
           : await tx.product.create({
               data: {
                 ...content,
@@ -177,7 +186,7 @@ try {
           templateCopy: { ...copy, bannerImageUrl: copy.bannerImageUrl ?? banner },
         },
       });
-      return { created, updated: products.length - created, hidden: hidden.count };
+      return { created, updated: products.length - created, hidden: hidden.count, newlyPriced };
     },
     { timeout: 60_000 },
   );
@@ -185,6 +194,7 @@ try {
   const unpublished = products.filter((p) => !p.active || p.priceCents === null).map((p) => p.slug);
   console.log(`Catálogo Selecta en ${slug}: ${summary.created} creados, ${summary.updated} actualizados.`);
   console.log(`Productos anteriores despublicados: ${summary.hidden}.`);
+  if (summary.newlyPriced.length) console.log(`Con precio nuevo y publicados: ${summary.newlyPriced.join(', ')}`);
   if (unpublished.length) console.log(`Sin precio en Selecta (quedan sin publicar): ${unpublished.join(', ')}`);
 } finally {
   await prisma.$disconnect();

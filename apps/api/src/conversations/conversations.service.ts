@@ -86,7 +86,7 @@ export class ConversationsService {
       },
     });
     if (!conversation) {
-      throw new NotFoundException('Conversation not found');
+      throw new NotFoundException('Conversación no encontrada.');
     }
 
     const linkedOrder = await this.prisma.order.findFirst({
@@ -469,7 +469,7 @@ export class ConversationsService {
       select: { id: true },
     });
     if (!found) {
-      throw new NotFoundException('Conversation not found');
+      throw new NotFoundException('Conversación no encontrada.');
     }
   }
 }

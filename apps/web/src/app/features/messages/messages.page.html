@@ -40,7 +40,7 @@
     } @else if (conversations().length === 0) {
       <ds-empty-state
         title="Sin conversaciones"
-        body="Conecta WhatsApp y simula un mensaje desde Canales para ver el agente responder aquí."
+        body="Conecta WhatsApp o prueba un mensaje desde Canales para ver aquí cómo responde tu vendedor."
       />
     } @else {
       <ul>
@@ -310,7 +310,7 @@
         </label>
         <label class="toggle">
           <input type="checkbox" formControlName="createPaymentLink" />
-          <span>Crear link de pago (Mercado Pago / mock)</span>
+          <span>Crear link de pago</span>
         </label>
         <label class="toggle">
           <input type="checkbox" formControlName="sendLinkToChat" />

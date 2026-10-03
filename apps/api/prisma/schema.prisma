@@ -149,6 +149,8 @@ model Tenant {
   country   String   @default("PE")
   currency  String   @default("PEN")
   planTier  PlanTier @default(FREE)
+  /// End of the paid plan period; after it the limits fall back to FREE. Null: no expiry (FREE or granted by the team).
+  planExpiresAt DateTime?
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
@@ -165,6 +167,19 @@ model Tenant {
   storefront         Storefront?
   paymentAccounts    MerchantPaymentAccount[]
   coupons            Coupon[]
+  slugRedirects      StoreSlugRedirect[]
+}
+
+/// Former store subdomains of a tenant: the store server redirects them to the current slug,
+/// and no other tenant can claim them.
+model StoreSlugRedirect {
+  slug      String   @id
+  tenantId  String
+  createdAt DateTime @default(now())
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId, createdAt])
 }
 
 /// Buyer payments of a tenant go to the tenant's own Mercado Pago account.
@@ -675,6 +690,8 @@ model Payment {
   idempotencyKey String        @unique
   checkoutUrl    String?
   rawPayload     Json?
+  /// Plan bought by a BILLING_SUBSCRIPTION payment (flow A).
+  planTier       PlanTier?
   createdAt      DateTime      @default(now())
   updatedAt      DateTime      @updatedAt
 

@@ -1,6 +1,5 @@
 import { ChangeDetectionStrategy, Component, ViewEncapsulation, computed, input } from '@angular/core';
-import { TablerIconComponent } from '@tabler/icons-angular';
-import { DS_ICONS, DsIconName } from '@vendedoria/ui';
+import { DsIconComponent, DsIconName } from '@vendedoria/ui';
 
 export type SelectaIconName =
   | 'bag'
@@ -57,10 +56,10 @@ const NAMES: Record<SelectaIconName, DsIconName> = {
   whatsapp: 'whatsapp',
 };
 
-/** Selecta icon: the stylesheet sizes `app-icon svg`, so the svg carries no inline size. */
+/** Selecta icon: the stylesheet sizes `app-icon svg`; the 24px attributes are only the fallback. */
 @Component({
   selector: 'app-icon',
-  imports: [TablerIconComponent],
+  imports: [DsIconComponent],
   templateUrl: './selecta-icon.html',
   styleUrl: './selecta-icon.scss',
   encapsulation: ViewEncapsulation.None,
@@ -68,5 +67,5 @@ const NAMES: Record<SelectaIconName, DsIconName> = {
 })
 export class SelectaIcon {
   readonly name = input.required<SelectaIconName>();
-  readonly icon = computed(() => DS_ICONS[NAMES[this.name()]]);
+  readonly icon = computed(() => NAMES[this.name()]);
 }

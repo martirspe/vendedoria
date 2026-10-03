@@ -172,6 +172,12 @@ export class CatalogApiService {
     );
   }
 
+  remove(productId: string): Promise<{ deleted: true }> {
+    return firstValueFrom(
+      this.http.delete<{ deleted: true }>(`${this.base}/${productId}`),
+    );
+  }
+
   getById(productId: string): Promise<ProductDto> {
     return firstValueFrom(
       this.http.get<ProductDto>(`${this.base}/${productId}`),

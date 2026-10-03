@@ -12,12 +12,14 @@ export type AuthTokensResponse = {
 
 const ACCESS_KEY = 'vendedoria.accessToken';
 const REFRESH_KEY = 'vendedoria.refreshToken';
+const TURNSTILE_HEADER = 'X-Turnstile-Token';
 
 @Injectable({ providedIn: 'root' })
 export class AuthApiService {
   private readonly http = inject(HttpClient);
   readonly isAuthenticated = signal(false);
   private refreshInFlight: Promise<AuthTokensResponse> | null = null;
+  private turnstileConfig: Promise<string | null> | null = null;
 
   constructor() {
     this.syncFromStorage();
@@ -42,30 +44,51 @@ export class AuthApiService {
     return localStorage.getItem(REFRESH_KEY);
   }
 
-  async register(payload: {
-    email: string;
-    password: string;
-    fullName: string;
-    businessName: string;
-  }): Promise<AuthTokensResponse> {
+  /** Turnstile site key for login and sign-up; `null` when the API does not require a challenge. */
+  turnstileSiteKey(): Promise<string | null> {
+    this.turnstileConfig ??= firstValueFrom(
+      this.http.get<{ siteKey: string | null }>(`${environment.apiBaseUrl}/turnstile/config`),
+    )
+      .then((config) => config.siteKey)
+      .catch(() => {
+        this.turnstileConfig = null;
+        return null;
+      });
+    return this.turnstileConfig;
+  }
+
+  async register(
+    payload: {
+      email: string;
+      password: string;
+      fullName: string;
+      businessName: string;
+    },
+    turnstileToken?: string,
+  ): Promise<AuthTokensResponse> {
     const response = await firstValueFrom(
       this.http.post<AuthTokensResponse>(
         `${environment.apiBaseUrl}/auth/register`,
         payload,
+        this.challenge(turnstileToken),
       ),
     );
     this.persist(response);
     return response;
   }
 
-  async login(payload: {
-    email: string;
-    password: string;
-  }): Promise<AuthTokensResponse> {
+  async login(
+    payload: {
+      email: string;
+      password: string;
+    },
+    turnstileToken?: string,
+  ): Promise<AuthTokensResponse> {
     const response = await firstValueFrom(
       this.http.post<AuthTokensResponse>(
         `${environment.apiBaseUrl}/auth/login`,
         payload,
+        this.challenge(turnstileToken),
       ),
     );
     this.persist(response);
@@ -109,6 +132,10 @@ export class AuthApiService {
       localStorage.removeItem(REFRESH_KEY);
     }
     this.isAuthenticated.set(false);
+  }
+
+  private challenge(token?: string): { headers?: Record<string, string> } {
+    return token ? { headers: { [TURNSTILE_HEADER]: token } } : {};
   }
 
   private persist(response: AuthTokensResponse): void {

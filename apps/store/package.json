@@ -10,23 +10,22 @@
     "serve:ssr:store": "node dist/store/server/server.mjs"
   },
   "dependencies": {
-    "@angular/common": "22.1.0",
-    "@angular/compiler": "22.1.0",
-    "@angular/core": "22.1.0",
-    "@angular/platform-browser": "22.1.0",
-    "@angular/platform-server": "22.1.0",
-    "@angular/router": "22.1.0",
+    "@angular/common": "^22.1.0",
+    "@angular/compiler": "^22.1.0",
+    "@angular/core": "^22.1.0",
+    "@angular/platform-browser": "^22.1.0",
+    "@angular/platform-server": "^22.1.0",
+    "@angular/router": "^22.1.0",
     "@angular/ssr": "^22.1.2",
-    "@tabler/icons": "^3.48.0",
-    "@tabler/icons-angular": "^3.48.0",
+    "@lucide/angular": "^1.50.0",
     "express": "^5.1.0",
     "rxjs": "~7.8.0",
     "tslib": "^2.3.0"
   },
   "devDependencies": {
-    "@angular/build": "22.1.2",
-    "@angular/cli": "22.1.2",
-    "@angular/compiler-cli": "22.1.0",
+    "@angular/build": "^22.1.2",
+    "@angular/cli": "^22.1.2",
+    "@angular/compiler-cli": "^22.1.0",
     "@types/express": "^5.0.1",
     "@types/node": "^20.17.19",
     "typescript": "6.0.3"

@@ -939,14 +939,13 @@
    "slug": "set-osadia-infinita-yanbal",
    "name": "Set Osadía Infinita de Yanbal",
    "category": "Perfumería femenina",
-   "priceCents": null,
+   "priceCents": 18525,
    "active": true,
    "content": {
     "line": "Osadía Infinita",
     "brand": "Yanbal",
     "notes": [
-     "El set y sus piezas individuales comparten las mismas unidades disponibles.",
-     "Precio del set pendiente de confirmar; falta el precio individual de al menos una pieza."
+     "El set y sus piezas individuales comparten las mismas unidades disponibles."
     ],
     "title": "Set Osadía Infinita de Yanbal",
     "usage": [
@@ -3345,7 +3344,7 @@
    "slug": "shampoo-acondicionador-baby-individual",
    "name": "Shampoo acondicionador Yanbal Baby",
    "category": "Cuidado del bebé",
-   "priceCents": null,
+   "priceCents": 2100,
    "active": true,
    "content": {
     "line": "Baby",
@@ -3400,7 +3399,7 @@
     "notes": [
      "Consulta las instrucciones del envase. La fuente no publica un modo de uso verificable."
     ],
-    "title": "Shampoo Triple Acción Vivo YANBAL · 250 g",
+    "title": "Shampoo Triple Acción Vivo YANBAL · 250 ml",
     "usage": [],
     "format": "individual",
     "images": [
@@ -3427,15 +3426,15 @@
      }
     ],
     "lineKey": "vivo",
-    "summary": "Shampoo masculino 3 en 1 · 250 g",
+    "summary": "Shampoo masculino 3 en 1 · 250 ml",
     "benefits": [],
     "includes": [
      {
       "code": null,
       "name": "Shampoo Triple Acción Vivo YANBAL",
-      "size": "250 g",
+      "size": "250 ml",
       "details": [
-       "Shampoo masculino 3 en 1 · 250 g"
+       "Shampoo masculino 3 en 1 · 250 ml"
       ]
      }
     ],
@@ -3503,9 +3502,7 @@
    "content": {
     "line": "Solo",
     "brand": "Yanbal",
-    "notes": [
-     "La fotografía individual del jabón está pendiente de confirmar."
-    ],
+    "notes": [],
     "title": "Solo Jabón en Barra Perfumado",
     "usage": [
      "Humedece la piel, usa el jabón en barra y aclara con abundante agua."
@@ -3513,11 +3510,11 @@
     "format": "individual",
     "images": [
      {
-      "alt": "Fotografía del producto pendiente de confirmar",
-      "url": "/images/products/foto-pendiente.svg",
-      "file": "foto-pendiente.svg",
-      "kind": "placeholder",
-      "label": "Foto pendiente"
+      "alt": "Solo Jabón en Barra Perfumado de Yanbal: barra verde con el logo grabado",
+      "url": "/images/products/solo-jabon-en-barra/foto-1.jpg",
+      "file": "foto-1.jpg",
+      "kind": "component",
+      "label": "Producto"
      }
     ],
     "lineKey": "solo",

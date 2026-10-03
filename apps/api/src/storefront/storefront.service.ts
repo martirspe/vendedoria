@@ -1,4 +1,4 @@
-import { BadRequestException, Injectable } from '@nestjs/common';
+import { BadRequestException, ConflictException, Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { Prisma, Storefront } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
@@ -8,9 +8,14 @@ import { shippingOptions } from './shipping';
 import { readTemplateCopy, templateAllowed } from './store-templates';
 import {
   DEFAULT_STOREFRONT_URL_TEMPLATE,
+  RESERVED_SLUGS,
   storefrontUrl,
 } from './storefront-host';
 import { createPreviewToken } from './storefront-preview';
+
+const SUBDOMAIN_CHANGES_PER_WINDOW = 3;
+const SUBDOMAIN_WINDOW_MS = 30 * 24 * 60 * 60 * 1000;
+const SUBDOMAIN_TAKEN = 'Esa dirección ya está en uso. Prueba con otra.';
 
 export type StorefrontChecklistItem = {
   id:
@@ -112,6 +117,52 @@ export class StorefrontService {
         pickupAddress: this.optionalText(dto.pickupAddress),
       },
     });
+    return this.view(tenantId, storefront);
+  }
+
+  /**
+   * Moves the store to a new subdomain. The previous one is kept as a redirect owned by this
+   * tenant, so links already shared keep working and no other store can take it over.
+   */
+  async changeSubdomain(tenantId: string, slug: string): Promise<StorefrontSettingsView> {
+    if (RESERVED_SLUGS.has(slug)) {
+      throw new BadRequestException('Esa dirección está reservada. Elige otra.');
+    }
+    const storefront = await this.ensure(tenantId);
+    const tenant = await this.prisma.tenant.findUniqueOrThrow({
+      where: { id: tenantId },
+      select: { slug: true },
+    });
+    if (tenant.slug === slug) {
+      return this.view(tenantId, storefront);
+    }
+    const recentChanges = await this.prisma.storeSlugRedirect.count({
+      where: { tenantId, createdAt: { gte: new Date(Date.now() - SUBDOMAIN_WINDOW_MS) } },
+    });
+    if (recentChanges >= SUBDOMAIN_CHANGES_PER_WINDOW) {
+      throw new BadRequestException(
+        'Ya cambiaste la dirección de tu tienda varias veces este mes. Podrás cambiarla de nuevo en unos días.',
+      );
+    }
+
+    try {
+      await this.prisma.$transaction(async (tx) => {
+        const claimed = await tx.storeSlugRedirect.findUnique({ where: { slug } });
+        if (claimed && claimed.tenantId !== tenantId) {
+          throw new ConflictException(SUBDOMAIN_TAKEN);
+        }
+        if (claimed) {
+          await tx.storeSlugRedirect.delete({ where: { slug } });
+        }
+        await tx.storeSlugRedirect.create({ data: { slug: tenant.slug, tenantId } });
+        await tx.tenant.update({ where: { id: tenantId }, data: { slug } });
+      });
+    } catch (error) {
+      if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2002') {
+        throw new ConflictException(SUBDOMAIN_TAKEN);
+      }
+      throw error;
+    }
     return this.view(tenantId, storefront);
   }
 

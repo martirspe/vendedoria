@@ -24,7 +24,7 @@ Do NOT open API code unless the data shape is unclear from the `core/api` servic
 ## Invariants
 - Reuse before creating: `ds-button`, `ds-empty-state`, `ds-icon`, global `.ds-*` classes. A pattern needed in 2+ places goes into `packages/ui` (or global styles) first, then into the feature.
 - No literal colors, spacing, radii, shadows or z-index in features: only `var(--ds-*)` (console/marketing) or `var(--store-*)` (store).
-- Icons only through `ds-icon`; add missing ones as Tabler icons (`@tabler/icons-angular`) in `DS_ICONS` in `packages/ui/src/icon/ds-icon.component.ts`.
+- Icons only through `ds-icon`; add missing ones as Lucide icons (`@lucide/angular`) in `DS_ICONS`, and brand logos as official SVG paths in `DS_BRAND_ICONS` (`packages/ui/src/icon/ds-icon.component.ts`).
 - Fonts: Manrope (UI) and Satoshi (display) already declared; do not add Inter/Roboto or web-font CDNs.
 - Every touched data view has loading (page-shaped), actionable empty, recoverable error and success feedback.
 - Copy in Spanish, honest: no promises of human support from AI, no unconnected channels; distinguish "tu plan" (flow A) from "pago del cliente" (flow B).

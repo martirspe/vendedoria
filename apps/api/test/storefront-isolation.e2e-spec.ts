@@ -1,4 +1,4 @@
-import { ValidationPipe } from '@nestjs/common';
+import { NotFoundException, ValidationPipe } from '@nestjs/common';
 import {
   FastifyAdapter,
   NestFastifyApplication,
@@ -6,6 +6,7 @@ import {
 import { Test } from '@nestjs/testing';
 import { randomBytes } from 'node:crypto';
 import { AppModule } from '../src/app.module';
+import { CatalogService } from '../src/catalog/catalog.service';
 import { PrismaService } from '../src/prisma/prisma.service';
 import { createPreviewToken } from '../src/storefront/storefront-preview';
 import { StorefrontService } from '../src/storefront/storefront.service';
@@ -98,7 +99,7 @@ describe('Storefront tenant isolation (e2e)', () => {
   it('resolves only single-label hosts under the platform domain', async () => {
     const ok = await get(`/storefront/resolve?host=${slugA}.localhost:4300`);
     expect(ok.statusCode).toBe(200);
-    expect(ok.json()).toEqual({ slug: slugA });
+    expect(ok.json()).toEqual({ slug: slugA, moved: false });
     expect((await get(`/storefront/resolve?host=${slugA}.evil.pe`)).statusCode).toBe(404);
     expect((await get(`/storefront/resolve?host=x.${slugA}.localhost`)).statusCode).toBe(404);
   });
@@ -148,5 +149,15 @@ describe('Storefront tenant isolation (e2e)', () => {
     expect(view.publishedProducts).toBe(2);
     expect((await get(`/storefront/${slugB}/products/b-hidden`)).statusCode).toBe(200);
     expect((await get(`/storefront/${slugA}/products/a-hidden`)).statusCode).toBe(404);
+  });
+
+  it('deletes a product only inside the calling tenant', async () => {
+    const catalog = app.get(CatalogService);
+    const target = await prisma.product.findFirstOrThrow({
+      where: { tenantId: tenantAId, handle: 'a-hidden' },
+    });
+    await expect(catalog.remove(tenantBId, target.id)).rejects.toThrow(NotFoundException);
+    await expect(catalog.remove(tenantAId, target.id)).resolves.toEqual({ deleted: true });
+    expect(await prisma.product.count({ where: { id: target.id } })).toBe(0);
   });
 });

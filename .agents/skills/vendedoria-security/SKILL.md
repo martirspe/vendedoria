@@ -35,6 +35,7 @@ Do NOT inspect console UI unless the task changes how a payment/channel state is
 - Outbound outside the Meta 24h window only through approved templates.
 - Never log raw webhook bodies; never echo secrets in error messages.
 - Rate limiting: `@RateLimit(bucket, perMinute)` from `apps/api/src/rate-limit/` (per client IP, HMAC-hashed counters in `RateLimitHit`, disabled when `NODE_ENV=test`). It covers store checkout/coupon/pay/order actions and auth login/register. New anonymous sensitive endpoints must carry it. Client IPs come from Fastify `trustProxy` (loopback + private ranges); never read `X-Forwarded-For` by hand.
+- Bot protection: `@Turnstile(action)` from `apps/api/src/turnstile/` on anonymous forms a human fills in (login, register, store checkout). `TurnstileGuard` runs after `RateLimitGuard`, reads `X-Turnstile-Token`, redeems it once with Siteverify (secret only server-side, client IP, idempotency key, 5 s timeout, one retry) and checks `action` plus hostname (console host from `CORS_ORIGIN`; for `:slug` routes the subdomain of that same store). Siteverify unreachable ⇒ 503, never skip. Disabled without keys and in `NODE_ENV=test`; Cloudflare test keys relax action/hostname and are rejected in production. Frontends render `ds-turnstile` (Managed, `interaction-only`), call `waitForToken()` before submitting and `reset()` after every attempt (tokens are single-use, 5 min). The store proxy forwards the header only on POST; CSP needs `https://challenges.cloudflare.com` in `script-src` and `frame-src` (store `server.ts`, console `docker/nginx/security-headers.conf`). Do not put Turnstile on webhooks, authenticated routes or capability-token order actions.
 
 ## Procedure
 1. Classify: auth / webhook / money A / money B / public store / PII.
@@ -57,3 +58,4 @@ Do NOT inspect console UI unless the task changes how a payment/channel state is
 
 ## References
 - Mercado Pago Orders API/Bricks/Yape: user-level skill `mercadopago-checkout-api` if available.
+- Cloudflare Turnstile (widget modes, Siteverify, CSP, testing): user-level skill `cloudflare-turnstile` if available.

@@ -1,4 +1,4 @@
-﻿{
+{
   "name": "vendedoria",
   "private": true,
   "version": "0.1.0",
@@ -18,6 +18,12 @@
     "docker:down:prod": "docker compose down",
     "docker:logs:prod": "docker compose logs -f --tail 200",
     "docker:ps:prod": "docker compose ps",
+    "deploy": "bash scripts/deploy.sh",
+    "deploy:pull": "bash scripts/deploy.sh --pull",
+    "backup": "bash scripts/backup.sh",
+    "backup:restore": "bash scripts/restore-backup.sh",
+    "bootstrap:host": "sudo bash scripts/bootstrap-host.sh",
+    "bootstrap:host:generate": "bash scripts/bootstrap-host.sh --generate-only",
     "test:docker": "node scripts/docker.mjs test",
     "dev:api": "npm run start:dev -w @vendedoria/api",
     "dev:web": "npm run start -w @vendedoria/web",

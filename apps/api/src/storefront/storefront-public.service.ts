@@ -11,8 +11,10 @@ import type {
   StorefrontCheckout,
   StorefrontView,
 } from '@vendedoria/contracts';
+import { effectivePlanTier } from '../billing/plan-catalog';
 import { MerchantAccountsService } from '../payments/merchant-accounts.service';
 import { PrismaService } from '../prisma/prisma.service';
+import { TurnstileService } from '../turnstile/turnstile.service';
 import { shippingOptions } from './shipping';
 import {
   DEFAULT_STOREFRONT_URL_TEMPLATE,
@@ -79,6 +81,7 @@ export class StorefrontPublicService {
     private readonly prisma: PrismaService,
     private readonly config: ConfigService,
     private readonly accounts: MerchantAccountsService,
+    private readonly turnstile: TurnstileService,
   ) {
     this.baseDomain = storefrontBaseDomain(
       this.config.get<string>('STOREFRONT_URL_TEMPLATE') ??
@@ -91,14 +94,23 @@ export class StorefrontPublicService {
     if (!slug) {
       throw new NotFoundException('Store not found');
     }
-    const storefront = await this.prisma.storefront.findFirst({
-      where: { tenant: { slug }, status: { not: 'SUSPENDED' } },
-      select: { id: true },
-    });
-    if (!storefront) {
+    const tenant = await this.tenantBySlug(slug, { slug: true, storefront: { select: { status: true } } });
+    const status = tenant?.storefront?.status;
+    if (!tenant || !status || status === 'SUSPENDED') {
       throw new NotFoundException('Store not found');
     }
-    return { slug };
+    return { slug: tenant.slug, moved: tenant.slug !== slug };
+  }
+
+  /** Current tenant for a slug, following the redirect left behind when a store changed subdomain. */
+  private async tenantBySlug<S extends Prisma.TenantSelect>(slug: string, select: S) {
+    const current = await this.prisma.tenant.findUnique({ where: { slug }, select });
+    if (current) return current;
+    const redirect = await this.prisma.storeSlugRedirect.findUnique({
+      where: { slug },
+      select: { tenant: { select } },
+    });
+    return redirect?.tenant ?? null;
   }
 
   /**
@@ -109,10 +121,7 @@ export class StorefrontPublicService {
     if (!isValidStoreSlug(slug)) {
       throw new NotFoundException('Store not found');
     }
-    const tenant = await this.prisma.tenant.findUnique({
-      where: { slug },
-      select: { id: true, storefront: { select: { status: true } } },
-    });
+    const tenant = await this.tenantBySlug(slug, { id: true, storefront: { select: { status: true } } });
     const status = tenant?.storefront?.status;
     if (!tenant || !status || status === 'SUSPENDED') {
       throw new NotFoundException('Store not found');
@@ -153,7 +162,7 @@ export class StorefrontPublicService {
       categories: await this.categories(access.tenantId),
       status: storefront.status,
       isPreview: access.isPreview,
-      showPlatformBadge: BADGE_PLANS.includes(tenant.planTier),
+      showPlatformBadge: BADGE_PLANS.includes(effectivePlanTier(tenant)),
       shipping: {
         options: shippingOptions(storefront),
         freeShippingFromCents: storefront.freeShippingFromCents,
@@ -198,6 +207,7 @@ export class StorefrontPublicService {
       liveMode: account?.liveMode ?? false,
       simulator,
       couponsEnabled: activeCoupons > 0,
+      turnstileSiteKey: this.turnstile.siteKey,
     };
   }
 

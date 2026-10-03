@@ -1,46 +1,127 @@
-<section class="auth ds-page-shell">
-  <a class="auth__brand" routerLink="/">VendedorIA</a>
-  <h1>Crea tu cuenta</h1>
-  <p>Configura tu negocio y tu primer agente en minutos.</p>
+<app-auth-shell title="Crea tu cuenta" lead="Configura tu negocio y tu primer agente en minutos.">
+  <form
+    class="auth-form"
+    [formGroup]="form"
+    (ngSubmit)="submit()"
+    [attr.aria-busy]="submitting()"
+    novalidate
+  >
+    <div class="auth-field">
+      <label for="register-fullName">Nombre completo</label>
+      <span class="auth-input">
+        <span class="auth-input__icon" aria-hidden="true">
+          <ds-icon name="user" [size]="1.05" />
+        </span>
+        <input
+          id="register-fullName"
+          formControlName="fullName"
+          autocomplete="name"
+          [attr.aria-invalid]="error('fullName') ? true : null"
+          [attr.aria-describedby]="error('fullName') ? 'register-fullName-error' : null"
+        />
+      </span>
+      @if (error('fullName'); as message) {
+        <p id="register-fullName-error" class="auth-field__error">{{ message }}</p>
+      }
+    </div>
 
-  <form class="auth__form" [formGroup]="form" (ngSubmit)="submit()">
-    <label>
-      Nombre completo
-      <input formControlName="fullName" autocomplete="name" />
-    </label>
-    <label>
-      Nombre del negocio
-      <input formControlName="businessName" autocomplete="organization" />
-    </label>
-    <label>
-      Email
-      <input formControlName="email" type="email" autocomplete="email" />
-    </label>
-    <label>
-      Contraseña
-      <input
-        formControlName="password"
-        type="password"
-        autocomplete="new-password"
-      />
-    </label>
+    <div class="auth-field">
+      <label for="register-businessName">Nombre del negocio</label>
+      <span class="auth-input">
+        <span class="auth-input__icon" aria-hidden="true">
+          <ds-icon name="store" [size]="1.05" />
+        </span>
+        <input
+          id="register-businessName"
+          formControlName="businessName"
+          autocomplete="organization"
+          [attr.aria-invalid]="error('businessName') ? true : null"
+          [attr.aria-describedby]="error('businessName') ? 'register-businessName-error' : null"
+        />
+      </span>
+      @if (error('businessName'); as message) {
+        <p id="register-businessName-error" class="auth-field__error">{{ message }}</p>
+      }
+    </div>
 
-    @if (errorMessage(); as error) {
-      <p class="auth__error" role="alert">
-        {{ error }}
-        @if (emailTaken()) {
-          <a routerLink="/auth/login">Inicia sesión</a>
-        }
+    <div class="auth-field">
+      <label for="register-email">Email</label>
+      <span class="auth-input">
+        <span class="auth-input__icon" aria-hidden="true">
+          <ds-icon name="mail" [size]="1.05" />
+        </span>
+        <input
+          id="register-email"
+          formControlName="email"
+          type="email"
+          autocomplete="email"
+          inputmode="email"
+          autocapitalize="none"
+          spellcheck="false"
+          placeholder="tu@negocio.com"
+          [attr.aria-invalid]="error('email') ? true : null"
+          [attr.aria-describedby]="error('email') ? 'register-email-error' : null"
+        />
+      </span>
+      @if (error('email'); as message) {
+        <p id="register-email-error" class="auth-field__error">{{ message }}</p>
+      }
+    </div>
+
+    <div class="auth-field">
+      <label for="register-password">Contraseña</label>
+      <span class="auth-input auth-input--password">
+        <span class="auth-input__icon" aria-hidden="true">
+          <ds-icon name="lockKeyhole" [size]="1.05" />
+        </span>
+        <input
+          id="register-password"
+          formControlName="password"
+          [type]="showPassword() ? 'text' : 'password'"
+          autocomplete="new-password"
+          [attr.aria-invalid]="error('password') ? true : null"
+          aria-describedby="register-password-help"
+        />
+        <button
+          type="button"
+          class="auth-input__toggle"
+          [attr.aria-label]="showPassword() ? 'Ocultar contraseña' : 'Mostrar contraseña'"
+          [attr.aria-pressed]="showPassword()"
+          (click)="showPassword.set(!showPassword())"
+        >
+          <ds-icon [name]="showPassword() ? 'eyeOff' : 'eye'" [size]="1.05" />
+        </button>
+      </span>
+      @if (error('password'); as message) {
+        <p id="register-password-help" class="auth-field__error">{{ message }}</p>
+      } @else {
+        <p id="register-password-help" class="auth-field__hint">Mínimo 8 caracteres.</p>
+      }
+    </div>
+
+    @if (turnstileSiteKey(); as siteKey) {
+      <ds-turnstile [siteKey]="siteKey" action="register" theme="light" />
+    }
+
+    @if (errorMessage(); as message) {
+      <p class="auth-alert" role="alert">
+        <ds-icon name="circleAlert" [size]="1.05" />
+        <span>
+          {{ message }}
+          @if (emailTaken()) {
+            <a routerLink="/auth/login">Inicia sesión</a>
+          }
+        </span>
       </p>
     }
 
-    <ds-button type="submit" [disabled]="submitting()">
-      {{ submitting() ? 'Creando…' : 'Crear cuenta' }}
+    <ds-button type="submit" [block]="true" [disabled]="submitting()">
+      {{ submitting() ? 'Creando tu cuenta…' : 'Crear cuenta' }}
     </ds-button>
   </form>
 
-  <p class="auth__footer">
+  <p class="auth-switch" authFooter>
     ¿Ya tienes cuenta?
-    <a routerLink="/auth/login">Entrar</a>
+    <a routerLink="/auth/login">Inicia sesión</a>
   </p>
-</section>
+</app-auth-shell>

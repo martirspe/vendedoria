@@ -5,6 +5,7 @@ import {
   effect,
   inject,
   signal,
+  viewChild,
 } from '@angular/core';
 import { HttpErrorResponse } from '@angular/common/http';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
@@ -15,7 +16,7 @@ import type {
   ShippingQuote,
   UbigeoDistrict,
 } from '@vendedoria/contracts';
-import { DsIconComponent } from '@vendedoria/ui';
+import { DsIconComponent, DsTurnstileComponent } from '@vendedoria/ui';
 import { campaignCoupon, forgetCampaignCoupon } from '../../core/campaign-coupon';
 import { CartService } from '../../core/cart.service';
 import { MoneyPipe } from '../../core/money.pipe';
@@ -25,10 +26,11 @@ import { StoreApiService } from '../../core/store-api.service';
 import { StoreStateService } from '../../core/store-state.service';
 
 const CHECKOUT_KEY = 'vendedoria-checkout-key';
+const CHALLENGE_PENDING = 'Completa la verificación de seguridad para continuar.';
 
 @Component({
   selector: 'store-checkout-page',
-  imports: [ReactiveFormsModule, RouterLink, DsIconComponent, MoneyPipe],
+  imports: [ReactiveFormsModule, RouterLink, DsIconComponent, DsTurnstileComponent, MoneyPipe],
   templateUrl: './checkout.page.html',
   styleUrl: './checkout.page.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -39,6 +41,7 @@ export class CheckoutPage {
   private readonly fb = inject(FormBuilder);
   readonly cart = inject(CartService);
   readonly store = inject(StoreStateService).store;
+  private readonly turnstile = viewChild(DsTurnstileComponent);
 
   readonly submitting = signal(false);
   readonly applyingCoupon = signal(false);
@@ -226,6 +229,13 @@ export class CheckoutPage {
     const mode = v.mode as ShippingMode;
     this.submitting.set(true);
     this.errorMessage.set(null);
+    const widget = this.turnstile();
+    const token = widget ? await widget.waitForToken() : undefined;
+    if (token === null) {
+      this.errorMessage.set(CHALLENGE_PENDING);
+      this.submitting.set(false);
+      return;
+    }
     try {
       const order = await this.api.checkout({
         checkoutKey: this.checkoutKey(),
@@ -249,7 +259,7 @@ export class CheckoutPage {
         },
         ...(this.coupon() ? { couponCode: this.coupon()!.code } : {}),
         acceptTerms: true,
-      });
+      }, token);
       sessionStorage.removeItem(CHECKOUT_KEY);
       if (this.coupon()) forgetCampaignCoupon();
       await this.router.navigate(['/pedido', order.id], { queryParams: { t: order.token } });
@@ -258,6 +268,7 @@ export class CheckoutPage {
       if (error instanceof HttpErrorResponse && error.status === 409) {
         sessionStorage.removeItem(CHECKOUT_KEY);
       }
+      widget?.reset();
       this.submitting.set(false);
     }
   }
@@ -295,7 +306,7 @@ export class CheckoutPage {
   }
 
   private messageFrom(error: unknown, fallback: string): string {
-    if (error instanceof HttpErrorResponse && [400, 403, 404, 409, 429].includes(error.status)) {
+    if (error instanceof HttpErrorResponse && [400, 403, 404, 409, 429, 503].includes(error.status)) {
       const message = error.error?.message;
       if (typeof message === 'string') return message;
       if (Array.isArray(message) && typeof message[0] === 'string') return message[0];

@@ -98,8 +98,8 @@ export class ChannelsService {
         callbackUrl: `${publicBase}/webhooks/meta/whatsapp`,
         verifyTokenConfigured: Boolean(verifyToken),
         verifyTokenHint: verifyToken
-          ? 'Usa el META_VERIFY_TOKEN configurado en el servidor'
-          : 'Configura META_VERIFY_TOKEN en el entorno del API',
+          ? 'Usa el token de verificación que te indicó VendedorIA.'
+          : 'La verificación del webhook aún no está activa. Escríbenos a soporte.',
       },
     };
   }
@@ -150,8 +150,7 @@ export class ChannelsService {
         ],
         nextSteps: [
           'Completa el formulario de conexión con Meta Cloud API.',
-          'Configura META_VERIFY_TOKEN en el servidor.',
-          `Registra el webhook: ${callbackUrl}`,
+          `Registra el webhook en Meta: ${callbackUrl}`,
         ],
       };
     }
@@ -180,19 +179,19 @@ export class ChannelsService {
       },
       {
         id: 'verify',
-        label: 'Verify token (servidor)',
+        label: 'Verificación del webhook',
         status: verifyToken ? 'ok' : 'warn',
         detail: verifyToken
-          ? 'META_VERIFY_TOKEN configurado.'
-          : 'Configura META_VERIFY_TOKEN para que Meta verifique el webhook.',
+          ? 'Meta puede verificar el webhook.'
+          : 'La verificación del webhook aún no está activa. Escríbenos a soporte.',
       },
       {
         id: 'signature',
-        label: 'Firma webhook (opcional)',
+        label: 'Firma de mensajes',
         status: appSecret ? 'ok' : 'warn',
         detail: appSecret
-          ? 'META_APP_SECRET activo para validar POST.'
-          : 'Sin META_APP_SECRET: los POST del webhook no se firman.',
+          ? 'Solo se aceptan mensajes firmados por Meta.'
+          : 'La firma de mensajes de Meta aún no está activa. Escríbenos a soporte.',
       },
       {
         id: 'webhook',
@@ -233,7 +232,7 @@ export class ChannelsService {
             : 'ok',
       detail: channel.lastActiveAt
         ? `Hace ${Math.round(hoursSinceActivity ?? 0)} h · ${channel.lastActiveAt.toISOString()}`
-        : 'Sin mensajes entrantes aún. Simula uno o espera webhook.',
+        : 'Aún no llegan mensajes. Escribe a tu número de WhatsApp para probar.',
     });
 
     const hasError = checks.some((item) => item.status === 'error');
@@ -253,7 +252,7 @@ export class ChannelsService {
 
     const nextSteps: string[] = [];
     if (!verifyToken) {
-      nextSteps.push('Añade META_VERIFY_TOKEN al .env del API y reinicia.');
+      nextSteps.push('Escríbenos a soporte para activar la verificación del webhook.');
     }
     if (!hasToken) {
       nextSteps.push('Pega un access token válido y guarda la conexión.');
@@ -265,7 +264,7 @@ export class ChannelsService {
     }
     if (hoursSinceActivity === null || (hoursSinceActivity ?? 0) > 72) {
       nextSteps.push(
-        'Envía un mensaje de prueba (simular inbound) para confirmar el flujo.',
+        'Envía un mensaje de prueba a tu número para confirmar que llega.',
       );
     }
     if (!nextSteps.length) {
@@ -298,12 +297,16 @@ export class ChannelsService {
     throw new UnauthorizedException('Webhook verification failed');
   }
 
-  assertMetaSignature(rawBody: string, signatureHeader?: string) {
+  assertMetaSignature(rawBody: Buffer | undefined, signatureHeader?: string) {
     const appSecret = this.config.get<string>('META_APP_SECRET');
     if (!appSecret) {
+      // Unsigned webhooks are accepted only outside production.
+      if (this.config.get<string>('NODE_ENV') === 'production') {
+        throw new UnauthorizedException('Meta webhook signature is not configured');
+      }
       return;
     }
-    if (!signatureHeader?.startsWith('sha256=')) {
+    if (!rawBody || !signatureHeader?.startsWith('sha256=')) {
       throw new UnauthorizedException('Missing Meta signature');
     }
     const expected = createHmac('sha256', appSecret)

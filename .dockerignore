@@ -15,6 +15,10 @@ backups
 docker
 scripts
 docs
+infra
+.local
+.agents
+apps/api/uploads
 **/.DS_Store
 **/README.md
 Project constitution*

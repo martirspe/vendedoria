@@ -8,9 +8,23 @@ import express from 'express';
 import { join } from 'node:path';
 
 const browserDistFolder = join(import.meta.dirname, '../browser');
+const LOOPBACK_IP_HOST = /^(?:127\.0\.0\.1|\[::1\])(:\d+)?$/;
+const isStandaloneServer = isMainModule(import.meta.url) || Boolean(process.env['pm_id']);
 
 const app = express();
 const angularApp = new AngularNodeAppEngine();
+
+/** Dev server only: SSR allows just the `localhost` host, so loopback IP URLs move there. */
+if (!isStandaloneServer) {
+  app.use((req, res, next) => {
+    const loopback = LOOPBACK_IP_HOST.exec(req.get('host') ?? '');
+    if (!loopback) {
+      next();
+      return;
+    }
+    res.redirect(308, `${req.protocol}://localhost${loopback[1] ?? ''}${req.originalUrl}`);
+  });
+}
 
 /**
  * Example Express Rest API endpoints can be defined here.

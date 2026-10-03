@@ -63,13 +63,13 @@ export class PaymentsService {
       where: { id: params.orderId, tenantId: params.tenantId },
     });
     if (!order) {
-      throw new NotFoundException('Order not found');
+      throw new NotFoundException('Pedido no encontrado.');
     }
     if (order.status === 'CANCELLED' || order.status === 'COMPLETED') {
-      throw new BadRequestException('Cannot create payment link for a closed order');
+      throw new BadRequestException('Este pedido ya está cerrado; no se puede generar un link de pago.');
     }
     if (params.amountCents <= 0) {
-      throw new BadRequestException('Order total must be greater than zero');
+      throw new BadRequestException('El total del pedido debe ser mayor a cero.');
     }
     const { provider, credentials } = await this.providerFor(params.tenantId);
 
@@ -149,13 +149,13 @@ export class PaymentsService {
 
   async simulateMockPayment(tenantId: string, paymentId: string) {
     if (!this.accounts.simulatorAllowed()) {
-      throw new BadRequestException('Simulate payment is only available in development');
+      throw new BadRequestException('El pago simulado no está disponible.');
     }
     const payment = await this.prisma.payment.findFirst({
-      where: { id: paymentId, tenantId, provider: 'mock' },
+      where: { id: paymentId, tenantId, provider: 'mock', flow: 'COMMERCE_CHECKOUT' },
     });
     if (!payment) {
-      throw new NotFoundException('Payment not found');
+      throw new NotFoundException('Pago no encontrado.');
     }
     return this.applyEvent(
       this.mock.parseEvent({
@@ -168,6 +168,9 @@ export class PaymentsService {
   }
 
   getMockCheckoutPage(paymentId: string) {
+    if (!this.accounts.simulatorAllowed()) {
+      throw new NotFoundException();
+    }
     return {
       provider: 'mock',
       paymentId,
@@ -185,7 +188,7 @@ export class PaymentsService {
     if (event.externalId) orFilters.push({ externalId: event.externalId });
 
     const payment = await this.prisma.payment.findFirst({
-      where: { tenantId, OR: orFilters },
+      where: { tenantId, flow: 'COMMERCE_CHECKOUT', OR: orFilters },
     });
     if (!payment) {
       this.logger.warn('Payment notification for an unknown payment');

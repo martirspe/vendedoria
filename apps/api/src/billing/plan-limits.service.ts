@@ -3,11 +3,12 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
+import { PlanTier } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
-import { getPlanDefinition } from './plan-catalog';
+import { effectivePlanTier, getPlanDefinition } from './plan-catalog';
 
 export type PlanUsageSnapshot = {
-  planTier: string;
+  planTier: PlanTier;
   conversationsUsed: number;
   conversationQuota: number | null;
   productsUsed: number;
@@ -37,7 +38,7 @@ export class PlanLimitsService {
       this.prisma.product.count({ where: { tenantId } }),
     ]);
 
-    const plan = getPlanDefinition(tenant.planTier);
+    const plan = getPlanDefinition(effectivePlanTier(tenant));
     const conversationAtLimit =
       plan.conversationQuota !== null &&
       conversationsUsed >= plan.conversationQuota;
@@ -45,7 +46,7 @@ export class PlanLimitsService {
       plan.productQuota !== null && productsUsed >= plan.productQuota;
 
     return {
-      planTier: tenant.planTier,
+      planTier: plan.id,
       conversationsUsed,
       conversationQuota: plan.conversationQuota,
       productsUsed,
@@ -60,7 +61,7 @@ export class PlanLimitsService {
     const usage = await this.getUsage(tenantId);
     if (usage.productAtLimit) {
       throw new ForbiddenException(
-        `Alcanzaste el límite de ${usage.productQuota} productos en plan ${usage.planTier}. Sube de plan en Planes para seguir publicando.`,
+        `Alcanzaste el límite de ${usage.productQuota} productos de tu plan ${getPlanDefinition(usage.planTier).name}. Sube de plan en Planes para seguir publicando.`,
       );
     }
   }
@@ -69,7 +70,7 @@ export class PlanLimitsService {
     const usage = await this.getUsage(tenantId);
     if (usage.conversationAtLimit) {
       throw new ForbiddenException(
-        `Alcanzaste el límite de ${usage.conversationQuota} conversaciones este mes en plan ${usage.planTier}. Sube de plan en Planes o espera al próximo periodo.`,
+        `Alcanzaste el límite de ${usage.conversationQuota} conversaciones este mes de tu plan ${getPlanDefinition(usage.planTier).name}. Sube de plan en Planes o espera al próximo periodo.`,
       );
     }
   }

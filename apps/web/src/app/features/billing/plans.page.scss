@@ -58,6 +58,17 @@
   letter-spacing: -0.03em;
 }
 
+.usage small {
+  color: var(--ds-color-text-secondary);
+  font-size: 0.8rem;
+}
+
+.plan-grid__contact {
+  margin: 0;
+  color: var(--ds-color-text-secondary);
+  font-size: 0.9rem;
+}
+
 .plan-grid {
   list-style: none;
   margin: 0;
@@ -117,6 +128,16 @@
 .banner--danger {
   background: color-mix(in srgb, var(--ds-color-danger) 12%, white);
   color: var(--ds-color-danger);
+}
+
+.banner--info {
+  flex-wrap: wrap;
+  background: color-mix(in srgb, var(--ds-color-info) 12%, white);
+  color: var(--ds-color-text-primary);
+}
+
+.banner--info span {
+  flex: 1 1 16rem;
 }
 
 .banner--success {

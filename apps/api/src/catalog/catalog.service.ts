@@ -15,6 +15,7 @@ import {
 } from './dto/create-product.dto';
 import { InventoryUpdateDto } from './dto/inventory.dto';
 import { UpdateProductDto } from './dto/update-product.dto';
+import { MediaService } from './media.service';
 
 const PRODUCT_INCLUDE = {
   variants: true,
@@ -28,6 +29,12 @@ const PRODUCT_INCLUDE = {
 const MAX_MEDIA = 12;
 
 type Tx = Prisma.TransactionClient;
+
+type PhotoRefs = { media: { url: string }[]; variants: { imageUrl: string | null }[] };
+const photoUrls = (product: PhotoRefs) => [
+  ...product.media.map((item) => item.url),
+  ...product.variants.flatMap((variant) => (variant.imageUrl ? [variant.imageUrl] : [])),
+];
 
 type InventoryRow = {
   productId: string;
@@ -45,6 +52,7 @@ export class CatalogService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly planLimits: PlanLimitsService,
+    private readonly media: MediaService,
   ) {}
 
   list(tenantId: string) {
@@ -94,9 +102,10 @@ export class CatalogService {
   }
 
   async update(tenantId: string, productId: string, dto: UpdateProductDto) {
-    await this.getById(tenantId, productId);
+    const before = await this.getById(tenantId, productId);
+    let updated;
     try {
-      return await this.prisma.$transaction(async (tx) => {
+      updated = await this.prisma.$transaction(async (tx) => {
         if (dto.variants) {
           await tx.productVariant.deleteMany({ where: { productId } });
           if (dto.variants.length) {
@@ -141,6 +150,9 @@ export class CatalogService {
     } catch (error) {
       throw this.mapConflict(error);
     }
+    const kept = new Set(photoUrls(updated));
+    await this.releasePhotos(tenantId, photoUrls(before).filter((url) => !kept.has(url)));
+    return updated;
   }
 
   async getById(tenantId: string, productId: string) {
@@ -149,9 +161,61 @@ export class CatalogService {
       include: PRODUCT_INCLUDE,
     });
     if (!product) {
-      throw new NotFoundException('Product not found');
+      throw new NotFoundException('Producto no encontrado.');
     }
     return product;
+  }
+
+  /** Order lines keep their title and price snapshot; set pieces must leave their sets first. */
+  async remove(tenantId: string, productId: string) {
+    const product = await this.prisma.product.findFirst({
+      where: { id: productId, tenantId },
+      select: {
+        id: true,
+        media: { select: { url: true } },
+        variants: { select: { imageUrl: true } },
+        _count: { select: { componentOf: true } },
+      },
+    });
+    if (!product) {
+      throw new NotFoundException('Producto no encontrado.');
+    }
+    const inSet = new ConflictException(
+      'Este producto es pieza de un set. Quítalo del set antes de eliminarlo.',
+    );
+    if (product._count.componentOf > 0) throw inSet;
+    try {
+      await this.prisma.product.delete({ where: { id: product.id } });
+    } catch (error) {
+      if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2003') {
+        throw inSet;
+      }
+      throw error;
+    }
+    await this.releasePhotos(tenantId, photoUrls(product));
+    return { deleted: true };
+  }
+
+  /** Deletes stored photos no longer used by any product, variant or store setting of the tenant. */
+  private async releasePhotos(tenantId: string, urls: string[]) {
+    if (!urls.length) return;
+    const [media, variants, storefront] = await Promise.all([
+      this.prisma.productMedia.findMany({
+        where: { url: { in: urls }, product: { tenantId } },
+        select: { url: true },
+      }),
+      this.prisma.productVariant.findMany({
+        where: { imageUrl: { in: urls }, product: { tenantId } },
+        select: { imageUrl: true },
+      }),
+      this.prisma.storefront.findUnique({ where: { tenantId } }),
+    ]);
+    const used = new Set<string | null>([...media.map((m) => m.url), ...variants.map((v) => v.imageUrl)]);
+    const storeSettings = storefront ? JSON.stringify(storefront) : '';
+    await this.media.remove(
+      tenantId,
+      urls.filter((url) => !used.has(url) && !storeSettings.includes(url)),
+    );
   }
 
   /** Stock rows by SKU: products without variants and every variant of the others. */
@@ -323,7 +387,7 @@ export class CatalogService {
 
   private mapConflict(error: unknown) {
     if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2002') {
-      return new ConflictException('Product handle already exists');
+      return new ConflictException('Ya tienes un producto con ese enlace. Usa otro.');
     }
     return error;
   }

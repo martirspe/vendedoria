@@ -27,7 +27,7 @@ export class MercadoPagoPaymentProvider extends PaymentProviderPort {
         {
           items: [
             {
-              id: input.orderId,
+              id: input.orderId ?? input.paymentId,
               title: input.title,
               quantity: 1,
               unit_price: Number((input.amountCents / 100).toFixed(2)),
@@ -42,7 +42,7 @@ export class MercadoPagoPaymentProvider extends PaymentProviderPort {
             failure: input.failureUrl,
           },
           auto_return: 'approved',
-          metadata: { orderId: input.orderId, paymentId: input.paymentId },
+          metadata: { ...(input.orderId ? { orderId: input.orderId } : {}), paymentId: input.paymentId },
         },
         input.idempotencyKey,
       )
@@ -58,7 +58,7 @@ export class MercadoPagoPaymentProvider extends PaymentProviderPort {
     return { provider: this.name, externalId: payload.id, checkoutUrl, raw: payload };
   }
 
-  /** The webhook body is never trusted: the payment is fetched with the tenant token. */
+  /** The webhook body is never trusted: the payment is fetched with the account token. */
   async fetchPaymentEvent(
     paymentId: string,
     credentials: MerchantCredentials,
@@ -69,6 +69,11 @@ export class MercadoPagoPaymentProvider extends PaymentProviderPort {
       externalId: String(payment.id ?? paymentId),
       externalReference: payment.external_reference ?? null,
       status: mapPaymentStatus(payment.status),
+      amountCents:
+        typeof payment.transaction_amount === 'number'
+          ? Math.round(payment.transaction_amount * 100)
+          : undefined,
+      currency: payment.currency_id,
       raw: payment,
     };
   }

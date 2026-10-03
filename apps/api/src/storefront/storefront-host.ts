@@ -2,6 +2,17 @@ const DNS_LABEL = /^[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?$/;
 
 export const DEFAULT_STOREFRONT_URL_TEMPLATE = 'http://{slug}.localhost:4300';
 
+/** Subdomains a merchant can pick: 3–40 chars, no `--` (reserved for punycode `xn--`). */
+export const CHOOSABLE_SLUG = /^(?!.*--)[a-z0-9](?:[a-z0-9-]{1,38}[a-z0-9])$/;
+
+/** Platform, infrastructure and impersonation-prone names no store may use. */
+export const RESERVED_SLUGS = new Set([
+  'admin', 'api', 'app', 'apps', 'assets', 'auth', 'billing', 'blog', 'cdn', 'checkout', 'consola', 'console',
+  'dashboard', 'dev', 'docs', 'email', 'ftp', 'help', 'imap', 'login', 'mail', 'media', 'ns1', 'ns2', 'pagos',
+  'panel', 'pay', 'payments', 'pop', 'preview', 'smtp', 'soporte', 'staging', 'static', 'status', 'store',
+  'support', 'test', 'tienda', 'tiendas', 'vendedoria', 'webhook', 'webhooks', 'webmail', 'www',
+]);
+
 export function isValidStoreSlug(slug: string): boolean {
   return DNS_LABEL.test(slug);
 }

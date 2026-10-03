@@ -7,7 +7,7 @@ Global rules live in the root `AGENTS.md`. UI/design-system work: `vendedoria-ui
 - `src/app/core/auth/`: guard, interceptor (JWT + refresh), auth API.
 - `src/app/features/<feature>/<name>.page.{ts,html,scss}`: one routed page per feature, lazy routes in `app.routes.ts`.
 - `src/app/layout/console-shell.layout.*`: console shell (sidebar, Ctrl+K palette).
-- SSR: every route is `RenderMode.Prerender` (`app.routes.server.ts`); pages must not depend on per-request server data, and browser-only APIs need platform guards.
+- SSR (`app.routes.server.ts`): marketing and auth routes are `RenderMode.Prerender`; the authenticated console (`app/**`) is `RenderMode.Client` so the build never calls the API. Pages must not depend on per-request server data, and browser-only APIs need platform guards.
 
 ## Angular conventions (match existing pages)
 - Standalone components, `ChangeDetectionStrategy.OnPush`, `inject()`, signals/`computed`; `effect()` only when unavoidable.

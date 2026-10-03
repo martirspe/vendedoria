@@ -17,6 +17,7 @@ import { StorefrontModule } from './storefront/storefront.module';
 import { CouponsModule } from './coupons/coupons.module';
 import { CheckoutModule } from './checkout/checkout.module';
 import { RateLimitModule } from './rate-limit/rate-limit.module';
+import { TurnstileModule } from './turnstile/turnstile.module';
 import { validateEnv } from './config/env.validation';
 
 @Module({
@@ -29,6 +30,7 @@ import { validateEnv } from './config/env.validation';
     HealthModule,
     AuthModule,
     RateLimitModule,
+    TurnstileModule,
     TenantsModule,
     AgentsModule,
     KnowledgeModule,

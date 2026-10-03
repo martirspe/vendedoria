@@ -78,7 +78,7 @@ export class OrdersService {
       include: ORDER_INCLUDE,
     });
     if (!order) {
-      throw new NotFoundException('Order not found');
+      throw new NotFoundException('Pedido no encontrado.');
     }
     return order;
   }
@@ -89,7 +89,7 @@ export class OrdersService {
         where: { id: dto.conversationId, tenantId },
       });
       if (!conversation) {
-        throw new NotFoundException('Conversation not found');
+        throw new NotFoundException('Conversación no encontrada.');
       }
     }
 
@@ -99,9 +99,7 @@ export class OrdersService {
           where: { id: item.productId, tenantId },
         });
         if (!product) {
-          throw new BadRequestException(
-            `Product not found: ${item.productId}`,
-          );
+          throw new BadRequestException('Algún producto del pedido ya no existe.');
         }
       }
     }

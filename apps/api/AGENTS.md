@@ -4,7 +4,7 @@ Global rules live in the root `AGENTS.md`. Data work: `vendedoria-data` skill. A
 
 ## Structure
 - One Nest module per domain: `src/<domain>/{<domain>.module,.controller,.service}.ts` + `dto/`. New modules are registered in `src/app.module.ts`.
-- Existing domains: `auth`, `tenants`, `agents` (+ playground, quality score), `agent-runtime` (sales agent + tools), `knowledge`, `catalog` (+ sets with shared stock in `orders/stock.ts`, inventory, photo upload), `channels` (Meta WhatsApp), `conversations`, `orders`, `payments`, `billing` (plans + limits), `metrics`, `storefront`, `coupons`, `checkout` (web store orders + Mercado Pago), `ubigeo` (INEI districts in `data/`, rebuilt with `scripts/compile-ubigeos.mjs`), `rate-limit`, `health`.
+- Existing domains: `auth`, `tenants`, `agents` (+ playground, quality score), `agent-runtime` (sales agent + tools), `knowledge`, `catalog` (+ sets with shared stock in `orders/stock.ts`, inventory, photo upload), `channels` (Meta WhatsApp), `conversations`, `orders`, `payments`, `billing` (plans + limits), `metrics`, `storefront`, `coupons`, `checkout` (web store orders + Mercado Pago), `ubigeo` (INEI districts in `data/`, rebuilt with `scripts/compile-ubigeos.mjs`), `rate-limit`, `turnstile` (Cloudflare Turnstile guard + `@Turnstile(action)`), `health`.
 - Layering is controller → service → `PrismaService`. There is no repository or domain layer; do not introduce one for a single feature.
 
 ## Invariants

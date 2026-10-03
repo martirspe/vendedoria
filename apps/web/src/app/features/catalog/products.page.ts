@@ -74,6 +74,7 @@ export class ProductsPage {
   readonly products = signal<ProductDto[]>([]);
   readonly loading = signal(true);
   readonly saving = signal(false);
+  readonly deleting = signal(false);
   readonly editorOpen = signal(false);
   readonly editingId = signal<string | null>(null);
   readonly handleLocked = signal(false);
@@ -201,7 +202,7 @@ export class ProductsPage {
       this.products.set(await this.api.list());
     } catch {
       this.errorMessage.set(
-        'No pudimos cargar el catálogo. Revisa la API e inténtalo de nuevo.',
+        'No pudimos cargar el catálogo. Revisa tu conexión e inténtalo de nuevo.',
       );
     } finally {
       this.loading.set(false);
@@ -613,6 +614,35 @@ export class ProductsPage {
       this.errorMessage.set(this.mapSaveError(error));
     } finally {
       this.saving.set(false);
+    }
+  }
+
+  async deleteProduct(): Promise<void> {
+    const productId = this.editingId();
+    if (!productId) return;
+    const name = this.productForm.controls.name.value.trim() || 'este producto';
+    if (
+      !confirm(
+        `¿Eliminar "${name}"? Sale del catálogo, la tienda web y el inventario. Los pedidos anteriores conservan su detalle.`,
+      )
+    ) {
+      return;
+    }
+    this.deleting.set(true);
+    this.errorMessage.set(null);
+    try {
+      await this.api.remove(productId);
+      this.products.set(this.products().filter((product) => product.id !== productId));
+      this.closeEditor();
+      this.successMessage.set(`"${name}" eliminado.`);
+    } catch (error) {
+      this.errorMessage.set(
+        error instanceof HttpErrorResponse && error.status === 409 && typeof error.error?.message === 'string'
+          ? error.error.message
+          : 'No se pudo eliminar el producto. Inténtalo de nuevo.',
+      );
+    } finally {
+      this.deleting.set(false);
     }
   }
 

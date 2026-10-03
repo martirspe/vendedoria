@@ -14,11 +14,33 @@ async function bootstrap() {
     // nginx and the store server reach the API over the Docker network; trusting only those
     // hops makes `request.ip` the real client and ignores X-Forwarded-For sent by the client.
     new FastifyAdapter({ logger: true, trustProxy: ['loopback', 'uniquelocal'] }),
+    // Webhook signatures (Meta) are computed over the exact bytes received.
+    { rawBody: true },
   );
 
   const config = app.get(ConfigService);
   const port = config.get<number>('PORT', 3000);
   const corsOrigin = config.get<string>('CORS_ORIGIN', 'http://localhost:4200');
+
+  // The console only calls (and CORS only allows) http://localhost; loopback IP URLs move there.
+  if (config.get<string>('NODE_ENV') === 'development') {
+    app
+      .getHttpAdapter()
+      .getInstance()
+      .addHook('onRequest', (request, reply, done) => {
+        const loopback = /^(?:127\.0\.0\.1|\[::1\])(:\d+)?$/.exec(
+          request.headers.host ?? '',
+        );
+        if (!loopback) {
+          done();
+          return;
+        }
+        void reply.redirect(
+          `${request.protocol}://localhost${loopback[1] ?? ''}${request.url}`,
+          308,
+        );
+      });
+  }
 
   app.setGlobalPrefix('api/v1');
   app.enableCors({
@@ -31,6 +53,7 @@ async function bootstrap() {
       'Accept',
       'Origin',
       'X-Requested-With',
+      'X-Turnstile-Token',
     ],
   });
   app.useGlobalPipes(

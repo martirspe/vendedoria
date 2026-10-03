@@ -1,9 +1,13 @@
 import {
   ChangeDetectionStrategy,
   Component,
+  ElementRef,
+  Injector,
+  afterNextRender,
   computed,
   inject,
   signal,
+  viewChild,
 } from '@angular/core';
 import { HttpErrorResponse } from '@angular/common/http';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
@@ -19,6 +23,8 @@ import {
 } from '../../core/api/store-api.service';
 
 const HEX_COLOR = /^#[0-9a-fA-F]{6}$/;
+/** Mirrors `CHOOSABLE_SLUG` in `apps/api/src/storefront/storefront-host.ts`. */
+const SUBDOMAIN = /^(?!.*--)[a-z0-9](?:[a-z0-9-]{1,38}[a-z0-9])$/;
 const toCents = (soles: number | null) =>
   soles === null || Number.isNaN(soles) ? null : Math.round(soles * 100);
 const toSoles = (cents: number | null) => (cents === null ? null : cents / 100);
@@ -105,6 +111,23 @@ export class StorePage {
   readonly requiredPending = computed(
     () => this.view()?.checklist.filter((item) => item.required && !item.done) ?? [],
   );
+  /** Store URL split for display: `https:` + `//` + slug + `.tiendas.example.pe[:port]`. */
+  readonly address = computed(() => {
+    const url = this.view()?.url;
+    if (!url) return null;
+    const { protocol, host } = new URL(url);
+    const dot = host.indexOf('.');
+    return { protocol, slug: host.slice(0, dot), suffix: host.slice(dot) };
+  });
+
+  readonly subdomainForm = this.fb.nonNullable.group({ slug: [''] });
+  readonly subdomain = this.subdomainForm.controls.slug;
+  private readonly injector = inject(Injector);
+  private readonly subdomainInput = viewChild<ElementRef<HTMLInputElement>>('subdomainInput');
+  readonly editingSubdomain = signal(false);
+  readonly savingSubdomain = signal(false);
+  readonly subdomainError = signal<string | null>(null);
+  readonly subdomainSuccess = signal<string | null>(null);
 
   readonly form = this.fb.nonNullable.group({
     displayName: ['', [Validators.required, Validators.minLength(2), Validators.maxLength(80)]],
@@ -217,7 +240,7 @@ export class StorePage {
       this.districts.set(districts);
       this.apply(view);
     } catch {
-      this.errorMessage.set('No pudimos cargar tu tienda web. Revisa la API e inténtalo de nuevo.');
+      this.errorMessage.set('No pudimos cargar tu tienda web. Revisa tu conexión e inténtalo de nuevo.');
     } finally {
       this.loading.set(false);
     }
@@ -270,6 +293,58 @@ export class StorePage {
       this.errorMessage.set(this.messageFrom(error, 'No se pudo guardar. Revisa los datos de la tienda.'));
     } finally {
       this.saving.set(false);
+    }
+  }
+
+  startSubdomainEdit(): void {
+    this.subdomain.setValue(this.address()?.slug ?? '');
+    this.subdomainError.set(null);
+    this.subdomainSuccess.set(null);
+    this.editingSubdomain.set(true);
+    afterNextRender(() => this.subdomainInput()?.nativeElement.focus(), { injector: this.injector });
+  }
+
+  cancelSubdomainEdit(): void {
+    this.editingSubdomain.set(false);
+    this.subdomainError.set(null);
+  }
+
+  /** Lowercase, accents stripped, spaces as hyphens: what the merchant types becomes a valid label. */
+  normalizeSubdomain(): void {
+    const clean = this.subdomain.value
+      .toLowerCase()
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .replace(/[\s_]+/g, '-')
+      .replace(/[^a-z0-9-]/g, '');
+    if (clean !== this.subdomain.value) this.subdomain.setValue(clean);
+    this.subdomainError.set(null);
+  }
+
+  async saveSubdomain(): Promise<void> {
+    const slug = this.subdomain.value.replace(/^-+|-+$/g, '');
+    if (slug === this.address()?.slug) {
+      this.editingSubdomain.set(false);
+      return;
+    }
+    if (!SUBDOMAIN.test(slug)) {
+      this.subdomainError.set(
+        'Usa entre 3 y 40 letras minúsculas, números o guiones, sin empezar ni terminar en guion y sin guiones seguidos.',
+      );
+      this.subdomainInput()?.nativeElement.focus();
+      return;
+    }
+    this.savingSubdomain.set(true);
+    this.subdomainError.set(null);
+    try {
+      const view = await this.api.changeSubdomain(slug);
+      this.view.set(view);
+      this.editingSubdomain.set(false);
+      this.subdomainSuccess.set('Listo. Tu tienda ya está en la nueva dirección y la anterior redirige a ella.');
+    } catch (error) {
+      this.subdomainError.set(this.messageFrom(error, 'No pudimos cambiar la dirección. Inténtalo de nuevo.'));
+    } finally {
+      this.savingSubdomain.set(false);
     }
   }
 
@@ -417,7 +492,7 @@ export class StorePage {
   }
 
   private messageFrom(error: unknown, fallback: string): string {
-    if (error instanceof HttpErrorResponse && error.status === 400) {
+    if (error instanceof HttpErrorResponse && (error.status === 400 || error.status === 409)) {
       const message = error.error?.message;
       if (typeof message === 'string') return message;
       if (Array.isArray(message) && typeof message[0] === 'string') return message[0];

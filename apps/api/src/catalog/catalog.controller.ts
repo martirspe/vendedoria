@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Param, Patch, Post, Res } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Param, Patch, Post, Res } from '@nestjs/common';
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 import type { FastifyReply } from 'fastify';
 import { CurrentUser, Public } from '../common/decorators/auth.decorators';
@@ -8,7 +8,7 @@ import { CatalogService } from './catalog.service';
 import { CreateProductDto } from './dto/create-product.dto';
 import { InventoryUpdateDto, MediaUploadDto } from './dto/inventory.dto';
 import { UpdateProductDto } from './dto/update-product.dto';
-import { MediaService } from './media.service';
+import { MEDIA_CACHE_CONTROL, MediaService } from './media.service';
 
 @ApiTags('catalog')
 @ApiBearerAuth()
@@ -46,6 +46,14 @@ export class CatalogController {
     return this.catalogService.update(user.tenantId, productId, dto);
   }
 
+  @Delete('products/:productId')
+  remove(
+    @CurrentUser() user: AuthUserPayload,
+    @Param('productId') productId: string,
+  ) {
+    return this.catalogService.remove(user.tenantId, productId);
+  }
+
   @Get('inventory')
   inventory(@CurrentUser() user: AuthUserPayload) {
     return this.catalogService.inventory(user.tenantId);
@@ -58,8 +66,8 @@ export class CatalogController {
 
   @Post('media')
   @RateLimit('catalog-media', 30)
-  upload(@Body() dto: MediaUploadDto) {
-    return this.media.upload(dto);
+  upload(@CurrentUser() user: AuthUserPayload, @Body() dto: MediaUploadDto) {
+    return this.media.upload(user.tenantId, dto);
   }
 }
 
@@ -75,7 +83,7 @@ export class MediaController {
     const { bytes, contentType } = await this.media.read(file);
     return reply
       .header('Content-Type', contentType)
-      .header('Cache-Control', 'public, max-age=31536000, immutable')
+      .header('Cache-Control', MEDIA_CACHE_CONTROL)
       .header('X-Content-Type-Options', 'nosniff')
       .send(bytes);
   }

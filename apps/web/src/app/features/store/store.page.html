@@ -372,6 +372,63 @@
       </form>
 
       <aside class="store__rail">
+        @if (address(); as a) {
+          <section class="card" aria-labelledby="store-address-title">
+            <h2 id="store-address-title">Dirección de la tienda</h2>
+            @if (!editingSubdomain()) {
+              <p class="address">
+                <span>{{ a.protocol }}//</span><strong>{{ a.slug }}</strong><span>{{ a.suffix }}</span>
+              </p>
+              @if (subdomainSuccess(); as success) {
+                <p class="address__success" role="status">
+                  <ds-icon name="circleCheck" [size]="1" />
+                  <span>{{ success }}</span>
+                </p>
+              }
+              <ds-button variant="secondary" (click)="startSubdomainEdit()">Cambiar dirección</ds-button>
+            } @else {
+              <form class="address__form" [formGroup]="subdomainForm" (ngSubmit)="saveSubdomain()" novalidate>
+                <label for="store-subdomain">Nueva dirección</label>
+                <div class="address__input" [class.is-invalid]="subdomainError()">
+                  <input
+                    #subdomainInput
+                    id="store-subdomain"
+                    formControlName="slug"
+                    maxlength="40"
+                    autocomplete="off"
+                    autocapitalize="none"
+                    spellcheck="false"
+                    [attr.aria-invalid]="subdomainError() ? true : null"
+                    aria-describedby="store-subdomain-help"
+                    (input)="normalizeSubdomain()"
+                  />
+                  <span aria-hidden="true">{{ a.suffix }}</span>
+                </div>
+                @if (subdomainError(); as error) {
+                  <p id="store-subdomain-help" class="address__error" role="alert">{{ error }}</p>
+                } @else {
+                  <p id="store-subdomain-help" class="hint">
+                    Letras, números y guiones. Quedará así:
+                    <strong>{{ a.protocol }}//{{ subdomain.value || a.slug }}{{ a.suffix }}</strong>
+                  </p>
+                }
+                <p class="hint">
+                  Los enlaces con la dirección anterior seguirán funcionando y llevarán a la nueva.
+                  Puedes cambiarla hasta 3 veces por mes.
+                </p>
+                <div class="address__actions">
+                  <ds-button type="submit" [disabled]="savingSubdomain()">
+                    {{ savingSubdomain() ? 'Guardando…' : 'Guardar dirección' }}
+                  </ds-button>
+                  <ds-button variant="ghost" [disabled]="savingSubdomain()" (click)="cancelSubdomainEdit()">
+                    Cancelar
+                  </ds-button>
+                </div>
+              </form>
+            }
+          </section>
+        }
+
         <section class="card">
           <h2>Antes de publicar</h2>
           <ul class="checklist">

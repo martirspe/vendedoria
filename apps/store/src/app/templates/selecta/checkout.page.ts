@@ -7,6 +7,7 @@ import {
   inject,
   signal,
   untracked,
+  viewChild,
 } from '@angular/core';
 import { HttpErrorResponse } from '@angular/common/http';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
@@ -17,6 +18,7 @@ import type {
   ShippingQuote,
   UbigeoDistrict,
 } from '@vendedoria/contracts';
+import { DsTurnstileComponent } from '@vendedoria/ui';
 import { campaignCoupon, forgetCampaignCoupon, keepCoupon } from '../../core/campaign-coupon';
 import { CartService } from '../../core/cart.service';
 import { MoneyPipe } from '../../core/money.pipe';
@@ -29,6 +31,7 @@ import { SelectaIcon } from './selecta-icon';
 import { SelectaProductImage } from './selecta-photo';
 
 const CHECKOUT_KEY = 'vendedoria-checkout-key';
+const CHALLENGE_PENDING = 'Completa la verificación de seguridad para continuar.';
 
 type Line = {
   handle: string;
@@ -44,7 +47,7 @@ type DeliveryChoice = { mode: ShippingMode; label: string; cents: number; note: 
 
 @Component({
   selector: 'selecta-checkout',
-  imports: [ReactiveFormsModule, RouterLink, MoneyPipe, SelectaIcon, SelectaProductImage],
+  imports: [ReactiveFormsModule, RouterLink, MoneyPipe, SelectaIcon, SelectaProductImage, DsTurnstileComponent],
   templateUrl: './checkout.page.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
@@ -56,6 +59,7 @@ export class SelectaCheckoutPage {
   private readonly catalog = inject(SelectaCatalog);
   readonly cart = inject(CartService);
   readonly store = inject(StoreStateService).store;
+  private readonly turnstile = viewChild(DsTurnstileComponent);
 
   readonly form = this.fb.nonNullable.group({
     name: ['', [Validators.required, Validators.minLength(3), Validators.maxLength(100)]],
@@ -352,6 +356,13 @@ export class SelectaCheckoutPage {
     }
     const v = this.form.getRawValue();
     this.busy.set(true);
+    const widget = this.turnstile();
+    const token = widget ? await widget.waitForToken() : undefined;
+    if (token === null) {
+      this.error.set(CHALLENGE_PENDING);
+      this.busy.set(false);
+      return;
+    }
     try {
       const order = await this.api.checkout({
         checkoutKey: this.checkoutKey(),
@@ -370,13 +381,14 @@ export class SelectaCheckoutPage {
         },
         ...(this.coupon() ? { couponCode: this.coupon()!.code } : {}),
         acceptTerms: true,
-      });
+      }, token);
       sessionStorage.removeItem(CHECKOUT_KEY);
       if (this.coupon()) forgetCampaignCoupon();
       await this.router.navigate(['/pedido', order.id], { queryParams: { t: order.token } });
     } catch (error) {
       this.error.set(this.messageFrom(error, 'No pudimos reservar tu pedido. Inténtalo de nuevo.'));
       if (error instanceof HttpErrorResponse && error.status === 409) sessionStorage.removeItem(CHECKOUT_KEY);
+      widget?.reset();
       this.busy.set(false);
     }
   }
@@ -400,7 +412,7 @@ export class SelectaCheckoutPage {
   }
 
   private messageFrom(error: unknown, fallback: string): string {
-    if (error instanceof HttpErrorResponse && [400, 403, 404, 409, 429].includes(error.status)) {
+    if (error instanceof HttpErrorResponse && [400, 403, 404, 409, 429, 503].includes(error.status)) {
       const message = error.error?.message;
       if (typeof message === 'string') return message;
       if (Array.isArray(message) && typeof message[0] === 'string') return message[0];

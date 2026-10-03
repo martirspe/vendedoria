@@ -10,7 +10,7 @@
     </div>
     <div class="orders__header-actions">
       @if (mockMode()) {
-        <span class="provider-pill">Pagos en modo mock</span>
+        <span class="provider-pill">Pagos en modo de prueba</span>
       } @else {
         <span class="provider-pill provider-pill--live">Mercado Pago</span>
       }
@@ -271,7 +271,7 @@
         </section>
 
         <section>
-          <h3>Pago (flujo B)</h3>
+          <h3>Pago</h3>
           @if (latestPayment(order); as payment) {
             <div class="payment-box" [attr.data-status]="payment.status">
               <div>

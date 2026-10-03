@@ -6,7 +6,10 @@
 export type StorefrontStatus = 'DRAFT' | 'PUBLISHED' | 'SUSPENDED';
 
 export type StoreResolveResult = {
+  /** Current slug of the store. */
   slug: string;
+  /** The host used a former subdomain of this store: the store server redirects it to `slug`. */
+  moved: boolean;
 };
 
 export type StorefrontView = {
@@ -106,6 +109,8 @@ export type StorefrontCheckout = {
   simulator: boolean;
   /** True when the store has at least one active coupon. */
   couponsEnabled: boolean;
+  /** Cloudflare Turnstile site key; when set, `POST checkout` needs a token (action `checkout`) in `X-Turnstile-Token`. */
+  turnstileSiteKey: string | null;
 };
 
 export type PublicProductCard = {

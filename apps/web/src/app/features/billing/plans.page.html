@@ -1,11 +1,11 @@
 <section class="plans">
   <header class="plans__header">
     <div>
-      <p class="plans__eyebrow">Flujo A · Suscripción SaaS</p>
-      <h1>Planes y cuotas</h1>
+      <p class="plans__eyebrow">Tu suscripción</p>
+      <h1>Planes y límites</h1>
       <p>
-        Esto es lo que paga el merchant por usar VendedorIA. No confundir con el
-        cobro al comprador (flujo B) en Pedidos.
+        Elige el plan de VendedorIA que mejor se adapte a tu negocio y revisa
+        cuánto has usado este mes.
       </p>
     </div>
   </header>
@@ -22,6 +22,22 @@
       <span>{{ success }}</span>
     </div>
   }
+  @if (infoMessage(); as info) {
+    <div class="banner banner--info" role="status">
+      <ds-icon name="wallet" />
+      <span>{{ info }}</span>
+      @if (pendingSimulation()) {
+        <ds-button
+          type="button"
+          variant="primary"
+          [disabled]="saving()"
+          (click)="confirmSimulation()"
+        >
+          {{ saving() ? 'Confirmando…' : 'Confirmar pago de prueba' }}
+        </ds-button>
+      }
+    </div>
+  }
 
   @if (loading()) {
     <div class="skeleton" aria-busy="true">Cargando planes…</div>
@@ -30,6 +46,9 @@
       <div>
         <span>Plan actual</span>
         <strong>{{ data.currentPlan.name }}</strong>
+        @if (periodEndLabel(data.currentPeriodEnd); as periodEnd) {
+          <small>Activo hasta el {{ periodEnd }}</small>
+        }
       </div>
       <div>
         <span>Conversaciones del mes</span>
@@ -65,20 +84,21 @@
               <li>{{ item }}</li>
             }
           </ul>
-          <ds-button
-            type="button"
-            [variant]="plan.id === data.currentPlan.id ? 'ghost' : 'primary'"
-            [disabled]="saving() || plan.id === data.currentPlan.id"
-            (click)="selectPlan(plan)"
-          >
-            {{
-              plan.id === data.currentPlan.id
-                ? 'Plan actual'
-                : saving()
-                  ? 'Cambiando…'
-                  : 'Elegir plan'
-            }}
-          </ds-button>
+          @if (plan.priceCents == null) {
+            <p class="plan-grid__contact">
+              Pídenos una cotización desde
+              <a routerLink="/app/help">Ayuda</a>.
+            </p>
+          } @else {
+            <ds-button
+              type="button"
+              [variant]="plan.id === data.currentPlan.id ? 'ghost' : 'primary'"
+              [disabled]="!canSelect(plan, data)"
+              (click)="selectPlan(plan)"
+            >
+              {{ buttonLabel(plan, data) }}
+            </ds-button>
+          }
         </li>
       }
     </ul>

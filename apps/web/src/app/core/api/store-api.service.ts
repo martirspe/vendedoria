@@ -126,6 +126,11 @@ export class StoreApiService {
     return firstValueFrom(this.http.patch<StoreSettingsView>(this.base, payload));
   }
 
+  /** Moves the store to a new subdomain; the previous one redirects to it. */
+  changeSubdomain(slug: string): Promise<StoreSettingsView> {
+    return firstValueFrom(this.http.patch<StoreSettingsView>(`${this.base}/subdomain`, { slug }));
+  }
+
   publish(): Promise<StoreSettingsView> {
     return firstValueFrom(this.http.post<StoreSettingsView>(`${this.base}/publish`, {}));
   }

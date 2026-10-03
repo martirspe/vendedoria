@@ -13,6 +13,6 @@ import { PaymentsService } from './payments.service';
     MercadoPagoPaymentProvider,
     PaymentsService,
   ],
-  exports: [PaymentsService, MerchantAccountsService],
+  exports: [PaymentsService, MerchantAccountsService, MercadoPagoPaymentProvider],
 })
 export class PaymentsModule {}

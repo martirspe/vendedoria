@@ -124,6 +124,9 @@
               </span>
             </label>
           }
+          @if (store()?.checkout?.turnstileSiteKey; as siteKey) {
+            <ds-turnstile [siteKey]="siteKey" action="checkout" theme="light" />
+          }
           <button class="button full" type="submit" [disabled]="busy() || !choice()">{{ busy() ? 'Reservando tu selección…' : 'Continuar al pago' }}<app-icon name="arrow" /></button>
           @if (store()?.checkout?.simulator) {
             <p class="notice">Modo de prueba: esta tienda aún no conectó Mercado Pago. El pago será simulado y no se cobra dinero.</p>

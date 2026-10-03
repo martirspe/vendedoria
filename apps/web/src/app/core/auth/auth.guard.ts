@@ -8,7 +8,7 @@ import { AuthApiService } from './auth-api.service';
  * request through and enforce on the browser after hydration — otherwise every
  * hard refresh dumps the merchant back to login.
  */
-export const authGuard: CanActivateFn = () => {
+export const authGuard: CanActivateFn = (_route, state) => {
   const auth = inject(AuthApiService);
   const router = inject(Router);
   const platformId = inject(PLATFORM_ID);
@@ -21,5 +21,5 @@ export const authGuard: CanActivateFn = () => {
   if (auth.isAuthenticated()) {
     return true;
   }
-  return router.createUrlTree(['/auth/login']);
+  return router.createUrlTree(['/auth/login'], { queryParams: { redirect: state.url } });
 };

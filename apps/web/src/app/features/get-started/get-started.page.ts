@@ -49,7 +49,7 @@ export class GetStartedPage {
     {
       id: 'seller',
       title: 'Configura el vendedor',
-      body: 'Personalidad, FAQs, límites y playground con score útil para vender.',
+      body: 'Define su personalidad, preguntas frecuentes y límites, y pruébalo antes de activarlo.',
       done: this.agentReady(),
       cta: 'Ir a Vendedor',
       link: '/app/seller',
@@ -57,7 +57,7 @@ export class GetStartedPage {
     {
       id: 'product',
       title: 'Agrega un producto vendible',
-      body: 'Precio y descripción corta reales para que el agente no invente.',
+      body: 'Con precio y descripción reales, para que tu vendedor responda con datos correctos.',
       done: this.hasProduct(),
       cta: 'Ir a Productos',
       link: '/app/products',
@@ -65,7 +65,7 @@ export class GetStartedPage {
     {
       id: 'channel',
       title: 'Conecta WhatsApp',
-      body: 'Guarda Phone Number ID + token (pueden ser placeholders en local).',
+      body: 'Guarda el Phone Number ID y el token de acceso de tu cuenta de Meta.',
       done: this.channelReady(),
       cta: 'Ir a Canales',
       link: '/app/channels',
@@ -73,7 +73,7 @@ export class GetStartedPage {
     {
       id: 'chat',
       title: 'Prueba un mensaje',
-      body: 'Simula un inbound o usa Probar vendedor. Debe haber al menos un hilo.',
+      body: 'Escribe a tu número de WhatsApp o usa Probar vendedor para iniciar una conversación.',
       done: this.hasConversation(),
       cta: 'Ir a Mensajes',
       link: '/app/messages',
@@ -81,7 +81,7 @@ export class GetStartedPage {
     {
       id: 'order',
       title: 'Cierra un pedido de prueba',
-      body: 'Crea pedido + link y simula el pago mock.',
+      body: 'Crea un pedido con link de pago y confirma que el cobro llega.',
       done: this.hasOrder(),
       cta: 'Ir a Pedidos',
       link: '/app/orders',

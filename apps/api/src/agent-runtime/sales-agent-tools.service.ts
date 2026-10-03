@@ -355,7 +355,7 @@ export class SalesAgentToolsService {
         traces.push({
           name: 'create_payment_link',
           status: 'ok',
-          summary: 'Link de pago simulado (playground · no es cobro real)',
+          summary: 'Link de pago de prueba (no es un cobro real)',
           data: { dryRun: true, checkoutUrl: fakeUrl },
         });
       }

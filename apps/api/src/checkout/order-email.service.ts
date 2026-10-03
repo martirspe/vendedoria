@@ -1,3 +1,4 @@
+import { SESv2Client, SendEmailCommand } from '@aws-sdk/client-sesv2';
 import { Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import type { Order, OrderItem, Storefront } from '@prisma/client';
@@ -8,6 +9,25 @@ const CLAIM_TTL_MS = 60_000;
 const esc = (value: string | null | undefined) =>
   (value ?? '').replace(/[&<>"']/g, (c) => `&#${c.charCodeAt(0)};`);
 const soles = (cents: number) => `S/ ${(cents / 100).toFixed(2)}`;
+
+/** Plain-text part for the HTML built by this service (better deliverability, text-only clients). */
+export function htmlToText(html: string): string {
+  return html
+    .replace(/<\/(p|h1|h2|div)>/gi, '\n')
+    .replace(/<br\s*\/?>/gi, '\n')
+    .replace(/<[^>]+>/g, '')
+    .replace(/&#(\d+);/g, (_, code: string) => String.fromCharCode(Number(code)))
+    .split('\n')
+    .map((line) => line.trim())
+    .filter(Boolean)
+    .join('\n\n');
+}
+
+type EmailKind = 'confirmation' | 'merchant' | 'logistics';
+type OutgoingEmail = { to: string; subject: string; html: string; replyTo?: string | null };
+type Transport =
+  | { provider: 'ses'; client: SESv2Client; from: string; configurationSet?: string }
+  | { provider: 'resend'; apiKey: string; from: string };
 
 type EmailOrder = Order & { items: OrderItem[] };
 type Delivery = {
@@ -25,16 +45,20 @@ export type RenderedEmail = { subject: string; html: string };
 
 /**
  * Purchase confirmation and shipping notices. `EMAIL_MODE=preview` (default) only records
- * the state so test purchases never send real mail; `live` sends through Resend once per order.
+ * the state so test purchases never send real mail; `live` sends once per order through
+ * Amazon SES (`EMAIL_PROVIDER=ses`, default) or Resend.
  */
 @Injectable()
 export class OrderEmailService {
   private readonly logger = new Logger(OrderEmailService.name);
+  private readonly transport: Transport | null;
 
   constructor(
     private readonly prisma: PrismaService,
-    private readonly config: ConfigService,
-  ) {}
+    config: ConfigService,
+  ) {
+    this.transport = OrderEmailService.createTransport(config);
+  }
 
   /** What the buyer receives (or would receive in preview mode), for the console. */
   async preview(tenantId: string, orderId: string): Promise<RenderedEmail & { status: string }> {
@@ -47,8 +71,7 @@ export class OrderEmailService {
   }
 
   async sendConfirmation(orderId: string): Promise<void> {
-    const sender = this.sender();
-    if (!sender) {
+    if (!this.transport) {
       await this.prisma.order.updateMany({
         where: { id: orderId, status: 'PAID', emailStatus: { not: 'sent' } },
         data: { emailStatus: 'preview' },
@@ -74,10 +97,10 @@ export class OrderEmailService {
     if (!order.customerEmail || !store) return;
     const email = this.confirmation(order, store);
     try {
-      await this.send(sender, `confirmation/${order.id}`, {
-        to: [order.customerEmail],
+      await this.send('confirmation', `confirmation/${order.id}`, {
+        to: order.customerEmail,
         ...email,
-        ...(store.contactEmail ? { reply_to: store.contactEmail } : {}),
+        replyTo: store.contactEmail,
       });
       await this.prisma.order.update({
         where: { id: order.id },
@@ -92,8 +115,8 @@ export class OrderEmailService {
       return;
     }
     if (store.contactEmail) {
-      await this.send(sender, `merchant/${order.id}`, {
-        to: [store.contactEmail],
+      await this.send('merchant', `merchant/${order.id}`, {
+        to: store.contactEmail,
         subject: `Nuevo pedido pagado · ${order.code} · ${soles(order.totalCents)}`,
         html: email.html,
       }).catch((error: unknown) =>
@@ -102,10 +125,9 @@ export class OrderEmailService {
     }
   }
 
-  /** Shipped / ready for pickup / delivered notice; Resend deduplicates per status. */
+  /** Shipped / ready for pickup / delivered notice, sent on each status transition. */
   async sendLogistics(orderId: string): Promise<void> {
-    const sender = this.sender();
-    if (!sender) return;
+    if (!this.transport) return;
     const order = await this.prisma.order.findUnique({
       where: { id: orderId },
       include: { items: true, tenant: { include: { storefront: true } } },
@@ -113,10 +135,10 @@ export class OrderEmailService {
     const store = order?.tenant.storefront;
     if (!order?.customerEmail || !store || !['SHIPPED', 'COMPLETED'].includes(order.status)) return;
     const email = this.logistics(order, store);
-    await this.send(sender, `logistics/${order.id}/${order.status}`, {
-      to: [order.customerEmail],
+    await this.send('logistics', `logistics/${order.id}/${order.status}`, {
+      to: order.customerEmail,
       ...email,
-      ...(store.contactEmail ? { reply_to: store.contactEmail } : {}),
+      replyTo: store.contactEmail,
     }).catch((error: unknown) =>
       this.logger.warn(`Logistics email failed for ${order.id}: ${(error as Error).message}`),
     );
@@ -174,26 +196,64 @@ ${content}
 </div>`;
   }
 
-  private sender(): { apiKey: string; from: string } | null {
-    const live = this.config.get<string>('EMAIL_MODE') === 'live';
-    const apiKey = this.config.get<string>('RESEND_API_KEY');
-    const from = this.config.get<string>('EMAIL_FROM');
-    return live && apiKey && from ? { apiKey, from } : null;
+  /** Env validation guarantees the provider settings exist whenever `EMAIL_MODE=live`. */
+  private static createTransport(config: ConfigService): Transport | null {
+    if (config.get<string>('EMAIL_MODE') !== 'live') return null;
+    const from = config.getOrThrow<string>('EMAIL_FROM');
+    if (config.get<string>('EMAIL_PROVIDER') === 'resend') {
+      return { provider: 'resend', apiKey: config.getOrThrow<string>('RESEND_API_KEY'), from };
+    }
+    return {
+      provider: 'ses',
+      client: new SESv2Client({
+        region: config.get<string>('SES_REGION') || config.getOrThrow<string>('AWS_REGION'),
+        maxAttempts: 3,
+        requestHandler: { connectionTimeout: 3_000, requestTimeout: 10_000 },
+      }),
+      from,
+      configurationSet: config.get<string>('SES_CONFIGURATION_SET') || undefined,
+    };
   }
 
-  private async send(
-    sender: { apiKey: string; from: string },
-    idempotencyKey: string,
-    body: Record<string, unknown>,
-  ) {
+  /** `dedupeKey` is honoured by Resend; with SES the order claim and status guards prevent repeats. */
+  private async send(kind: EmailKind, dedupeKey: string, email: OutgoingEmail): Promise<void> {
+    const transport = this.transport;
+    if (!transport) return;
+    const text = htmlToText(email.html);
+    if (transport.provider === 'ses') {
+      await transport.client.send(
+        new SendEmailCommand({
+          FromEmailAddress: transport.from,
+          Destination: { ToAddresses: [email.to] },
+          ...(email.replyTo ? { ReplyToAddresses: [email.replyTo] } : {}),
+          Content: {
+            Simple: {
+              Subject: { Data: email.subject, Charset: 'UTF-8' },
+              Body: { Html: { Data: email.html, Charset: 'UTF-8' }, Text: { Data: text, Charset: 'UTF-8' } },
+            },
+          },
+          ConfigurationSetName: transport.configurationSet,
+          EmailTags: [{ Name: 'kind', Value: kind }],
+        }),
+      );
+      return;
+    }
     const response = await fetch('https://api.resend.com/emails', {
       method: 'POST',
       headers: {
-        Authorization: `Bearer ${sender.apiKey}`,
+        Authorization: `Bearer ${transport.apiKey}`,
         'Content-Type': 'application/json',
-        'Idempotency-Key': idempotencyKey,
+        'Idempotency-Key': dedupeKey,
       },
-      body: JSON.stringify({ from: sender.from, ...body }),
+      body: JSON.stringify({
+        from: transport.from,
+        to: [email.to],
+        subject: email.subject,
+        html: email.html,
+        text,
+        ...(email.replyTo ? { reply_to: email.replyTo } : {}),
+        tags: [{ name: 'kind', value: kind }],
+      }),
       signal: AbortSignal.timeout(10_000),
     });
     if (!response.ok) throw new Error(`Resend responded ${response.status}`);

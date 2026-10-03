@@ -11,6 +11,7 @@ import {
   PREVIEW_HEADER,
   STORE_PROXY_PREFIX,
   StoreRequestContext,
+  TURNSTILE_HEADER,
 } from './app/core/store-context';
 import { LEGAL_SLUGS } from './app/features/legal/legal-slugs';
 
@@ -21,6 +22,7 @@ const ALLOWED_HOSTS = (process.env['STORE_ALLOWED_HOSTS'] ?? 'localhost,*.localh
   .filter(Boolean);
 const PREVIEW_COOKIE = 'store_preview';
 const PREVIEW_TOKEN = /^\d{10}\.[A-Za-z0-9_-]{43}$/;
+const LOOPBACK_IP_HOST = /^(?:127\.0\.0\.1|\[::1\])(:\d+)?$/;
 const RESOLVE_TTL_MS = 60_000;
 const UPSTREAM_TIMEOUT_MS = 8_000;
 /** Paying waits for Mercado Pago (12 s) plus our own work. */
@@ -31,14 +33,17 @@ const PROXY_POST = /^(checkout|coupons\/preview|orders\/[a-z0-9]{20,40}\/(pay|ca
 
 /** Mercado Pago SDK, Card Payment Brick and Yape tokenization. */
 const MP = 'https://*.mercadopago.com https://*.mercadopago.com.pe https://*.mercadolibre.com https://*.mlstatic.com';
+/** Cloudflare Turnstile script and challenge iframe on the checkout. */
+const TURNSTILE = 'https://challenges.cloudflare.com';
+const TURNSTILE_TOKEN_MAX = 2048;
 const CONTENT_SECURITY_POLICY = [
   "default-src 'self'",
-  `script-src 'self' 'unsafe-inline' https://sdk.mercadopago.com ${MP}`,
+  `script-src 'self' 'unsafe-inline' https://sdk.mercadopago.com ${MP} ${TURNSTILE}`,
   `style-src 'self' 'unsafe-inline' https://*.mlstatic.com`,
   "img-src 'self' https: data:",
   "font-src 'self' https://fonts.gstatic.com https://*.mlstatic.com",
   `connect-src 'self' https://api.mercadopago.com ${MP}`,
-  `frame-src https://sdk.mercadopago.com ${MP}`,
+  `frame-src https://sdk.mercadopago.com ${MP} ${TURNSTILE}`,
   "frame-ancestors 'self'",
   "base-uri 'self'",
   "form-action 'self' https://*.mercadopago.com",
@@ -50,12 +55,12 @@ type ResolvedStore = {
   previewToken: string | null;
 };
 
-type ResolveOutcome = { slug: string } | { missing: true } | { failed: true };
+type ResolveOutcome = StoreResolveResult | { missing: true } | { failed: true };
 
 const browserDistFolder = join(import.meta.dirname, '../browser');
 const app = express();
 const angularApp = new AngularNodeAppEngine({ allowedHosts: ALLOWED_HOSTS });
-const resolveCache = new Map<string, { slug: string | null; expiresAt: number }>();
+const resolveCache = new Map<string, { store: StoreResolveResult | null; expiresAt: number }>();
 
 app.disable('x-powered-by');
 app.set('trust proxy', 'loopback, uniquelocal');
@@ -69,6 +74,18 @@ app.use((_req, res, next) => {
   }
   next();
 });
+
+/** Dev server only: stores resolve from `{slug}.localhost`, so loopback IP URLs move there. */
+if (!isMainModule(import.meta.url) && !process.env['pm_id']) {
+  app.use((req, res, next) => {
+    const loopback = LOOPBACK_IP_HOST.exec(req.get('host') ?? '');
+    if (!loopback) {
+      next();
+      return;
+    }
+    res.redirect(308, `${req.protocol}://localhost${loopback[1] ?? ''}${req.originalUrl}`);
+  });
+}
 
 app.get('/healthz', (_req, res) => {
   res.json({ ok: true });
@@ -92,6 +109,12 @@ app.use(async (req: Request, res: Response, next: NextFunction) => {
   }
   if ('missing' in outcome) {
     res.status(404).type('html').send(statusPage('Tienda no encontrada', 'Revisa que la dirección sea correcta.'));
+    return;
+  }
+  if (outcome.moved) {
+    // Temporary on purpose: the merchant may move back to this subdomain, and a cached 301 would loop.
+    const rest = host.slice(host.indexOf('.'));
+    res.redirect(302, `${req.protocol}://${outcome.slug}${rest}${req.originalUrl}`);
     return;
   }
 
@@ -136,6 +159,7 @@ app.use(STORE_PROXY_PREFIX, express.json({ limit: '32kb' }), async (req: Request
   }
   const store = res.locals['store'] as ResolvedStore;
   const query = req.originalUrl.includes('?') ? req.originalUrl.slice(req.originalUrl.indexOf('?')) : '';
+  const turnstile = post ? req.get(TURNSTILE_HEADER) : undefined;
   try {
     const upstream = await fetch(`${API_URL}/storefront/${store.slug}${path ? `/${path}` : ''}${query}`, {
       method: req.method,
@@ -143,6 +167,7 @@ app.use(STORE_PROXY_PREFIX, express.json({ limit: '32kb' }), async (req: Request
         ...previewHeaders(store),
         ...(post ? { 'content-type': 'application/json' } : {}),
         ...(req.ip ? { 'x-forwarded-for': req.ip } : {}),
+        ...(turnstile && turnstile.length <= TURNSTILE_TOKEN_MAX ? { [TURNSTILE_HEADER]: turnstile } : {}),
       },
       ...(post ? { body: JSON.stringify(req.body ?? {}) } : {}),
       signal: AbortSignal.timeout(post ? PAY_TIMEOUT_MS : UPSTREAM_TIMEOUT_MS),
@@ -212,15 +237,16 @@ async function resolveHost(host: string): Promise<ResolveOutcome> {
   const key = host.toLowerCase();
   const cached = resolveCache.get(key);
   if (cached && cached.expiresAt > Date.now()) {
-    return cached.slug ? { slug: cached.slug } : { missing: true };
+    return cached.store ?? { missing: true };
   }
-  let slug: string | null = null;
+  let store: StoreResolveResult | null = null;
   try {
     const response = await fetch(`${API_URL}/storefront/resolve?host=${encodeURIComponent(key)}`, {
       signal: AbortSignal.timeout(UPSTREAM_TIMEOUT_MS),
     });
     if (response.ok) {
-      slug = ((await response.json()) as StoreResolveResult).slug;
+      const body = (await response.json()) as StoreResolveResult;
+      store = { slug: body.slug, moved: body.moved === true };
     } else if (response.status !== 404 && response.status !== 400) {
       return { failed: true };
     }
@@ -231,8 +257,8 @@ async function resolveHost(host: string): Promise<ResolveOutcome> {
   if (resolveCache.size > 5000) {
     resolveCache.clear();
   }
-  resolveCache.set(key, { slug, expiresAt: Date.now() + RESOLVE_TTL_MS });
-  return slug ? { slug } : { missing: true };
+  resolveCache.set(key, { store, expiresAt: Date.now() + RESOLVE_TTL_MS });
+  return store ?? { missing: true };
 }
 
 function previewHeaders(store: ResolvedStore): Record<string, string> {

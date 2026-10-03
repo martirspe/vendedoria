@@ -2,7 +2,8 @@ import type { MerchantCredentials } from './merchant-accounts.service';
 
 export type CreateCheckoutInput = {
   idempotencyKey: string;
-  orderId: string;
+  /** Buyer order (flow B); plan payments (flow A) have none. */
+  orderId?: string;
   paymentId: string;
   title: string;
   amountCents: number;
@@ -26,6 +27,9 @@ export type NormalizedWebhookEvent = {
   externalId: string | null;
   externalReference: string | null;
   status: 'PENDING' | 'SUCCEEDED' | 'FAILED' | 'CANCELLED';
+  /** Amount actually charged, when the provider reports it. */
+  amountCents?: number;
+  currency?: string;
   raw: unknown;
 };
 

@@ -1,12 +1,20 @@
 @use './styles/tokens';
 
+// Self-hosted (public/fonts): the console CSP only allows fonts from 'self'.
 @font-face {
   font-family: 'Manrope';
   font-style: normal;
   font-weight: 400 800;
   font-display: swap;
-  src: url('https://fonts.gstatic.com/s/manrope/v15/xn7_YHE41ni1AdIRggexSg.woff2')
-    format('woff2');
+  src: url('/fonts/manrope-latin.woff2') format('woff2');
+}
+
+@font-face {
+  font-family: 'Satoshi';
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: url('/fonts/satoshi-700.woff2') format('woff2');
 }
 
 *,

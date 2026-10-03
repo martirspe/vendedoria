@@ -1,33 +1,82 @@
-<section class="auth ds-page-shell">
-  <a class="auth__brand" routerLink="/">VendedorIA</a>
-  <h1>Entrar</h1>
-  <p>Continúa gestionando tus agentes y conversaciones.</p>
+<app-auth-shell title="Inicia sesión" lead="Gestiona tus agentes, conversaciones y ventas.">
+  <form
+    class="auth-form"
+    [formGroup]="form"
+    (ngSubmit)="submit()"
+    [attr.aria-busy]="submitting()"
+    novalidate
+  >
+    <div class="auth-field">
+      <label for="login-email">Email</label>
+      <span class="auth-input">
+        <span class="auth-input__icon" aria-hidden="true">
+          <ds-icon name="mail" [size]="1.05" />
+        </span>
+        <input
+          id="login-email"
+          formControlName="email"
+          type="email"
+          autocomplete="email"
+          inputmode="email"
+          autocapitalize="none"
+          spellcheck="false"
+          placeholder="tu@negocio.com"
+          [attr.aria-invalid]="emailError() ? true : null"
+          [attr.aria-describedby]="emailError() ? 'login-email-error' : null"
+        />
+      </span>
+      @if (emailError(); as message) {
+        <p id="login-email-error" class="auth-field__error">{{ message }}</p>
+      }
+    </div>
 
-  <form class="auth__form" [formGroup]="form" (ngSubmit)="submit()">
-    <label>
-      Email
-      <input formControlName="email" type="email" autocomplete="email" />
-    </label>
-    <label>
-      Contraseña
-      <input
-        formControlName="password"
-        type="password"
-        autocomplete="current-password"
-      />
-    </label>
+    <div class="auth-field">
+      <label for="login-password">Contraseña</label>
+      <span class="auth-input auth-input--password">
+        <span class="auth-input__icon" aria-hidden="true">
+          <ds-icon name="lockKeyhole" [size]="1.05" />
+        </span>
+        <input
+          id="login-password"
+          formControlName="password"
+          [type]="showPassword() ? 'text' : 'password'"
+          autocomplete="current-password"
+          [attr.aria-invalid]="passwordError() ? true : null"
+          [attr.aria-describedby]="passwordError() ? 'login-password-error' : null"
+        />
+        <button
+          type="button"
+          class="auth-input__toggle"
+          [attr.aria-label]="showPassword() ? 'Ocultar contraseña' : 'Mostrar contraseña'"
+          [attr.aria-pressed]="showPassword()"
+          (click)="showPassword.set(!showPassword())"
+        >
+          <ds-icon [name]="showPassword() ? 'eyeOff' : 'eye'" [size]="1.05" />
+        </button>
+      </span>
+      @if (passwordError(); as message) {
+        <p id="login-password-error" class="auth-field__error">{{ message }}</p>
+      }
+    </div>
 
-    @if (errorMessage(); as error) {
-      <p class="auth__error" role="alert">{{ error }}</p>
+    @if (turnstileSiteKey(); as siteKey) {
+      <ds-turnstile [siteKey]="siteKey" action="login" theme="light" />
     }
 
-    <ds-button type="submit" [disabled]="submitting()">
-      {{ submitting() ? 'Entrando…' : 'Entrar' }}
+    @if (errorMessage(); as error) {
+      <p class="auth-alert" role="alert">
+        <ds-icon name="circleAlert" [size]="1.05" />
+        <span>{{ error }}</span>
+      </p>
+    }
+
+    <ds-button type="submit" [block]="true" [disabled]="submitting()">
+      {{ submitting() ? 'Entrando…' : 'Iniciar sesión' }}
     </ds-button>
   </form>
 
-  <p class="auth__footer">
+  <p class="auth-switch" authFooter>
     ¿Nuevo en VendedorIA?
     <a routerLink="/auth/register">Crear cuenta</a>
   </p>
-</section>
+</app-auth-shell>

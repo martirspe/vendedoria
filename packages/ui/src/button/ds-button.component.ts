@@ -15,6 +15,7 @@ export type DsButtonVariant = 'primary' | 'secondary' | 'ghost';
       [class.ds-button--primary]="variant() === 'primary'"
       [class.ds-button--secondary]="variant() === 'secondary'"
       [class.ds-button--ghost]="variant() === 'ghost'"
+      [class.ds-button--block]="block()"
       [disabled]="disabled()"
       [attr.type]="type()"
       [attr.aria-label]="label()"
@@ -22,7 +23,16 @@ export type DsButtonVariant = 'primary' | 'secondary' | 'ghost';
       <ng-content />
     </button>
   `,
+  host: { '[class.ds-button-host--block]': 'block()' },
   styles: `
+    :host(.ds-button-host--block) {
+      display: block;
+    }
+
+    .ds-button--block {
+      width: 100%;
+    }
+
     .ds-button {
       display: inline-flex;
       gap: var(--ds-space-2);
@@ -71,6 +81,8 @@ export type DsButtonVariant = 'primary' | 'secondary' | 'ghost';
 export class DsButtonComponent {
   readonly variant = input<DsButtonVariant>('primary');
   readonly disabled = input(false);
+  /** Stretches the button to the width of its container. */
+  readonly block = input(false);
   /** Accessible name for icon-only buttons. */
   readonly label = input<string | null>(null);
   readonly type = input<'button' | 'submit' | 'reset'>('button');
