@@ -47,7 +47,7 @@ Each item: verify in the repo, fix repo gaps, and list server-side actions as "D
 ## Data & operations
 - [ ] Backups for Postgres and uploads documented and tested (restore path in README).
 - [ ] Logs: Fastify logger level appropriate; no PII; log rotation on the host.
-- [ ] Seed scripts (`apps/api/scripts/seed-*.mjs`) are manual tools, not executed by the production stack.
+- [ ] Seed scripts (`apps/api/scripts/seed-*.mjs`) are manual dev tools, not executed by the production stack; real stores load catalogs through Productos → Importar catálogo.
 - [ ] Health endpoints: `/api/v1/health`, store `/healthz`, web `/healthz`, nginx `/nginx-health` wired to healthchecks.
 
 ## Release hygiene

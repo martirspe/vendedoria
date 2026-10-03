@@ -32,8 +32,30 @@ export type SalesAgentDto = {
   neverOfferDiscount: boolean;
   neverInventShipping: boolean;
   catalogOnlyFacts: boolean;
+  salesTechniques: string[];
+  objectionHandling: string | null;
+  promptMode: SalesAgentPromptMode;
+  customPrompt: string | null;
   isActive: boolean;
+  isPrimary: boolean;
+  channelIds: string[];
   quality: AgentQuality;
+};
+
+export type SalesAgentPromptMode = 'guided' | 'custom';
+
+export type SalesAgentSummaryDto = {
+  id: string;
+  name: string;
+  isActive: boolean;
+  promptMode: SalesAgentPromptMode;
+  isPrimary: boolean;
+  channelIds: string[];
+};
+
+export type SalesAgentPromptDto = {
+  guidedPersona: string;
+  effectivePrompt: string;
 };
 
 export type UpdateSalesAgentPayload = Partial<{
@@ -55,6 +77,10 @@ export type UpdateSalesAgentPayload = Partial<{
   neverOfferDiscount: boolean;
   neverInventShipping: boolean;
   catalogOnlyFacts: boolean;
+  salesTechniques: string[];
+  objectionHandling: string;
+  promptMode: SalesAgentPromptMode;
+  customPrompt: string;
   isActive: boolean;
 }>;
 
@@ -106,11 +132,52 @@ export class AgentsApiService {
     );
   }
 
-  updatePrimary(payload: UpdateSalesAgentPayload) {
+  list() {
+    return firstValueFrom(
+      this.http.get<SalesAgentSummaryDto[]>(`${environment.apiBaseUrl}/agents`),
+    );
+  }
+
+  get(id: string) {
+    return firstValueFrom(
+      this.http.get<SalesAgentDto>(`${environment.apiBaseUrl}/agents/${id}`),
+    );
+  }
+
+  create(payload: { name: string; copyFromId?: string }) {
+    return firstValueFrom(
+      this.http.post<SalesAgentDto>(`${environment.apiBaseUrl}/agents`, payload),
+    );
+  }
+
+  update(id: string, payload: UpdateSalesAgentPayload) {
     return firstValueFrom(
       this.http.patch<SalesAgentDto>(
-        `${environment.apiBaseUrl}/agents/primary`,
+        `${environment.apiBaseUrl}/agents/${id}`,
         payload,
+      ),
+    );
+  }
+
+  remove(id: string) {
+    return firstValueFrom(
+      this.http.delete<{ deleted: boolean }>(`${environment.apiBaseUrl}/agents/${id}`),
+    );
+  }
+
+  assignChannels(id: string, channelIds: string[]) {
+    return firstValueFrom(
+      this.http.put<SalesAgentDto>(
+        `${environment.apiBaseUrl}/agents/${id}/channels`,
+        { channelIds },
+      ),
+    );
+  }
+
+  getPrompt(id: string) {
+    return firstValueFrom(
+      this.http.get<SalesAgentPromptDto>(
+        `${environment.apiBaseUrl}/agents/${id}/prompt`,
       ),
     );
   }
@@ -132,11 +199,11 @@ export class AgentsApiService {
     );
   }
 
-  sendPlaygroundMessage(sessionId: string, text: string) {
+  sendPlaygroundMessage(sessionId: string, text: string, agentId?: string) {
     return firstValueFrom(
       this.http.post<PlaygroundSendResult>(
         `${environment.apiBaseUrl}/agents/playground/sessions/${sessionId}/messages`,
-        { text },
+        { text, agentId },
       ),
     );
   }

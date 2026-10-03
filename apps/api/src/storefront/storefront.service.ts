@@ -1,17 +1,19 @@
-import { BadRequestException, ConflictException, Injectable } from '@nestjs/common';
+import { BadRequestException, ConflictException, ForbiddenException, Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { Prisma, Storefront } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
-import { findUbigeo } from '../ubigeo/ubigeo';
 import { RUC, UpdateStorefrontDto } from './dto/update-storefront.dto';
 import { shippingOptions } from './shipping';
+import { ensureStorefront } from './storefront-row';
 import { readTemplateCopy, templateAllowed } from './store-templates';
 import {
+  customDomainUrl,
   DEFAULT_STOREFRONT_URL_TEMPLATE,
   RESERVED_SLUGS,
   storefrontUrl,
 } from './storefront-host';
 import { createPreviewToken } from './storefront-preview';
+import { activeCustomDomain, isIntegrationActive } from '../integrations/integration-state';
 
 const SUBDOMAIN_CHANGES_PER_WINDOW = 3;
 const SUBDOMAIN_WINDOW_MS = 30 * 24 * 60 * 60 * 1000;
@@ -60,6 +62,7 @@ export class StorefrontService {
     tenantId: string,
     dto: UpdateStorefrontDto,
   ): Promise<StorefrontSettingsView> {
+    await this.assertEnabled(tenantId);
     const current = await this.ensure(tenantId);
     const industry = dto.industry ?? current.industry;
     let template = dto.template ?? current.template;
@@ -68,9 +71,6 @@ export class StorefrontService {
         throw new BadRequestException('Esa plantilla no está disponible para el rubro de tu negocio.');
       }
       template = 'classic';
-    }
-    if (dto.shippingOriginUbigeo && !findUbigeo(dto.shippingOriginUbigeo)) {
-      throw new BadRequestException('Elige un distrito de origen válido.');
     }
     const storefront = await this.prisma.storefront.update({
       where: { tenantId },
@@ -84,17 +84,6 @@ export class StorefrontService {
                 : Prisma.DbNull,
             }
           : {}),
-        ...(dto.carrierRates !== undefined
-          ? {
-              carrierRates: dto.carrierRates
-                ? ({
-                    ...(dto.carrierRates.olva ? { olva: dto.carrierRates.olva } : {}),
-                    ...(dto.carrierRates.shalom ? { shalom: dto.carrierRates.shalom } : {}),
-                  } as Prisma.JsonObject)
-                : Prisma.DbNull,
-            }
-          : {}),
-        shippingOriginUbigeo: this.optionalText(dto.shippingOriginUbigeo),
         displayName: dto.displayName?.trim(),
         tagline: this.optionalText(dto.tagline),
         logoUrl: this.optionalText(dto.logoUrl),
@@ -111,10 +100,6 @@ export class StorefrontService {
         complaintsBookUrl: this.optionalText(dto.complaintsBookUrl),
         dataBankCode: this.optionalText(dto.dataBankCode),
         exchangeDays: dto.exchangeDays,
-        deliveryEnabled: dto.deliveryEnabled,
-        freeShippingFromCents: dto.freeShippingFromCents,
-        pickupEnabled: dto.pickupEnabled,
-        pickupAddress: this.optionalText(dto.pickupAddress),
       },
     });
     return this.view(tenantId, storefront);
@@ -128,6 +113,7 @@ export class StorefrontService {
     if (RESERVED_SLUGS.has(slug)) {
       throw new BadRequestException('Esa dirección está reservada. Elige otra.');
     }
+    await this.assertEnabled(tenantId);
     const storefront = await this.ensure(tenantId);
     const tenant = await this.prisma.tenant.findUniqueOrThrow({
       where: { id: tenantId },
@@ -167,6 +153,7 @@ export class StorefrontService {
   }
 
   async publish(tenantId: string): Promise<StorefrontSettingsView> {
+    await this.assertEnabled(tenantId);
     const current = await this.get(tenantId);
     if (!current.canPublish) {
       const missing = current.checklist
@@ -196,6 +183,7 @@ export class StorefrontService {
   }
 
   async showAvailableProducts(tenantId: string): Promise<StorefrontSettingsView> {
+    await this.assertEnabled(tenantId);
     const storefront = await this.ensure(tenantId);
     await this.prisma.product.updateMany({
       where: { tenantId, isAvailable: true, isPublishedOnStore: false },
@@ -205,6 +193,7 @@ export class StorefrontService {
   }
 
   async previewLink(tenantId: string): Promise<{ url: string; expiresAt: Date }> {
+    await this.assertEnabled(tenantId);
     const tenant = await this.prisma.tenant.findUniqueOrThrow({
       where: { id: tenantId },
       select: { slug: true },
@@ -219,22 +208,14 @@ export class StorefrontService {
     return { url: url.toString(), expiresAt };
   }
 
-  private async ensure(tenantId: string): Promise<Storefront> {
-    const existing = await this.prisma.storefront.findUnique({
-      where: { tenantId },
-    });
-    if (existing) {
-      return existing;
+  private async assertEnabled(tenantId: string): Promise<void> {
+    if (!(await isIntegrationActive(this.prisma, tenantId, 'store'))) {
+      throw new ForbiddenException('Activa «Tienda web» en Integraciones para configurar y publicar tu tienda.');
     }
-    const tenant = await this.prisma.tenant.findUniqueOrThrow({
-      where: { id: tenantId },
-      select: { name: true },
-    });
-    return this.prisma.storefront.upsert({
-      where: { tenantId },
-      create: { tenantId, displayName: tenant.name },
-      update: {},
-    });
+  }
+
+  private ensure(tenantId: string): Promise<Storefront> {
+    return ensureStorefront(this.prisma, tenantId);
   }
 
   private async view(
@@ -307,7 +288,7 @@ export class StorefrontService {
         label: 'Formas de entrega',
         done: shippingOptions(storefront).length > 0,
         required: true,
-        impact: 'El comprador elige cómo recibe su pedido y ve el costo antes de pagar.',
+        impact: 'Se configuran en Envíos. El comprador elige cómo recibe su pedido y ve el costo antes de pagar.',
       },
       {
         id: 'logo',
@@ -324,9 +305,10 @@ export class StorefrontService {
         impact: 'Mejora cómo aparece la tienda en buscadores y al compartir el enlace.',
       },
     ];
+    const domain = await activeCustomDomain(this.prisma, tenantId);
     return {
       storefront,
-      url: storefrontUrl(this.urlTemplate(), tenant.slug),
+      url: domain ? customDomainUrl(this.urlTemplate(), domain) : storefrontUrl(this.urlTemplate(), tenant.slug),
       totalProducts,
       publishedProducts,
       availableProducts,

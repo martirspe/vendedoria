@@ -12,6 +12,7 @@ import {
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import type { PublicVariant } from '@vendedoria/contracts';
+import { AnalyticsService } from '../../core/analytics.service';
 import { CartService } from '../../core/cart.service';
 import { MoneyPipe } from '../../core/money.pipe';
 import { markNotFound } from '../../core/not-found-status';
@@ -47,6 +48,7 @@ export class SelectaProductPage {
   private readonly seo = inject(SeoService);
   private readonly state = inject(StoreStateService);
   private readonly catalog = inject(SelectaCatalog);
+  private readonly analytics = inject(AnalyticsService);
   readonly cart = inject(CartService);
   readonly store = this.state.store;
 
@@ -224,6 +226,7 @@ export class SelectaProductPage {
     const variants = p?.variants ?? [];
     this.variantId.set((variants.find((v) => v.isAvailable) ?? variants[0])?.id ?? null);
     if (p) this.setSeo(p);
+    if (p) this.analytics.viewProduct(p);
     if (typeof document !== 'undefined') {
       setTimeout(() => {
         this.track()?.nativeElement.scrollTo({ left: 0 });

@@ -1,5 +1,17 @@
 {
  "source": "Selecta (export de la base, 2026-10-02)",
+ "store": {
+  "industry": "belleza",
+  "template": "selecta",
+  "freeShippingFromCents": 50000,
+  "shippingOriginUbigeo": "150132",
+  "carrierRates": {
+   "olva": [900, 1200, 1600, 2200, 2800],
+   "shalom": [800, 1000, 1400, 1800, 2400]
+  },
+  "heroImage": "/images/products/set-icono-yanbal/ritual.jpg",
+  "bannerImage": "/images/products/set-osadia-infinita-yanbal/ritual.jpg"
+ },
  "products": [
   {
    "slug": "set-aires-andes-y-caribe",

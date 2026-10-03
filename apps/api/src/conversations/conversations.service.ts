@@ -5,8 +5,10 @@ import {
   Logger,
   NotFoundException,
 } from '@nestjs/common';
-import { ChannelType, Prisma } from '@prisma/client';
+import { Channel, ChannelType, Prisma } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
+import { ChannelMessengerService } from '../channels/channel-messenger.service';
+import { isIntegrationActive } from '../integrations/integration-state';
 import { buildAgentContext, HISTORY_LIMIT } from '../agent-runtime/conversation-context';
 import { SalesAgentRuntimeService } from '../agent-runtime/sales-agent-runtime.service';
 import { PlanLimitsService } from '../billing/plan-limits.service';
@@ -30,6 +32,7 @@ export class ConversationsService {
     private readonly prisma: PrismaService,
     private readonly agentRuntime: SalesAgentRuntimeService,
     private readonly metaWhatsApp: MetaWhatsAppClient,
+    private readonly messenger: ChannelMessengerService,
     private readonly planLimits: PlanLimitsService,
     private readonly media: MediaService,
     private readonly inboxEvents: InboxEventsService,
@@ -159,25 +162,12 @@ export class ConversationsService {
       );
     }
 
-    const metadata = asWhatsAppMetadata(conversation.channel.metadata);
-    let externalId: string | undefined;
-
-    if (
-      conversation.channel.type === 'WHATSAPP' &&
-      metadata &&
-      conversation.contactPhone
-    ) {
-      const send = await this.metaWhatsApp.sendTextMessage({
-        phoneNumberId: metadata.phoneNumberId,
-        accessToken: metadata.accessToken,
-        toPhone: conversation.contactPhone,
-        text,
-      });
-      if (!send.ok) {
-        this.logger.warn(`Operator outbound failed: ${send.error}`);
-      }
-      externalId = send.messageId;
+    const recipient = this.messenger.recipientOf(conversation.channel, conversation);
+    const send = recipient ? await this.messenger.sendText(conversation.channel, recipient, text) : null;
+    if (send && !send.ok) {
+      this.logger.warn(`Operator outbound failed: ${send.error}`);
     }
+    const externalId = send?.messageId;
 
     const [message] = await this.prisma.$transaction([
       this.prisma.message.create({
@@ -326,12 +316,62 @@ export class ConversationsService {
       return { ignored: true };
     }
 
+    return this.ingestInbound(channel, {
+      threadId: params.fromPhone,
+      contactPhone: params.fromPhone,
+      contactName: params.contactName,
+      text: params.text,
+      externalMessageId: params.externalMessageId,
+    });
+  }
+
+  async ingestInboundInstagram(params: {
+    accountId: string;
+    senderId: string;
+    text: string;
+    externalMessageId?: string;
+  }) {
+    if (params.externalMessageId) {
+      const existing = await this.prisma.message.findFirst({
+        where: { externalId: params.externalMessageId },
+      });
+      if (existing) {
+        return { duplicate: true };
+      }
+    }
+
+    const channel = await this.prisma.channel.findFirst({
+      where: { type: 'INSTAGRAM', externalId: params.accountId },
+    });
+    if (!channel || !(await isIntegrationActive(this.prisma, channel.tenantId, 'instagram'))) {
+      this.logger.warn(`No active Instagram channel for accountId=${params.accountId}`);
+      return { ignored: true };
+    }
+
+    return this.ingestInbound(channel, {
+      threadId: params.senderId,
+      contactPhone: null,
+      text: params.text,
+      externalMessageId: params.externalMessageId,
+    });
+  }
+
+  private async ingestInbound(
+    channel: Channel,
+    params: {
+      threadId: string;
+      contactPhone: string | null;
+      contactName?: string;
+      text: string;
+      externalMessageId?: string;
+    },
+  ) {
     const now = new Date();
     const existingConversation = await this.prisma.conversation.findUnique({
       where: {
         channelId_externalThreadId: {
           channelId: channel.id,
-          externalThreadId: params.fromPhone,
+          externalThreadId: params.threadId,
         },
       },
     });
@@ -344,14 +384,14 @@ export class ConversationsService {
       where: {
         channelId_externalThreadId: {
           channelId: channel.id,
-          externalThreadId: params.fromPhone,
+          externalThreadId: params.threadId,
         },
       },
       create: {
         tenantId: channel.tenantId,
         channelId: channel.id,
-        externalThreadId: params.fromPhone,
-        contactPhone: params.fromPhone,
+        externalThreadId: params.threadId,
+        contactPhone: params.contactPhone,
         contactName: params.contactName,
         lastInboundAt: now,
         status: 'OPEN',
@@ -401,30 +441,26 @@ export class ConversationsService {
 
     const agentResult = await this.agentRuntime.generateReply({
       tenantId,
+      channelId: channel.id,
       conversationId: conversation.id,
       inboundText: params.text,
       mode: 'production',
       customerName: conversation.contactName,
-      customerPhone: conversation.contactPhone ?? params.fromPhone,
+      customerPhone: conversation.contactPhone ?? params.contactPhone,
       history: context.history,
       shownImageProductIds: context.shownImageProductIds,
+      allowAi: await this.planLimits.canUseAi(tenantId),
     });
-
-    const metadata = asWhatsAppMetadata(channel.metadata);
-    let outboundExternalId: string | undefined;
-
-    if (metadata) {
-      const send = await this.metaWhatsApp.sendTextMessage({
-        phoneNumberId: metadata.phoneNumberId,
-        accessToken: metadata.accessToken,
-        toPhone: params.fromPhone,
-        text: agentResult.replyText,
-      });
-      outboundExternalId = send.messageId;
-      if (!send.ok) {
-        this.logger.warn(`Agent WhatsApp send failed: ${send.error}`);
-      }
+    if (agentResult.usedAi) {
+      await this.planLimits.recordAiReply(tenantId);
     }
+
+    const send = await this.messenger.sendText(channel, params.threadId, agentResult.replyText);
+    const outboundExternalId = send?.messageId;
+    if (send && !send.ok) {
+      this.logger.warn(`Agent ${channel.type} send failed: ${send.error}`);
+    }
+    const metadata = channel.type === 'WHATSAPP' ? asWhatsAppMetadata(channel.metadata) : null;
 
     await this.prisma.message.create({
       data: {
@@ -444,13 +480,13 @@ export class ConversationsService {
     });
     this.inboxEvents.publish(tenantId, conversation.id);
 
-    for (const image of agentResult.images) {
+    for (const image of channel.type === 'WHATSAPP' ? agentResult.images : []) {
       let imageExternalId: string | undefined;
       if (metadata) {
         const send = await this.metaWhatsApp.sendImageMessage({
           phoneNumberId: metadata.phoneNumberId,
           accessToken: metadata.accessToken,
-          toPhone: params.fromPhone,
+          toPhone: params.threadId,
           caption: image.caption,
           cacheKey: image.imageUrl,
           loadJpeg: () => this.media.jpegForMessaging(image.imageUrl),

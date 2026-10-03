@@ -20,20 +20,51 @@
     </div>
 
     <nav class="console__nav">
-      @for (group of navGroups; track group.id) {
+      @for (group of navGroups(); track group.id) {
         <div class="console__group">
-          <p class="console__group-label">{{ group.label }}</p>
+          @if (group.label) {
+            <p class="console__group-label">{{ group.label }}</p>
+          }
           <ul class="console__list">
             @for (item of group.items; track item.path) {
               <li>
-                <a
-                  [routerLink]="item.path"
-                  routerLinkActive="is-active"
-                  [attr.aria-label]="item.label"
-                >
-                  <ds-icon [name]="item.icon" [size]="1.1" />
-                  <span>{{ item.label }}</span>
-                </a>
+                @if (item.children) {
+                  <div class="console__parent" [class.is-open]="isExpanded(item)">
+                    <a
+                      [routerLink]="item.path"
+                      [class.is-active]="isInSection(item)"
+                    >
+                      <ds-icon [name]="item.icon" [size]="1.1" />
+                      <span>{{ item.label }}</span>
+                    </a>
+                    <button
+                      type="button"
+                      class="console__toggle"
+                      [attr.aria-expanded]="isExpanded(item)"
+                      [attr.aria-controls]="'nav-' + group.id"
+                      [attr.aria-label]="(isExpanded(item) ? 'Ocultar' : 'Mostrar') + ' secciones de ' + item.label"
+                      (click)="toggleItem(item)"
+                    >
+                      <ds-icon name="chevronDown" [size]="0.95" />
+                    </button>
+                  </div>
+                  @if (isExpanded(item)) {
+                    <ul class="console__sublist" [id]="'nav-' + group.id">
+                      @for (child of item.children; track child.path) {
+                        <li>
+                          <a [routerLink]="child.path" routerLinkActive="is-active">
+                            {{ child.label }}
+                          </a>
+                        </li>
+                      }
+                    </ul>
+                  }
+                } @else {
+                  <a [routerLink]="item.path" routerLinkActive="is-active">
+                    <ds-icon [name]="item.icon" [size]="1.1" />
+                    <span>{{ item.label }}</span>
+                  </a>
+                }
               </li>
             }
           </ul>
@@ -42,6 +73,16 @@
     </nav>
 
     <div class="console__footer">
+      <ul class="console__list">
+        @for (item of footerItems(); track item.path) {
+          <li>
+            <a [routerLink]="item.path" routerLinkActive="is-active">
+              <ds-icon [name]="item.icon" [size]="1.1" />
+              <span>{{ item.label }}</span>
+            </a>
+          </li>
+        }
+      </ul>
       <button type="button" class="console__logout" (click)="logout()">
         <ds-icon name="logOut" [size]="1.1" />
         <span>Cerrar sesión</span>
@@ -53,7 +94,11 @@
     @if (quotaWarning(); as warning) {
       <div class="console__quota" role="status">
         <span>{{ warning }}</span>
-        <a routerLink="/app/plans">Ver planes</a>
+        @if (quotaAction() === 'onboarding') {
+          <a [href]="onboardingUrl" target="_blank" rel="noopener">Agendar mi sesión</a>
+        } @else {
+          <a routerLink="/app/plans">Ver planes</a>
+        }
       </div>
     }
 

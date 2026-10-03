@@ -1,30 +1,42 @@
 # AWS setup reference (S3 + CloudFront + SES)
 
-Placeholders: `BUCKET` (e.g. `vendedoria-media-prod`), `REGION` (e.g. `us-east-1`), `ACCOUNT_ID`, `DISTRIBUTION_ID`, `DOMAIN` (sender domain, e.g. `example.pe`), `CONFIG_SET` (e.g. `vendedoria-transactional`). Never commit the real values; they live only in the server `.env`.
+Placeholders: `BUCKET` (e.g. `vendedoria-media-prod`), `REGION` (e.g. `us-east-1`), `ACCOUNT_ID`, `DISTRIBUTION_ID`, `DOMAIN` (sender domain, e.g. `example.pe`), `CONFIG_SET` (e.g. `vendedoria-prod-transactional`). Never commit the real values; they live only in the server `.env`.
 
 Use one bucket, distribution and IAM user per environment (dev/staging/prod).
 
-## 0. Recommended: CloudFormation stack (S3 + CloudFront + IAM)
+## 0. Terraform (S3 + CloudFront + SES + IAM + Cloudflare DNS)
 
-`infra/aws/media-cdn.yaml` creates everything in sections 1, 2 and the media part of 4 in one reviewed, repeatable step. Deploy it in the region where the bucket should live (the distribution is global; an alias certificate must already exist in ACM **us-east-1**):
+`infra/terraform/` creates everything in sections 1–4 except the SES production access request and the IAM access key. Requirements: Terraform ≥ 1.10 **64-bit** (the Cloudflare provider has no `windows_386` build), AWS CLI with an operator profile (admin or enough rights for S3, CloudFront, ACM, SES, SNS, CloudWatch, IAM), and a Cloudflare API token limited to *Zone → DNS → Edit* on the zone.
 
-```bash
-aws cloudformation deploy \
-  --stack-name vendedoria-media-prod \
-  --template-file infra/aws/media-cdn.yaml \
-  --capabilities CAPABILITY_NAMED_IAM \
-  --parameter-overrides Environment=prod AppUserName=vendedoria-prod-api \
-    AliasDomain=media.example.pe AcmCertificateArn=arn:aws:acm:us-east-1:ACCOUNT_ID:certificate/ID
-aws cloudformation describe-stacks --stack-name vendedoria-media-prod --query "Stacks[0].Outputs"
+```powershell
+$env:AWS_PROFILE = "ops"
+$env:CLOUDFLARE_API_TOKEN = "<token>"   # only in the shell, never in a file
+
+# Once per AWS account: state bucket (local state)
+cd infra/terraform/bootstrap
+terraform init
+terraform apply -var aws_region=us-east-1
+terraform output -raw backend_config | Out-File -Encoding ascii ../backend.hcl   # `>` writes UTF-16 in Windows PowerShell
+
+# Once per machine, then once per environment
+cd ..
+terraform init -backend-config=backend.hcl
+terraform workspace new staging          # later: terraform workspace select staging
+copy envs/staging.tfvars.example envs/staging.tfvars   # fill zone id, domains, alerts email
+terraform plan -var-file=envs/staging.tfvars -out=staging.tfplan
+terraform apply staging.tfplan
+terraform output -raw server_env
 ```
 
-- Outputs → server `.env`: `MediaBucketName` → `MEDIA_S3_BUCKET`, `BucketRegion` → `AWS_REGION`, `MediaCdnUrl` → `MEDIA_CDN_URL`. `DistributionId` is only for the audit (`CLOUDFRONT_DISTRIBUTION_ID`).
-- With an alias: create the DNS `CNAME`/alias `media.example.pe → DistributionDomainName` after the stack finishes.
-- `AppUserName` (optional) attaches the managed media policy to an existing IAM user; the SES statement of section 4 is still added separately.
-- The bucket has `DeletionPolicy: Retain`: deleting the stack never deletes photos. Change parameters with the same `deploy` command (CloudFront updates take a few minutes).
-- Lint before changing it: `cfn-lint infra/aws/media-cdn.yaml`.
+- The workspace must match `environment` in the tfvars (a precondition stops the plan otherwise). Each workspace has its own state, locked with `use_lockfile`.
+- Before the first apply, check `_dmarc.DOMAIN`: if a DMARC record already exists keep `manage_dmarc = false` (two records invalidate DMARC). Also check that `bounce.DOMAIN` and the media host have no records yet.
+- `manage_account_settings = true` only in one workspace per account and SES region (prod): the suppression list and reputation alarms are account-wide.
+- Staging sends from a subdomain (`staging.DOMAIN`) so its SES identity does not collide with prod.
+- `server_env` gives every non-secret API variable. Then create the key by hand: `aws iam create-access-key --user-name <api_iam_user>` and put it only in the server `.env`.
+- The alerts e-mail receives an SNS confirmation message: confirm it, or no alarm or bounce notice arrives.
+- The bucket has `prevent_destroy`; `terraform destroy` fails instead of deleting photos.
 
-Sections 1, 2 and 4 below describe the same settings for console setup or review.
+Sections 1–4 below describe the same settings for review.
 
 ## 1. S3 bucket (private)
 
@@ -131,7 +143,7 @@ App user (or instance role) policy, attached to a dedicated principal per enviro
 
 ## 5. Rollout
 
-1. Deploy the `infra/aws/media-cdn.yaml` stack, then create the SES identity and the IAM user's SES statement (staging first).
+1. `terraform apply` on the staging workspace, then request SES production access (section 3, step 7) and create the API access key.
 2. Run `node .agents/skills/vendedoria-aws/scripts/check-aws.mjs --write-test` with the target env vars exported; fix every FAIL.
 3. Server `.env`: `AWS_REGION`, keys (if no role), `MEDIA_STORAGE=s3`, `MEDIA_S3_BUCKET`, `MEDIA_CDN_URL`; then `EMAIL_PROVIDER=ses`, `EMAIL_FROM`, optional `SES_REGION`/`SES_CONFIGURATION_SET`, and `EMAIL_MODE=live` only after production access is granted.
 4. `docker compose up -d --force-recreate api` (the API validates the settings at boot and exits with the missing variable names).

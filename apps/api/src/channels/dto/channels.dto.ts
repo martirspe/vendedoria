@@ -2,6 +2,8 @@ import {
   IsEnum,
   IsOptional,
   IsString,
+  Matches,
+  MaxLength,
   MinLength,
 } from 'class-validator';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
@@ -39,6 +41,22 @@ export class ConnectWhatsAppDto {
   @IsOptional()
   @IsString()
   wabaId?: string;
+}
+
+export class ConnectInstagramDto {
+  @ApiProperty({ description: 'Instagram user access token (Instagram API with Instagram Login)' })
+  @IsString()
+  @MinLength(10)
+  @MaxLength(1000)
+  accessToken!: string;
+
+  @ApiPropertyOptional({
+    example: '17841400000000000',
+    description: 'Instagram account ID; only used when the token cannot be checked (local development)',
+  })
+  @IsOptional()
+  @Matches(/^\d{5,30}$/)
+  accountId?: string;
 }
 
 export class SimulateInboundDto {

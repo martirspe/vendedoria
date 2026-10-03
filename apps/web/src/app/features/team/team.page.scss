@@ -1,0 +1,48 @@
+.people {
+  display: grid;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.people__row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--ds-space-3);
+  padding: var(--ds-space-3) 0;
+  border-top: 1px solid var(--ds-color-border);
+}
+
+.people__row:first-child {
+  border-top: 0;
+}
+
+.people__who {
+  display: grid;
+  flex: 1 1 12rem;
+  min-width: 0;
+}
+
+.people__who span {
+  overflow-wrap: anywhere;
+  color: var(--ds-color-text-secondary);
+  font-size: 0.85rem;
+}
+
+.card .people__role {
+  display: block;
+}
+
+.card .people__role select {
+  min-height: 2.25rem;
+}
+
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}

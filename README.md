@@ -44,6 +44,7 @@ npm run test:docker    # tests unitarios + e2e en una base aislada vendedoria_te
 - Cambios en dependencias (`package.json`): `npm run dev` de nuevo (el servicio `deps` ejecuta `npm ci`).
 - Migraciones nuevas: `docker compose -f docker-compose.dev.yml exec api npx prisma migrate dev --name <nombre>`.
 - Una sola vez, tras migrar del stack anterior: `npm run docker:clean-legacy` (conserva la base).
+- Operadores de la plataforma (SUPERADMIN / ADMIN): `docker compose -f docker-compose.dev.yml exec api npm run create-admin` (interactivo; `-- --help` muestra las opciones). Entran por `POST /api/v1/platform/auth/login`, con una sesión separada de la de los negocios.
 - Meta webhook: `GET/POST /api/v1/webhooks/meta/whatsapp`
 
 ## Producción (Docker)
@@ -55,7 +56,7 @@ cp .env.production.example .env   # dominio, CERTBOT_EMAIL y CLOUDFLARE_API_TOKE
 bash scripts/deploy.sh            # actualizar: bash scripts/deploy.sh --pull
 ```
 
-Web comercial en `marrso.com`, consola en `app.marrso.com` y tiendas en `{slug}.marrso.com`. Fotos en S3/CloudFront y correos con SES (opcional): plantilla `infra/aws/media-cdn.yaml` y pasos en `.agents/skills/vendedoria-aws/`.
+Web comercial en `marrso.com`, consola en `app.marrso.com` y tiendas en `{slug}.marrso.com`. Fotos en S3/CloudFront y correos con SES (opcional): infraestructura en Terraform (`infra/terraform/`), guía paso a paso en [docs/TERRAFORM.md](docs/TERRAFORM.md).
 
 ### Local WhatsApp slice smoke test
 

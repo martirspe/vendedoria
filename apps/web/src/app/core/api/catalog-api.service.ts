@@ -139,6 +139,66 @@ export type UpdateProductPayload = ProductExtrasPayload & {
   brand?: string | null;
 };
 
+export type CatalogImportOptions = {
+  updatePrices: boolean;
+  updateStock: boolean;
+  fullSync: boolean;
+  applyStoreSettings: boolean;
+};
+
+export type CatalogImportFile = { path: string; hash: string };
+
+export type CatalogImportPayload = {
+  catalog: string;
+  files: CatalogImportFile[];
+  options: CatalogImportOptions;
+};
+
+export type CatalogImportIssue = { level: 'error' | 'warning'; handle: string | null; message: string };
+
+export type CatalogImportReport = {
+  source: string | null;
+  canImport: boolean;
+  summary: {
+    products: number;
+    create: number;
+    update: number;
+    sets: number;
+    publish: number;
+    unpublished: number;
+    priceChanges: number;
+    stockChanges: number;
+    hide: number;
+    photos: number;
+    uploads: number;
+  };
+  products: {
+    handle: string;
+    name: string;
+    action: 'create' | 'update';
+    isSet: boolean;
+    priceCents: number;
+    published: boolean;
+    photos: number;
+    missingPhotos: number;
+    priceChange: { from: number; to: number } | null;
+    stockChange: { from: number | null; to: number } | null;
+  }[];
+  hidden: { handle: string; name: string }[];
+  store: { available: boolean; changes: string[] };
+  plan: { used: number; quota: number | null; after: number };
+  issues: CatalogImportIssue[];
+  uploads: { hash: string; path: string }[];
+};
+
+export type CatalogImportResult = {
+  created: number;
+  updated: number;
+  published: number;
+  hidden: number;
+  storeUpdated: boolean;
+};
+
 @Injectable({ providedIn: 'root' })
 export class CatalogApiService {
   private readonly http = inject(HttpClient);
@@ -148,6 +208,20 @@ export class CatalogApiService {
   /** `data` is base64 without the data-URL prefix; the browser resizes before upload. */
   uploadMedia(contentType: 'image/jpeg' | 'image/png' | 'image/webp', data: string): Promise<{ url: string }> {
     return firstValueFrom(this.http.post<{ url: string }>(`${this.root}/media`, { contentType, data }));
+  }
+
+  previewImport(payload: CatalogImportPayload): Promise<CatalogImportReport> {
+    return firstValueFrom(this.http.post<CatalogImportReport>(`${this.root}/import/preview`, payload));
+  }
+
+  uploadImportMedia(contentType: 'image/jpeg' | 'image/png' | 'image/webp', data: string): Promise<{ url: string }> {
+    return firstValueFrom(this.http.post<{ url: string }>(`${this.root}/import/media`, { contentType, data }));
+  }
+
+  commitImport(
+    payload: CatalogImportPayload & { uploaded: { hash: string; url: string }[] },
+  ): Promise<CatalogImportResult> {
+    return firstValueFrom(this.http.post<CatalogImportResult>(`${this.root}/import`, payload));
   }
 
   inventory(): Promise<InventoryRow[]> {

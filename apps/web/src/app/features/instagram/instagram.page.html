@@ -1,0 +1,97 @@
+<section class="store">
+  <header class="store__header">
+    <div>
+      <p class="store__eyebrow">Canales</p>
+      <h1>Instagram Direct</h1>
+      <p>
+        Tu vendedor IA responde los mensajes directos de tu cuenta profesional de Instagram
+        con la misma información de tu catálogo. Las conversaciones llegan a Mensajes.
+      </p>
+    </div>
+  </header>
+
+  @if (errorMessage(); as error) {
+    <div class="banner banner--danger" role="alert">
+      <ds-icon name="alert" />
+      <span>{{ error }}</span>
+      @if (!status()) {
+        <ds-button type="button" variant="secondary" (click)="load()">Reintentar</ds-button>
+      }
+    </div>
+  }
+  @if (successMessage(); as success) {
+    <div class="banner banner--success" role="status">
+      <ds-icon name="check" />
+      <span>{{ success }}</span>
+    </div>
+  }
+
+  @if (loading()) {
+    <div class="skeleton" aria-busy="true">Cargando tu conexión…</div>
+  } @else if (!active()) {
+    <app-integration-gate key="instagram" />
+  } @else if (status(); as s) {
+    <div class="status-card" [class.status-card--live]="connected()">
+      <span class="pill" [class.pill--ok]="connected()">{{ connected() ? 'Conectado' : 'Sin conectar' }}</span>
+      <div class="status-card__body">
+        <strong>{{ connected() ? (s.channel?.displayName ?? 'Instagram') : 'Aún no conectas tu cuenta' }}</strong>
+        <span>
+          @if (connected()) {
+            Tu vendedor responde los mensajes directos. Si escribes tú desde Mensajes, se pausa en esa conversación.
+          } @else {
+            Conecta tu cuenta profesional para que tu vendedor empiece a responder.
+          }
+        </span>
+      </div>
+      @if (connected() && canManage) {
+        <ds-button variant="ghost" [disabled]="saving()" (click)="disconnect()">Desconectar</ds-button>
+      }
+    </div>
+
+    @if (!receiving()) {
+      <div class="banner banner--danger" role="alert">
+        <ds-icon name="alert" />
+        <span>La recepción de mensajes de Instagram aún no está habilitada en la plataforma. Escríbenos desde Ayuda.</span>
+      </div>
+    }
+
+    <div class="store__grid">
+      @if (canManage) {
+        <form class="store__form" [formGroup]="form" (ngSubmit)="connect()">
+          <section class="card">
+            <h2>{{ connected() ? 'Cambiar de cuenta' : 'Conectar cuenta' }}</h2>
+            <label>
+              Token de acceso de Instagram
+              <input formControlName="accessToken" type="password" autocomplete="off" spellcheck="false" />
+              <small>Se usa solo para leer y responder tus mensajes directos.</small>
+            </label>
+            <label>
+              <span class="label-text">ID de la cuenta <span class="optional">Opcional</span></span>
+              <input formControlName="accountId" autocomplete="off" spellcheck="false" inputmode="numeric" />
+              <small>Lo detectamos con el token; complétalo solo si te lo pedimos.</small>
+            </label>
+          </section>
+          <footer>
+            <ds-button type="submit" [disabled]="saving()">
+              {{ saving() ? 'Conectando…' : connected() ? 'Guardar y verificar' : 'Conectar Instagram' }}
+            </ds-button>
+          </footer>
+        </form>
+      } @else {
+        <p class="hint">Solo el dueño o un administrador puede conectar Instagram.</p>
+      }
+
+      <aside class="store__rail">
+        <section class="card">
+          <h2>Antes de conectar</h2>
+          <ol class="steps">
+            <li>Tu cuenta de Instagram debe ser profesional (de empresa o de creador).</li>
+            <li>En la app de Instagram, ve a Configuración › Mensajes y respuestas a historias › Herramientas conectadas y activa «Permitir acceso a los mensajes».</li>
+            <li>Genera el token de acceso de tu cuenta en el panel de Meta para desarrolladores y pégalo aquí.</li>
+          </ol>
+          <small>Instagram solo permite responder dentro de las 24 horas siguientes al último mensaje del cliente.</small>
+        </section>
+      </aside>
+    </div>
+  }
+</section>

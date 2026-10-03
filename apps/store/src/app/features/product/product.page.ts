@@ -7,11 +7,13 @@ import {
   input,
   linkedSignal,
   signal,
+  untracked,
 } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import type { PublicProductDetail, PublicVariant } from '@vendedoria/contracts';
 import { DsIconComponent } from '@vendedoria/ui';
 import { ProductCardComponent } from '../../components/product-card.component';
+import { AnalyticsService } from '../../core/analytics.service';
 import { CartService } from '../../core/cart.service';
 import { MoneyPipe } from '../../core/money.pipe';
 import { SeoService } from '../../core/seo.service';
@@ -34,6 +36,7 @@ type OptionGroup = {
 export class ProductPage {
   private readonly seo = inject(SeoService);
   private readonly cart = inject(CartService);
+  private readonly analytics = inject(AnalyticsService);
   readonly store = inject(StoreStateService).store;
 
   readonly product = input.required<PublicProductDetail | null>();
@@ -141,6 +144,7 @@ export class ProductPage {
           },
         },
       });
+      untracked(() => this.analytics.viewProduct(product));
     });
   }
 

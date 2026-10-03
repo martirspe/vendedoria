@@ -1,12 +1,28 @@
 import { Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { PrismaService } from '../prisma/prisma.service';
-import { OrdersService } from '../orders/orders.service';
+import { OrderShipping, OrdersService } from '../orders/orders.service';
+import type { ShippingRules } from '../storefront/shipping';
 import {
+  customDomainUrl,
   DEFAULT_STOREFRONT_URL_TEMPLATE,
   storefrontUrl,
 } from '../storefront/storefront-host';
-import { normalizeText } from './conversation-context';
+import { activeCustomDomain, isIntegrationActive } from '../integrations/integration-state';
+import { normalizeText, PendingLine } from './conversation-context';
+import type { DeliveryPlan } from './delivery-plan';
+
+export type DeliveryQuote = Extract<DeliveryPlan, { kind: 'quote' }>;
+
+const REFERENCE_RATE_NOTE = 'Tarifa referencial: la cobertura se coordina antes del despacho.';
+
+export function moneyLabel(currency: string, cents: number): string {
+  return `${currency} ${(cents / 100).toFixed(2)}`;
+}
+
+export function placeLabel(place: { district: string; province: string }): string {
+  return place.district === place.province ? place.district : `${place.district}, ${place.province}`;
+}
 
 /**
  * Product references written by the store: `Ref: P-{handle}` on product pages and
@@ -106,6 +122,7 @@ export type AgentToolName =
   | 'lookup_faq'
   | 'create_order'
   | 'create_payment_link'
+  | 'quote_shipping'
   | 'escalate';
 
 export type AgentToolTrace = {
@@ -292,12 +309,14 @@ export class SalesAgentToolsService {
       where: { tenantId },
       select: { status: true, tenant: { select: { slug: true } } },
     });
-    return storefront?.status === 'PUBLISHED'
-      ? storefrontUrl(
-          this.config.get<string>('STOREFRONT_URL_TEMPLATE') ?? DEFAULT_STOREFRONT_URL_TEMPLATE,
-          storefront.tenant.slug,
-        ).replace(/\/$/, '')
-      : null;
+    if (storefront?.status !== 'PUBLISHED') return null;
+    if (!(await isIntegrationActive(this.prisma, tenantId, 'store'))) return null;
+    const template = this.config.get<string>('STOREFRONT_URL_TEMPLATE') ?? DEFAULT_STOREFRONT_URL_TEMPLATE;
+    const domain = await activeCustomDomain(this.prisma, tenantId);
+    return (domain ? customDomainUrl(template, domain) : storefrontUrl(template, storefront.tenant.slug)).replace(
+      /\/$/,
+      '',
+    );
   }
 
   private toStoreView(
@@ -480,6 +499,76 @@ export class SalesAgentToolsService {
       });
   }
 
+  /** The business's shipping settings; they apply with or without the store add-on. */
+  async shippingRules(tenantId: string): Promise<ShippingRules | null> {
+    return this.prisma.storefront.findUnique({
+      where: { tenantId },
+      select: {
+        deliveryEnabled: true,
+        freeShippingFromCents: true,
+        pickupEnabled: true,
+        pickupAddress: true,
+        shippingOriginUbigeo: true,
+        carrierRates: true,
+      },
+    });
+  }
+
+  subtotalCents(lines: OrderLine[]): number {
+    return lines.reduce(
+      (sum, line) => sum + Math.max(1, line.quantity) * (line.variant?.priceCents ?? line.product.basePriceCents),
+      0,
+    );
+  }
+
+  /** Lines a previous turn left waiting for delivery, re-read from the current catalog. */
+  orderLinesFromPending(pending: PendingLine[], products: CatalogProductView[]): OrderLine[] {
+    const lines = pending.flatMap((line): OrderLine[] => {
+      const product = products.find((item) => item.id === line.productId);
+      if (!product) return [];
+      const variant = line.variantId ? product.variants.find((item) => item.id === line.variantId) : undefined;
+      if (line.variantId && !variant) return [];
+      return [{ product, variant, quantity: line.quantity }];
+    });
+    return lines.length === pending.length ? lines : [];
+  }
+
+  /** Trace of the delivery step; an `ask` stores the lines so the next turn can finish the order. */
+  deliveryTrace(plan: DeliveryPlan, lines: OrderLine[]): AgentToolTrace {
+    const currency = lines[0]?.product.currency ?? 'PEN';
+    if (plan.kind === 'quote') {
+      const where = plan.place ? ` a ${placeLabel(plan.place)}` : '';
+      return {
+        name: 'quote_shipping',
+        status: 'ok',
+        summary: `${plan.charge.label}${where}: ${plan.charge.free ? 'gratis' : moneyLabel(currency, plan.charge.cents)}`,
+        data: { mode: plan.charge.mode, cents: plan.charge.cents, free: plan.charge.free, ubigeo: plan.place?.code ?? null },
+      };
+    }
+    if (plan.kind === 'ask') {
+      return {
+        name: 'quote_shipping',
+        status: 'skipped',
+        summary: plan.candidates.length
+          ? 'Distrito con varios homónimos: se pidió distrito y provincia'
+          : 'Se pidió el distrito de entrega para cotizar el envío',
+        data: {
+          awaitingDelivery: true,
+          lines: lines.map((line) => ({
+            productId: line.product.id,
+            variantId: line.variant?.id ?? null,
+            quantity: Math.max(1, line.quantity),
+          })),
+        },
+      };
+    }
+    return {
+      name: 'quote_shipping',
+      status: 'skipped',
+      summary: 'Sin formas de entrega configuradas: la entrega se coordina en el chat',
+    };
+  }
+
   async createOrderWithOptionalLink(params: {
     tenantId: string;
     mode: AgentRuntimeMode;
@@ -488,6 +577,7 @@ export class SalesAgentToolsService {
     customerName?: string | null;
     customerPhone?: string | null;
     createPaymentLink: boolean;
+    delivery?: DeliveryQuote;
   }): Promise<{
     traces: AgentToolTrace[];
     orderId?: string;
@@ -500,7 +590,9 @@ export class SalesAgentToolsService {
       unitCents: line.variant?.priceCents ?? line.product.basePriceCents,
       title: line.variant ? `${line.product.name} (${line.variant.label})` : line.product.name,
     }));
-    const totalCents = lines.reduce((sum, line) => sum + line.quantity * line.unitCents, 0);
+    const shipping = params.delivery ? this.orderShipping(params.delivery) : undefined;
+    const totalCents =
+      lines.reduce((sum, line) => sum + line.quantity * line.unitCents, 0) + (shipping?.cents ?? 0);
     const currency = lines[0].product.currency;
     const label = lines.map((line) => `${line.quantity}× ${line.title}`).join(', ');
 
@@ -539,21 +631,25 @@ export class SalesAgentToolsService {
     }
 
     try {
-      const order = await this.ordersService.create(params.tenantId, {
-        conversationId: params.conversationId ?? undefined,
-        customerName: params.customerName ?? undefined,
-        customerPhone: params.customerPhone ?? undefined,
-        currency,
-        items: lines.map((line) => ({
-          productId: line.product.id,
-          ...(line.variant ? { variantId: line.variant.id } : {}),
-          title: line.title,
-          quantity: line.quantity,
-          unitCents: line.unitCents,
-        })),
-        createPaymentLink: params.createPaymentLink,
-        sendLinkToChat: false,
-      });
+      const order = await this.ordersService.create(
+        params.tenantId,
+        {
+          conversationId: params.conversationId ?? undefined,
+          customerName: params.customerName ?? undefined,
+          customerPhone: params.customerPhone ?? undefined,
+          currency,
+          items: lines.map((line) => ({
+            productId: line.product.id,
+            ...(line.variant ? { variantId: line.variant.id } : {}),
+            title: line.title,
+            quantity: line.quantity,
+            unitCents: line.unitCents,
+          })),
+          createPaymentLink: params.createPaymentLink,
+          sendLinkToChat: false,
+        },
+        shipping,
+      );
 
       const payment = order.payments?.[0];
       const traces: AgentToolTrace[] = [
@@ -606,6 +702,26 @@ export class SalesAgentToolsService {
         dryRun: false,
       };
     }
+  }
+
+  /** Same delivery record as web store orders, so Orders and fulfillment read both alike. */
+  private orderShipping(quote: DeliveryQuote): OrderShipping {
+    const pickup = quote.charge.mode === 'PICKUP';
+    return {
+      cents: quote.charge.cents,
+      delivery: {
+        mode: quote.charge.mode,
+        label: quote.charge.label,
+        address: pickup ? null : quote.address,
+        ubigeo: quote.place?.code ?? null,
+        district: quote.place?.district ?? null,
+        province: quote.place?.province ?? null,
+        department: quote.place?.department ?? null,
+        reference: null,
+        eta: pickup ? quote.pickupAddress : REFERENCE_RATE_NOTE,
+        free: quote.charge.free,
+      },
+    };
   }
 
   escalateTrace(reason: string): AgentToolTrace {

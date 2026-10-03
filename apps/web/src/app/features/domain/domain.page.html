@@ -1,0 +1,119 @@
+<section class="store">
+  <header class="store__header">
+    <div>
+      <p class="store__eyebrow">Tienda</p>
+      <h1>Dominio propio</h1>
+      <p>Haz que tu tienda abra en tu propia dirección, por ejemplo www.tumarca.pe. El candado de seguridad (HTTPS) se activa solo.</p>
+    </div>
+  </header>
+
+  @if (errorMessage(); as error) {
+    <div class="banner banner--danger" role="alert">
+      <ds-icon name="alert" />
+      <span>{{ error }}</span>
+      @if (!view()) {
+        <ds-button type="button" variant="secondary" (click)="load()">Reintentar</ds-button>
+      }
+    </div>
+  }
+  @if (successMessage(); as success) {
+    <div class="banner banner--success" role="status">
+      <ds-icon name="check" />
+      <span>{{ success }}</span>
+    </div>
+  }
+
+  @if (loading()) {
+    <div class="skeleton" aria-busy="true">Cargando tu dominio…</div>
+  } @else if (!active()) {
+    <app-integration-gate key="custom_domain" />
+  } @else if (view(); as v) {
+    <div class="status-card" [class.status-card--live]="v.status === 'active'">
+      <span class="pill" [class.pill--ok]="v.status === 'active'">{{ statusLabel() }}</span>
+      <div class="status-card__body">
+        <strong>{{ v.domain ?? 'Aún no conectas un dominio' }}</strong>
+        <span>
+          @switch (v.status) {
+            @case ('active') { Tu tienda abre en tu dominio. La dirección anterior redirige aquí. }
+            @case ('pending') { Crea el registro DNS de abajo en tu proveedor de dominio y luego pulsa «Comprobar». }
+            @case ('failed') { Tu proveedor de dominio ya no apunta a tu tienda. Revisa el registro DNS y vuelve a comprobar. }
+            @default { Mientras tanto, tu tienda abre en {{ v.subdomainUrl }}. }
+          }
+        </span>
+      </div>
+      @if (v.status === 'active') {
+        <a class="status-card__link" [href]="v.storeUrl" target="_blank" rel="noopener">Ver tienda</a>
+      }
+    </div>
+
+    <div class="store__grid">
+      <form class="store__form" [formGroup]="form" (ngSubmit)="save()">
+        <section class="card">
+          <h2>Tu dominio</h2>
+          <label>
+            Dirección
+            <input
+              formControlName="domain"
+              autocomplete="off"
+              spellcheck="false"
+              inputmode="url"
+              placeholder="www.tumarca.pe"
+              [readonly]="!canManage"
+            />
+            <small>Usa el subdominio «www» de un dominio que ya hayas comprado.</small>
+          </label>
+        </section>
+        @if (canManage) {
+          <footer>
+            <ds-button type="submit" [disabled]="saving()">
+              {{ saving() ? 'Guardando…' : v.domain ? 'Cambiar dominio' : 'Guardar dominio' }}
+            </ds-button>
+            @if (v.domain) {
+              <ds-button type="button" variant="secondary" [disabled]="saving()" (click)="verify()">Comprobar</ds-button>
+              <ds-button type="button" variant="ghost" [disabled]="saving()" (click)="remove()">Quitar dominio</ds-button>
+            }
+          </footer>
+        } @else {
+          <p class="hint">Solo el dueño o un administrador puede cambiar el dominio.</p>
+        }
+      </form>
+
+      <aside class="store__rail">
+        <section class="card">
+          <h2>Cómo conectarlo</h2>
+          <ol class="steps">
+            <li>Entra al panel de tu proveedor de dominio (donde lo compraste) y abre la sección DNS.</li>
+            <li>
+              Crea un registro <strong>CNAME</strong> con el nombre <strong>{{ v.domain ?? 'www' }}</strong>
+              (algunos proveedores piden solo «www») que apunte a:
+              <span class="webhook">
+                <code>{{ v.cnameTarget }}</code>
+                <ds-button type="button" variant="secondary" (click)="copy(v.cnameTarget)">
+                  {{ copied() === v.cnameTarget ? 'Copiado' : 'Copiar' }}
+                </ds-button>
+              </span>
+            </li>
+            @if (v.ownershipRecord; as record) {
+              <li>
+                Crea también un registro <strong>TXT</strong> con el nombre
+                <code>{{ record.name }}</code> y este valor:
+                <span class="webhook">
+                  <code>{{ record.value }}</code>
+                  <ds-button type="button" variant="secondary" (click)="copy(record.value)">
+                    {{ copied() === record.value ? 'Copiado' : 'Copiar' }}
+                  </ds-button>
+                </span>
+              </li>
+            }
+            <li>Vuelve aquí y pulsa «Comprobar». Los cambios de DNS pueden tardar desde minutos hasta 24 horas.</li>
+          </ol>
+          @if (v.dnsOk === true && v.status !== 'active') {
+            <small>El registro CNAME ya apunta bien. Falta emitir el certificado de seguridad; vuelve a comprobar en unos minutos.</small>
+          } @else if (v.dnsOk === false) {
+            <small>Todavía no vemos el registro CNAME. Revisa que el nombre y el valor estén bien escritos.</small>
+          }
+        </section>
+      </aside>
+    </div>
+  }
+</section>

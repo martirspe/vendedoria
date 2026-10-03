@@ -1,5 +1,7 @@
 // Loads the Selecta catalog (seed-data/selecta) into a tenant store and switches it to the
-// Selecta template. Run inside the api container:
+// Selecta template. Development only: production stores load the same folder from the console
+// (Productos → Importar catálogo), which stores photos through the media pipeline and checks
+// the plan quota. Run inside the api container:
 // node scripts/seed-selecta-catalog.mjs <tenant-slug>
 //
 // Re-running refreshes names, texts, photos and set pieces. Price, stock, availability and
@@ -18,15 +20,15 @@ const [slug] = process.argv.slice(2);
 if (!slug) throw new Error('Usage: node scripts/seed-selecta-catalog.mjs <tenant-slug>');
 
 const DATA = new URL('../seed-data/selecta/', import.meta.url);
-const { products, inventory } = JSON.parse(readFileSync(new URL('catalog.json', DATA), 'utf8'));
+const { products, inventory, store } = JSON.parse(readFileSync(new URL('catalog.json', DATA), 'utf8'));
 const UPLOADS = resolve(process.env.UPLOADS_DIR ?? 'uploads');
 const PUBLIC_BASE = (process.env.PUBLIC_API_BASE_URL ?? 'http://localhost:3000/api/v1').replace(/\/$/, '');
-const HERO = 'set-icono-yanbal/ritual.jpg';
-const BANNER = 'set-osadia-infinita-yanbal/ritual.jpg';
+const HERO = store.heroImage.slice('/images/products/'.length);
+const BANNER = store.bannerImage.slice('/images/products/'.length);
 // Selecta's shipping rules: free from S/ 500, Olva/Shalom by distance from San Juan de Lurigancho.
-const FREE_SHIPPING_FROM_CENTS = 50_000;
-const SHIPPING_ORIGIN_UBIGEO = '150132';
-const CARRIER_RATES = { olva: [900, 1200, 1600, 2200, 2800], shalom: [800, 1000, 1400, 1800, 2400] };
+const FREE_SHIPPING_FROM_CENTS = store.freeShippingFromCents;
+const SHIPPING_ORIGIN_UBIGEO = store.shippingOriginUbigeo;
+const CARRIER_RATES = store.carrierRates;
 
 const clip = (value, max) => (typeof value === 'string' && value.trim() ? value.trim().slice(0, max) : null);
 const clips = (values, max = 400) => (Array.isArray(values) ? values.map((v) => clip(v, max)).filter(Boolean).slice(0, 20) : []);
@@ -171,6 +173,11 @@ try {
         data: { isPublishedOnStore: false },
       });
 
+      await tx.tenantIntegration.upsert({
+        where: { tenantId_key: { tenantId: tenant.id, key: 'store' } },
+        create: { tenantId: tenant.id, key: 'store', enabled: true },
+        update: { enabled: true },
+      });
       const storefront = await tx.storefront.findUniqueOrThrow({ where: { tenantId: tenant.id } });
       const copy = storefront.templateCopy && typeof storefront.templateCopy === 'object' ? storefront.templateCopy : {};
       await tx.storefront.update({

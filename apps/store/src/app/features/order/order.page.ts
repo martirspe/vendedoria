@@ -15,6 +15,7 @@ import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import type { PayOrderRequest, PublicOrder } from '@vendedoria/contracts';
 import { DsIconComponent } from '@vendedoria/ui';
+import { AnalyticsService } from '../../core/analytics.service';
 import { CartService } from '../../core/cart.service';
 import {
   CardBrickController,
@@ -55,6 +56,7 @@ const REJECTION_MESSAGES: Record<string, string> = {
 export class OrderPage {
   private readonly api = inject(StoreApiService);
   private readonly cart = inject(CartService);
+  private readonly analytics = inject(AnalyticsService);
   private readonly injector = inject(Injector);
   private readonly route = inject(ActivatedRoute);
   readonly store = inject(StoreStateService).store;
@@ -215,6 +217,7 @@ export class OrderPage {
 
   private apply(order: PublicOrder): void {
     this.order.set(order);
+    if (this.paid()) this.analytics.purchase(order);
     if (!this.canPay()) this.unmountBrick();
     else if (this.method() === 'card') this.mountBrickAfterRender();
     if (this.processing()) this.schedulePoll();

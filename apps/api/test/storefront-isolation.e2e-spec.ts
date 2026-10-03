@@ -61,6 +61,7 @@ describe('Storefront tenant isolation (e2e)', () => {
           storefront: {
             create: { displayName: `Tienda ${slug}`, status, whatsappPhone: '51900000000' },
           },
+          integrations: { create: { key: 'store' } },
           products: {
             create: products.map((item) => ({
               handle: item.handle,
@@ -99,7 +100,7 @@ describe('Storefront tenant isolation (e2e)', () => {
   it('resolves only single-label hosts under the platform domain', async () => {
     const ok = await get(`/storefront/resolve?host=${slugA}.localhost:4300`);
     expect(ok.statusCode).toBe(200);
-    expect(ok.json()).toEqual({ slug: slugA, moved: false });
+    expect(ok.json()).toEqual({ slug: slugA, moved: false, primaryHost: null });
     expect((await get(`/storefront/resolve?host=${slugA}.evil.pe`)).statusCode).toBe(404);
     expect((await get(`/storefront/resolve?host=x.${slugA}.localhost`)).statusCode).toBe(404);
   });

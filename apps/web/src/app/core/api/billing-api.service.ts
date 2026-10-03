@@ -3,21 +3,42 @@ import { HttpClient } from '@angular/common/http';
 import { firstValueFrom } from 'rxjs';
 import { environment } from '../../../environments/environment';
 
+export type IntegrationKey = 'store' | 'custom_domain' | 'instagram' | 'tracking' | 'team';
+
+export type PrepayPrice = {
+  months: number;
+  discountPercent: number;
+  label: string;
+  totalCents: number;
+  monthlyCents: number;
+};
+
 export type PlanDefinition = {
-  id: 'STARTER' | 'PRO' | 'BUSINESS' | 'ENTERPRISE';
+  id: 'START' | 'GROW' | 'SCALE' | 'LEAD' | 'ENTERPRISE';
   name: string;
   priceLabel: string;
   priceCents: number | null;
   conversationQuota: number | null;
+  aiReplyQuota: number | null;
   productQuota: number | null;
   couponQuota: number | null;
+  seatQuota: number | null;
   platformBadge: boolean;
+  integrations: IntegrationKey[];
   description: string;
   note: string | null;
   highlights: string[];
+  /** Price for paying 1, 3, 6 or 12 months at once; empty for quoted plans. */
+  prepay: PrepayPrice[];
 };
 
-/** TRIAL: Starter trial with reduced limits. EXPIRED: no new conversations or products until paying. */
+export type ChatPack = {
+  chats: number;
+  priceCents: number;
+  aiReplies: number;
+};
+
+/** TRIAL: Crece trial with reduced limits. EXPIRED: no new conversations or products until paying. */
 export type PlanStatus = 'TRIAL' | 'ACTIVE' | 'EXPIRED';
 
 export type PlanUsage = {
@@ -25,16 +46,27 @@ export type PlanUsage = {
   planStatus: PlanStatus;
   planExpiresAt: string | null;
   conversationsUsed: number;
+  /** Plan quota plus the chat packs bought for this month. */
   conversationQuota: number | null;
+  extraChats: number;
+  aiRepliesUsed: number;
+  aiReplyQuota: number | null;
   productsUsed: number;
   productQuota: number | null;
   couponsActive: number;
   couponQuota: number | null;
+  seatsUsed: number;
+  seatQuota: number | null;
   conversationAtLimit: boolean;
+  aiAtLimit: boolean;
   productAtLimit: boolean;
   couponAtLimit: boolean;
+  seatAtLimit: boolean;
+  integrations: IntegrationKey[];
   periodStart: string;
 };
+
+export type PlanPurchase = { planTier: PlanDefinition['id']; months: number } | { chatPackSize: number };
 
 export type BillingOverview = {
   currentPlan: PlanDefinition;
@@ -43,6 +75,9 @@ export type BillingOverview = {
   trialDays: number;
   usage: PlanUsage;
   plans: PlanDefinition[];
+  chatPacks: ChatPack[];
+  /** Packs can only be added to a paid, active plan. */
+  chatPacksAvailable: boolean;
   includedInAllPlans: string[];
   notes: string[];
   checkoutEnabled: boolean;
@@ -76,11 +111,9 @@ export class BillingApiService {
     );
   }
 
-  createCheckout(planTier: PlanDefinition['id']): Promise<PlanCheckout> {
+  createCheckout(purchase: PlanPurchase): Promise<PlanCheckout> {
     return firstValueFrom(
-      this.http.post<PlanCheckout>(`${environment.apiBaseUrl}/billing/checkout`, {
-        planTier,
-      }),
+      this.http.post<PlanCheckout>(`${environment.apiBaseUrl}/billing/checkout`, purchase),
     );
   }
 

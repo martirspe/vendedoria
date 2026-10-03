@@ -5,7 +5,11 @@ export const TURNSTILE_ACTION_KEY = 'turnstileAction';
 export const TURNSTILE_HEADER = 'x-turnstile-token';
 
 /** Widget `action` names; Cloudflare allows up to 32 chars of `[a-z0-9_-]`. */
-export type TurnstileAction = 'login' | 'register' | 'checkout';
+export type TurnstileAction =
+  | 'login'
+  | 'register'
+  | 'checkout'
+  | 'platform-login';
 
 /**
  * Requires a Cloudflare Turnstile token rendered with the same `action` in the

@@ -1,0 +1,7 @@
+# Copy to backend.hcl (git-ignored) with the output of bootstrap/ (terraform output -raw backend_config).
+# Each workspace (staging, prod) keeps its own state under env:/<workspace>/aws.tfstate.
+bucket       = "vendedoria-tfstate-ACCOUNT_ID"
+key          = "aws.tfstate"
+region       = "us-east-1"
+encrypt      = true
+use_lockfile = true

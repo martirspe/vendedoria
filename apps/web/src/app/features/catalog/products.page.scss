@@ -39,6 +39,27 @@
   color: var(--ds-color-text-secondary);
 }
 
+.catalog__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--ds-space-3);
+  align-items: center;
+}
+
+.catalog__import {
+  display: inline-flex;
+  gap: var(--ds-space-2);
+  align-items: center;
+  min-height: var(--ds-touch-target);
+  padding: 0 var(--ds-space-5);
+  border: 1px solid var(--ds-color-border);
+  border-radius: 999px;
+  background: var(--ds-color-surface);
+  color: var(--ds-color-text-primary);
+  font-weight: 700;
+  text-decoration: none;
+}
+
 .catalog__banner {
   margin: 0;
   padding: var(--ds-space-3) var(--ds-space-4);

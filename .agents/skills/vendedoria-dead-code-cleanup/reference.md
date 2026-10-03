@@ -26,7 +26,7 @@ Dynamic usage to rule out before deleting: string-based maps (`DS_ICONS`, templa
 - Store: `apps/store/src/server.ts` host resolution, preview-token flow, proxy allow-lists, sitemap/robots, legacy Selecta URL redirects.
 - Contracts: `packages/contracts/index.d.ts` and `storefront-mapper.ts` fields (the store or the agent may read them).
 - Legacy input still accepted by the API (e.g. `mediaUrls` next to `media` in catalog DTOs): remove only after confirming no client sends it, and note it as an API change.
-- Data: applied migrations (including the intentional no-op `0004_sales_agent_personality_fields`), seed scripts used by docs/README (`apps/api/scripts/seed-selecta-catalog.mjs`), `ubigeo` data and `scripts/compile-ubigeos.mjs`.
+- Data: applied migrations, seed scripts used by docs/README (`apps/api/scripts/seed-selecta-catalog.mjs`), `ubigeo` data and `scripts/compile-ubigeos.mjs`.
 - Tests: `test/storefront-isolation.e2e-spec.ts` and any spec covering signatures, isolation or idempotency.
 
 ## Not dead code

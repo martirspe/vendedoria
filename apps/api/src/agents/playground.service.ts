@@ -6,12 +6,14 @@ import { Prisma } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { buildAgentContext, HISTORY_LIMIT } from '../agent-runtime/conversation-context';
 import { SalesAgentRuntimeService } from '../agent-runtime/sales-agent-runtime.service';
+import { PlanLimitsService } from '../billing/plan-limits.service';
 
 @Injectable()
 export class PlaygroundService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly agentRuntime: SalesAgentRuntimeService,
+    private readonly planLimits: PlanLimitsService,
   ) {}
 
   async createSession(tenantId: string, title?: string) {
@@ -59,7 +61,12 @@ export class PlaygroundService {
     return this.getSession(tenantId, session.id);
   }
 
-  async sendMessage(tenantId: string, sessionId: string, text: string) {
+  async sendMessage(
+    tenantId: string,
+    sessionId: string,
+    text: string,
+    agentId?: string,
+  ) {
     const session = await this.ensureOwnership(tenantId, sessionId);
     const trimmed = text.trim();
     const earlier = await this.prisma.playgroundMessage.findMany({
@@ -87,13 +94,18 @@ export class PlaygroundService {
 
     const agentResult = await this.agentRuntime.generateReply({
       tenantId,
+      agentId,
       conversationId: null,
       inboundText: trimmed,
       mode: 'playground',
       customerName: 'Comprador de prueba',
       customerPhone: null,
       history: context.history,
+      allowAi: await this.planLimits.canUseAi(tenantId),
     });
+    if (agentResult.usedAi) {
+      await this.planLimits.recordAiReply(tenantId);
+    }
 
     await this.prisma.playgroundMessage.create({
       data: {

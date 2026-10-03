@@ -4,6 +4,7 @@ import { KnowledgeService } from '../knowledge/knowledge.service';
 import { PrismaService } from '../prisma/prisma.service';
 import {
   allRecommendedProductIds,
+  awaitingDelivery,
   conversationalIntent,
   ConversationTurn,
   HISTORY_LIMIT,
@@ -13,14 +14,18 @@ import {
   toWhatsAppText,
   wantsPhoto,
 } from './conversation-context';
+import { DeliveryPlan, planDelivery } from './delivery-plan';
 import {
   AgentRuntimeMode,
   AgentToolTrace,
   CatalogOverview,
   CatalogProductView,
+  moneyLabel,
   OrderLine,
+  placeLabel,
   SalesAgentToolsService,
 } from './sales-agent-tools.service';
+import { AgentPersonality, buildAgentPrompt, toPersonality } from './sales-playbook';
 
 /** How a catalog browse is presented in the reply. */
 type BrowseView = {
@@ -33,6 +38,12 @@ type BrowseView = {
 };
 
 const BROWSE_PAGE = 3;
+
+function journeyGuide(journeys: Array<{ stage: string }>): string {
+  return journeys.length
+    ? 'journeyScripts son guiones del negocio por etapa (DISCOVER descubrir, RECOMMEND recomendar, CLOSE cerrar, SUPPORT postventa): usa el de la etapa actual de la conversación como guía, con tus palabras.'
+    : '';
+}
 
 /** Photo of a recommended product, sent as its own message after the reply. */
 export type AgentProductImage = {
@@ -50,10 +61,15 @@ export type AgentReplyResult = {
   images: AgentProductImage[];
   orderId?: string;
   checkoutUrl?: string;
+  /** The reply was written by OpenAI (counts toward the plan's AI replies). */
+  usedAi?: boolean;
 };
 
 type ReplyParams = {
   tenantId: string;
+  /** Explicit agent (playground); otherwise the channel's agent, else the primary one. */
+  agentId?: string | null;
+  channelId?: string | null;
   conversationId?: string | null;
   inboundText: string;
   mode?: AgentRuntimeMode;
@@ -62,37 +78,32 @@ type ReplyParams = {
   /** Earlier turns of this chat, oldest first, without the current message. */
   history?: ConversationTurn[];
   shownImageProductIds?: string[];
+  /** False when the plan's AI replies for the month are used: the deterministic reply is used. */
+  allowAi?: boolean;
 };
 
 /** What the reply must resolve before an order can be created. */
 type PendingChoice =
   | { kind: 'product' }
   | { kind: 'variant'; product: CatalogProductView }
+  | { kind: 'delivery'; question: string }
   | null;
 
-const MAX_IMAGES = 3;
-
-type AgentPersonality = {
-  name: string;
-  companyName: string;
-  companyDescription?: string | null;
-  audienceDescription?: string | null;
-  rulesText?: string | null;
-  communicationStyle?: string | null;
-  salesStyle?: string | null;
-  responseLength: string;
-  useEmojis: boolean;
-  emojiPalette?: string | null;
-  wordsToAvoid?: string | null;
-  initialMessage?: string | null;
-  purchaseConfirmMessage?: string | null;
-  handoffMessage?: string | null;
-  pauseOnHandoff: boolean;
-  neverOfferDiscount: boolean;
-  neverInventShipping: boolean;
-  catalogOnlyFacts: boolean;
-  isActive: boolean;
+/** Order lines with the delivery step of this turn, already worded from real settings. */
+type DeliveryText = {
+  /** Price breakdown shown before the payment link. */
+  summary: string | null;
+  /** Note after the link (delivery coordinated in the chat, address still needed). */
+  note: string | null;
 };
+
+const SHIPPING_RULE =
+  'Nunca inventes costos ni tiempos de envío: el costo se calcula con el distrito del cliente cuando confirma la compra.';
+
+const MAX_IMAGES = 3;
+/** A WhatsApp reply needs ~150 tokens; the cap bounds the cost of a runaway answer. */
+const MAX_OUTPUT_TOKENS = 600;
+const LOW_STOCK_UNITS = 5;
 
 type FaqMatch = { id: string; question: string; answer: string };
 type JourneyView = {
@@ -121,13 +132,13 @@ export class SalesAgentRuntimeService {
     const mode = params.mode ?? 'production';
     const history = (params.history ?? []).slice(-HISTORY_LIMIT);
     const firstTurn = !history.some((turn) => turn.role === 'agent');
-    const contextIds = lastRecommendedProductIds(history);
+    const pendingLines = awaitingDelivery(history);
+    const contextIds = [
+      ...new Set([...lastRecommendedProductIds(history), ...pendingLines.map((line) => line.productId)]),
+    ];
     const refs = this.tools.extractProductRefs(params.inboundText);
     const [agentRow, products, runtimeKnowledge, overview] = await Promise.all([
-      this.prisma.salesAgent.findFirst({
-        where: { tenantId: params.tenantId },
-        orderBy: { createdAt: 'asc' },
-      }),
+      this.resolveAgent(params.tenantId, params.agentId, params.channelId),
       this.tools.listAvailableProducts(
         params.tenantId,
         refs.map((ref) => ref.handle),
@@ -137,7 +148,7 @@ export class SalesAgentRuntimeService {
       this.tools.catalogOverview(params.tenantId),
     ]);
 
-    const agent = this.toPersonality(agentRow);
+    const agent = toPersonality(agentRow);
 
     if (!agent.isActive && mode === 'production') {
       return {
@@ -151,7 +162,8 @@ export class SalesAgentRuntimeService {
       };
     }
 
-    const openAiKey = this.config.get<string>('OPENAI_API_KEY');
+    const openAiKey =
+      params.allowAi === false ? undefined : this.config.get<string>('OPENAI_API_KEY');
     const intent = conversationalIntent(params.inboundText);
     if (intent === 'closing' || (intent === 'acknowledgement' && !firstTurn && !openAiKey)) {
       return {
@@ -228,6 +240,39 @@ export class SalesAgentRuntimeService {
         };
       }
     }
+
+    let delivery: DeliveryPlan | null = null;
+    if (!lines.length && !pending && pendingLines.length && !this.tools.wantsHuman(params.inboundText)) {
+      const resumed = this.tools.orderLinesFromPending(pendingLines, products);
+      if (resumed.length) {
+        const plan = planDelivery({
+          rules: await this.tools.shippingRules(params.tenantId),
+          text: params.inboundText,
+          subtotalCents: this.tools.subtotalCents(resumed),
+        });
+        if (plan.kind !== 'ask' || plan.candidates.length) {
+          lines = resumed;
+          delivery = plan;
+          matches = resumed.map((line) => line.product);
+          searchTrace = {
+            ...searchTrace,
+            data: { ...searchTrace.data, matchIds: matches.map((item) => item.id), count: matches.length },
+          };
+        }
+      }
+    } else if (lines.length && !cartLines.length) {
+      delivery = planDelivery({
+        rules: await this.tools.shippingRules(params.tenantId),
+        text: params.inboundText,
+        subtotalCents: this.tools.subtotalCents(lines),
+        ignore: lines.flatMap((line) =>
+          [line.product.name, line.variant?.label ?? ''].flatMap((name) => name.split(/\s+/)).filter((word) => word.length > 3),
+        ),
+      });
+    }
+    if (delivery?.kind === 'ask') {
+      pending = { kind: 'delivery', question: this.deliveryQuestion(delivery) };
+    }
     traces.push(searchTrace);
 
     for (const match of matches.slice(0, 2)) {
@@ -260,7 +305,11 @@ export class SalesAgentRuntimeService {
       };
     }
 
-    if (lines.length) {
+    if (lines.length && delivery) {
+      traces.push(this.tools.deliveryTrace(delivery, lines));
+    }
+    let deliveryText: DeliveryText = { summary: null, note: null };
+    if (lines.length && delivery?.kind !== 'ask') {
       const commerce = await this.tools.createOrderWithOptionalLink({
         tenantId: params.tenantId,
         mode,
@@ -269,10 +318,14 @@ export class SalesAgentRuntimeService {
         customerName: params.customerName,
         customerPhone: params.customerPhone,
         createPaymentLink: !cartLines.length,
+        delivery: delivery?.kind === 'quote' ? delivery : undefined,
       });
       traces.push(...commerce.traces);
       orderId = commerce.orderId;
       checkoutUrl = commerce.checkoutUrl;
+      if (checkoutUrl && delivery) {
+        deliveryText = this.deliveryText(delivery, lines);
+      }
     }
     const cartOrder = cartLines.length > 0 && Boolean(orderId);
 
@@ -298,6 +351,7 @@ export class SalesAgentRuntimeService {
           faqMatches,
           journeys,
           checkoutUrl,
+          deliveryText,
           cartOrder,
           pending,
           browse: browse?.view ?? null,
@@ -312,6 +366,7 @@ export class SalesAgentRuntimeService {
             images,
             orderId,
             checkoutUrl,
+            usedAi: true,
           };
         }
       } catch (error) {
@@ -332,6 +387,7 @@ export class SalesAgentRuntimeService {
         faqMatches,
         journeys,
         checkoutUrl,
+        deliveryText,
         cartOrder,
         pending,
         browse: browse?.view ?? null,
@@ -432,50 +488,64 @@ export class SalesAgentRuntimeService {
       : `${thanks} Aquí estaré si necesitas algo más.`;
   }
 
-  private toPersonality(
-    agentRow: {
-      name: string;
-      companyName: string | null;
-      companyDescription: string | null;
-      audienceDescription: string | null;
-      rulesText: string | null;
-      communicationStyle: string | null;
-      salesStyle: string | null;
-      responseLength: string;
-      useEmojis: boolean;
-      emojiPalette: string | null;
-      wordsToAvoid: string | null;
-      initialMessage: string | null;
-      purchaseConfirmMessage: string | null;
-      handoffMessage: string | null;
-      pauseOnHandoff: boolean;
-      neverOfferDiscount: boolean;
-      neverInventShipping: boolean;
-      catalogOnlyFacts: boolean;
-      isActive: boolean;
-    } | null,
-  ): AgentPersonality {
-    return {
-      name: agentRow?.name ?? 'Vendedor',
-      companyName: agentRow?.companyName ?? 'nuestra tienda',
-      companyDescription: agentRow?.companyDescription,
-      audienceDescription: agentRow?.audienceDescription,
-      rulesText: agentRow?.rulesText,
-      communicationStyle: agentRow?.communicationStyle,
-      salesStyle: agentRow?.salesStyle,
-      responseLength: agentRow?.responseLength ?? 'balanced',
-      useEmojis: agentRow?.useEmojis ?? true,
-      emojiPalette: agentRow?.emojiPalette,
-      wordsToAvoid: agentRow?.wordsToAvoid,
-      initialMessage: agentRow?.initialMessage,
-      purchaseConfirmMessage: agentRow?.purchaseConfirmMessage,
-      handoffMessage: agentRow?.handoffMessage,
-      pauseOnHandoff: agentRow?.pauseOnHandoff ?? true,
-      neverOfferDiscount: agentRow?.neverOfferDiscount ?? true,
-      neverInventShipping: agentRow?.neverInventShipping ?? true,
-      catalogOnlyFacts: agentRow?.catalogOnlyFacts ?? true,
-      isActive: agentRow?.isActive ?? true,
-    };
+  private async resolveAgent(
+    tenantId: string,
+    agentId?: string | null,
+    channelId?: string | null,
+  ) {
+    if (agentId) {
+      const agent = await this.prisma.salesAgent.findFirst({ where: { id: agentId, tenantId } });
+      if (agent) return agent;
+    }
+    if (channelId) {
+      const channel = await this.prisma.channel.findFirst({
+        where: { id: channelId, tenantId },
+        select: { salesAgent: true },
+      });
+      if (channel?.salesAgent?.tenantId === tenantId) return channel.salesAgent;
+    }
+    return this.prisma.salesAgent.findFirst({
+      where: { tenantId },
+      orderBy: { createdAt: 'asc' },
+    });
+  }
+
+  /** Asks where to deliver, offering pickup when the business has it. */
+  private deliveryQuestion(plan: Extract<DeliveryPlan, { kind: 'ask' }>): string {
+    const pickup = plan.pickupAddress ? `\nSi prefieres, puedes recogerlo gratis en ${plan.pickupAddress}.` : '';
+    if (plan.candidates.length) {
+      const options = plan.candidates
+        .map((place) => `• ${place.district} (${place.province}, ${place.department})`)
+        .join('\n');
+      return `Hay varios distritos con ese nombre:\n${options}\n¿Cuál es el tuyo? Escríbeme el distrito y la provincia.${pickup}`;
+    }
+    return `Para calcular el envío, ¿a qué distrito te lo enviamos? Escríbeme el distrito y la provincia, por ejemplo: Miraflores, Lima.${pickup}`;
+  }
+
+  /** Price breakdown and delivery note from the plan used to create the order. */
+  private deliveryText(plan: DeliveryPlan, lines: OrderLine[]): DeliveryText {
+    if (plan.kind === 'none') {
+      return { summary: null, note: 'La entrega la coordinamos contigo por este chat.' };
+    }
+    if (plan.kind !== 'quote') return { summary: null, note: null };
+    const currency = lines[0].product.currency;
+    const subtotal = this.tools.subtotalCents(lines);
+    const { charge } = plan;
+    const cost = charge.free ? 'gratis' : moneyLabel(currency, charge.cents);
+    const shippingLine =
+      charge.mode === 'PICKUP'
+        ? `Recojo en tienda: gratis${plan.pickupAddress ? ` (${plan.pickupAddress})` : ''}`
+        : `Envío con ${charge.label}${plan.place ? ` a ${placeLabel(plan.place)}` : ''}: ${cost}`;
+    const summary = [
+      `Productos: ${moneyLabel(currency, subtotal)}`,
+      shippingLine,
+      `Total: ${moneyLabel(currency, subtotal + charge.cents)}`,
+    ].join('\n');
+    const note =
+      charge.mode !== 'PICKUP' && !plan.address
+        ? 'Después del pago, envíanos tu dirección exacta y una referencia para el despacho.'
+        : null;
+    return { summary, note };
   }
 
   private deterministicReply(params: {
@@ -486,6 +556,7 @@ export class SalesAgentRuntimeService {
     faqMatches: FaqMatch[];
     journeys: JourneyView[];
     checkoutUrl?: string;
+    deliveryText: DeliveryText;
     cartOrder: boolean;
     pending: PendingChoice;
     browse: BrowseView | null;
@@ -514,14 +585,25 @@ export class SalesAgentRuntimeService {
         params.mode === 'playground'
           ? '\n\n(Prueba: este link es simulado y no aparece en Pedidos.)'
           : '';
+      const { summary, note } = params.deliveryText;
       return {
         escalate: false,
         usedCatalog: true,
         pauseOnHandoff: agent.pauseOnHandoff,
         replyText: this.applyTone(
           agent,
-          `${confirm}\n${params.checkoutUrl}${dryNote}`,
+          `${summary ? `${summary}\n\n` : ''}${confirm}\n${params.checkoutUrl}${note ? `\n\n${note}` : ''}${dryNote}`,
+          { keepLines: true },
         ),
+      };
+    }
+
+    if (params.pending?.kind === 'delivery') {
+      return {
+        escalate: false,
+        usedCatalog: true,
+        pauseOnHandoff: agent.pauseOnHandoff,
+        replyText: this.applyTone(agent, `¡Buena elección! ${params.pending.question}`, { keepLines: true }),
       };
     }
 
@@ -605,11 +687,14 @@ export class SalesAgentRuntimeService {
       const faqNote = params.faqMatches[0]
         ? `\n\nTambién: ${params.faqMatches[0].answer}`
         : '';
+      const [first, second] = params.catalogMatches;
       const closeHint =
         params.pending?.kind === 'product'
           ? '¿Cuál de estas opciones te gustaría? Te preparo el link de pago.'
           : (params.journeys.find((item) => item.stage === 'CLOSE')?.scriptText ??
-            'Si te gusta, dime “lo quiero” y te envío el link de pago.');
+            (second && agent.salesTechniques.includes('alternative_close')
+              ? `¿Cuál te gusta más, ${first.name} o ${second.name}? Te lo separo y te envío el link de pago.`
+              : 'Si te gusta, dime “lo quiero” y te envío el link de pago.'));
       const greeting = params.firstTurn
         ? `¡Hola! Soy ${agent.name} de ${agent.companyName}. `
         : '';
@@ -665,12 +750,13 @@ export class SalesAgentRuntimeService {
     };
   }
 
-  private applyTone(agent: AgentPersonality, text: string): string {
+  /** `keepLines`: the text carries amounts or a link that must never be cut by the concise length. */
+  private applyTone(agent: AgentPersonality, text: string, options: { keepLines?: boolean } = {}): string {
     let result = text;
     if (!agent.useEmojis) {
       result = result
         .replace(/[\u{1F300}-\u{1FAFF}\u{2600}-\u{27BF}]/gu, '')
-        .replace(/\s{2,}/g, ' ')
+        .replace(options.keepLines ? /[^\S\n]{2,}/g : /\s{2,}/g, ' ')
         .trim();
     } else if (agent.emojiPalette && !/[\u{1F300}-\u{1FAFF}]/u.test(result)) {
       const emoji = agent.emojiPalette.trim().split(/\s+/)[0];
@@ -679,7 +765,7 @@ export class SalesAgentRuntimeService {
       }
     }
 
-    if (agent.responseLength === 'concise') {
+    if (agent.responseLength === 'concise' && !options.keepLines) {
       result = result.split('\n').slice(0, 4).join('\n');
     }
 
@@ -697,6 +783,7 @@ export class SalesAgentRuntimeService {
     faqMatches: FaqMatch[];
     journeys: JourneyView[];
     checkoutUrl?: string;
+    deliveryText: DeliveryText;
     cartOrder: boolean;
     pending: PendingChoice;
     browse: BrowseView | null;
@@ -711,6 +798,11 @@ export class SalesAgentRuntimeService {
       description: product.descriptionShort,
       price: product.priceLabel,
       stock: product.stockLabel,
+      lowStock:
+        !product.stockUnlimited &&
+        product.stockQty !== null &&
+        product.stockQty > 0 &&
+        product.stockQty <= LOW_STOCK_UNITS,
       url: product.productUrl,
       variants: product.variants.map((variant) => ({
         label: variant.label,
@@ -720,36 +812,29 @@ export class SalesAgentRuntimeService {
     }));
 
     const agent = params.agent;
-    const lengthGuide =
-      agent.responseLength === 'concise'
-        ? 'Respuestas muy breves (1-3 oraciones).'
-        : agent.responseLength === 'detailed'
-          ? 'Puedes explicar con más detalle cuando ayude a vender.'
-          : 'Respuestas equilibradas, claras y comerciales.';
 
     const system = [
-      `Eres ${agent.name}, vendedor IA de ${agent.companyName}.`,
-      'Responde en español.',
+      buildAgentPrompt(agent),
+      '',
+      'CONTEXTO DE ESTE TURNO:',
       params.firstTurn
         ? `Es el primer mensaje de esta conversación: saluda una sola vez y de forma breve${agent.initialMessage ? `, usando como base: "${agent.initialMessage}"` : ''}.`
         : 'La conversación ya está en curso (ver historial): NO vuelvas a saludar ni a presentarte. Responde directo a lo último que dijo el cliente, sin repetir lo que ya le dijiste.',
       'Usa el historial para entender referencias como "ese", "el segundo" o "lo quiero".',
-      'Escribes por WhatsApp: texto plano, sin Markdown. Nada de [texto](url), encabezados ni **doble asterisco**; para resaltar usa *un asterisco*. Pega las URLs completas tal cual.',
-      lengthGuide,
-      agent.catalogOnlyFacts
-        ? 'Nunca inventes precios, stock ni productos. Solo usa catálogo/tools.'
-        : 'Prioriza el catálogo/tools para hechos de producto.',
-      agent.neverOfferDiscount
-        ? 'Nunca ofrezcas descuentos ni inventes promociones.'
-        : '',
-      agent.neverInventShipping
-        ? 'Nunca inventes plazos ni costos de envío. Solo usa FAQs o di que lo confirma un humano.'
-        : '',
-      'Para políticas (envío, cambios, horarios) usa SOLO las FAQs provistas. Si no hay FAQ, dilo y ofrece handoff.',
-      'Si el cliente pide humano, responde con escalate=true.',
+      journeyGuide(params.journeys),
       params.checkoutUrl
         ? `Ya existe un link de pago generado: ${params.checkoutUrl}. Inclúyelo en la respuesta.`
         : '',
+      params.checkoutUrl && params.deliveryText.summary
+        ? `Incluye antes del link este detalle del pedido, línea por línea y sin cambiar ningún monto:\n${params.deliveryText.summary}`
+        : '',
+      params.checkoutUrl && params.deliveryText.note
+        ? `Después del link agrega: "${params.deliveryText.note}"`
+        : '',
+      params.pending?.kind === 'delivery'
+        ? `El cliente quiere comprar, pero antes del link de pago necesitas saber dónde entregar. Pregúntale esto, con tus palabras pero sin cambiar los datos: "${params.pending.question}". No generes ni prometas link de pago todavía.`
+        : '',
+      SHIPPING_RULE,
       params.cartOrder
         ? 'El cliente envió su carrito de la tienda web y ya quedó registrado como pedido. Agradécele, resume los productos y dile que un asesor confirmará stock, envío y forma de pago. No envíes link de pago.'
         : '',
@@ -771,30 +856,9 @@ export class SalesAgentRuntimeService {
       params.sendsPhotos
         ? 'Las fotos de los productos recomendados se envían automáticamente justo después de tu mensaje: no digas que no puedes enviar fotos.'
         : '',
-      'Si un producto del catálogo tiene url, puedes compartirla para que vea más detalles en la tienda. No inventes enlaces.',
+      'Si un producto del catálogo tiene url, puedes compartirla para que vea más detalles en la tienda.',
       params.mode === 'playground'
         ? 'Estás en playground de prueba: sé claro si algo es simulado.'
-        : '',
-      agent.useEmojis
-        ? `Puedes usar emojis${agent.emojiPalette ? ` de esta paleta: ${agent.emojiPalette}` : ''}.`
-        : 'No uses emojis.',
-      agent.companyDescription
-        ? `Descripción del negocio: ${agent.companyDescription}`
-        : '',
-      agent.audienceDescription
-        ? `Audiencia: ${agent.audienceDescription}`
-        : '',
-      agent.communicationStyle
-        ? `Estilo de comunicación: ${agent.communicationStyle}`
-        : '',
-      agent.salesStyle ? `Estilo de ventas: ${agent.salesStyle}` : '',
-      agent.rulesText ? `Reglas: ${agent.rulesText}` : '',
-      agent.wordsToAvoid ? `Palabras a evitar: ${agent.wordsToAvoid}` : '',
-      agent.handoffMessage
-        ? `Si escalas a humano, usa este mensaje base: ${agent.handoffMessage}`
-        : '',
-      agent.purchaseConfirmMessage
-        ? `Si hay link de pago, usa como base: ${agent.purchaseConfirmMessage}`
         : '',
       'Devuelve SOLO JSON válido: {"replyText":"...","escalate":false,"usedCatalog":true}',
     ]
@@ -810,6 +874,7 @@ export class SalesAgentRuntimeService {
       body: JSON.stringify({
         model: params.model,
         temperature: 0.4,
+        max_tokens: MAX_OUTPUT_TOKENS,
         response_format: { type: 'json_object' },
         messages: [
           { role: 'system', content: system },

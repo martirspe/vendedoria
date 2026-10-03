@@ -183,10 +183,6 @@ small {
   align-items: start;
 }
 
-.row--3 {
-  grid-template-columns: repeat(3, 1fr);
-}
-
 .templates {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(14rem, 1fr));
@@ -223,8 +219,7 @@ small {
 }
 
 .copy,
-.faq,
-.carriers {
+.faq {
   display: grid;
   gap: var(--ds-space-3);
 }
@@ -247,12 +242,6 @@ small {
 
 .faq__row ds-button {
   justify-self: end;
-}
-
-.tiers {
-  display: grid;
-  grid-template-columns: repeat(5, minmax(0, 1fr));
-  gap: var(--ds-space-2);
 }
 
 .label-text {
@@ -348,13 +337,8 @@ small {
 }
 
 @media (max-width: 640px) {
-  .row,
-  .row--3 {
+  .row {
     grid-template-columns: 1fr;
-  }
-
-  .tiers {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
 

@@ -105,21 +105,7 @@ export class OrdersPage {
       const provider = await this.api.getPaymentProvider();
       this.mockMode.set(provider.mockMode);
       await Promise.all([this.load(), this.loadProducts()]);
-      const paymentState = this.route.snapshot.queryParamMap.get('payment');
       const orderId = this.route.snapshot.queryParamMap.get('orderId');
-      if (paymentState === 'success') {
-        this.successMessage.set(
-          'El comprador volvió del checkout. Si el webhook ya llegó, el pedido aparecerá como Pagado.',
-        );
-      } else if (paymentState === 'pending') {
-        this.successMessage.set(
-          'Pago pendiente en la pasarela. Esperamos confirmación del webhook.',
-        );
-      } else if (paymentState === 'failure') {
-        this.errorMessage.set(
-          'El checkout falló o fue cancelado. Puedes regenerar el link de pago.',
-        );
-      }
       if (orderId) {
         await this.openOrder(orderId);
       }

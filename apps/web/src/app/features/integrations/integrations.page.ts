@@ -5,11 +5,21 @@ import {
   inject,
   signal,
 } from '@angular/core';
-import { RouterLink } from '@angular/router';
-import { DsButtonComponent } from '@vendedoria/ui';
+import { Router, RouterLink } from '@angular/router';
+import { DsButtonComponent, DsConfirmService } from '@vendedoria/ui';
 import { DsIconComponent } from '@vendedoria/ui';
+import type { IntegrationKey } from '../../core/api/billing-api.service';
+import { IntegrationState, IntegrationsApiService } from '../../core/api/integrations-api.service';
 import { MessagingApiService } from '../../core/api/messaging-api.service';
 import { OrdersApiService } from '../../core/api/orders-api.service';
+import { AuthApiService } from '../../core/auth/auth-api.service';
+import {
+  INTEGRATIONS,
+  IntegrationInfo,
+  IntegrationsStateService,
+  integrationInfo,
+} from '../../core/integrations/integrations-state.service';
+import { messageFrom } from '../../core/api/api-error';
 
 type IntegrationCategory =
   | 'ALL'
@@ -17,8 +27,7 @@ type IntegrationCategory =
   | 'Payments'
   | 'E-commerce'
   | 'Shipping'
-  | 'ERP'
-  | 'Marketing';
+  | 'ERP';
 
 const CATEGORY_LABELS: Record<IntegrationCategory, string> = {
   ALL: 'Todas',
@@ -27,7 +36,13 @@ const CATEGORY_LABELS: Record<IntegrationCategory, string> = {
   'E-commerce': 'E-commerce',
   Shipping: 'Envíos',
   ERP: 'ERP',
-  Marketing: 'Marketing',
+};
+
+type FeatureCard = IntegrationInfo & {
+  state: IntegrationState | null;
+  status: 'active' | 'paused' | 'available' | 'needs' | 'locked' | 'unavailable';
+  /** Required integration that is off right now. */
+  needs: IntegrationInfo | null;
 };
 
 type IntegrationCard = {
@@ -51,7 +66,15 @@ type IntegrationCard = {
 export class IntegrationsPage {
   private readonly messaging = inject(MessagingApiService);
   private readonly orders = inject(OrdersApiService);
+  private readonly api = inject(IntegrationsApiService);
+  private readonly confirmDialog = inject(DsConfirmService);
+  private readonly router = inject(Router);
+  readonly integrations = inject(IntegrationsStateService);
+  readonly canManage = inject(AuthApiService).isManager();
 
+  readonly busyKey = signal<IntegrationKey | null>(null);
+  readonly actionError = signal<string | null>(null);
+  readonly actionSuccess = signal<string | null>(null);
   readonly loading = signal(true);
   readonly errorMessage = signal<string | null>(null);
   readonly filter = signal<IntegrationCategory>('ALL');
@@ -66,8 +89,29 @@ export class IntegrationsPage {
     'E-commerce',
     'Shipping',
     'ERP',
-    'Marketing',
   ];
+
+  readonly features = computed<FeatureCard[]>(() =>
+    INTEGRATIONS.map((info) => {
+      const state = this.integrations.states().find((item) => item.key === info.key) ?? null;
+      const needs =
+        state?.requires && !this.integrations.isActive(state.requires) ? integrationInfo(state.requires) : null;
+      const status: FeatureCard['status'] = !state
+        ? 'unavailable'
+        : state.active
+          ? 'active'
+          : !state.included
+            ? 'locked'
+            : state.enabled && needs
+              ? 'paused'
+              : !state.available
+                ? 'unavailable'
+                : needs
+                  ? 'needs'
+                  : 'available';
+      return { ...info, state, status, needs };
+    }),
+  );
 
   readonly cards = computed<IntegrationCard[]>(() => {
     const list: IntegrationCard[] = [
@@ -83,14 +127,6 @@ export class IntegrationsPage {
           ? 'Revisa el estado del canal en Canales.'
           : 'Conecta WhatsApp para empezar a vender.',
         link: '/app/channels',
-      },
-      {
-        id: 'instagram',
-        name: 'Instagram Direct',
-        category: 'Channel',
-        status: 'waitlist',
-        summary: 'Responde los mensajes directos de Instagram con tu vendedor.',
-        nextStep: 'Muy pronto. Te avisaremos cuando esté disponible.',
       },
       {
         id: 'mercadopago',
@@ -131,14 +167,6 @@ export class IntegrationsPage {
         summary: 'Usa el inventario de tu sistema de gestión como fuente de stock.',
         nextStep: 'Mientras tanto, administra tu stock en Inventario.',
       },
-      {
-        id: 'ads',
-        name: 'Anuncios y remarketing',
-        category: 'Marketing',
-        status: 'waitlist',
-        summary: 'Conecta tus campañas y audiencias con tus ventas.',
-        nextStep: 'Aún no disponible.',
-      },
     ];
 
     const filter = this.filter();
@@ -151,6 +179,80 @@ export class IntegrationsPage {
     void this.load();
   }
 
+  async toggle(card: FeatureCard): Promise<void> {
+    if (this.busyKey() || !this.canManage) return;
+    const enable = card.status !== 'active' && card.status !== 'paused';
+    if (
+      !enable &&
+      !(await this.confirmDialog.confirm({
+        title: `¿Desactivar ${card.name}?`,
+        message: this.disableWarning(card),
+        confirmLabel: 'Desactivar',
+        tone: 'danger',
+      }))
+    ) {
+      return;
+    }
+    this.busyKey.set(card.key);
+    this.actionError.set(null);
+    this.actionSuccess.set(null);
+    try {
+      this.integrations.set(enable ? await this.api.enable(card.key) : await this.api.disable(card.key));
+      this.actionSuccess.set(
+        enable
+          ? `${card.name} está activa. La encuentras en el menú como «${card.navLabel}».`
+          : `Desactivaste ${card.name}.`,
+      );
+    } catch (error) {
+      this.actionError.set(messageFrom(error, 'No pudimos guardar el cambio. Inténtalo de nuevo.'));
+    } finally {
+      this.busyKey.set(null);
+    }
+  }
+
+  open(path: string): void {
+    void this.router.navigateByUrl(path);
+  }
+
+  featureStatusLabel(card: FeatureCard): string {
+    switch (card.status) {
+      case 'active':
+        return 'Activa';
+      case 'available':
+        return 'Incluida en tu plan';
+      case 'paused':
+        return 'En pausa';
+      case 'needs':
+        return `Requiere ${card.needs?.name ?? 'otra función'}`;
+      case 'locked':
+        return card.state?.requiredPlan ? `Desde ${card.state.requiredPlan.name}` : 'No incluida';
+      default:
+        return 'Próximamente';
+    }
+  }
+
+  private disableWarning(card: FeatureCard): string {
+    switch (card.key) {
+      case 'store': {
+        const dependents = this.features()
+          .filter((item) => item.state?.requires === 'store' && item.status === 'active')
+          .map((item) => item.name);
+        const paused = dependents.length
+          ? ` En pausa hasta que reactives la tienda, sin perder su configuración: ${dependents.join(' y ')}.`
+          : '';
+        return `Tu tienda dejará de abrir para tus clientes. Tu vendedor IA sigue vendiendo por chat con fotos, precios y links de pago, solo sin enlaces a la tienda. Tu catálogo, tus pedidos y la configuración de la tienda se conservan.${paused}`;
+      }
+      case 'custom_domain':
+        return 'Tu tienda dejará de abrir en tu dominio y volverá a su dirección de VendedorIA. Puedes activarla de nuevo cuando quieras.';
+      case 'instagram':
+        return 'Tu vendedor dejará de responder los mensajes de Instagram. Puedes activarla de nuevo cuando quieras.';
+      case 'tracking':
+        return 'Tu tienda dejará de enviar datos al píxel de Meta y a Google Analytics. Puedes activarla de nuevo cuando quieras.';
+      default:
+        return 'Se cancelarán las invitaciones pendientes. Puedes activarla de nuevo cuando quieras.';
+    }
+  }
+
   async load(): Promise<void> {
     this.loading.set(true);
     this.errorMessage.set(null);
@@ -158,6 +260,7 @@ export class IntegrationsPage {
       const [channels, provider] = await Promise.all([
         this.messaging.listChannels(),
         this.orders.getPaymentProvider(),
+        this.integrations.refresh(),
       ]);
       this.whatsappConnected.set(
         channels.some(

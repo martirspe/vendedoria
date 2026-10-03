@@ -10,10 +10,12 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+/// Plans in ascending order: Inicia, Crece, Escala, Lidera, A medida.
 enum PlanTier {
-  STARTER
-  PRO
-  BUSINESS
+  START
+  GROW
+  SCALE
+  LEAD
   /// Custom plan quoted and granted by the team.
   ENTERPRISE
 }
@@ -22,6 +24,12 @@ enum MembershipRole {
   OWNER
   ADMIN
   AGENT
+}
+
+/// VendedorIA staff role, unrelated to any tenant membership. Granted only through the create-admin CLI.
+enum PlatformRole {
+  SUPERADMIN
+  ADMIN
 }
 
 enum ChannelType {
@@ -137,6 +145,8 @@ model User {
   email         String         @unique
   passwordHash  String
   fullName      String?
+  /// Null for business users. Checked against the database on every platform request.
+  platformRole  PlatformRole?
   createdAt     DateTime       @default(now())
   updatedAt     DateTime       @updatedAt
   memberships   Membership[]
@@ -149,12 +159,12 @@ model Tenant {
   slug      String   @unique
   country   String   @default("PE")
   currency  String   @default("PEN")
-  /// New businesses start a 30-day Starter trial.
-  planTier  PlanTier @default(STARTER)
-  /// Trial period: Starter with the reduced trial limits until planExpiresAt. Cleared by the first paid plan.
+  /// New businesses start a 14-day trial of Crece.
+  planTier  PlanTier @default(GROW)
+  /// Trial period: Crece with the reduced trial limits until planExpiresAt. Cleared by the first paid plan.
   planTrial Boolean  @default(true)
   /// End of the trial or paid period; after it the plan is expired. Null: no expiry (granted by the team).
-  planExpiresAt DateTime? @default(dbgenerated("(now() + '30 days'::interval)"))
+  planExpiresAt DateTime? @default(dbgenerated("(now() + '14 days'::interval)"))
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
@@ -172,6 +182,67 @@ model Tenant {
   paymentAccounts    MerchantPaymentAccount[]
   coupons            Coupon[]
   slugRedirects      StoreSlugRedirect[]
+  chatPacks          ChatPack[]
+  aiUsage            AiUsageMonth[]
+  integrations       TenantIntegration[]
+  memberInvites      MemberInvite[]
+}
+
+/// Extra new chats bought on top of the plan for one calendar month (flow A).
+model ChatPack {
+  id          String   @id @default(cuid())
+  tenantId    String
+  paymentId   String   @unique
+  chats       Int
+  /// First day (00:00 UTC) of the calendar month the chats count toward.
+  periodStart DateTime
+  createdAt   DateTime @default(now())
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId, periodStart])
+}
+
+/// Sales agent replies generated with OpenAI per calendar month (fair-use cap of the plan).
+model AiUsageMonth {
+  tenantId    String
+  periodStart DateTime
+  replies     Int      @default(0)
+  updatedAt   DateTime @updatedAt
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@id([tenantId, periodStart])
+}
+
+/// Optional features the business turns on from Integraciones (custom_domain, instagram, tracking, team).
+model TenantIntegration {
+  id        String   @id @default(cuid())
+  tenantId  String
+  key       String
+  enabled   Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@unique([tenantId, key])
+}
+
+/// Invitation link to join a business team. Only the sha256 of the token is stored.
+model MemberInvite {
+  id         String         @id @default(cuid())
+  tenantId   String
+  email      String
+  role       MembershipRole @default(AGENT)
+  tokenHash  String         @unique
+  expiresAt  DateTime
+  acceptedAt DateTime?
+  createdAt  DateTime       @default(now())
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId, acceptedAt])
 }
 
 /// Former store subdomains of a tenant: the store server redirects them to the current slug,
@@ -305,6 +376,17 @@ model Storefront {
   /// Template texts (hero, banner, FAQ, footer note); null uses the template defaults.
   templateCopy Json?
 
+  /// Own domain of the store (e.g. www.mitienda.pe), lowercase, unique across tenants.
+  customDomain           String?   @unique
+  /// pending | active | failed
+  customDomainStatus     String?
+  /// Cloudflare for SaaS custom hostname id.
+  customDomainProviderId String?
+  customDomainCheckedAt  DateTime?
+  /// Store analytics, loaded only after the buyer accepts cookies.
+  metaPixelId            String?
+  ga4MeasurementId       String?
+
   tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
 }
 
@@ -329,11 +411,27 @@ model RefreshToken {
   tokenHash String    @unique
   expiresAt DateTime
   revokedAt DateTime?
+  /// Platform sessions are refreshed only by /platform/auth/refresh, business sessions only by /auth/refresh.
+  platform  Boolean   @default(false)
   createdAt DateTime  @default(now())
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId])
+}
+
+/// Who did what on the platform. actorUserId is null for the create-admin CLI. metadata never holds PII.
+model PlatformAuditLog {
+  id             String   @id @default(cuid())
+  actorUserId    String?
+  action         String
+  targetUserId   String?
+  targetTenantId String?
+  metadata       Json?
+  createdAt      DateTime @default(now())
+
+  @@index([createdAt])
+  @@index([actorUserId, createdAt])
 }
 
 model SalesAgent {
@@ -357,11 +455,19 @@ model SalesAgent {
   neverOfferDiscount     Boolean  @default(true)
   neverInventShipping    Boolean  @default(true)
   catalogOnlyFacts       Boolean  @default(true)
+  /// Sales technique ids from agent-runtime/sales-playbook.ts the agent emphasizes.
+  salesTechniques        String[] @default(["discovery", "benefits", "objections", "alternative_close", "cross_sell"])
+  /// Merchant answers to frequent buyer objections (price, trust, timing...).
+  objectionHandling      String?
+  /// `guided`: prompt compiled from the form; `custom`: customPrompt replaces the persona section.
+  promptMode             String   @default("guided")
+  customPrompt           String?
   isActive               Boolean  @default(true)
   createdAt              DateTime @default(now())
   updatedAt              DateTime @updatedAt
 
-  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  tenant   Tenant    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  channels Channel[]
 
   @@index([tenantId])
 }
@@ -410,15 +516,19 @@ model Channel {
   displayName    String?
   metadata       Json?
   lastActiveAt   DateTime?
+  /// Sales agent that answers this channel; null falls back to the tenant's primary agent.
+  salesAgentId   String?
   createdAt      DateTime               @default(now())
   updatedAt      DateTime               @updatedAt
 
   tenant        Tenant         @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  salesAgent    SalesAgent?    @relation(fields: [salesAgentId], references: [id], onDelete: SetNull)
   conversations Conversation[]
 
   @@unique([tenantId, type, externalId])
   @@index([tenantId, type])
   @@index([externalId])
+  @@index([salesAgentId])
 }
 
 model Product {
@@ -492,11 +602,14 @@ model ProductMedia {
   alt       String?
   caption   String?
   sortOrder Int      @default(0)
+  /// SHA-256 of the original file when it came from a catalog import; re-imports reuse the URL.
+  sourceHash String?
   createdAt DateTime @default(now())
 
   product Product @relation(fields: [productId], references: [id], onDelete: Cascade)
 
   @@index([productId])
+  @@index([sourceHash])
 }
 
 /// A set consumes the stock of its pieces; its own stock fields are ignored.
@@ -696,6 +809,10 @@ model Payment {
   rawPayload     Json?
   /// Plan bought by a BILLING_SUBSCRIPTION payment (flow A).
   planTier       PlanTier?
+  /// Months paid in advance with planTier (1, 3, 6 or 12).
+  planMonths     Int?
+  /// Extra new chats bought by a BILLING_SUBSCRIPTION payment without planTier.
+  chatPackSize   Int?
   createdAt      DateTime      @default(now())
   updatedAt      DateTime      @updatedAt
 

@@ -10,6 +10,14 @@ export type StoreResolveResult = {
   slug: string;
   /** The host used a former subdomain of this store: the store server redirects it to `slug`. */
   moved: boolean;
+  /** Verified own domain of the store: the store server redirects its subdomain there. */
+  primaryHost: string | null;
+};
+
+/** Analytics ids of the store, loaded only after the buyer accepts cookies. */
+export type StoreTracking = {
+  metaPixelId: string | null;
+  ga4MeasurementId: string | null;
 };
 
 export type StorefrontView = {
@@ -37,6 +45,8 @@ export type StorefrontView = {
   template: StoreTemplate;
   /** Template texts chosen by the merchant; missing fields use the template defaults. */
   templateCopy: StoreTemplateCopy;
+  /** Null when the plan or the merchant has no analytics on. */
+  tracking: StoreTracking | null;
 };
 
 export type StoreTemplate = 'classic' | 'selecta';

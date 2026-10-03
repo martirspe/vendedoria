@@ -10,6 +10,14 @@ export type AuthTokensResponse = {
   user: { id: string; email: string; role: string };
 };
 
+export type MembershipRole = 'OWNER' | 'ADMIN' | 'AGENT';
+
+export type InvitePreview = {
+  businessName: string;
+  email: string;
+  role: MembershipRole;
+};
+
 const ACCESS_KEY = 'vendedoria.accessToken';
 const REFRESH_KEY = 'vendedoria.refreshToken';
 const TURNSTILE_HEADER = 'X-Turnstile-Token';
@@ -124,6 +132,51 @@ export class AuthApiService {
       });
 
     return this.refreshInFlight;
+  }
+
+  /** Business and email behind an invitation link, before creating the account. */
+  previewInvite(token: string): Promise<InvitePreview> {
+    return firstValueFrom(
+      this.http.get<InvitePreview>(
+        `${environment.apiBaseUrl}/team/invites/accept/${encodeURIComponent(token)}`,
+      ),
+    );
+  }
+
+  async acceptInvite(
+    token: string,
+    payload: { fullName: string; password: string },
+    turnstileToken?: string,
+  ): Promise<AuthTokensResponse> {
+    const response = await firstValueFrom(
+      this.http.post<AuthTokensResponse>(
+        `${environment.apiBaseUrl}/team/invites/accept/${encodeURIComponent(token)}`,
+        payload,
+        this.challenge(turnstileToken),
+      ),
+    );
+    this.persist(response);
+    return response;
+  }
+
+  /** Role in the current business, read from the access token (the API enforces it anyway). */
+  role(): MembershipRole | null {
+    const token = this.getAccessToken();
+    const payload = token?.split('.')[1];
+    if (!payload) return null;
+    try {
+      const json = JSON.parse(atob(payload.replace(/-/g, '+').replace(/_/g, '/'))) as { membershipRole?: string };
+      return json.membershipRole === 'OWNER' || json.membershipRole === 'ADMIN' || json.membershipRole === 'AGENT'
+        ? json.membershipRole
+        : null;
+    } catch {
+      return null;
+    }
+  }
+
+  isManager(): boolean {
+    const role = this.role();
+    return role === 'OWNER' || role === 'ADMIN';
   }
 
   logout(): void {

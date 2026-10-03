@@ -30,6 +30,20 @@
         <ds-icon name="check" />
         <span>Todo listo para vender: canal, catálogo, vendedor y cobros.</span>
       </div>
+    } @else {
+      <aside class="onboarding" aria-labelledby="onboarding-title">
+        <div>
+          <h2 id="onboarding-title">Te ayudamos a dejar todo listo</h2>
+          <p>
+            Agenda una sesión gratis por Zoom: conectamos contigo WhatsApp, cargamos tus productos
+            y publicamos tu tienda para que vendas desde el primer día.
+          </p>
+        </div>
+        <a class="onboarding__cta" [href]="onboardingUrl" target="_blank" rel="noopener">
+          Agendar mi sesión
+          <span class="visually-hidden">(se abre en una pestaña nueva)</span>
+        </a>
+      </aside>
     }
 
     <ol class="checklist">

@@ -4,7 +4,7 @@
 // Usage (repo root; export the same values the API uses, never commit them):
 //   AWS_PROFILE=ops node .agents/skills/vendedoria-aws/scripts/check-aws.mjs [--write-test]
 //   CloudFront config checks: npm i --no-save @aws-sdk/client-cloudfront (once) and optionally
-//   CLOUDFRONT_DISTRIBUTION_ID=<DistributionId output of infra/aws/media-cdn.yaml>.
+//   CLOUDFRONT_DISTRIBUTION_ID=<cloudfront_distribution_id output of infra/terraform>.
 //
 // Flags fall back to env vars: AWS_REGION, MEDIA_S3_BUCKET | AWS_S3_BUCKET, MEDIA_CDN_URL | AWS_CLOUDFRONT_URL,
 // CLOUDFRONT_DISTRIBUTION_ID, EMAIL_FROM, SES_REGION, SES_CONFIGURATION_SET. --project <dir> sets where to load

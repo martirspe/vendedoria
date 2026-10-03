@@ -30,7 +30,7 @@ export class BillingController {
     @CurrentUser() user: AuthUserPayload,
     @Body() dto: CreatePlanCheckoutDto,
   ) {
-    return this.billingService.createCheckout(user, dto.planTier);
+    return this.billingService.createCheckout(user, dto);
   }
 
   @Post('checkout/confirm')

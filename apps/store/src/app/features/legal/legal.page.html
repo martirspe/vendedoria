@@ -23,6 +23,11 @@
             <button type="button" class="store-btn store-btn--secondary print-hide" (click)="print()">
               <ds-icon name="fileText" [size]="1" /> Imprimir o guardar en PDF
             </button>
+            @if (canChangeConsent()) {
+              <button type="button" class="store-btn store-btn--secondary print-hide" (click)="changeConsent()">
+                Cambiar mi decisión sobre cookies
+              </button>
+            }
           </header>
 
           <div class="doc__summary">

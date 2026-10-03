@@ -43,6 +43,8 @@
 
   @if (loading()) {
     <div class="skeleton" aria-busy="true">Cargando tu tienda…</div>
+  } @else if (!active()) {
+    <app-integration-gate key="store" />
   } @else if (view(); as v) {
     <div class="status-card" [class.status-card--live]="isPublished()">
       <span class="pill" [class.pill--ok]="isPublished()">
@@ -237,81 +239,12 @@
 
         <section class="card">
           <h2>Entregas</h2>
-          <label class="check">
-            <input type="checkbox" formControlName="deliveryEnabled" />
-            <span>Hago envíos a domicilio</span>
-          </label>
-          @if (form.controls.deliveryEnabled.value) {
-            <p class="hint">El comprador elige su distrito de la lista oficial del INEI y el costo se calcula por la distancia desde tu distrito de despacho.</p>
-            <label>
-              <span class="label-text">Envío gratis desde (S/) <span class="optional">Opcional</span></span>
-              <input formControlName="freeShippingFrom" type="number" min="1" step="1" inputmode="decimal" />
-              <small>Se calcula sobre el total después de descuentos.</small>
-            </label>
-
-            <div class="carriers">
-              <strong>Agencias por distancia</strong>
-              <p class="hint">
-                Ofrece Olva o Shalom a cualquier distrito. La tarifa se calcula por la distancia desde tu
-                punto de despacho y el comprador la acepta como referencial.
-              </p>
-              <div class="row row--3">
-                <label>
-                  Departamento de despacho
-                  <select [value]="originDepartment()" (change)="setOriginDepartment($any($event.target).value)">
-                    <option value="">Elige…</option>
-                    @for (department of departments(); track department) {
-                      <option [value]="department">{{ department }}</option>
-                    }
-                  </select>
-                </label>
-                <label>
-                  Provincia
-                  <select [value]="originProvince()" [disabled]="!originDepartment()" (change)="setOriginProvince($any($event.target).value)">
-                    <option value="">Elige…</option>
-                    @for (province of provinces(); track province) {
-                      <option [value]="province">{{ province }}</option>
-                    }
-                  </select>
-                </label>
-                <label>
-                  Distrito
-                  <select formControlName="shippingOriginUbigeo">
-                    <option value="">Elige…</option>
-                    @for (district of originDistricts(); track district.code) {
-                      <option [value]="district.code">{{ district.district }}</option>
-                    }
-                  </select>
-                </label>
-              </div>
-              @for (carrier of carriers; track carrier.key) {
-                <label class="check">
-                  <input type="checkbox" [formControlName]="carrier.key + 'Enabled'" />
-                  <span>Envío con {{ carrier.label }}</span>
-                </label>
-                @if (form.get(carrier.key + 'Enabled')?.value) {
-                  <div class="tiers" [formArrayName]="carrier.key">
-                    @for (label of tierLabels; track label; let i = $index) {
-                      <label>
-                        <span class="label-text">{{ label }} (S/)</span>
-                        <input [formControlName]="i" type="number" min="0" max="1000" step="0.10" inputmode="decimal" />
-                      </label>
-                    }
-                  </div>
-                }
-              }
-            </div>
-          }
-          <label class="check">
-            <input type="checkbox" formControlName="pickupEnabled" />
-            <span>Ofrezco recojo en tienda (gratis)</span>
-          </label>
-          @if (form.controls.pickupEnabled.value) {
-            <label>
-              Dirección y horario de recojo
-              <input formControlName="pickupAddress" maxlength="240" placeholder="Av. Larco 123, Miraflores · Lun a Sáb 10 a 7 p. m." />
-            </label>
-          }
+          <p class="hint">
+            Tu tienda y tu vendedor IA usan las mismas formas de entrega y tarifas. Se configuran en Envíos.
+          </p>
+          <a routerLink="/app/shipping" class="rail-link">
+            Configurar envíos <ds-icon name="chevronRight" [size]="1" />
+          </a>
         </section>
 
         <section class="card">

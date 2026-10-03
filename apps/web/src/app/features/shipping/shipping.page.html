@@ -1,0 +1,133 @@
+<section class="shipping">
+  <header class="shipping__header">
+    <p class="shipping__eyebrow">Ventas</p>
+    <h1>Envíos</h1>
+    <p>
+      Cómo reciben tus clientes sus pedidos. Tu vendedor IA cotiza con estas tarifas antes de enviar
+      el link de pago, y tu tienda web las usa en el checkout.
+    </p>
+  </header>
+
+  @if (errorMessage(); as error) {
+    <div class="banner banner--danger" role="alert">
+      <ds-icon name="alert" />
+      <span>{{ error }}</span>
+    </div>
+  }
+  @if (successMessage(); as success) {
+    <div class="banner banner--success" role="status">
+      <ds-icon name="check" />
+      <span>{{ success }}</span>
+    </div>
+  }
+
+  @if (loading()) {
+    <div class="skeleton" aria-busy="true">Cargando tus envíos…</div>
+  } @else if (loadError()) {
+    <div class="card">
+      <p class="hint">No pudimos cargar tu configuración de envíos. Revisa tu conexión e inténtalo de nuevo.</p>
+      <ds-button variant="secondary" (click)="load()">Reintentar</ds-button>
+    </div>
+  } @else {
+    @if (!options().length) {
+      <div class="banner banner--warning" role="status">
+        <ds-icon name="info" />
+        <span>
+          Aún no ofreces ninguna forma de entrega. Tu vendedor IA no cobrará envío y le dirá al cliente
+          que coordinarás la entrega contigo.
+        </span>
+      </div>
+    }
+
+    <form class="shipping__form" [formGroup]="form" (ngSubmit)="save()">
+      <section class="card">
+        <h2>Envío a domicilio</h2>
+        <label class="check">
+          <input type="checkbox" formControlName="deliveryEnabled" />
+          <span>Hago envíos a domicilio</span>
+        </label>
+        @if (form.controls.deliveryEnabled.value) {
+          <p class="hint">El cliente indica su distrito y el costo se calcula por la distancia desde tu distrito de despacho.</p>
+          <label>
+            <span class="label-text">Envío gratis desde (S/) <span class="optional">Opcional</span></span>
+            <input formControlName="freeShippingFrom" type="number" min="1" step="1" inputmode="decimal" />
+            <small>Se calcula sobre el total después de descuentos.</small>
+          </label>
+
+          <div class="carriers">
+            <strong>Agencias por distancia</strong>
+            <p class="hint">
+              Ofrece Olva o Shalom a cualquier distrito. La tarifa se calcula por la distancia desde tu
+              punto de despacho y el cliente la acepta como referencial.
+            </p>
+            <div class="row row--3">
+              <label>
+                Departamento de despacho
+                <select [value]="originDepartment()" (change)="setOriginDepartment($any($event.target).value)">
+                  <option value="">Elige…</option>
+                  @for (department of departments(); track department) {
+                    <option [value]="department">{{ department }}</option>
+                  }
+                </select>
+              </label>
+              <label>
+                Provincia
+                <select [value]="originProvince()" [disabled]="!originDepartment()" (change)="setOriginProvince($any($event.target).value)">
+                  <option value="">Elige…</option>
+                  @for (province of provinces(); track province) {
+                    <option [value]="province">{{ province }}</option>
+                  }
+                </select>
+              </label>
+              <label>
+                Distrito
+                <select formControlName="shippingOriginUbigeo">
+                  <option value="">Elige…</option>
+                  @for (district of originDistricts(); track district.code) {
+                    <option [value]="district.code">{{ district.district }}</option>
+                  }
+                </select>
+              </label>
+            </div>
+            @for (carrier of carriers; track carrier.key) {
+              <label class="check">
+                <input type="checkbox" [formControlName]="carrier.key + 'Enabled'" />
+                <span>Envío con {{ carrier.label }}</span>
+              </label>
+              @if (form.get(carrier.key + 'Enabled')?.value) {
+                <div class="tiers" [formArrayName]="carrier.key">
+                  @for (label of tierLabels; track label; let i = $index) {
+                    <label>
+                      <span class="label-text">{{ label }} (S/)</span>
+                      <input [formControlName]="i" type="number" min="0" max="1000" step="0.10" inputmode="decimal" />
+                    </label>
+                  }
+                </div>
+              }
+            }
+          </div>
+        }
+      </section>
+
+      <section class="card">
+        <h2>Recojo</h2>
+        <label class="check">
+          <input type="checkbox" formControlName="pickupEnabled" />
+          <span>Ofrezco recojo en tienda (gratis)</span>
+        </label>
+        @if (form.controls.pickupEnabled.value) {
+          <label>
+            Dirección y horario de recojo
+            <input formControlName="pickupAddress" maxlength="240" placeholder="Av. Larco 123, Miraflores · Lun a Sáb 10 a 7 p. m." />
+          </label>
+        }
+      </section>
+
+      <footer>
+        <ds-button type="submit" [disabled]="saving() || form.pristine">
+          {{ saving() ? 'Guardando…' : 'Guardar envíos' }}
+        </ds-button>
+      </footer>
+    </form>
+  }
+</section>

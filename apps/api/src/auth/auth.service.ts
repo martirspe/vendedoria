@@ -118,7 +118,12 @@ export class AuthService {
       },
     });
 
-    if (!stored || stored.revokedAt || stored.expiresAt < new Date()) {
+    if (
+      !stored ||
+      stored.platform ||
+      stored.revokedAt ||
+      stored.expiresAt < new Date()
+    ) {
       throw new UnauthorizedException('Invalid refresh token');
     }
 
@@ -140,7 +145,7 @@ export class AuthService {
     });
   }
 
-  private async issueTokens(payload: {
+  async issueTokens(payload: {
     userId: string;
     email: string;
     tenantId: string;

@@ -1,0 +1,15 @@
+<main class="payment-result">
+  <section
+    class="payment-result__card"
+    [class.payment-result__card--success]="state === 'success'"
+    [class.payment-result__card--failure]="state === 'failure'"
+    aria-labelledby="payment-result-title"
+  >
+    <span class="payment-result__icon" aria-hidden="true">
+      <ds-icon [name]="copy.icon" [size]="1.75" />
+    </span>
+    <h1 id="payment-result-title" class="payment-result__title">{{ copy.title }}</h1>
+    <p class="payment-result__lead">{{ copy.lead }}</p>
+    <p class="payment-result__hint">Ya puedes cerrar esta ventana y volver a la conversación.</p>
+  </section>
+</main>

@@ -4,8 +4,9 @@
       <p class="integrations__eyebrow">Conectores</p>
       <h1>Integraciones</h1>
       <p>
-        Conecta VendedorIA con tus canales y cobros. Te mostramos qué está
-        conectado, qué puedes activar hoy y qué llegará pronto.
+        Tu vendedor IA funciona solo. Suma las funciones que tu negocio necesite, como
+        la tienda web, y conecta tus canales y cobros. Al activar una función, aparece
+        en el menú para que la configures.
       </p>
     </div>
   </header>
@@ -17,6 +18,91 @@
       <ds-button type="button" variant="secondary" (click)="load()">Reintentar</ds-button>
     </div>
   }
+  @if (actionError(); as error) {
+    <div class="banner banner--danger" role="alert">
+      <ds-icon name="alert" />
+      <span>{{ error }}</span>
+    </div>
+  }
+  @if (actionSuccess(); as success) {
+    <div class="banner banner--success" role="status">
+      <ds-icon name="check" />
+      <span>{{ success }}</span>
+    </div>
+  }
+
+  <section class="features" aria-labelledby="features-title">
+    <h2 id="features-title" class="section-title">Funciones para activar</h2>
+    @if (!canManage) {
+      <p class="hint">Solo el dueño o un administrador puede activar o desactivar funciones.</p>
+    }
+    @if (loading() && !integrations.loaded()) {
+      <div class="skeleton" aria-busy="true">Cargando funciones…</div>
+    } @else {
+      <ul class="grid">
+        @for (card of features(); track card.key) {
+          <li [attr.data-status]="card.status === 'active' ? 'connected' : card.status === 'available' ? 'ready' : 'waitlist'">
+            <div class="grid__top">
+              <h3 class="feature__name"><ds-icon [name]="card.icon" [size]="1.1" /> {{ card.name }}</h3>
+              <span class="status">{{ featureStatusLabel(card) }}</span>
+            </div>
+            <p>{{ card.summary }}</p>
+            <div class="feature__actions">
+              @switch (card.status) {
+                @case ('active') {
+                  <ds-button type="button" variant="primary" (click)="open(card.path)">Configurar</ds-button>
+                  @if (canManage) {
+                    <ds-button
+                      type="button"
+                      variant="ghost"
+                      [disabled]="busyKey() !== null"
+                      (click)="toggle(card)"
+                    >
+                      {{ busyKey() === card.key ? 'Desactivando…' : 'Desactivar' }}
+                    </ds-button>
+                  }
+                }
+                @case ('available') {
+                  <ds-button
+                    type="button"
+                    variant="primary"
+                    [disabled]="busyKey() !== null || !canManage"
+                    (click)="toggle(card)"
+                  >
+                    {{ busyKey() === card.key ? 'Activando…' : 'Activar' }}
+                  </ds-button>
+                }
+                @case ('paused') {
+                  <p class="next">Funciona sobre {{ card.needs?.name }}. Vuelve sola, con tu configuración, cuando la actives.</p>
+                  @if (canManage) {
+                    <ds-button
+                      type="button"
+                      variant="ghost"
+                      [disabled]="busyKey() !== null"
+                      (click)="toggle(card)"
+                    >
+                      {{ busyKey() === card.key ? 'Desactivando…' : 'Desactivar' }}
+                    </ds-button>
+                  }
+                }
+                @case ('needs') {
+                  <p class="next">Activa primero {{ card.needs?.name }}: esta función trabaja sobre ella.</p>
+                }
+                @case ('locked') {
+                  <ds-button type="button" variant="secondary" (click)="open('/app/plans')">Ver planes</ds-button>
+                }
+                @default {
+                  <p class="next">Aún no está disponible para tu cuenta. Escríbenos desde Ayuda si la necesitas.</p>
+                }
+              }
+            </div>
+          </li>
+        }
+      </ul>
+    }
+  </section>
+
+  <h2 class="section-title">Canales y conectores</h2>
 
   <div class="filters" role="tablist" aria-label="Categoría">
     @for (category of categories; track category) {

@@ -30,7 +30,7 @@ Multi-tenant SaaS: AI sales agents on WhatsApp/Instagram ("del hola al pago") pl
 - Prisma schema, migrations, tenant-scoped queries, test DB: `vendedoria-data`
 - Auth, webhooks, payments, Meta channel, public store endpoints: `vendedoria-security`
 - Console/store UI, design system, UX states: `vendedoria-ui`
-- S3/CloudFront media, SES email, AWS IAM and deliverability: `vendedoria-aws`
+- S3/CloudFront media, SES email, AWS IAM, deliverability and Terraform (`infra/terraform/`): `vendedoria-aws`
 - Reviewing a diff or PR: `vendedoria-review`
 - Full release pass (cleanup + security + copy + prod config): `vendedoria-production-readiness`, which runs `vendedoria-dead-code-cleanup`, `vendedoria-security-audit` and `vendedoria-copy-audit` (each also usable alone)
 - Docker/deploy: `docker-compose*.yml`, `Dockerfile`, `docker/nginx/`, `scripts/docker.mjs`, `scripts/deploy.sh`, `docs/DEPLOY.md`.
@@ -50,4 +50,4 @@ Multi-tenant SaaS: AI sales agents on WhatsApp/Instagram ("del hola al pago") pl
 ## Documentation
 - Product/UX authority: `PROJECT CONSTITUTION.md` (read by section)
 - Store integration plan (proposal; code wins): `docs/plan-tienda-web.md`
-- Ports, setup: `README.md` · Production deploy (automatic and manual): `docs/DEPLOY.md`
+- Ports, setup: `README.md` · Production deploy (automatic and manual): `docs/DEPLOY.md` · AWS infrastructure with Terraform: `docs/TERRAFORM.md`

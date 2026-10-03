@@ -12,6 +12,7 @@ import { AgentsApiService } from '../../core/api/agents-api.service';
 import { CatalogApiService } from '../../core/api/catalog-api.service';
 import { MessagingApiService } from '../../core/api/messaging-api.service';
 import { OrdersApiService } from '../../core/api/orders-api.service';
+import { environment } from '../../../environments/environment';
 
 type ChecklistItem = {
   id: string;
@@ -36,6 +37,7 @@ export class GetStartedPage {
   private readonly messaging = inject(MessagingApiService);
   private readonly orders = inject(OrdersApiService);
 
+  readonly onboardingUrl = environment.onboardingUrl;
   readonly loading = signal(true);
   readonly errorMessage = signal<string | null>(null);
   readonly agentReady = signal(false);

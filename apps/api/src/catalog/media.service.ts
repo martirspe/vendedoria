@@ -89,6 +89,12 @@ export class MediaService {
     return { url: `${this.publicBase}/media/${file}` };
   }
 
+  /** True for URLs this service returned to the tenant (its S3 prefix, or a local upload). */
+  isOwnUpload(tenantId: string, url: string): boolean {
+    const prefix = this.s3 ? `${this.s3.cdnBase}/media/${tenantId}/` : `${this.publicBase}/media/`;
+    return url.startsWith(prefix) && MEDIA_FILE.test(url.slice(prefix.length));
+  }
+
   async read(file: string): Promise<{ bytes: Buffer; contentType: string }> {
     if (!MEDIA_FILE.test(file)) throw new NotFoundException();
     try {

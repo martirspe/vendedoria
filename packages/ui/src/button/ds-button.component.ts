@@ -4,7 +4,7 @@ import {
   input,
 } from '@angular/core';
 
-export type DsButtonVariant = 'primary' | 'secondary' | 'ghost';
+export type DsButtonVariant = 'primary' | 'secondary' | 'ghost' | 'danger';
 
 @Component({
   selector: 'ds-button',
@@ -15,6 +15,7 @@ export type DsButtonVariant = 'primary' | 'secondary' | 'ghost';
       [class.ds-button--primary]="variant() === 'primary'"
       [class.ds-button--secondary]="variant() === 'secondary'"
       [class.ds-button--ghost]="variant() === 'ghost'"
+      [class.ds-button--danger]="variant() === 'danger'"
       [class.ds-button--block]="block()"
       [disabled]="disabled()"
       [attr.type]="type()"
@@ -70,6 +71,16 @@ export type DsButtonVariant = 'primary' | 'secondary' | 'ghost';
     .ds-button--ghost {
       background: transparent;
       color: var(--ds-color-text-secondary);
+    }
+
+    .ds-button--danger {
+      background: var(--ds-color-danger);
+      color: var(--ds-color-surface);
+    }
+
+    .ds-button:focus-visible {
+      outline: 2px solid var(--ds-color-focus-ring);
+      outline-offset: 2px;
     }
 
     .ds-button:not(:disabled):hover {

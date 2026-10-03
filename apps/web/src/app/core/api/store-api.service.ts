@@ -5,7 +5,6 @@ import type {
   StoreTemplate,
   StoreTemplateCopy,
   StorefrontStatus,
-  UbigeoDistrict,
 } from '@vendedoria/contracts';
 import { environment } from '../../../environments/environment';
 
@@ -29,12 +28,6 @@ export type StorefrontDto = {
   complaintsBookUrl: string | null;
   dataBankCode: string | null;
   exchangeDays: number;
-  deliveryEnabled: boolean;
-  freeShippingFromCents: number | null;
-  pickupEnabled: boolean;
-  pickupAddress: string | null;
-  shippingOriginUbigeo: string | null;
-  carrierRates: CarrierRates | null;
   industry: StoreIndustry;
   template: StoreTemplate;
   templateCopy: StoreTemplateCopy | null;
@@ -50,9 +43,6 @@ export type StoreIndustry =
   | 'salud'
   | 'mascotas'
   | 'otros';
-
-/** Five rates in cents, from the nearest distance tier to the farthest. */
-export type CarrierRates = { olva?: number[]; shalom?: number[] };
 
 export type StoreChecklistItem = {
   id:
@@ -98,12 +88,6 @@ export type UpdateStorePayload = Partial<{
   complaintsBookUrl: string | null;
   dataBankCode: string | null;
   exchangeDays: number;
-  deliveryEnabled: boolean;
-  freeShippingFromCents: number | null;
-  pickupEnabled: boolean;
-  pickupAddress: string | null;
-  shippingOriginUbigeo: string | null;
-  carrierRates: CarrierRates | null;
   industry: StoreIndustry;
   template: StoreTemplate;
   templateCopy: StoreTemplateCopy | null;
@@ -116,10 +100,6 @@ export class StoreApiService {
 
   get(): Promise<StoreSettingsView> {
     return firstValueFrom(this.http.get<StoreSettingsView>(this.base));
-  }
-
-  ubigeos(): Promise<UbigeoDistrict[]> {
-    return firstValueFrom(this.http.get<UbigeoDistrict[]>(`${this.base}/ubigeos`));
   }
 
   update(payload: UpdateStorePayload): Promise<StoreSettingsView> {

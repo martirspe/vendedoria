@@ -61,7 +61,13 @@ export class TurnstileService {
    */
   async verify(
     token: string | undefined,
-    expected: { action: TurnstileAction; remoteIp?: string; storeSlug?: string },
+    expected: {
+      action: TurnstileAction;
+      remoteIp?: string;
+      storeSlug?: string;
+      /** Verified own domain of that store. */
+      storeDomain?: string | null;
+    },
   ): Promise<TurnstileResult> {
     if (!this.secret) return 'ok';
     if (!token || token.length > MAX_TOKEN_LENGTH) return this.reject(expected.action, 'missing-or-oversized');
@@ -73,7 +79,8 @@ export class TurnstileService {
     if (outcome.action !== expected.action) return this.reject(expected.action, 'action-mismatch');
     const hostname = outcome.hostname?.toLowerCase() ?? '';
     const hostOk = expected.storeSlug
-      ? slugFromHost(hostname, this.storeBaseDomain) === expected.storeSlug
+      ? slugFromHost(hostname, this.storeBaseDomain) === expected.storeSlug ||
+        (Boolean(expected.storeDomain) && hostname === expected.storeDomain)
       : this.consoleHosts.has(hostname);
     return hostOk ? 'ok' : this.reject(expected.action, 'hostname-mismatch');
   }

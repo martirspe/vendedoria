@@ -19,6 +19,7 @@ import type {
   UbigeoDistrict,
 } from '@vendedoria/contracts';
 import { DsTurnstileComponent } from '@vendedoria/ui';
+import { AnalyticsService } from '../../core/analytics.service';
 import { campaignCoupon, forgetCampaignCoupon, keepCoupon } from '../../core/campaign-coupon';
 import { CartService } from '../../core/cart.service';
 import { MoneyPipe } from '../../core/money.pipe';
@@ -210,6 +211,13 @@ export class SelectaCheckoutPage {
 
   constructor() {
     inject(SeoService).set({ title: 'Finaliza tu compra', path: '/checkout', noindex: true });
+    const analytics = inject(AnalyticsService);
+    let checkoutTracked = false;
+    effect(() => {
+      if (checkoutTracked || !this.cart.ready() || !this.cart.lines().length) return;
+      checkoutTracked = true;
+      untracked(() => analytics.beginCheckoutFromCart(this.cart.lines(), this.cart.lines()[0].currency));
+    });
     effect(() => {
       if (!this.homeOptions().length && this.pickupOption()) untracked(() => this.setPickup(true));
     });

@@ -1,0 +1,14 @@
+# Copy to envs/prod.tfvars (git-ignored). No secrets here: AWS and Cloudflare credentials come from
+# AWS_PROFILE and CLOUDFLARE_API_TOKEN.
+environment        = "prod"
+aws_region         = "us-east-1"
+cloudflare_zone_id = "CLOUDFLARE_ZONE_ID"
+
+media_domain = "media.example.pe"
+
+email_domain = "example.pe"
+email_from   = "VendedorIA <pedidos@example.pe>"
+# Leave false when the domain already publishes a DMARC record.
+manage_dmarc            = false
+manage_account_settings = true
+alerts_email            = "alertas@example.pe"

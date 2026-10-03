@@ -1,7 +1,7 @@
 import { ChangeDetectionStrategy, Component, inject, signal } from '@angular/core';
 import { HttpErrorResponse } from '@angular/common/http';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
-import { DsButtonComponent, DsIconComponent } from '@vendedoria/ui';
+import { DsButtonComponent, DsConfirmService, DsIconComponent } from '@vendedoria/ui';
 import {
   ConnectPaymentAccountPayload,
   PaymentAccountView,
@@ -21,6 +21,7 @@ const CREDENTIAL = /^(APP_USR|TEST)-[A-Za-z0-9-]{20,200}$/;
 export class PaymentsPage {
   private readonly api = inject(PaymentsApiService);
   private readonly fb = inject(FormBuilder);
+  private readonly confirmDialog = inject(DsConfirmService);
 
   readonly loading = signal(true);
   readonly saving = signal(false);
@@ -82,7 +83,13 @@ export class PaymentsPage {
   }
 
   async disconnect(): Promise<void> {
-    if (!confirm('¿Desconectar Mercado Pago? La tienda dejará de cobrar online.')) return;
+    const confirmed = await this.confirmDialog.confirm({
+      title: '¿Desconectar Mercado Pago?',
+      message: 'Tu tienda dejará de cobrar online hasta que vuelvas a conectar una cuenta.',
+      confirmLabel: 'Desconectar',
+      tone: 'danger',
+    });
+    if (!confirmed) return;
     this.saving.set(true);
     this.clearMessages();
     try {

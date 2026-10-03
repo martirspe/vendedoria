@@ -4,6 +4,7 @@ import { Reflector } from '@nestjs/core';
 import type { TurnstileAction } from './turnstile.decorator';
 import { TurnstileGuard } from './turnstile.guard';
 import type { TurnstileResult, TurnstileService } from './turnstile.service';
+import type { PrismaService } from '../prisma/prisma.service';
 
 function setup(action: TurnstileAction | undefined, result: TurnstileResult, nodeEnv = 'production') {
   const turnstile = { enabled: true, verify: jest.fn().mockResolvedValue(result) };
@@ -12,6 +13,7 @@ function setup(action: TurnstileAction | undefined, result: TurnstileResult, nod
     reflector,
     turnstile as unknown as TurnstileService,
     new ConfigService({ NODE_ENV: nodeEnv }),
+    { tenant: { findUnique: jest.fn().mockResolvedValue(null) } } as unknown as PrismaService,
   );
   const context = (headers: Record<string, string>, params: Record<string, string> = {}) =>
     ({
@@ -30,6 +32,7 @@ describe('TurnstileGuard', () => {
       action: 'checkout',
       remoteIp: '203.0.113.7',
       storeSlug: 'acme',
+      storeDomain: null,
     });
   });
 

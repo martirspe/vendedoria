@@ -1,4 +1,4 @@
-import { IsOptional, IsString, MinLength } from 'class-validator';
+import { IsOptional, IsString, MaxLength, MinLength } from 'class-validator';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 
 export class CreatePlaygroundSessionDto {
@@ -14,4 +14,10 @@ export class SendPlaygroundMessageDto {
   @IsString()
   @MinLength(1)
   text!: string;
+
+  @ApiPropertyOptional({ description: 'Sales agent to test; defaults to the primary one' })
+  @IsOptional()
+  @IsString()
+  @MaxLength(40)
+  agentId?: string;
 }

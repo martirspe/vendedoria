@@ -9,6 +9,7 @@ import { OrderEmailService } from '../checkout/order-email.service';
 import { InboxEventsService } from '../conversations/inbox-events.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { PaymentsService } from '../payments/payments.service';
+import { OrderNotificationsService } from './order-notifications.service';
 import { releaseOrder, settlePaidOrder } from './settlement';
 import {
   CreateOrderDto,
@@ -32,6 +33,9 @@ const ORDER_INCLUDE = {
   },
 } satisfies Prisma.OrderInclude;
 
+/** Delivery already priced on the server from the tenant's shipping settings (never from client input). */
+export type OrderShipping = { cents: number; delivery: Prisma.InputJsonObject };
+
 @Injectable()
 export class OrdersService {
   constructor(
@@ -40,6 +44,7 @@ export class OrdersService {
     private readonly checkout: CheckoutService,
     private readonly email: OrderEmailService,
     private readonly inboxEvents: InboxEventsService,
+    private readonly notifications: OrderNotificationsService,
   ) {}
 
   async list(
@@ -85,7 +90,7 @@ export class OrdersService {
     return order;
   }
 
-  async create(tenantId: string, dto: CreateOrderDto) {
+  async create(tenantId: string, dto: CreateOrderDto, shipping?: OrderShipping) {
     if (dto.conversationId) {
       const conversation = await this.prisma.conversation.findFirst({
         where: { id: dto.conversationId, tenantId },
@@ -119,7 +124,9 @@ export class OrdersService {
       unitCents: item.unitCents,
       totalCents: item.quantity * item.unitCents,
     }));
-    const totalCents = items.reduce((sum, item) => sum + item.totalCents, 0);
+    const subtotalCents = items.reduce((sum, item) => sum + item.totalCents, 0);
+    const shippingCents = shipping?.cents ?? 0;
+    const totalCents = subtotalCents + shippingCents;
 
     let customerName = dto.customerName;
     let customerPhone = dto.customerPhone;
@@ -141,8 +148,10 @@ export class OrdersService {
         status: 'DRAFT',
         channel,
         currency,
-        subtotalCents: totalCents,
+        subtotalCents,
+        shippingCents,
         totalCents,
+        ...(shipping ? { delivery: shipping.delivery } : {}),
         customerName,
         customerPhone,
         items: { create: items },
@@ -220,20 +229,22 @@ export class OrdersService {
       throw new BadRequestException('Ingresa el código de seguimiento del envío.');
     }
 
-    await this.prisma.$transaction(async (tx) => {
+    const paidNow = await this.prisma.$transaction(async (tx) => {
       if (dto.status === 'CANCELLED') {
         await releaseOrder(tx, order, 'Cancelado desde la consola');
       } else if (dto.status === 'PAID') {
-        await settlePaidOrder(tx, order, 'Marcado como pagado en la consola');
+        return settlePaidOrder(tx, order, 'Marcado como pagado en la consola');
       } else {
         await tx.order.update({
           where: { id: order.id },
           data: { status: dto.status, ...(dto.status === 'SHIPPED' && trackingCode ? { trackingCode } : {}) },
         });
       }
+      return false;
     });
     if (order.conversationId) {
       this.inboxEvents.publish(tenantId, order.conversationId, 'conversation');
+      if (paidNow) await this.notifications.paymentConfirmed(tenantId, order.id);
     }
     if (dto.status === 'SHIPPED' || dto.status === 'COMPLETED') {
       await this.email.sendLogistics(order.id);

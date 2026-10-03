@@ -1,5 +1,7 @@
 import {
   BadRequestException,
+  ConflictException,
+  ForbiddenException,
   Injectable,
   NotFoundException,
   UnauthorizedException,
@@ -8,10 +10,15 @@ import { ConfigService } from '@nestjs/config';
 import { createHmac, timingSafeEqual } from 'crypto';
 import { PrismaService } from '../prisma/prisma.service';
 import { ConversationsService } from '../conversations/conversations.service';
+import { assertManager } from '../common/roles';
+import type { AuthUserPayload } from '../common/types/auth-user';
+import { isIntegrationActive } from '../integrations/integration-state';
 import {
+  ConnectInstagramDto,
   ConnectWhatsAppDto,
   SimulateInboundDto,
 } from './dto/channels.dto';
+import { asInstagramMetadata, isPlaceholderToken, MetaInstagramClient } from './meta-instagram.client';
 import { MetaWhatsAppClient } from './meta-whatsapp.client';
 import { asWhatsAppMetadata } from './whatsapp-metadata';
 
@@ -22,6 +29,7 @@ export class ChannelsService {
     private readonly config: ConfigService,
     private readonly conversations: ConversationsService,
     private readonly metaWhatsApp: MetaWhatsAppClient,
+    private readonly metaInstagram: MetaInstagramClient,
   ) {}
 
   list(tenantId: string) {
@@ -102,6 +110,89 @@ export class ChannelsService {
           : 'La verificación del webhook aún no está activa. Escríbenos a soporte.',
       },
     };
+  }
+
+  async connectInstagram(user: AuthUserPayload, dto: ConnectInstagramDto) {
+    assertManager(user, 'Solo el dueño o un administrador puede conectar Instagram.');
+    const tenantId = user.tenantId;
+    if (!(await isIntegrationActive(this.prisma, tenantId, 'instagram'))) {
+      throw new ForbiddenException('Activa «Instagram Direct» en Integraciones para conectar tu cuenta.');
+    }
+
+    let accountId: string;
+    let username: string | null = null;
+    if (isPlaceholderToken(dto.accessToken) && this.config.get<string>('NODE_ENV') !== 'production') {
+      if (!dto.accountId) {
+        throw new BadRequestException('Indica el ID de la cuenta de Instagram.');
+      }
+      accountId = dto.accountId;
+    } else {
+      const account = await this.metaInstagram.fetchAccount(dto.accessToken);
+      if (!account.ok) {
+        throw new BadRequestException(
+          'Instagram no aceptó el token. Genera uno nuevo desde tu app de Meta y vuelve a intentarlo.',
+        );
+      }
+      accountId = account.accountId;
+      username = account.username;
+    }
+
+    const takenElsewhere = await this.prisma.channel.findFirst({
+      where: { type: 'INSTAGRAM', externalId: accountId, tenantId: { not: tenantId } },
+      select: { id: true },
+    });
+    if (takenElsewhere) {
+      throw new ConflictException('Esa cuenta de Instagram ya está conectada a otro negocio.');
+    }
+
+    const metadata = { accessToken: dto.accessToken, accountId, ...(username ? { username } : {}) };
+    const displayName = username ? `@${username}` : 'Instagram';
+    const existing = await this.prisma.channel.findFirst({ where: { tenantId, type: 'INSTAGRAM' } });
+    const channel = existing
+      ? await this.prisma.channel.update({
+          where: { id: existing.id },
+          data: { externalId: accountId, displayName, healthStatus: 'CONNECTED', metadata, lastActiveAt: new Date() },
+        })
+      : await this.prisma.channel.create({
+          data: {
+            tenantId,
+            type: 'INSTAGRAM',
+            externalId: accountId,
+            displayName,
+            healthStatus: 'CONNECTED',
+            metadata,
+            lastActiveAt: new Date(),
+          },
+        });
+
+    return {
+      channel: { ...channel, metadata: this.publicMetadata(channel.metadata) },
+      webhook: this.instagramWebhookInfo(),
+    };
+  }
+
+  async getInstagramStatus(tenantId: string) {
+    const channel = await this.prisma.channel.findFirst({
+      where: { tenantId, type: 'INSTAGRAM' },
+      select: { id: true, displayName: true, externalId: true, healthStatus: true, lastActiveAt: true, metadata: true },
+    });
+    return {
+      channel: channel ? { ...channel, metadata: this.publicMetadata(channel.metadata) } : null,
+      webhook: this.instagramWebhookInfo(),
+    };
+  }
+
+  private instagramWebhookInfo() {
+    const publicBase = this.config.get<string>('PUBLIC_API_BASE_URL') ?? 'http://localhost:3000/api/v1';
+    return {
+      callbackUrl: `${publicBase}/webhooks/meta/instagram`,
+      verifyTokenConfigured: Boolean(this.config.get<string>('META_VERIFY_TOKEN')),
+      signatureConfigured: Boolean(this.instagramAppSecret()),
+    };
+  }
+
+  private instagramAppSecret(): string | undefined {
+    return this.config.get<string>('INSTAGRAM_APP_SECRET') || this.config.get<string>('META_APP_SECRET');
   }
 
   async markDisconnected(tenantId: string, channelId: string) {
@@ -297,8 +388,11 @@ export class ChannelsService {
     throw new UnauthorizedException('Webhook verification failed');
   }
 
-  assertMetaSignature(rawBody: Buffer | undefined, signatureHeader?: string) {
-    const appSecret = this.config.get<string>('META_APP_SECRET');
+  assertMetaSignature(
+    rawBody: Buffer | undefined,
+    signatureHeader?: string,
+    appSecret = this.config.get<string>('META_APP_SECRET'),
+  ) {
     if (!appSecret) {
       // Unsigned webhooks are accepted only outside production.
       if (this.config.get<string>('NODE_ENV') === 'production') {
@@ -359,6 +453,33 @@ export class ChannelsService {
     return { processed: results.length, results };
   }
 
+  assertInstagramSignature(rawBody: Buffer | undefined, signatureHeader?: string) {
+    this.assertMetaSignature(rawBody, signatureHeader, this.instagramAppSecret());
+  }
+
+  async handleInstagramWebhook(payload: InstagramWebhookPayload) {
+    const results = [];
+    for (const entry of payload.entry ?? []) {
+      for (const event of entry.messaging ?? []) {
+        const text = event.message?.text;
+        const senderId = event.sender?.id;
+        const accountId = event.recipient?.id ?? entry.id;
+        if (!text || !senderId || !accountId || event.message?.is_echo || senderId === accountId) {
+          continue;
+        }
+        results.push(
+          await this.conversations.ingestInboundInstagram({
+            accountId: String(accountId),
+            senderId: String(senderId),
+            text,
+            externalMessageId: event.message?.mid,
+          }),
+        );
+      }
+    }
+    return { processed: results.length, results };
+  }
+
   async simulateInbound(tenantId: string, dto: SimulateInboundDto) {
     const channel = await this.prisma.channel.findFirst({
       where: { tenantId, type: 'WHATSAPP' },
@@ -379,6 +500,10 @@ export class ChannelsService {
   }
 
   private publicMetadata(metadata: unknown) {
+    const instagram = asInstagramMetadata(metadata);
+    if (instagram) {
+      return { accountId: instagram.accountId, username: instagram.username ?? null, hasAccessToken: true };
+    }
     const parsed = asWhatsAppMetadata(metadata);
     if (!parsed) {
       return null;
@@ -390,6 +515,17 @@ export class ChannelsService {
     };
   }
 }
+
+type InstagramWebhookPayload = {
+  entry?: Array<{
+    id?: string;
+    messaging?: Array<{
+      sender?: { id?: string };
+      recipient?: { id?: string };
+      message?: { mid?: string; text?: string; is_echo?: boolean };
+    }>;
+  }>;
+};
 
 type MetaWebhookPayload = {
   entry?: Array<{

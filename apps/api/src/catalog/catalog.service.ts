@@ -197,7 +197,7 @@ export class CatalogService {
   }
 
   /** Deletes stored photos no longer used by any product, variant or store setting of the tenant. */
-  private async releasePhotos(tenantId: string, urls: string[]) {
+  async releasePhotos(tenantId: string, urls: string[]) {
     if (!urls.length) return;
     const [media, variants, storefront] = await Promise.all([
       this.prisma.productMedia.findMany({

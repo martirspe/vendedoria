@@ -1,7 +1,7 @@
 import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
 import { HttpErrorResponse } from '@angular/common/http';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
-import { DsButtonComponent, DsIconComponent } from '@vendedoria/ui';
+import { DsButtonComponent, DsConfirmService, DsIconComponent } from '@vendedoria/ui';
 import {
   Coupon,
   CouponKind,
@@ -11,6 +11,8 @@ import {
   CouponsApiService,
 } from '../../core/api/coupons-api.service';
 import { StoreApiService } from '../../core/api/store-api.service';
+import { IntegrationsStateService } from '../../core/integrations/integrations-state.service';
+import { IntegrationGateComponent } from '../integrations/integration-gate.component';
 
 type TargetOption = { value: string; label: string };
 
@@ -34,7 +36,7 @@ const fromLocalInput = (value: string) => (value ? new Date(value).toISOString()
 @Component({
   selector: 'app-coupons-page',
   standalone: true,
-  imports: [ReactiveFormsModule, DsButtonComponent, DsIconComponent],
+  imports: [ReactiveFormsModule, DsButtonComponent, DsIconComponent, IntegrationGateComponent],
   templateUrl: './coupons.page.html',
   styleUrls: ['../store/store.page.scss', '../payments/payments.page.scss', './coupons.page.scss'],
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -43,7 +45,10 @@ export class CouponsPage {
   private readonly api = inject(CouponsApiService);
   private readonly store = inject(StoreApiService);
   private readonly fb = inject(FormBuilder);
+  private readonly confirmDialog = inject(DsConfirmService);
+  private readonly integrations = inject(IntegrationsStateService);
 
+  readonly active = computed(() => this.integrations.isActive('store'));
   readonly kindLabels = KIND_LABELS;
   readonly kinds = Object.keys(KIND_LABELS) as CouponKind[];
 
@@ -124,6 +129,8 @@ export class CouponsPage {
   async load(): Promise<void> {
     this.loading.set(true);
     try {
+      await this.integrations.refresh();
+      if (!this.active()) return;
       const [coupons, targets] = await Promise.all([this.api.list(), this.api.targets()]);
       this.coupons.set(coupons);
       this.targetsCatalog.set(targets);
@@ -225,7 +232,13 @@ export class CouponsPage {
   }
 
   async remove(coupon: Coupon): Promise<void> {
-    if (!confirm(`¿Eliminar el cupón ${coupon.code}?`)) return;
+    const confirmed = await this.confirmDialog.confirm({
+      title: `¿Eliminar el cupón ${coupon.code}?`,
+      message: 'Los compradores ya no podrán usarlo. Esta acción no se puede deshacer.',
+      confirmLabel: 'Eliminar cupón',
+      tone: 'danger',
+    });
+    if (!confirmed) return;
     this.clearMessages();
     try {
       await this.api.remove(coupon.id);

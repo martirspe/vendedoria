@@ -16,3 +16,9 @@ coverage/
 .DS_Store
 apps/api/prisma/*.db
 apps/api/prisma/*.db-journal
+.terraform/
+*.tfstate
+*.tfstate.*
+*.tfplan
+infra/terraform/backend.hcl
+infra/terraform/envs/*.tfvars

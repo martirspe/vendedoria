@@ -36,13 +36,17 @@ const MP = 'https://*.mercadopago.com https://*.mercadopago.com.pe https://*.mer
 /** Cloudflare Turnstile script and challenge iframe on the checkout. */
 const TURNSTILE = 'https://challenges.cloudflare.com';
 const TURNSTILE_TOKEN_MAX = 2048;
+/** GA4 and Meta Pixel: loaded only for stores with analytics and after the buyer accepts cookies. */
+const ANALYTICS_SCRIPTS = 'https://www.googletagmanager.com https://connect.facebook.net';
+const ANALYTICS_CONNECT =
+  'https://*.google-analytics.com https://*.analytics.google.com https://*.googletagmanager.com https://www.facebook.com https://connect.facebook.net';
 const CONTENT_SECURITY_POLICY = [
   "default-src 'self'",
-  `script-src 'self' 'unsafe-inline' https://sdk.mercadopago.com ${MP} ${TURNSTILE}`,
+  `script-src 'self' 'unsafe-inline' https://sdk.mercadopago.com ${MP} ${TURNSTILE} ${ANALYTICS_SCRIPTS}`,
   `style-src 'self' 'unsafe-inline' https://*.mlstatic.com`,
   "img-src 'self' https: data:",
   "font-src 'self' https://fonts.gstatic.com https://*.mlstatic.com",
-  `connect-src 'self' https://api.mercadopago.com ${MP}`,
+  `connect-src 'self' https://api.mercadopago.com ${MP} ${ANALYTICS_CONNECT}`,
   `frame-src https://sdk.mercadopago.com ${MP} ${TURNSTILE}`,
   "frame-ancestors 'self'",
   "base-uri 'self'",
@@ -53,6 +57,8 @@ const CONTENT_SECURITY_POLICY = [
 type ResolvedStore = {
   slug: string;
   previewToken: string | null;
+  /** Served on the tenant's own verified domain instead of a platform subdomain. */
+  customDomain: boolean;
 };
 
 type ResolveOutcome = StoreResolveResult | { missing: true } | { failed: true };
@@ -60,6 +66,11 @@ type ResolveOutcome = StoreResolveResult | { missing: true } | { failed: true };
 const browserDistFolder = join(import.meta.dirname, '../browser');
 const app = express();
 const angularApp = new AngularNodeAppEngine({ allowedHosts: ALLOWED_HOSTS });
+/**
+ * Own domains are arbitrary hosts. This engine is only reached after the API confirmed the
+ * Host is a verified domain of an active store, which is the host validation Angular asks for.
+ */
+let customDomainApp: AngularNodeAppEngine | null = null;
 const resolveCache = new Map<string, { store: StoreResolveResult | null; expiresAt: number }>();
 
 app.disable('x-powered-by');
@@ -117,6 +128,19 @@ app.use(async (req: Request, res: Response, next: NextFunction) => {
     res.redirect(302, `${req.protocol}://${outcome.slug}${rest}${req.originalUrl}`);
     return;
   }
+  const hostname = host.toLowerCase().replace(/:\d+$/, '');
+  const customDomain = outcome.primaryHost === hostname;
+  if (
+    outcome.primaryHost &&
+    !customDomain &&
+    (req.method === 'GET' || req.method === 'HEAD') &&
+    !req.path.startsWith(STORE_PROXY_PREFIX)
+  ) {
+    // Temporary so the store can drop its own domain without buyers stuck on a cached redirect.
+    const port = /:\d+$/.exec(host)?.[0] ?? '';
+    res.redirect(302, `${req.protocol}://${outcome.primaryHost}${port}${req.originalUrl}`);
+    return;
+  }
 
   const fromQuery = typeof req.query['preview'] === 'string' ? req.query['preview'] : null;
   if (fromQuery && PREVIEW_TOKEN.test(fromQuery)) {
@@ -137,6 +161,7 @@ app.use(async (req: Request, res: Response, next: NextFunction) => {
   const store: ResolvedStore = {
     slug: outcome.slug,
     previewToken: cookie && PREVIEW_TOKEN.test(cookie) ? cookie : null,
+    customDomain,
   };
   res.locals['store'] = store;
   next();
@@ -227,7 +252,10 @@ app.use((req: Request, res: Response, next: NextFunction) => {
   if (store.previewToken) {
     res.setHeader('Cache-Control', 'private, no-store');
   }
-  angularApp
+  const engine = store.customDomain
+    ? (customDomainApp ??= new AngularNodeAppEngine({ allowedHosts: ['*'] }))
+    : angularApp;
+  engine
     .handle(req, context)
     .then((response) => (response ? writeResponseToNodeResponse(response, res) : next()))
     .catch(next);
@@ -246,7 +274,11 @@ async function resolveHost(host: string): Promise<ResolveOutcome> {
     });
     if (response.ok) {
       const body = (await response.json()) as StoreResolveResult;
-      store = { slug: body.slug, moved: body.moved === true };
+      store = {
+        slug: body.slug,
+        moved: body.moved === true,
+        primaryHost: typeof body.primaryHost === 'string' ? body.primaryHost : null,
+      };
     } else if (response.status !== 404 && response.status !== 400) {
       return { failed: true };
     }

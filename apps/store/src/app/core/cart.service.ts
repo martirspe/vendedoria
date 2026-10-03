@@ -1,4 +1,5 @@
-import { Injectable, computed, signal } from '@angular/core';
+import { Injectable, computed, inject, signal } from '@angular/core';
+import { AnalyticsService } from './analytics.service';
 
 export type CartLine = {
   key: string;
@@ -18,6 +19,7 @@ const STORAGE_PREFIX = 'vendedoria-cart:';
 /** Browser-only cart, one per store (keyed by slug in localStorage). */
 @Injectable({ providedIn: 'root' })
 export class CartService {
+  private readonly analytics = inject(AnalyticsService);
   private storageKey: string | null = null;
 
   readonly lines = signal<CartLine[]>([]);
@@ -57,6 +59,10 @@ export class CartService {
       }
       return [...lines, { ...line, key, quantity: cap(quantity) }];
     });
+    this.analytics.addToCart(
+      { id: line.handle, name: line.name, priceCents: line.unitCents, quantity: clamp(quantity) },
+      line.currency,
+    );
   }
 
   setQuantity(key: string, quantity: number): void {

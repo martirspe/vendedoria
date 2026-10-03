@@ -1,4 +1,6 @@
 import {
+  ArrayMaxSize,
+  IsArray,
   IsBoolean,
   IsIn,
   IsOptional,
@@ -6,7 +8,34 @@ import {
   MaxLength,
   MinLength,
 } from 'class-validator';
-import { ApiPropertyOptional } from '@nestjs/swagger';
+import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+import {
+  PROMPT_MODES,
+  SALES_TECHNIQUE_IDS,
+} from '../../agent-runtime/sales-playbook';
+
+export class CreateSalesAgentDto {
+  @ApiProperty({ example: 'Valeria' })
+  @IsString()
+  @MinLength(2)
+  @MaxLength(80)
+  name!: string;
+
+  @ApiPropertyOptional({ description: 'Copy the configuration of this agent' })
+  @IsOptional()
+  @IsString()
+  @MaxLength(40)
+  copyFromId?: string;
+}
+
+export class AssignAgentChannelsDto {
+  @ApiProperty({ type: [String], description: 'Channels this agent answers' })
+  @IsArray()
+  @ArrayMaxSize(20)
+  @IsString({ each: true })
+  @MaxLength(40, { each: true })
+  channelIds!: string[];
+}
 
 export class UpdateSalesAgentDto {
   @ApiPropertyOptional()
@@ -120,6 +149,34 @@ export class UpdateSalesAgentDto {
   @IsOptional()
   @IsBoolean()
   catalogOnlyFacts?: boolean;
+
+  @ApiPropertyOptional({ enum: SALES_TECHNIQUE_IDS, isArray: true })
+  @IsOptional()
+  @IsArray()
+  @ArrayMaxSize(SALES_TECHNIQUE_IDS.length)
+  @IsIn(SALES_TECHNIQUE_IDS, { each: true })
+  salesTechniques?: string[];
+
+  @ApiPropertyOptional({
+    description: 'Merchant answers to frequent buyer objections',
+  })
+  @IsOptional()
+  @IsString()
+  @MaxLength(4000)
+  objectionHandling?: string;
+
+  @ApiPropertyOptional({ enum: PROMPT_MODES })
+  @IsOptional()
+  @IsIn(PROMPT_MODES)
+  promptMode?: string;
+
+  @ApiPropertyOptional({
+    description: 'Full persona prompt used when promptMode is custom; system guardrails still apply',
+  })
+  @IsOptional()
+  @IsString()
+  @MaxLength(12000)
+  customPrompt?: string;
 
   @ApiPropertyOptional()
   @IsOptional()

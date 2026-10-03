@@ -4,7 +4,12 @@ import type { FastifyReply } from 'fastify';
 import { CurrentUser, Public } from '../common/decorators/auth.decorators';
 import type { AuthUserPayload } from '../common/types/auth-user';
 import { RateLimit } from '../rate-limit/rate-limit.decorator';
+import { CatalogImportService } from './catalog-import.service';
 import { CatalogService } from './catalog.service';
+import {
+  CatalogImportCommitDto,
+  CatalogImportPreviewDto,
+} from './dto/catalog-import.dto';
 import { CreateProductDto } from './dto/create-product.dto';
 import { InventoryUpdateDto, MediaUploadDto } from './dto/inventory.dto';
 import { UpdateProductDto } from './dto/update-product.dto';
@@ -16,6 +21,7 @@ import { MEDIA_CACHE_CONTROL, MediaService } from './media.service';
 export class CatalogController {
   constructor(
     private readonly catalogService: CatalogService,
+    private readonly catalogImport: CatalogImportService,
     private readonly media: MediaService,
   ) {}
 
@@ -68,6 +74,35 @@ export class CatalogController {
   @RateLimit('catalog-media', 30)
   upload(@CurrentUser() user: AuthUserPayload, @Body() dto: MediaUploadDto) {
     return this.media.upload(user.tenantId, dto);
+  }
+
+  /** Validates a catalog package and returns what the import would do; writes nothing. */
+  @Post('import/preview')
+  @RateLimit('catalog-import', 30)
+  previewImport(
+    @CurrentUser() user: AuthUserPayload,
+    @Body() dto: CatalogImportPreviewDto,
+  ) {
+    return this.catalogImport.preview(user, dto);
+  }
+
+  /** Photo of a catalog package; the browser only sends the ones the preview asked for. */
+  @Post('import/media')
+  @RateLimit('catalog-import-media', 120)
+  uploadImportMedia(
+    @CurrentUser() user: AuthUserPayload,
+    @Body() dto: MediaUploadDto,
+  ) {
+    return this.catalogImport.uploadPhoto(user, dto);
+  }
+
+  @Post('import')
+  @RateLimit('catalog-import', 30)
+  commitImport(
+    @CurrentUser() user: AuthUserPayload,
+    @Body() dto: CatalogImportCommitDto,
+  ) {
+    return this.catalogImport.commit(user, dto);
   }
 }
 

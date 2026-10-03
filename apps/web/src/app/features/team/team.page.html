@@ -1,0 +1,154 @@
+<section class="store">
+  <header class="store__header">
+    <div>
+      <p class="store__eyebrow">Cuenta</p>
+      <h1>Equipo</h1>
+      <p>
+        Invita a las personas que te ayudan a atender mensajes y pedidos. Cada una entra con su
+        propio correo y contraseña.
+      </p>
+    </div>
+  </header>
+
+  @if (errorMessage(); as error) {
+    <div class="banner banner--danger" role="alert">
+      <ds-icon name="alert" />
+      <span>{{ error }}</span>
+      @if (!overview()) {
+        <ds-button type="button" variant="secondary" (click)="load()">Reintentar</ds-button>
+      }
+    </div>
+  }
+  @if (successMessage(); as success) {
+    <div class="banner banner--success" role="status">
+      <ds-icon name="check" />
+      <span>{{ success }}</span>
+    </div>
+  }
+
+  @if (loading()) {
+    <div class="skeleton" aria-busy="true">Cargando tu equipo…</div>
+  } @else if (!active()) {
+    <app-integration-gate key="team" />
+  } @else if (overview(); as o) {
+    <div class="status-card">
+      <span class="pill" [class.pill--ok]="!seatsFull()">
+        {{ o.seatQuota === null ? o.seatsUsed + ' usuarios' : o.seatsUsed + ' de ' + o.seatQuota + ' usuarios' }}
+      </span>
+      <div class="status-card__body">
+        <strong>{{ seatsFull() ? 'Usaste todos los usuarios de tu plan' : 'Puedes invitar a más personas' }}</strong>
+        <span>Las invitaciones pendientes también ocupan un lugar hasta que se acepten o se cancelen.</span>
+      </div>
+    </div>
+
+    <div class="store__grid">
+      <div class="store__form">
+        <section class="card">
+          <h2>Personas</h2>
+          <ul class="people">
+            @for (member of o.members; track member.id) {
+              <li class="people__row">
+                <div class="people__who">
+                  <strong>{{ member.fullName ?? member.email }} @if (member.isYou) { <span class="optional">(tú)</span> }</strong>
+                  <span>{{ member.email }}</span>
+                </div>
+                @if (canEdit(member)) {
+                  <label class="people__role">
+                    <span class="visually-hidden">Rol de {{ member.fullName ?? member.email }}</span>
+                    <select
+                      [value]="member.role"
+                      [disabled]="saving()"
+                      (change)="changeRole(member, $event)"
+                    >
+                      <option value="ADMIN">Administrador</option>
+                      <option value="AGENT">Asesor</option>
+                    </select>
+                  </label>
+                  <ds-button
+                    type="button"
+                    variant="ghost"
+                    [disabled]="saving()"
+                    [label]="'Quitar a ' + (member.fullName ?? member.email)"
+                    (click)="removeMember(member)"
+                  >
+                    Quitar
+                  </ds-button>
+                } @else {
+                  <span class="pill">{{ roleLabels[member.role] }}</span>
+                }
+              </li>
+            }
+          </ul>
+        </section>
+
+        <section class="card">
+          <h2>Invitaciones pendientes</h2>
+          @if (o.invites.length === 0) {
+            <ds-empty-state
+              title="Sin invitaciones pendientes"
+              body="Cuando invites a alguien, aparecerá aquí hasta que acepte."
+            />
+          } @else {
+            <ul class="people">
+              @for (invite of o.invites; track invite.id) {
+                <li class="people__row">
+                  <div class="people__who">
+                    <strong>{{ invite.email }}</strong>
+                    <span>{{ roleLabels[invite.role] }} · vence el {{ invite.expiresAt | date: 'd MMM' }}</span>
+                  </div>
+                  @if (o.canManage) {
+                    <ds-button type="button" variant="ghost" [disabled]="saving()" (click)="revokeInvite(invite)">
+                      Cancelar
+                    </ds-button>
+                  }
+                </li>
+              }
+            </ul>
+          }
+        </section>
+      </div>
+
+      <aside class="store__rail">
+        @if (o.canManage) {
+          <form class="card" [formGroup]="form" (ngSubmit)="invite()">
+            <h2>Invitar a alguien</h2>
+            <label>
+              Correo
+              <input formControlName="email" type="email" autocomplete="off" placeholder="asesor@tumarca.com" />
+            </label>
+            <label>
+              Rol
+              <select formControlName="role">
+                <option value="AGENT">Asesor: atiende mensajes y pedidos</option>
+                <option value="ADMIN">Administrador: además gestiona la cuenta</option>
+              </select>
+            </label>
+            <ds-button type="submit" [disabled]="saving() || seatsFull()">
+              {{ saving() ? 'Creando…' : 'Crear invitación' }}
+            </ds-button>
+            @if (seatsFull()) {
+              <small>Para invitar a más personas, mejora tu plan en Planes.</small>
+            }
+          </form>
+        } @else {
+          <p class="hint">Solo el dueño o un administrador puede invitar personas.</p>
+        }
+
+        @if (inviteLink(); as invite) {
+          <section class="card" role="status">
+            <h2>Comparte este enlace</h2>
+            <p class="hint">
+              Envíaselo a {{ invite.email }}. Vence en 7 días y solo se muestra ahora: si lo pierdes, crea otra invitación.
+            </p>
+            <span class="webhook">
+              <code>{{ invite.link }}</code>
+              <ds-button type="button" variant="secondary" (click)="copyLink(invite.link)">
+                {{ copied() ? 'Copiado' : 'Copiar enlace' }}
+              </ds-button>
+            </span>
+          </section>
+        }
+      </aside>
+    </div>
+  }
+</section>

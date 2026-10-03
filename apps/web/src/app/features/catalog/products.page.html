@@ -9,7 +9,12 @@
           y listo para pedir.
         </p>
       </div>
-      <ds-button type="button" (click)="openCreate()">Publicar producto</ds-button>
+      <div class="catalog__actions">
+        <a routerLink="/app/products/import" class="catalog__import">
+          <ds-icon name="upload" [size]="0.95" /> Importar catálogo
+        </a>
+        <ds-button type="button" (click)="openCreate()">Publicar producto</ds-button>
+      </div>
     </header>
 
     @if (errorMessage() && !editorOpen()) {
@@ -28,9 +33,12 @@
     } @else if (products().length === 0) {
       <ds-empty-state
         title="Aún no hay productos"
-        body="Publica el primero: nombre corto, descripción para chat, precio y una foto."
+        body="Publica el primero: nombre corto, descripción para chat, precio y una foto. ¿Ya tienes tu catálogo en un archivo? Impórtalo completo."
       >
         <ds-button type="button" (click)="openCreate()">Publicar producto</ds-button>
+        <a routerLink="/app/products/import" class="catalog__import">
+          <ds-icon name="upload" [size]="0.95" /> Importar catálogo
+        </a>
       </ds-empty-state>
     } @else {
       <ul class="product-grid">
@@ -56,7 +64,7 @@
                 <h2>{{ product.name }}</h2>
                 <p>{{ formatPrice(product.basePriceCents, product.currency) }}</p>
                 <span>{{ stockLabel(product) }}</span>
-                @if (product.isPublishedOnStore) {
+                @if (storeActive() && product.isPublishedOnStore) {
                   <span class="product-card__store">
                     <ds-icon name="store" [size]="0.9" /> En tienda web
                   </span>
@@ -595,10 +603,16 @@
           <section class="pub-card">
             <header class="pub-card__head pub-card__head--inline">
               <div>
-                <h2>Tienda web</h2>
-                <p>Muéstralo en tu tienda online con botón de pedido por WhatsApp.</p>
+                @if (storeActive()) {
+                  <h2>Tienda web</h2>
+                  <p>Muéstralo en tu tienda online con botón de pedido por WhatsApp.</p>
+                } @else {
+                  <h2>Más detalles</h2>
+                  <p>Ayudan a tu vendedor IA a recomendar y agrupar tus productos.</p>
+                }
               </div>
             </header>
+            @if (storeActive()) {
             <div class="avail-row">
               <label class="switch">
                 <input type="checkbox" formControlName="isPublishedOnStore" />
@@ -613,6 +627,7 @@
                 {{ productForm.controls.isPublishedOnStore.value ? 'Visible en tienda' : 'Oculto en tienda' }}
               </span>
             </div>
+            }
             <label class="field">
               <span class="field__label-row">
                 Precio antes (tachado)

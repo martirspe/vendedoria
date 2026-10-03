@@ -15,10 +15,14 @@ import { MetricsModule } from './metrics/metrics.module';
 import { BillingModule } from './billing/billing.module';
 import { KnowledgeModule } from './knowledge/knowledge.module';
 import { StorefrontModule } from './storefront/storefront.module';
+import { ShippingModule } from './shipping/shipping.module';
 import { CouponsModule } from './coupons/coupons.module';
 import { CheckoutModule } from './checkout/checkout.module';
 import { RateLimitModule } from './rate-limit/rate-limit.module';
 import { TurnstileModule } from './turnstile/turnstile.module';
+import { IntegrationsModule } from './integrations/integrations.module';
+import { TeamModule } from './team/team.module';
+import { PlatformModule } from './platform/platform.module';
 import { validateEnv } from './config/env.validation';
 
 @Module({
@@ -44,8 +48,12 @@ import { validateEnv } from './config/env.validation';
     MetricsModule,
     BillingModule,
     StorefrontModule,
+    ShippingModule,
     CouponsModule,
     CheckoutModule,
+    IntegrationsModule,
+    TeamModule,
+    PlatformModule,
   ],
 })
 export class AppModule {}

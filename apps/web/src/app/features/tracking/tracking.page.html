@@ -1,0 +1,111 @@
+<section class="store">
+  <header class="store__header">
+    <div>
+      <p class="store__eyebrow">Resultados</p>
+      <h1>Píxel y Analytics</h1>
+      <p>
+        Mide las visitas, los carritos y las compras de tu tienda en Meta y Google Analytics
+        para medir tus anuncios. Solo se mide a quien acepta las cookies.
+      </p>
+    </div>
+  </header>
+
+  @if (errorMessage(); as error) {
+    <div class="banner banner--danger" role="alert">
+      <ds-icon name="alert" />
+      <span>{{ error }}</span>
+      @if (!settings()) {
+        <ds-button type="button" variant="secondary" (click)="load()">Reintentar</ds-button>
+      }
+    </div>
+  }
+  @if (successMessage(); as success) {
+    <div class="banner banner--success" role="status">
+      <ds-icon name="check" />
+      <span>{{ success }}</span>
+    </div>
+  }
+
+  @if (loading()) {
+    <div class="skeleton" aria-busy="true">Cargando tu analítica…</div>
+  } @else if (!active()) {
+    <app-integration-gate key="tracking" />
+  } @else if (settings()) {
+    <div class="status-card" [class.status-card--live]="connected()">
+      <span class="pill" [class.pill--ok]="connected()">{{ connected() ? 'Midiendo' : 'Sin códigos' }}</span>
+      <div class="status-card__body">
+        <strong>{{ connected() ? 'Tu tienda envía eventos' : 'Aún no conectas ningún código' }}</strong>
+        <span>
+          @if (connected()) {
+            Se registran: vista de página, vista de producto, agregar al carrito, inicio de compra y compra pagada.
+          } @else {
+            Pega el ID de tu píxel de Meta, el de Google Analytics o ambos.
+          }
+        </span>
+      </div>
+    </div>
+
+    <div class="store__grid">
+      <form class="store__form" [formGroup]="form" (ngSubmit)="save()">
+        <section class="card">
+          <h2>Tus códigos</h2>
+          <label>
+            <span class="label-text">ID del píxel de Meta <span class="optional">Opcional</span></span>
+            <input
+              formControlName="metaPixelId"
+              autocomplete="off"
+              spellcheck="false"
+              inputmode="numeric"
+              placeholder="123456789012345"
+              [readonly]="!canManage"
+            />
+            @if (form.controls.metaPixelId.invalid && form.controls.metaPixelId.touched) {
+              <small>Son solo números, entre 10 y 20.</small>
+            }
+          </label>
+          <label>
+            <span class="label-text">ID de medición de Google Analytics 4 <span class="optional">Opcional</span></span>
+            <input
+              formControlName="ga4MeasurementId"
+              autocomplete="off"
+              spellcheck="false"
+              placeholder="G-ABC123XYZ9"
+              [readonly]="!canManage"
+            />
+            @if (form.controls.ga4MeasurementId.invalid && form.controls.ga4MeasurementId.touched) {
+              <small>Empieza con G-, por ejemplo G-ABC123XYZ9.</small>
+            }
+          </label>
+          <small>Deja un campo vacío para dejar de usarlo.</small>
+        </section>
+        @if (canManage) {
+          <footer>
+            <ds-button type="submit" [disabled]="saving()">{{ saving() ? 'Guardando…' : 'Guardar' }}</ds-button>
+          </footer>
+        } @else {
+          <p class="hint">Solo el dueño o un administrador puede cambiar estos códigos.</p>
+        }
+      </form>
+
+      <aside class="store__rail">
+        <section class="card">
+          <h2>Dónde encontrarlos</h2>
+          <ol class="steps">
+            <li>
+              <strong>Píxel de Meta:</strong> en el Administrador de eventos de Meta, abre tu conjunto de datos;
+              el ID es el número que aparece bajo su nombre.
+            </li>
+            <li>
+              <strong>Google Analytics 4:</strong> en Administrar, abre Flujos de datos, elige tu flujo web
+              y copia el ID de medición (empieza con G-).
+            </li>
+          </ol>
+          <small>
+            Tu tienda muestra un aviso de cookies y actualiza su Política de cookies automáticamente.
+            Nadie es medido hasta que acepta.
+          </small>
+        </section>
+      </aside>
+    </div>
+  }
+</section>

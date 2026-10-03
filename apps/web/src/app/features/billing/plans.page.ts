@@ -12,8 +12,11 @@ import { DsIconComponent } from '@vendedoria/ui';
 import {
   BillingApiService,
   BillingOverview,
+  ChatPack,
   PlanDefinition,
   PlanPaymentResult,
+  PlanPurchase,
+  PrepayPrice,
 } from '../../core/api/billing-api.service';
 
 const PROVIDER_PAYMENT_ID = /^\d{1,20}$/;
@@ -40,6 +43,8 @@ export class PlansPage {
   readonly overview = signal<BillingOverview | null>(null);
   /** Simulated checkout (development without platform credentials) waiting for confirmation. */
   readonly pendingSimulation = signal<string | null>(null);
+  /** Months paid at once: 1, 3, 6 or 12. */
+  readonly months = signal(1);
 
   constructor() {
     void this.init();
@@ -57,25 +62,68 @@ export class PlansPage {
     }
   }
 
+  setMonths(months: number): void {
+    this.months.set(months);
+  }
+
+  /** Price of the plan for the chosen period; quoted plans have none. */
+  priceFor(plan: PlanDefinition): PrepayPrice | null {
+    return plan.prepay.find((option) => option.months === this.months()) ?? null;
+  }
+
+  /** Largest discount offered, for the period selector hint. */
+  maxDiscount(data: BillingOverview): number {
+    return Math.max(0, ...data.plans.flatMap((plan) => plan.prepay.map((option) => option.discountPercent)));
+  }
+
+  periodOptions(data: BillingOverview): PrepayPrice[] {
+    return data.plans.find((plan) => plan.prepay.length)?.prepay ?? [];
+  }
+
+  money(cents: number): string {
+    return new Intl.NumberFormat('es-PE', {
+      style: 'currency',
+      currency: 'PEN',
+      minimumFractionDigits: cents % 100 === 0 ? 0 : 2,
+    }).format(cents / 100);
+  }
+
   async selectPlan(plan: PlanDefinition): Promise<void> {
     const data = this.overview();
     if (!data || !this.canSelect(plan, data)) return;
+    const months = this.months();
+    await this.startCheckout(
+      { planTier: plan.id, months },
+      months === 1
+        ? `Pago de prueba del plan ${plan.name} listo. Confírmalo para activar el plan.`
+        : `Pago de prueba del plan ${plan.name} por ${months} meses listo. Confírmalo para activar el plan.`,
+      'No pudimos abrir el pago de tu plan. Inténtalo de nuevo en unos minutos.',
+    );
+  }
+
+  async buyChatPack(pack: ChatPack): Promise<void> {
+    const data = this.overview();
+    if (!data || this.saving() || !data.chatPacksAvailable || !data.checkoutEnabled) return;
+    await this.startCheckout(
+      { chatPackSize: pack.chats },
+      `Pago de prueba de ${pack.chats} chats extra listo. Confírmalo para sumarlos a este mes.`,
+      'No pudimos abrir el pago de tus chats extra. Inténtalo de nuevo en unos minutos.',
+    );
+  }
+
+  private async startCheckout(purchase: PlanPurchase, simulatedMessage: string, fallback: string): Promise<void> {
     this.saving.set(true);
     this.clearMessages();
     try {
-      const checkout = await this.api.createCheckout(plan.id);
+      const checkout = await this.api.createCheckout(purchase);
       if (checkout.simulated) {
         this.pendingSimulation.set(checkout.paymentId);
-        this.infoMessage.set(
-          `Pago de prueba del plan ${plan.name} listo. Confírmalo para activar el plan.`,
-        );
+        this.infoMessage.set(simulatedMessage);
         return;
       }
       this.document.defaultView?.location.assign(checkout.checkoutUrl);
     } catch (error) {
-      this.errorMessage.set(
-        this.messageFrom(error, 'No pudimos abrir el pago de tu plan. Inténtalo de nuevo en unos minutos.'),
-      );
+      this.errorMessage.set(this.messageFrom(error, fallback));
     } finally {
       this.saving.set(false);
     }
@@ -108,7 +156,7 @@ export class PlansPage {
     return data.planStatus === 'TRIAL' ? `Pagar ${plan.name}` : `Renovar ${plan.name}`;
   }
 
-  /** Plan name with its state, e.g. "Starter · prueba gratis". */
+  /** Plan name with its state, e.g. "Crece (prueba gratis)". */
   currentPlanLabel(data: BillingOverview): string {
     if (data.planStatus === 'TRIAL') return `${data.currentPlan.name} (prueba gratis)`;
     if (data.planStatus === 'EXPIRED') return `${data.currentPlan.name} (vencido)`;
@@ -183,7 +231,7 @@ export class PlansPage {
   private showResult(result: PlanPaymentResult): void {
     switch (result.status) {
       case 'active':
-        this.successMessage.set('¡Listo! Recibimos tu pago y tu plan ya está activo.');
+        this.successMessage.set('¡Listo! Recibimos tu pago y ya está aplicado a tu cuenta.');
         break;
       case 'pending':
         this.infoMessage.set(

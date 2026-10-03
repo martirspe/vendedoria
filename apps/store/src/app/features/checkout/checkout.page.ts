@@ -5,6 +5,7 @@ import {
   effect,
   inject,
   signal,
+  untracked,
   viewChild,
 } from '@angular/core';
 import { HttpErrorResponse } from '@angular/common/http';
@@ -17,6 +18,7 @@ import type {
   UbigeoDistrict,
 } from '@vendedoria/contracts';
 import { DsIconComponent, DsTurnstileComponent } from '@vendedoria/ui';
+import { AnalyticsService } from '../../core/analytics.service';
 import { campaignCoupon, forgetCampaignCoupon } from '../../core/campaign-coupon';
 import { CartService } from '../../core/cart.service';
 import { MoneyPipe } from '../../core/money.pipe';
@@ -117,6 +119,13 @@ export class CheckoutPage {
 
   constructor() {
     inject(SeoService).set({ title: 'Finalizar compra', path: '/checkout', noindex: true });
+    const analytics = inject(AnalyticsService);
+    let checkoutTracked = false;
+    effect(() => {
+      if (checkoutTracked || !this.cart.ready() || !this.cart.lines().length) return;
+      checkoutTracked = true;
+      untracked(() => analytics.beginCheckoutFromCart(this.cart.lines(), this.cart.lines()[0].currency));
+    });
     this.form.controls.mode.valueChanges.subscribe((mode) => {
       this.mode.set(mode || null);
       this.syncAddressValidators(mode || null);

@@ -28,7 +28,7 @@ Do NOT open frontend apps unless an API response shape changes.
 - Money columns are `*Cents` Int, never Float/Decimal.
 - External event idempotency is enforced by a DB unique key (e.g. `Payment.idempotencyKey`, `Channel @@unique([tenantId, type, externalId])`, `Conversation @@unique([channelId, externalThreadId])`), not by in-memory checks.
 - Refresh tokens are stored hashed (`RefreshToken.tokenHash`); passwords with bcrypt. Never store raw secrets or tokens in new columns without encryption decision from the user.
-- Never edit or renumber an applied migration. `0004_sales_agent_personality_fields` is an intentional no-op that existing databases already recorded: keep it.
+- Never edit or renumber an applied migration. History was squashed into `0001_init` before the first production customers; new changes go in new migrations after it.
 
 ## Procedure
 1. Edit `schema.prisma` minimally, following neighbouring naming (camelCase fields, PascalCase models, `createdAt`/`updatedAt`).

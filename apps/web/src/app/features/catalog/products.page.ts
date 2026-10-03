@@ -9,8 +9,9 @@ import {
 import { takeUntilDestroyed, toSignal } from '@angular/core/rxjs-interop';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { HttpErrorResponse } from '@angular/common/http';
+import { RouterLink } from '@angular/router';
 import { map, startWith } from 'rxjs';
-import { DsButtonComponent } from '@vendedoria/ui';
+import { DsButtonComponent, DsConfirmService } from '@vendedoria/ui';
 import { DsEmptyStateComponent } from '@vendedoria/ui';
 import { DsIconComponent } from '@vendedoria/ui';
 import {
@@ -20,6 +21,7 @@ import {
   ProductDetails,
   ProductDto,
 } from '../../core/api/catalog-api.service';
+import { IntegrationsStateService } from '../../core/integrations/integrations-state.service';
 import { resizeImage } from '../../core/media/resize-image';
 
 type VariantDraft = {
@@ -58,6 +60,7 @@ function toCents(amount: number): number {
   standalone: true,
   imports: [
     ReactiveFormsModule,
+    RouterLink,
     DsButtonComponent,
     DsEmptyStateComponent,
     DsIconComponent,
@@ -70,7 +73,10 @@ export class ProductsPage {
   private readonly api = inject(CatalogApiService);
   private readonly fb = inject(FormBuilder);
   private readonly destroyRef = inject(DestroyRef);
+  private readonly confirmDialog = inject(DsConfirmService);
+  private readonly integrations = inject(IntegrationsStateService);
 
+  readonly storeActive = computed(() => this.integrations.isActive('store'));
   readonly products = signal<ProductDto[]>([]);
   readonly loading = signal(true);
   readonly saving = signal(false);
@@ -621,13 +627,14 @@ export class ProductsPage {
     const productId = this.editingId();
     if (!productId) return;
     const name = this.productForm.controls.name.value.trim() || 'este producto';
-    if (
-      !confirm(
-        `¿Eliminar "${name}"? Sale del catálogo, la tienda web y el inventario. Los pedidos anteriores conservan su detalle.`,
-      )
-    ) {
-      return;
-    }
+    const confirmed = await this.confirmDialog.confirm({
+      title: `¿Eliminar "${name}"?`,
+      message:
+        'Sale del catálogo, la tienda web y el inventario. Los pedidos anteriores conservan su detalle.',
+      confirmLabel: 'Eliminar producto',
+      tone: 'danger',
+    });
+    if (!confirmed) return;
     this.deleting.set(true);
     this.errorMessage.set(null);
     try {

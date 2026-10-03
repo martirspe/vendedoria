@@ -9,6 +9,7 @@ import { ConfigService } from '@nestjs/config';
 import { PaymentStatus, Prisma } from '@prisma/client';
 import { InboxEventsService } from '../conversations/inbox-events.service';
 import { PrismaService } from '../prisma/prisma.service';
+import { OrderNotificationsService } from '../orders/order-notifications.service';
 import { settlePaidOrder } from '../orders/settlement';
 import { MerchantAccountsService, MerchantCredentials } from './merchant-accounts.service';
 import { MercadoPagoPaymentProvider } from './mercadopago.provider';
@@ -26,6 +27,7 @@ export class PaymentsService {
     private readonly mercadoPago: MercadoPagoPaymentProvider,
     private readonly mock: MockPaymentProvider,
     private readonly inboxEvents: InboxEventsService,
+    private readonly notifications: OrderNotificationsService,
   ) {}
 
   /** The tenant's account when connected; the simulator only outside production. */
@@ -102,8 +104,7 @@ export class PaymentsService {
         },
       }));
 
-    const back = (state: string) =>
-      `${webOrigin}/app/orders?payment=${state}&orderId=${params.orderId}`;
+    const back = (state: 'success' | 'pending' | 'failure') => `${webOrigin}/payment/${state}`;
     const checkout = await provider.createCheckout(
       {
         idempotencyKey,
@@ -203,8 +204,7 @@ export class PaymentsService {
       return { ok: true, idempotent: true, paymentId: payment.id };
     }
 
-    let settledConversationId: string | null = null;
-    const updated = await this.prisma.$transaction(async (tx) => {
+    const { updated, settled } = await this.prisma.$transaction(async (tx) => {
       const next = await tx.payment.update({
         where: { id: payment.id },
         data: {
@@ -219,13 +219,14 @@ export class PaymentsService {
           include: { items: true },
         });
         if (order && (await settlePaidOrder(tx, order, `${event.provider}:${event.externalId ?? ''}`))) {
-          settledConversationId = order.conversationId;
+          return { updated: next, settled: { id: order.id, conversationId: order.conversationId } };
         }
       }
-      return next;
+      return { updated: next, settled: null };
     });
-    if (settledConversationId) {
-      this.inboxEvents.publish(tenantId, settledConversationId, 'conversation');
+    if (settled?.conversationId) {
+      this.inboxEvents.publish(tenantId, settled.conversationId, 'conversation');
+      await this.notifications.paymentConfirmed(tenantId, settled.id);
     }
     return { ok: true, paymentId: updated.id, status: updated.status };
   }

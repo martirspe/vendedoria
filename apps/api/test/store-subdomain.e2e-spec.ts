@@ -34,6 +34,7 @@ describe('Store subdomain change (e2e)', () => {
           name: slug,
           slug,
           storefront: { create: { displayName: `Tienda ${slug}`, status: 'PUBLISHED', whatsappPhone: '51900000000' } },
+          integrations: { create: { key: 'store' } },
         },
       });
       tenantIds.push(tenant.id);
@@ -53,8 +54,8 @@ describe('Store subdomain change (e2e)', () => {
     const view = await storefront.changeSubdomain(tenantAId, next);
     expect(view.url).toContain(`//${next}.`);
 
-    expect((await resolve(next)).json()).toEqual({ slug: next, moved: false });
-    expect((await resolve(slugA)).json()).toEqual({ slug: next, moved: true });
+    expect((await resolve(next)).json()).toEqual({ slug: next, moved: false, primaryHost: null });
+    expect((await resolve(slugA)).json()).toEqual({ slug: next, moved: true, primaryHost: null });
 
     const store = await app.inject({ method: 'GET', url: `/storefront/${slugA}` });
     expect(store.statusCode).toBe(200);
@@ -69,8 +70,8 @@ describe('Store subdomain change (e2e)', () => {
 
   it('lets a store take back one of its own former subdomains', async () => {
     await storefront.changeSubdomain(tenantAId, slugA);
-    expect((await resolve(slugA)).json()).toEqual({ slug: slugA, moved: false });
-    expect((await resolve(`${slugA}-nuevo`)).json()).toEqual({ slug: slugA, moved: true });
+    expect((await resolve(slugA)).json()).toEqual({ slug: slugA, moved: false, primaryHost: null });
+    expect((await resolve(`${slugA}-nuevo`)).json()).toEqual({ slug: slugA, moved: true, primaryHost: null });
   });
 
   it('rejects reserved names and limits the changes per month', async () => {

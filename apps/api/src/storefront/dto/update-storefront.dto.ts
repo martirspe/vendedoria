@@ -2,9 +2,7 @@ import { ApiPropertyOptional } from '@nestjs/swagger';
 import { Type } from 'class-transformer';
 import {
   ArrayMaxSize,
-  ArrayMinSize,
   IsArray,
-  IsBoolean,
   IsEmail,
   IsIn,
   IsInt,
@@ -19,7 +17,6 @@ import {
   ValidateIf,
   ValidateNested,
 } from 'class-validator';
-import { CARRIER_TIERS, MAX_CARRIER_RATE_CENTS } from '../shipping';
 import { INDUSTRIES, MAX_TEMPLATE_FAQ, TEMPLATES } from '../store-templates';
 
 const HEX_COLOR = /^#[0-9a-fA-F]{6}$/;
@@ -27,29 +24,6 @@ export const RUC = /^(10|15|16|17|20)\d{9}$/;
 /** Same rule as product photos: uploads served by the API itself live on hosts without a TLD (localhost) in dev. */
 const URL_OPTIONS = { protocols: ['https', 'http'], require_protocol: true, require_tld: false };
 const IMAGE_URL_MESSAGE = { message: 'Usa un enlace de imagen válido que empiece con https://.' };
-
-/** Five tiers in cents: ≤20 km, ≤100 km, ≤400 km, ≤900 km, farther. */
-export class CarrierRatesDto {
-  @ApiPropertyOptional({ type: [Number], example: [900, 1200, 1600, 2200, 2800] })
-  @IsOptional()
-  @IsArray()
-  @ArrayMinSize(CARRIER_TIERS)
-  @ArrayMaxSize(CARRIER_TIERS)
-  @IsInt({ each: true })
-  @Min(0, { each: true })
-  @Max(MAX_CARRIER_RATE_CENTS, { each: true })
-  olva?: number[];
-
-  @ApiPropertyOptional({ type: [Number], example: [800, 1000, 1400, 1800, 2400] })
-  @IsOptional()
-  @IsArray()
-  @ArrayMinSize(CARRIER_TIERS)
-  @ArrayMaxSize(CARRIER_TIERS)
-  @IsInt({ each: true })
-  @Min(0, { each: true })
-  @Max(MAX_CARRIER_RATE_CENTS, { each: true })
-  shalom?: number[];
-}
 
 export class TemplateFaqDto {
   @ApiPropertyOptional()
@@ -201,44 +175,6 @@ export class UpdateStorefrontDto {
   @Min(0)
   @Max(60)
   exchangeDays?: number;
-
-  @ApiPropertyOptional()
-  @IsOptional()
-  @IsBoolean()
-  deliveryEnabled?: boolean;
-
-  @ApiPropertyOptional()
-  @IsOptional()
-  @ValidateIf((_, value) => value !== null)
-  @IsInt()
-  @Min(1)
-  @Max(100_000_000)
-  freeShippingFromCents?: number | null;
-
-  @ApiPropertyOptional()
-  @IsOptional()
-  @IsBoolean()
-  pickupEnabled?: boolean;
-
-  @ApiPropertyOptional()
-  @IsOptional()
-  @ValidateIf((_, value) => value !== null)
-  @IsString()
-  @MaxLength(240)
-  pickupAddress?: string | null;
-
-  @ApiPropertyOptional({ example: '150132', description: 'INEI district the couriers pick up from' })
-  @IsOptional()
-  @ValidateIf((_, value) => value !== null)
-  @Matches(/^\d{6}$/, { message: 'Elige el distrito desde donde despachas.' })
-  shippingOriginUbigeo?: string | null;
-
-  @ApiPropertyOptional({ type: CarrierRatesDto, nullable: true })
-  @IsOptional()
-  @ValidateIf((_, value) => value !== null)
-  @ValidateNested()
-  @Type(() => CarrierRatesDto)
-  carrierRates?: CarrierRatesDto | null;
 
   @ApiPropertyOptional({ enum: INDUSTRIES })
   @IsOptional()

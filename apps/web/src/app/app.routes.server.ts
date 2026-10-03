@@ -7,6 +7,15 @@ export const serverRoutes: ServerRoute[] = [
     renderMode: RenderMode.Client
   },
   {
+    path: 'invite/:token',
+    renderMode: RenderMode.Client
+  },
+  {
+    path: 'payment/:state',
+    renderMode: RenderMode.Prerender,
+    getPrerenderParams: async () => [{ state: 'success' }, { state: 'pending' }, { state: 'failure' }]
+  },
+  {
     path: '**',
     renderMode: RenderMode.Prerender
   }

@@ -67,6 +67,7 @@ WEB_PORT="${WEB_PORT:-8082}"
 CONSOLE_HOST="$(read_env CONSOLE_HOST)"
 STORE_BASE_DOMAIN="$(read_env STORE_BASE_DOMAIN)"
 CLOUDFLARE_API_TOKEN="$(read_env CLOUDFLARE_API_TOKEN)"
+CUSTOM_DOMAINS_ZONE="$(read_env CLOUDFLARE_SAAS_ZONE_ID)"
 
 DOMAIN_RE='^([a-z0-9]([a-z0-9-]*[a-z0-9])?\.)+[a-z]{2,}$'
 for pair in "CONSOLE_HOST=${CONSOLE_HOST}" "STORE_BASE_DOMAIN=${STORE_BASE_DOMAIN}"; do
@@ -258,6 +259,11 @@ NGINX
     site_servers "$STORE_BASE_DOMAIN" "$apex_cert" 1m "" "$apex_hsts"
     site_servers "www.${STORE_BASE_DOMAIN}" "$www_cert" 1m "$STORE_BASE_DOMAIN"
     site_servers "*.${STORE_BASE_DOMAIN}" "$stores_cert" 1m ""
+    # Own store domains arrive from Cloudflare for SaaS with the buyer's Host. Exact and wildcard
+    # names of every app on this VPS win over this regex, so it only catches unknown hosts.
+    if [[ -n "$CUSTOM_DOMAINS_ZONE" ]]; then
+      site_servers '~^.+$' "$stores_cert" 1m ""
+    fi
   } >"$generated"
 
   install -d "$GENERATED_DIR"
@@ -267,6 +273,7 @@ NGINX
   log "Console:  ${CONSOLE_HOST} (${console_cert:-http only})"
   log "Site:     ${STORE_BASE_DOMAIN} (${apex_cert:-http only}), www (${www_cert:-http only})"
   log "Stores:   *.${STORE_BASE_DOMAIN} (${stores_cert:-http only})"
+  [[ -n "$CUSTOM_DOMAINS_ZONE" ]] && log "Own store domains: catch-all via Cloudflare for SaaS (${stores_cert:-http only})"
   log "Upstream: 127.0.0.1:${WEB_PORT}"
   log "Generated: ${OUTPUT_FILE}"
 }

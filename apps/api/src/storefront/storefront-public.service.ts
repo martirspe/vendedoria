@@ -12,6 +12,8 @@ import type {
   StorefrontView,
 } from '@vendedoria/contracts';
 import { resolvePlanState } from '../billing/plan-catalog';
+import { normalizeDomain } from '../integrations/custom-domain.service';
+import { activeCustomDomain, isIntegrationActive } from '../integrations/integration-state';
 import { MerchantAccountsService } from '../payments/merchant-accounts.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { TurnstileService } from '../turnstile/turnstile.service';
@@ -90,14 +92,43 @@ export class StorefrontPublicService {
   async resolveHost(host: string): Promise<StoreResolveResult> {
     const slug = slugFromHost(host, this.baseDomain);
     if (!slug) {
-      throw new NotFoundException('Store not found');
+      return this.resolveCustomDomain(host);
     }
-    const tenant = await this.tenantBySlug(slug, { slug: true, storefront: { select: { status: true } } });
+    const tenant = await this.tenantBySlug(slug, {
+      id: true,
+      slug: true,
+      storefront: { select: { status: true } },
+    });
     const status = tenant?.storefront?.status;
-    if (!tenant || !status || status === 'SUSPENDED') {
+    if (!tenant || !status || status === 'SUSPENDED' || !(await this.storeEnabled(tenant.id))) {
       throw new NotFoundException('Store not found');
     }
-    return { slug: tenant.slug, moved: tenant.slug !== slug };
+    return {
+      slug: tenant.slug,
+      moved: tenant.slug !== slug,
+      primaryHost: await activeCustomDomain(this.prisma, tenant.id),
+    };
+  }
+
+  /** Own domains only answer once verified and while the plan includes them. */
+  private async resolveCustomDomain(host: string): Promise<StoreResolveResult> {
+    const domain = normalizeDomain(host);
+    const storefront = domain
+      ? await this.prisma.storefront.findUnique({
+          where: { customDomain: domain },
+          select: { tenantId: true, status: true, customDomainStatus: true, tenant: { select: { slug: true } } },
+        })
+      : null;
+    if (
+      !storefront ||
+      storefront.status === 'SUSPENDED' ||
+      storefront.customDomainStatus !== 'active' ||
+      !(await this.storeEnabled(storefront.tenantId)) ||
+      !(await isIntegrationActive(this.prisma, storefront.tenantId, 'custom_domain'))
+    ) {
+      throw new NotFoundException('Store not found');
+    }
+    return { slug: storefront.tenant.slug, moved: false, primaryHost: domain };
   }
 
   /** Current tenant for a slug, following the redirect left behind when a store changed subdomain. */
@@ -111,6 +142,11 @@ export class StorefrontPublicService {
     return redirect?.tenant ?? null;
   }
 
+  /** The business turned the store on in Integraciones; otherwise it does not exist publicly. */
+  private storeEnabled(tenantId: string): Promise<boolean> {
+    return isIntegrationActive(this.prisma, tenantId, 'store');
+  }
+
   /**
    * Every public read goes through here: the tenant is derived from the slug
    * on the server and unpublished stores are only visible with a valid preview token.
@@ -121,7 +157,7 @@ export class StorefrontPublicService {
     }
     const tenant = await this.tenantBySlug(slug, { id: true, storefront: { select: { status: true } } });
     const status = tenant?.storefront?.status;
-    if (!tenant || !status || status === 'SUSPENDED') {
+    if (!tenant || !status || status === 'SUSPENDED' || !(await this.storeEnabled(tenant.id))) {
       throw new NotFoundException('Store not found');
     }
     if (status === 'PUBLISHED') {
@@ -179,6 +215,12 @@ export class StorefrontPublicService {
       industry: storefront.industry,
       template: effectiveTemplate(storefront.template, storefront.industry),
       templateCopy: readTemplateCopy(storefront.templateCopy),
+      tracking:
+        !access.isPreview &&
+        (storefront.metaPixelId || storefront.ga4MeasurementId) &&
+        (await isIntegrationActive(this.prisma, access.tenantId, 'tracking'))
+          ? { metaPixelId: storefront.metaPixelId, ga4MeasurementId: storefront.ga4MeasurementId }
+          : null,
     };
   }
 

@@ -9,6 +9,9 @@
         <h1>{{ d.title }}</h1>
         <p>Última actualización: {{ updated() }}</p>
         <button class="text-link legal-print" type="button" (click)="print()"><app-icon name="print" />Imprimir o guardar en PDF</button>
+        @if (canChangeConsent()) {
+          <button class="text-link legal-print" type="button" (click)="changeConsent()">Cambiar mi decisión sobre cookies</button>
+        }
       </header>
       <div class="legal-layout">
         <aside class="legal-toc" aria-label="Contenido">

@@ -1,0 +1,12 @@
+@if (analytics.askConsent()) {
+  <section class="consent" role="region" aria-label="Aviso de cookies">
+    <p class="consent__text">
+      Usamos cookies propias para el carrito y, si lo aceptas, cookies de analítica y publicidad para mejorar la tienda.
+      <a routerLink="/politica-de-cookies">Más información</a>
+    </p>
+    <div class="consent__actions">
+      <button type="button" class="consent__btn" (click)="analytics.reject()">Rechazar</button>
+      <button type="button" class="consent__btn" (click)="analytics.accept()">Aceptar</button>
+    </div>
+  </section>
+}

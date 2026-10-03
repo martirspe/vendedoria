@@ -27,6 +27,12 @@ export function storefrontUrl(urlTemplate: string, slug: string): string {
   return urlTemplate.replace('{slug}', slug);
 }
 
+/** Store URL on its own domain, with the scheme and port of the platform stores. */
+export function customDomainUrl(urlTemplate: string, domain: string): string {
+  const base = new URL(urlTemplate.replace('{slug}', 'x'));
+  return `${base.protocol}//${domain}${base.port ? `:${base.port}` : ''}`;
+}
+
 /**
  * Extracts the tenant slug from a request host such as `acme-1a2b3c.localhost:4300`.
  * Only a single label directly under the base domain is accepted.

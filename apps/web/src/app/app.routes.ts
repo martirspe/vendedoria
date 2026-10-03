@@ -20,6 +20,18 @@ export const routes: Routes = [
       import('./features/auth/register.page').then((m) => m.RegisterPage),
   },
   {
+    path: 'invite/:token',
+    loadComponent: () =>
+      import('./features/auth/invite.page').then((m) => m.InvitePage),
+  },
+  {
+    path: 'payment/:state',
+    loadComponent: () =>
+      import('./features/payment-result/payment-result.page').then(
+        (m) => m.PaymentResultPage,
+      ),
+  },
+  {
     path: 'app',
     canActivate: [authGuard],
     loadComponent: () =>
@@ -30,6 +42,16 @@ export const routes: Routes = [
         path: 'products',
         loadComponent: () =>
           import('./features/catalog/products.page').then((m) => m.ProductsPage),
+      },
+      {
+        path: 'products/import',
+        loadComponent: () =>
+          import('./features/catalog/catalog-import.page').then((m) => m.CatalogImportPage),
+      },
+      {
+        path: 'shipping',
+        loadComponent: () =>
+          import('./features/shipping/shipping.page').then((m) => m.ShippingPage),
       },
       {
         path: 'store',
@@ -43,8 +65,9 @@ export const routes: Routes = [
             (m) => m.GetStartedPage,
           ),
       },
+      { path: 'seller', pathMatch: 'full', redirectTo: 'seller/profile' },
       {
-        path: 'seller',
+        path: 'seller/:section',
         loadComponent: () =>
           import('./features/seller/seller.page').then((m) => m.SellerPage),
       },
@@ -98,6 +121,26 @@ export const routes: Routes = [
         path: 'plans',
         loadComponent: () =>
           import('./features/billing/plans.page').then((m) => m.PlansPage),
+      },
+      {
+        path: 'domain',
+        loadComponent: () =>
+          import('./features/domain/domain.page').then((m) => m.DomainPage),
+      },
+      {
+        path: 'instagram',
+        loadComponent: () =>
+          import('./features/instagram/instagram.page').then((m) => m.InstagramPage),
+      },
+      {
+        path: 'tracking',
+        loadComponent: () =>
+          import('./features/tracking/tracking.page').then((m) => m.TrackingPage),
+      },
+      {
+        path: 'team',
+        loadComponent: () =>
+          import('./features/team/team.page').then((m) => m.TeamPage),
       },
       {
         path: 'settings',

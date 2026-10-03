@@ -5,7 +5,7 @@
       <h1>Planes</h1>
       <p>
         Revisa cuánto usaste este mes y elige el plan que va con el tamaño de
-        tu negocio. Pagas mes a mes, sin contratos.
+        tu negocio. Sin contratos: pagas por mes o por adelantado con descuento.
       </p>
     </div>
   </header>
@@ -73,7 +73,25 @@
             )
           }}
         </strong>
-        <small>Se reinicia el 1 de cada mes</small>
+        <small>
+          @if (data.usage.extraChats) {
+            Incluye {{ data.usage.extraChats }} chats extra ·
+          }
+          Se reinicia el 1 de cada mes
+        </small>
+      </div>
+      <div [class.is-warning]="data.usage.aiAtLimit">
+        <span>Respuestas con IA este mes</span>
+        <strong>
+          {{ usageLabel(data, data.usage.aiRepliesUsed, data.usage.aiReplyQuota) }}
+        </strong>
+        <small>
+          {{
+            data.usage.aiAtLimit
+              ? 'Llegaste al límite: tu vendedor responde con respuestas básicas hasta el próximo mes.'
+              : 'Al llegar al límite, tu vendedor sigue con respuestas básicas.'
+          }}
+        </small>
       </div>
       <div>
         <span>Productos publicados</span>
@@ -81,15 +99,47 @@
           {{ usageLabel(data, data.usage.productsUsed, data.usage.productQuota) }}
         </strong>
       </div>
+      @if (data.usage.couponQuota !== 0) {
+        <div>
+          <span>Cupones activos</span>
+          <strong>
+            {{ usageLabel(data, data.usage.couponsActive, data.usage.couponQuota) }}
+          </strong>
+        </div>
+      }
       <div>
-        <span>Cupones activos</span>
+        <span>Usuarios</span>
         <strong>
-          {{ usageLabel(data, data.usage.couponsActive, data.usage.couponQuota) }}
+          {{ usageLabel(data, data.usage.seatsUsed, data.usage.seatQuota) }}
         </strong>
+        <small>Incluye invitaciones pendientes</small>
       </div>
     </div>
 
-    <h2 class="plans__section-title">Elige tu plan</h2>
+    <div class="plans__choose">
+      <h2 class="plans__section-title">Elige tu plan</h2>
+      @if (periodOptions(data).length > 1) {
+        <div class="period" role="radiogroup" aria-label="Periodo de pago">
+          @for (option of periodOptions(data); track option.months) {
+            <button
+              type="button"
+              role="radio"
+              [attr.aria-checked]="months() === option.months"
+              [class.is-active]="months() === option.months"
+              (click)="setMonths(option.months)"
+            >
+              {{ option.label }}
+              @if (option.discountPercent) {
+                <span class="period__save">-{{ option.discountPercent }} %</span>
+              }
+            </button>
+          }
+        </div>
+      }
+    </div>
+    @if (months() === 1 && maxDiscount(data) > 0) {
+      <p class="plans__hint">Paga por adelantado y ahorra hasta {{ maxDiscount(data) }} %. No hay cobros automáticos.</p>
+    }
     <ul class="plan-grid">
       @for (plan of data.plans; track plan.id) {
         <li [class.is-current]="plan.id === data.currentPlan.id">
@@ -101,7 +151,19 @@
               }
             </div>
             <p class="plan-grid__description">{{ plan.description }}</p>
-            <strong>{{ plan.priceLabel }}</strong>
+            @if (priceFor(plan); as price) {
+              @if (price.months === 1) {
+                <strong>{{ plan.priceLabel }}</strong>
+              } @else {
+                <strong>{{ money(price.monthlyCents) }} al mes</strong>
+                <small class="plan-grid__period">
+                  {{ money(price.totalCents) }} por {{ price.months }} meses · ahorras
+                  {{ money((plan.priceCents ?? 0) * price.months - price.totalCents) }}
+                </small>
+              }
+            } @else {
+              <strong>{{ plan.priceLabel }}</strong>
+            }
             @if (plan.note) {
               <p class="plan-grid__note">{{ plan.note }}</p>
             }
@@ -128,6 +190,41 @@
         </li>
       }
     </ul>
+
+    @if (data.chatPacks.length) {
+      <section class="packs" aria-labelledby="packs-title">
+        <div>
+          <h2 class="plans__section-title" id="packs-title">Chats extra para este mes</h2>
+          <p class="plans__hint">
+            ¿Un mes con más ventas? Suma chats nuevos sin cambiar de plan. Se usan hasta fin de mes
+            e incluyen sus respuestas con IA.
+          </p>
+        </div>
+        @if (!data.chatPacksAvailable) {
+          <p class="packs__locked">
+            <ds-icon name="info" />
+            <span>Disponible con un plan pagado y activo.</span>
+          </p>
+        }
+        <ul class="packs__grid">
+          @for (pack of data.chatPacks; track pack.chats) {
+            <li>
+              <strong>{{ pack.chats }} chats</strong>
+              <span>{{ money(pack.priceCents) }}</span>
+              <small>{{ pack.aiReplies }} respuestas con IA</small>
+              <ds-button
+                type="button"
+                variant="secondary"
+                [disabled]="saving() || !data.chatPacksAvailable || !data.checkoutEnabled"
+                (click)="buyChatPack(pack)"
+              >
+                Sumar {{ pack.chats }} chats
+              </ds-button>
+            </li>
+          }
+        </ul>
+      </section>
+    }
 
     <div class="plans__details">
       <section>

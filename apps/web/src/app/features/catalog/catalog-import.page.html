@@ -1,0 +1,333 @@
+<section class="store">
+  <header class="store__header">
+    <div>
+      <a routerLink="/app/products" class="import__back">
+        <ds-icon name="arrowLeft" [size]="0.9" /> Volver a productos
+      </a>
+      <p class="store__eyebrow">Catálogo</p>
+      <h1>Importar catálogo</h1>
+      <p>
+        Carga todos tus productos de una vez con sus fotos, precios, stock y sets. Antes de guardar
+        verás qué se crea, qué se actualiza y qué queda sin publicar.
+      </p>
+    </div>
+  </header>
+
+  @if (errorMessage(); as error) {
+    <div class="banner banner--danger" role="alert">
+      <ds-icon name="alert" />
+      <span>{{ error }}</span>
+    </div>
+  }
+
+  @switch (step()) {
+    @case ('select') {
+      <div
+        class="card dropzone"
+        [class.is-dragging]="dragging()"
+        (dragover)="onDragOver($event)"
+        (dragleave)="onDragLeave()"
+        (drop)="onDrop($event)"
+      >
+        <ds-icon name="upload" [size]="1.6" />
+        <h2>Arrastra aquí la carpeta del catálogo</h2>
+        <p class="hint">Se lee en tu navegador; nada se guarda hasta que confirmes.</p>
+        <label class="dropzone__pick">
+          <input
+            #folder
+            type="file"
+            webkitdirectory
+            multiple
+            class="visually-hidden"
+            (change)="onFolder(folder)"
+          />
+          <span>Elegir carpeta</span>
+        </label>
+      </div>
+
+      <details class="card format">
+        <summary>¿Qué debe tener la carpeta?</summary>
+        <ul>
+          <li><strong>catalog.json</strong> con la lista <code>products</code> (precios en céntimos) y, opcionalmente, <code>inventory</code> con el stock por SKU.</li>
+          <li>Una carpeta <strong>images/</strong> con las fotos en JPG, PNG o WebP. Cada producto las nombra como <code>/images/products/…</code>.</li>
+          <li>Los sets indican los SKU de sus piezas y venden con el stock de esas piezas.</li>
+          <li>Un bloque <code>store</code> opcional trae plantilla, envíos e imágenes de la tienda.</li>
+        </ul>
+        <p class="hint">
+          Puedes volver a importar la misma carpeta cuando cambie: se actualizan textos y fotos, y se
+          respetan el precio, el stock y la publicación que cambiaste aquí, salvo que elijas lo contrario.
+        </p>
+      </details>
+    }
+
+    @case ('reading') {
+      <div class="card progress-card" aria-busy="true">
+        <strong>{{ progress().label }}</strong>
+        @if (progress().total) {
+          <progress [value]="progress().done" [max]="progress().total"></progress>
+          <span class="hint">{{ progress().done }} de {{ progress().total }}</span>
+        }
+      </div>
+    }
+
+    @case ('review') {
+      @if (report(); as r) {
+        <div class="card source">
+          <ds-icon name="package" />
+          <div>
+            <strong>{{ pkg()?.folderName }}</strong>
+            @if (r.source) {
+              <span class="hint">{{ r.source }}</span>
+            }
+          </div>
+          <ds-button variant="ghost" [disabled]="previewing()" (click)="reset()">Elegir otra carpeta</ds-button>
+        </div>
+
+        <ul class="stats" [class.is-busy]="previewing()">
+          <li>
+            <strong>{{ r.summary.products }}</strong>
+            <span>productos · {{ r.summary.create }} nuevos, {{ r.summary.update }} ya existen</span>
+          </li>
+          <li>
+            <strong>{{ r.summary.sets }}</strong>
+            <span>sets con stock de sus piezas</span>
+          </li>
+          <li>
+            <strong>{{ r.summary.products - r.summary.unpublished }}</strong>
+            <span>quedarán en la tienda web</span>
+          </li>
+          <li>
+            <strong>{{ r.summary.photos }}</strong>
+            <span>fotos · {{ r.summary.uploads }} por subir</span>
+          </li>
+        </ul>
+
+        <p class="hint">
+          Tu plan:
+          @if (r.plan.quota === null) {
+            pasarás de {{ r.plan.used }} a {{ r.plan.after }} productos (sin límite).
+          } @else {
+            pasarás de {{ r.plan.used }} a {{ r.plan.after }} de {{ r.plan.quota }} productos.
+          }
+        </p>
+
+        @if (errors().length) {
+          <div class="card issues issues--error" role="alert">
+            <h2><ds-icon name="circleAlert" [size]="1" /> Corrige esto para poder importar</h2>
+            <ul>
+              @for (issue of errors(); track $index) {
+                <li>{{ issue.message }}</li>
+              }
+            </ul>
+          </div>
+        }
+
+        @if (warnings().length) {
+          <details class="card issues">
+            <summary>{{ plural(warnings().length, 'aviso', 'avisos') }} (no impiden importar)</summary>
+            <ul>
+              @for (issue of warnings(); track $index) {
+                <li>{{ issue.message }}</li>
+              }
+            </ul>
+          </details>
+        }
+
+        <div class="card">
+          <h2>Opciones</h2>
+          <label class="check">
+            <input
+              type="checkbox"
+              [checked]="options().updatePrices"
+              [disabled]="previewing()"
+              (change)="setOption('updatePrices', $any($event.target).checked)"
+            />
+            <span>
+              Actualizar precios de los productos que ya existen
+              <small>Si no lo marcas, se mantiene el precio que tienen en tu catálogo.</small>
+            </span>
+          </label>
+          <label class="check">
+            <input
+              type="checkbox"
+              [checked]="options().updateStock"
+              [disabled]="previewing()"
+              (change)="setOption('updateStock', $any($event.target).checked)"
+            />
+            <span>
+              Actualizar el stock con el inventario del archivo
+              <small>Reemplaza las unidades actuales de los productos que ya existen.</small>
+            </span>
+          </label>
+          <label class="check">
+            <input
+              type="checkbox"
+              [checked]="options().fullSync"
+              [disabled]="previewing()"
+              (change)="setOption('fullSync', $any($event.target).checked)"
+            />
+            <span>
+              El archivo es mi catálogo completo
+              <small>Saca de la tienda web lo que no está en el archivo o figura inactivo. No borra nada.</small>
+            </span>
+          </label>
+          @if (options().fullSync && r.hidden.length) {
+            <p class="option-detail">
+              Dejarán de verse en la tienda:
+              @for (row of r.hidden; track row.handle; let last = $last) {
+                {{ row.name }}{{ last ? '.' : ', ' }}
+              }
+            </p>
+          }
+          @if (r.store.available) {
+            <label class="check">
+              <input
+                type="checkbox"
+                [checked]="options().applyStoreSettings"
+                [disabled]="previewing()"
+                (change)="setOption('applyStoreSettings', $any($event.target).checked)"
+              />
+              <span>
+                Aplicar los ajustes de tienda del paquete
+                <small>Plantilla, envíos e imágenes. El origen, las tarifas y las imágenes que ya configuraste no se reemplazan.</small>
+              </span>
+            </label>
+            @if (options().applyStoreSettings) {
+              <p class="option-detail">
+                @if (r.store.changes.length) {
+                  Cambiará: {{ r.store.changes.join(' · ') }}.
+                } @else {
+                  Tu tienda ya tiene estos ajustes.
+                }
+              </p>
+            }
+          }
+        </div>
+
+        <div class="card products">
+          <div class="products__head">
+            <h2>Productos</h2>
+            <div class="chips" role="group" aria-label="Filtrar productos">
+              <button type="button" [class.is-active]="filter() === 'all'" (click)="setFilter('all')">
+                Todos ({{ r.summary.products }})
+              </button>
+              <button type="button" [class.is-active]="filter() === 'create'" (click)="setFilter('create')">
+                Nuevos ({{ r.summary.create }})
+              </button>
+              <button type="button" [class.is-active]="filter() === 'update'" (click)="setFilter('update')">
+                Ya existen ({{ r.summary.update }})
+              </button>
+              <button type="button" [class.is-active]="filter() === 'unpublished'" (click)="setFilter('unpublished')">
+                Sin publicar ({{ r.summary.unpublished }})
+              </button>
+            </div>
+          </div>
+          @if (!visibleProducts().length) {
+            <p class="hint">Ningún producto en este filtro.</p>
+          } @else {
+            <div class="table-wrap">
+              <table>
+                <thead>
+                  <tr>
+                    <th scope="col">Producto</th>
+                    <th scope="col">Acción</th>
+                    <th scope="col">Precio</th>
+                    <th scope="col">Tienda web</th>
+                    <th scope="col">Fotos</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  @for (row of visibleProducts(); track row.handle) {
+                    <tr>
+                      <td>
+                        <strong>{{ row.name }}</strong>
+                        <span class="muted">
+                          {{ row.handle }}
+                          @if (row.isSet) {
+                            · Set
+                          }
+                        </span>
+                      </td>
+                      <td>
+                        <span class="pill" [class.pill--ok]="row.action === 'create'">
+                          {{ row.action === 'create' ? 'Nuevo' : 'Actualiza' }}
+                        </span>
+                      </td>
+                      <td>
+                        @if (row.priceChange; as change) {
+                          <span class="muted">{{ price(change.from) }} →</span> {{ price(change.to) }}
+                        } @else if (row.priceCents > 0) {
+                          {{ price(row.priceCents) }}
+                        } @else {
+                          <span class="muted">Sin precio</span>
+                        }
+                        @if (row.stockChange; as stock) {
+                          <span class="muted">
+                            Stock {{ stock.from === null ? 'ilimitado' : stock.from }} → {{ stock.to }}
+                          </span>
+                        }
+                      </td>
+                      <td>{{ row.published ? 'Publicado' : 'Sin publicar' }}</td>
+                      <td>
+                        {{ row.photos }}
+                        @if (row.missingPhotos) {
+                          <span class="warn">· faltan {{ row.missingPhotos }}</span>
+                        }
+                      </td>
+                    </tr>
+                  }
+                </tbody>
+              </table>
+            </div>
+          }
+        </div>
+
+        <div class="import__actions">
+          <ds-button variant="ghost" [disabled]="previewing()" (click)="reset()">Cancelar</ds-button>
+          <ds-button [disabled]="!r.canImport || previewing()" (click)="runImport()">
+            {{ previewing() ? 'Revisando…' : 'Importar ' + plural(r.summary.products, 'producto', 'productos') }}
+          </ds-button>
+        </div>
+      }
+    }
+
+    @case ('importing') {
+      <div class="card progress-card" aria-live="polite" aria-busy="true">
+        <strong>{{ progress().label }}</strong>
+        <progress [value]="progress().done" [max]="progress().total || 1"></progress>
+        <span class="hint">
+          @if (progress().total > 1) {
+            {{ progress().done }} de {{ progress().total }} ·
+          }
+          No cierres esta pestaña hasta que termine.
+        </span>
+      </div>
+    }
+
+    @case ('done') {
+      @if (result(); as res) {
+        <div class="card done" role="status">
+          <ds-icon name="circleCheck" [size]="1.6" />
+          <h2>Catálogo importado</h2>
+          <ul>
+            <li>{{ plural(res.created, 'producto creado', 'productos creados') }}</li>
+            <li>{{ plural(res.updated, 'producto actualizado', 'productos actualizados') }}</li>
+            <li>{{ plural(res.published, 'producto publicado', 'productos publicados') }} en la tienda web</li>
+            @if (res.hidden) {
+              <li>{{ plural(res.hidden, 'producto retirado', 'productos retirados') }} de la tienda web</li>
+            }
+            @if (res.storeUpdated) {
+              <li>Ajustes de la tienda actualizados</li>
+            }
+          </ul>
+          <div class="import__actions">
+            <ds-button variant="ghost" (click)="reset()">Importar otra carpeta</ds-button>
+            <a routerLink="/app/products" class="rail-link">
+              Ver productos <ds-icon name="chevronRight" [size]="1" />
+            </a>
+          </div>
+        </div>
+      }
+    }
+  }
+</section>

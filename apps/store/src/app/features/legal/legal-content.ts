@@ -358,15 +358,31 @@ export function legalDocs(store: StorefrontView): LegalDoc[] {
     ],
   };
 
+  const tracking = store.tracking;
+  const trackingRows: Inline[][] = [
+    ...(tracking ? [['vendedoria-consent:*', 'Propia, necesaria (localStorage)', 'Recordar si aceptaste o rechazaste la analítica', 'Hasta que borres los datos del sitio'] as Inline[]] : []),
+    ...(tracking?.ga4MeasurementId
+      ? [['_ga, _ga_*', 'De terceros (Google Analytics), opcional', 'Medir visitas y compras de forma estadística', 'Hasta 2 años'] as Inline[]]
+      : []),
+    ...(tracking?.metaPixelId
+      ? [['_fbp', 'De terceros (Meta), opcional', 'Medir anuncios de Facebook e Instagram y mostrarte publicidad relevante', '3 meses'] as Inline[]]
+      : []),
+  ];
   const cookies: LegalDoc = {
     slug: 'politica-de-cookies',
     title: 'Política de Cookies',
     description: `Qué guarda la tienda de ${brand} en tu navegador.`,
-    summary: [
-      ['No usamos cookies de analítica ni de publicidad.'],
-      ['Solo guardamos lo necesario para que funcionen el carrito y el pago.'],
-      ['Si incorporamos analítica o publicidad, te pediremos permiso antes.'],
-    ],
+    summary: tracking
+      ? [
+          ['Guardamos lo necesario para que funcionen el carrito y el pago.'],
+          ['La analítica y la publicidad se activan solo si las aceptas.'],
+          ['Puedes cambiar tu decisión cuando quieras.'],
+        ]
+      : [
+          ['No usamos cookies de analítica ni de publicidad.'],
+          ['Solo guardamos lo necesario para que funcionen el carrito y el pago.'],
+          ['Si incorporamos analítica o publicidad, te pediremos permiso antes.'],
+        ],
     sections: [
       {
         id: 'que-son',
@@ -386,6 +402,7 @@ export function legalDocs(store: StorefrontView): LegalDoc[] {
               ...(online
                 ? [['Cookies de Mercado Pago', 'De terceros, necesarias', 'Procesar el pago de forma segura y prevenir fraude; se cargan solo en la página de pago', 'Según la política de Mercado Pago'] as Inline[]]
                 : []),
+              ...trackingRows,
             ],
           ),
         ],
@@ -393,12 +410,22 @@ export function legalDocs(store: StorefrontView): LegalDoc[] {
       {
         id: 'sin-analitica',
         title: 'Analítica y publicidad',
-        blocks: [p('Hoy no usamos herramientas de analítica, píxeles publicitarios ni cookies de seguimiento. Si las incorporamos, te mostraremos un aviso para aceptarlas o rechazarlas con la misma facilidad antes de activarlas.')],
+        blocks: [
+          tracking
+            ? p('Usamos Google Analytics o el píxel de Meta solo si los aceptas en el aviso de cookies. Estos proveedores pueden tratar los datos fuera del Perú según sus propias políticas. Si los rechazas, la tienda funciona igual.')
+            : p('Hoy no usamos herramientas de analítica, píxeles publicitarios ni cookies de seguimiento. Si las incorporamos, te mostraremos un aviso para aceptarlas o rechazarlas con la misma facilidad antes de activarlas.'),
+        ],
       },
       {
         id: 'gestion',
         title: 'Cómo gestionarlas',
-        blocks: [p('Puedes borrar o bloquear estos datos desde la configuración de tu navegador. Si bloqueas los necesarios, el carrito o el pago podrían no funcionar.')],
+        blocks: [
+          p(
+            tracking
+              ? 'Puedes cambiar tu decisión sobre la analítica con el botón «Cambiar mi decisión sobre cookies» de esta página. También puedes bloquear las cookies desde la configuración del navegador; si bloqueas las necesarias, el carrito o el pago podrían no funcionar.'
+              : 'Puedes borrar o bloquear estos datos desde la configuración de tu navegador. Si bloqueas los necesarios, el carrito o el pago podrían no funcionar.',
+          ),
+        ],
       },
     ],
   };

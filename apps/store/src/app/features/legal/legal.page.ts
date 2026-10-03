@@ -2,6 +2,7 @@ import { ChangeDetectionStrategy, Component, computed, inject } from '@angular/c
 import { NgTemplateOutlet } from '@angular/common';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { DsIconComponent } from '@vendedoria/ui';
+import { AnalyticsService } from '../../core/analytics.service';
 import { SeoService } from '../../core/seo.service';
 import { StoreStateService } from '../../core/store-state.service';
 import { Inline, legalDocs, legalUpdatedLabel } from './legal-content';
@@ -23,6 +24,10 @@ export class LegalPage {
     return store ? legalDocs(store) : [];
   });
   readonly doc = computed(() => (this.slug ? this.docs().find((d) => d.slug === this.slug) ?? null : null));
+  private readonly analytics = inject(AnalyticsService);
+  readonly canChangeConsent = computed(
+    () => this.doc()?.slug === 'politica-de-cookies' && Boolean(this.analytics.tracking()) && !this.analytics.askConsent(),
+  );
   readonly updated = computed(() => {
     const store = this.store();
     return store ? legalUpdatedLabel(store) : '';
@@ -43,5 +48,9 @@ export class LegalPage {
 
   print(): void {
     window.print();
+  }
+
+  changeConsent(): void {
+    this.analytics.reopenConsent();
   }
 }

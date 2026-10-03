@@ -1,12 +1,9 @@
 <section class="seller">
   <header class="seller__header">
     <div>
-      <p class="seller__eyebrow">Vendedor IA</p>
-      <h1>Configura cómo vende</h1>
-      <p>
-        Personalidad, reglas y mensajes que el agente usa en WhatsApp. Los
-        cambios aplican en el próximo hilo, sin contaminar historial pasado.
-      </p>
+      <p class="seller__eyebrow">Vendedor IA · {{ activeSection().label }}</p>
+      <h1>{{ currentAgent()?.name ?? 'Tu vendedor' }}</h1>
+      <p>{{ activeSection().hint }}. Los cambios aplican desde el próximo mensaje.</p>
     </div>
     <div class="seller__header-actions">
       <ds-button type="button" variant="secondary" (click)="openPlayground()">
@@ -18,6 +15,83 @@
       </div>
     </div>
   </header>
+
+  @if (!loading() && agents().length) {
+    <div class="agent-bar">
+      <label class="agent-bar__select">
+        <span>Vendedor</span>
+        <select
+          [value]="agentId()"
+          [disabled]="agentLoading() || agentBusy()"
+          (change)="selectAgent($any($event.target).value); $any($event.target).value = agentId()"
+        >
+          @for (agent of agents(); track agent.id) {
+            <option [value]="agent.id">
+              {{ agent.name }}{{ agent.isPrimary ? ' · principal' : '' }}{{ agent.isActive ? '' : ' · pausado' }}
+            </option>
+          }
+        </select>
+      </label>
+      <div class="agent-bar__actions">
+        <ds-button type="button" variant="ghost" [disabled]="agentBusy()" (click)="toggleNewAgent()">
+          <ds-icon name="plus" [size]="1" />
+          Nuevo vendedor
+        </ds-button>
+        @if (currentAgent() && !currentAgent()!.isPrimary) {
+          <ds-button type="button" variant="ghost" [disabled]="agentBusy()" (click)="deleteAgent()">
+            <ds-icon name="trash" [size]="1" />
+            Eliminar
+          </ds-button>
+        }
+      </div>
+    </div>
+
+    @if (newAgentOpen()) {
+      <form class="agent-new" (submit)="$event.preventDefault(); createAgent()">
+        <label>
+          Nombre del nuevo vendedor
+          <input
+            [value]="newAgentName()"
+            (input)="onNewAgentName($any($event.target).value)"
+            maxlength="80"
+            placeholder="Ej. Sofía, para Instagram"
+            autocomplete="off"
+          />
+        </label>
+        <label class="toggle">
+          <input
+            type="checkbox"
+            [checked]="newAgentCopy()"
+            (change)="onNewAgentCopy($any($event.target).checked)"
+          />
+          <span>
+            <strong>Copiar la configuración de {{ currentAgent()?.name }}</strong>
+            <small>Parte de su personalidad, técnicas y reglas; luego ajústalo.</small>
+          </span>
+        </label>
+        <div class="inline-actions">
+          <ds-button type="submit" [disabled]="agentBusy()">
+            {{ agentBusy() ? 'Creando…' : 'Crear vendedor' }}
+          </ds-button>
+          <ds-button type="button" variant="ghost" (click)="toggleNewAgent()">Cancelar</ds-button>
+        </div>
+      </form>
+    }
+
+    <nav class="seller-tabs" aria-label="Secciones del vendedor">
+      @for (item of sections; track item.id) {
+        <a
+          [routerLink]="['/app/seller', item.id]"
+          [queryParams]="sectionQuery()"
+          [class.is-active]="section() === item.id"
+          [attr.aria-current]="section() === item.id ? 'page' : null"
+        >
+          <ds-icon [name]="item.icon" [size]="1" />
+          {{ item.label }}
+        </a>
+      }
+    </nav>
+  }
 
   @if (errorMessage(); as error) {
     <div class="banner banner--danger" role="alert">
@@ -35,19 +109,24 @@
 
   @if (loading()) {
     <div class="skeleton" aria-busy="true">Cargando vendedor…</div>
+  } @else if (!agents().length) {
+    <div class="skeleton">
+      <p class="empty-note">No encontramos tu vendedor.</p>
+      <ds-button type="button" (click)="init()">Reintentar</ds-button>
+    </div>
   } @else {
-    <div class="seller__layout">
+    <div class="seller__layout" [class.is-loading]="agentLoading()">
       <aside class="seller__rail" aria-label="Progreso del vendedor">
         <div class="score">
           <div
             class="score__ring"
             [style.--score]="qualityPercent()"
             role="img"
-            [attr.aria-label]="'Calidad del vendedor ' + (quality()?.score ?? 0) + ' de ' + (quality()?.max ?? 200)"
+            [attr.aria-label]="'Calidad del vendedor ' + (quality()?.score ?? 0) + ' de ' + (quality()?.max ?? 240)"
           >
             <div class="score__value">
               <strong>{{ quality()?.score ?? 0 }}</strong>
-              <span>/ {{ quality()?.max ?? 200 }}</span>
+              <span>/ {{ quality()?.max ?? 240 }}</span>
             </div>
           </div>
           <div class="score__meta">
@@ -67,19 +146,6 @@
           </ul>
         }
 
-        <nav class="section-nav" aria-label="Secciones">
-          @for (section of sections; track section.id) {
-            <button
-              type="button"
-              class="section-nav__item"
-              [class.is-active]="activeSection() === section.id"
-              (click)="scrollTo(section.id)"
-            >
-              {{ section.label }}
-            </button>
-          }
-        </nav>
-
         <div class="preview">
           <div class="preview__head">
             <ds-icon name="message" />
@@ -97,586 +163,614 @@
         </div>
       </aside>
 
-      <form
-        class="seller__form"
-        [formGroup]="form"
-        (ngSubmit)="save()"
-        (input)="markDirty()"
-        (change)="markDirty()"
-      >
-        <section class="block" id="seller-basics">
-          <header class="block__head">
-            <h2>Básico</h2>
-            <p>Identidad del vendedor y del negocio en el chat.</p>
-          </header>
-          <div class="fields">
-            <label>
-              Nombre del vendedor
-              <input formControlName="name" maxlength="80" autocomplete="off" />
-            </label>
-            <label>
-              Nombre del negocio
-              <input formControlName="companyName" maxlength="120" />
-            </label>
-            <label class="fields__full">
-              Descripción del negocio
-              <textarea
-                formControlName="companyDescription"
-                rows="3"
-                maxlength="2000"
-                placeholder="Qué vende, en qué destaca, envíos, etc."
-              ></textarea>
-            </label>
-            <label class="toggle fields__full">
-              <input type="checkbox" formControlName="isActive" />
-              <span>
-                <strong>Vendedor activo</strong>
-                <small>Si lo desactivas, no responderá chats nuevos automáticamente.</small>
-              </span>
-            </label>
-          </div>
-        </section>
+      @if (section() === 'knowledge') {
+        <div class="seller__form">
+          <section class="block">
+            <header class="block__head">
+              <h2>Preguntas frecuentes</h2>
+              <p>
+                Envíos, cambios, horarios, garantías: tus vendedores solo afirman
+                políticas que estén aquí. Se comparten entre todos tus vendedores.
+              </p>
+            </header>
 
-        <section class="block" id="seller-audience">
-          <header class="block__head">
-            <h2>Audiencia y reglas</h2>
-            <p>A quién le vende y límites que nunca debe romper.</p>
-          </header>
-          <div class="fields">
-            <label class="fields__full">
-              Audiencia
-              <textarea
-                formControlName="audienceDescription"
-                rows="3"
-                maxlength="1000"
-                placeholder="Ej. Mujeres 25–40 que buscan moda casual en Lima"
-              ></textarea>
-            </label>
-            <label class="fields__full">
-              Reglas: siempre / nunca
-              <textarea
-                formControlName="rulesText"
-                rows="5"
-                maxlength="4000"
-                placeholder="Siempre: confirmar stock antes de cerrar.&#10;Nunca: inventar descuentos ni prometer fechas de envío."
-              ></textarea>
-            </label>
-          </div>
-        </section>
-
-        <section class="block" id="seller-personality">
-          <header class="block__head">
-            <h2>Personalidad</h2>
-            <p>Tono, longitud y detalles que hacen reconocible al agente.</p>
-          </header>
-          <div class="fields">
-            <label>
-              Estilo de comunicación
-              <input
-                formControlName="communicationStyle"
-                placeholder="Cercano, profesional, juvenil…"
-              />
-            </label>
-            <label>
-              Estilo de ventas
-              <input
-                formControlName="salesStyle"
-                placeholder="Consultivo, directo, storytelling…"
-              />
-            </label>
-            <fieldset class="segmented fields__full">
-              <legend>Longitud de respuesta</legend>
-              <label>
-                <input type="radio" formControlName="responseLength" value="concise" />
-                Concisa
-              </label>
-              <label>
-                <input type="radio" formControlName="responseLength" value="balanced" />
-                Equilibrada
-              </label>
-              <label>
-                <input type="radio" formControlName="responseLength" value="detailed" />
-                Detallada
-              </label>
-            </fieldset>
-            <label class="toggle">
-              <input type="checkbox" formControlName="useEmojis" />
-              <span>
-                <strong>Usar emojis</strong>
-                <small>Activa o apaga emojis en las respuestas.</small>
-              </span>
-            </label>
-            <label>
-              Paleta de emojis
-              <input formControlName="emojiPalette" placeholder="✨ 🙌 💚" />
-            </label>
-            <label class="fields__full">
-              Palabras a evitar
-              <input
-                formControlName="wordsToAvoid"
-                placeholder="barato, oferta limitada, garantía eterna…"
-              />
-            </label>
-          </div>
-        </section>
-
-        <section class="block" id="seller-messages">
-          <header class="block__head">
-            <h2>Mensajes clave</h2>
-            <p>Textos fijos que el agente usa al abrir y al confirmar compra.</p>
-          </header>
-          <div class="fields">
-            <label class="fields__full">
-              Mensaje inicial
-              <textarea
-                formControlName="initialMessage"
-                rows="3"
-                maxlength="1000"
-                placeholder="¡Hola! Soy… ¿En qué te ayudo?"
-              ></textarea>
-            </label>
-            <label class="fields__full">
-              Confirmación de compra
-              <textarea
-                formControlName="purchaseConfirmMessage"
-                rows="3"
-                maxlength="1000"
-                placeholder="¡Pedido recibido! Te enviamos el link de pago…"
-              ></textarea>
-            </label>
-          </div>
-        </section>
-
-        <section class="block" id="seller-handoff">
-          <header class="block__head">
-            <h2>Derivar a un asesor</h2>
-            <p>
-              Cuando el comprador pide hablar con una persona, tu vendedor lo
-              deriva y puede pausarse solo.
-            </p>
-          </header>
-          <div class="fields">
-            <label class="fields__full">
-              Mensaje al derivar
-              <textarea
-                formControlName="handoffMessage"
-                rows="3"
-                maxlength="1000"
-                placeholder="Te conecto con un asesor de nuestro equipo…"
-              ></textarea>
-            </label>
-            <label class="toggle fields__full">
-              <input type="checkbox" formControlName="pauseOnHandoff" />
-              <span>
-                <strong>Pausar la IA al derivar</strong>
-                <small>
-                  Evita que tu vendedor y un asesor respondan a la vez en la misma conversación.
-                </small>
-              </span>
-            </label>
-          </div>
-        </section>
-
-        <section class="block" id="seller-limits">
-          <header class="block__head">
-            <h2>Límites duros</h2>
-            <p>
-              Reglas que tu vendedor cumple siempre, sin excepciones.
-            </p>
-          </header>
-          <div class="fields">
-            <label class="toggle fields__full">
-              <input type="checkbox" formControlName="catalogOnlyFacts" />
-              <span>
-                <strong>Solo hechos de catálogo</strong>
-                <small>No inventa productos, precios ni stock.</small>
-              </span>
-            </label>
-            <label class="toggle fields__full">
-              <input type="checkbox" formControlName="neverOfferDiscount" />
-              <span>
-                <strong>Sin descuentos inventados</strong>
-                <small>No ofrece promociones que no configuraste.</small>
-              </span>
-            </label>
-            <label class="toggle fields__full">
-              <input type="checkbox" formControlName="neverInventShipping" />
-              <span>
-                <strong>Sin envíos inventados</strong>
-                <small>Plazos y costos solo desde tus preguntas frecuentes o un asesor.</small>
-              </span>
-            </label>
-          </div>
-        </section>
-
-        <section class="block" id="seller-knowledge">
-          <header class="block__head">
-            <h2>Base de conocimiento</h2>
-            <p>
-              FAQs publicadas alimentan al vendedor (sin RAG). El import queda en
-              borrador hasta que lo apruebes.
-            </p>
-          </header>
-
-          <div class="knowledge-stats" aria-live="polite">
-            <span>{{ publishedFaqCount() }} publicadas</span>
-            <span>{{ draftFaqCount() }} en revisión</span>
-          </div>
-
-          <div class="fields">
-            <label class="fields__full">
-              Pregunta
-              <input
-                [value]="faqQuestion()"
-                (input)="onFaqQuestion($any($event.target).value)"
-                maxlength="300"
-                placeholder="¿Hacen envíos a provincia?"
-              />
-            </label>
-            <label class="fields__full">
-              Respuesta
-              <textarea
-                rows="3"
-                maxlength="2000"
-                [value]="faqAnswer()"
-                (input)="onFaqAnswer($any($event.target).value)"
-                placeholder="Sí, enviamos a todo el Perú en 2–5 días hábiles."
-              ></textarea>
-            </label>
-            <div class="inline-actions">
-              <ds-button
-                type="button"
-                [disabled]="knowledgeBusy()"
-                (click)="addFaq()"
-              >
-                Publicar FAQ
-              </ds-button>
+            <div class="knowledge-stats" aria-live="polite">
+              <span>{{ publishedFaqCount() }} publicadas</span>
+              <span>{{ draftFaqCount() }} en revisión</span>
             </div>
-          </div>
 
-          <div class="import-box">
-            <h3>Importar con revisión</h3>
-            <p>
-              Pega texto en bloques (pregunta + respuesta) o líneas
-              <code>Q:</code> / <code>A:</code>. Se crean borradores — tú apruebas.
-            </p>
-            <textarea
-              rows="5"
-              [value]="importDraft()"
-              (input)="onImportDraft($any($event.target).value)"
-              placeholder="Q: ¿Cuál es el horario de atención?&#10;A: De lunes a sábado de 9 a 18.&#10;&#10;Q: ¿Puedo cambiar una talla?&#10;A: Sí, dentro de 7 días con etiqueta."
-            ></textarea>
-            <ds-button
-              type="button"
-              variant="secondary"
-              [disabled]="knowledgeBusy()"
-              (click)="importFaqs()"
-            >
-              Crear borradores
-            </ds-button>
-          </div>
-
-          @if (faqs().length === 0) {
-            <p class="empty-note">
-              Aún no hay FAQs. Sin ellas el agente no puede afirmar políticas.
-            </p>
-          } @else {
-            <ul class="faq-list">
-              @for (faq of faqs(); track faq.id) {
-                <li>
-                  <div>
-                    <div class="faq-list__meta">
-                      @if (faq.reviewStatus === 'DRAFT') {
-                        <span class="pill pill--warn">Borrador</span>
-                      } @else if (faq.isPublished) {
-                        <span class="pill pill--ok">Publicada</span>
-                      }
-                      @if (faq.source === 'PASTE_IMPORT') {
-                        <span class="pill">Import</span>
-                      }
-                    </div>
-                    <strong>{{ faq.question }}</strong>
-                    <p>{{ faq.answer }}</p>
-                  </div>
-                  <div class="faq-list__actions">
-                    @if (faq.reviewStatus === 'DRAFT') {
-                      <ds-button
-                        type="button"
-                        [disabled]="knowledgeBusy()"
-                        (click)="approveFaq(faq)"
-                      >
-                        Aprobar
-                      </ds-button>
-                    }
-                    <ds-button
-                      type="button"
-                      variant="ghost"
-                      [disabled]="knowledgeBusy()"
-                      (click)="deleteFaq(faq)"
-                    >
-                      Eliminar
-                    </ds-button>
-                  </div>
-                </li>
-              }
-            </ul>
-          }
-        </section>
-
-        <section class="block" id="seller-journeys">
-          <header class="block__head">
-            <h2>Plantillas de recorrido</h2>
-            <p>
-              Guiones cortos por etapa (descubrir → recomendar → cerrar) que el
-              agente usa como guía, no como copy rígido.
-            </p>
-          </header>
-
-          <div class="fields">
-            <label>
-              Título
-              <input
-                [value]="journeyTitle()"
-                (input)="onJourneyTitle($any($event.target).value)"
-                maxlength="120"
-                placeholder="Cierre con link de pago"
-              />
-            </label>
-            <label>
-              Etapa
-              <select
-                [value]="journeyStage()"
-                (change)="onJourneyStage($any($event.target).value)"
-              >
-                <option value="DISCOVER">Descubrir</option>
-                <option value="RECOMMEND">Recomendar</option>
-                <option value="CLOSE">Cerrar</option>
-                <option value="SUPPORT">Soporte</option>
-              </select>
-            </label>
-            <label class="fields__full">
-              Guion
-              <textarea
-                rows="3"
-                maxlength="2000"
-                [value]="journeyScript()"
-                (input)="onJourneyScript($any($event.target).value)"
-                placeholder="Confirma el producto, resume precio y ofrece el link de pago."
-              ></textarea>
-            </label>
-            <div class="inline-actions">
-              <ds-button
-                type="button"
-                [disabled]="knowledgeBusy()"
-                (click)="addJourney()"
-              >
-                Guardar plantilla
-              </ds-button>
-            </div>
-          </div>
-
-          @if (journeys().length === 0) {
-            <p class="empty-note">
-              Sin plantillas, el agente improvisa el cierre. Añade al menos una de
-              cierre.
-            </p>
-          } @else {
-            <ul class="faq-list">
-              @for (journey of journeys(); track journey.id) {
-                <li>
-                  <div>
-                    <div class="faq-list__meta">
-                      <span class="pill">{{ stageLabel(journey.stage) }}</span>
-                      <span
-                        class="pill"
-                        [class.pill--ok]="journey.isActive"
-                        [class.pill--warn]="!journey.isActive"
-                      >
-                        {{ journey.isActive ? 'Activa' : 'Pausada' }}
-                      </span>
-                    </div>
-                    <strong>{{ journey.title }}</strong>
-                    <p>{{ journey.scriptText }}</p>
-                  </div>
-                  <div class="faq-list__actions">
-                    <ds-button
-                      type="button"
-                      variant="secondary"
-                      [disabled]="knowledgeBusy()"
-                      (click)="toggleJourney(journey)"
-                    >
-                      {{ journey.isActive ? 'Pausar' : 'Activar' }}
-                    </ds-button>
-                    <ds-button
-                      type="button"
-                      variant="ghost"
-                      [disabled]="knowledgeBusy()"
-                      (click)="deleteJourney(journey)"
-                    >
-                      Eliminar
-                    </ds-button>
-                  </div>
-                </li>
-              }
-            </ul>
-          }
-        </section>
-
-        <div class="seller__actions" [class.is-dirty]="dirty()">
-          <p>
-            @if (dirty()) {
-              Hay cambios sin guardar
-            } @else {
-              Todo guardado
-            }
-          </p>
-          <ds-button type="submit" [disabled]="saving() || !dirty()">
-            {{ saving() ? 'Guardando…' : 'Guardar vendedor' }}
-          </ds-button>
-        </div>
-      </form>
-    </div>
-  }
-
-  @if (playgroundOpen()) {
-    <div
-      class="playground"
-      role="dialog"
-      aria-modal="true"
-      aria-labelledby="playground-title"
-    >
-      <div class="playground__panel">
-        <header class="playground__head">
-          <div>
-            <p class="seller__eyebrow">Sin métricas de producción</p>
-            <h2 id="playground-title">Probar vendedor</h2>
-            <p>
-              Chatea como comprador. Ves qué tools usó (catálogo, stock, pedido,
-              link). No contamina Mensajes ni Pedidos.
-            </p>
-          </div>
-          <div class="playground__head-actions">
-            <ds-button
-              type="button"
-              variant="ghost"
-              [disabled]="playgroundSending() || !playgroundSession()"
-              (click)="resetPlayground()"
-            >
-              Reiniciar
-            </ds-button>
-            <button type="button" class="icon-btn" (click)="closePlayground()">
-              Cerrar
-            </button>
-          </div>
-        </header>
-
-        @if (playgroundError(); as error) {
-          <div class="banner banner--danger" role="alert">
-            <ds-icon name="alert" />
-            <span>{{ error }}</span>
-          </div>
-        }
-
-        <div class="playground__body">
-          <div class="playground__thread" aria-live="polite">
-            @if (playgroundLoading()) {
-              <div class="skeleton">Abriendo prueba…</div>
-            } @else if (playgroundMessages().length === 0) {
-              <div class="playground__empty">
-                <ds-icon name="sparkles" />
-                <strong>Escribe como un comprador</strong>
-                <p>
-                  Prueba saludo, un producto de tu catálogo o “quiero comprar
-                  [producto]” para ver el pedido y el link de pago de prueba.
-                </p>
-                <div class="playground__suggestions">
-                  <button
-                    type="button"
-                    (click)="sendSuggestion('Hola')"
-                    [disabled]="playgroundSending()"
-                  >
-                    Hola
-                  </button>
-                  <button
-                    type="button"
-                    (click)="sendSuggestion('¿Qué productos tienen?')"
-                    [disabled]="playgroundSending()"
-                  >
-                    ¿Qué productos tienen?
-                  </button>
-                  <button
-                    type="button"
-                    (click)="sendSuggestion('Quiero hablar con un humano')"
-                    [disabled]="playgroundSending()"
-                  >
-                    Quiero un humano
-                  </button>
-                </div>
+            <div class="fields">
+              <label class="fields__full">
+                Pregunta
+                <input
+                  [value]="faqQuestion()"
+                  (input)="onFaqQuestion($any($event.target).value)"
+                  maxlength="300"
+                  placeholder="¿Hacen envíos a provincia?"
+                />
+              </label>
+              <label class="fields__full">
+                Respuesta
+                <textarea
+                  rows="3"
+                  maxlength="2000"
+                  [value]="faqAnswer()"
+                  (input)="onFaqAnswer($any($event.target).value)"
+                  placeholder="Sí, enviamos a todo el Perú en 2 a 5 días hábiles."
+                ></textarea>
+              </label>
+              <div class="inline-actions">
+                <ds-button type="button" [disabled]="knowledgeBusy()" (click)="addFaq()">
+                  Publicar pregunta
+                </ds-button>
               </div>
-            } @else {
-              @for (message of playgroundMessages(); track message.id) {
-                <div
-                  class="pg-bubble"
-                  [class.pg-bubble--buyer]="isBuyer(message)"
-                  [class.pg-bubble--agent]="!isBuyer(message)"
-                >
-                  <span class="pg-bubble__label">
-                    {{ isBuyer(message) ? 'Comprador' : 'Vendedor IA' }}
-                  </span>
-                  <p>{{ message.body }}</p>
-                </div>
-              }
-            }
-          </div>
+            </div>
 
-          <aside class="playground__explain" aria-label="Por qué respondió">
-            <h3>Por qué respondió</h3>
-            <p class="playground__explain-lead">
-              Tools tipadas · precio y stock solo del catálogo
-            </p>
-            @if (lastTools().length === 0) {
-              <p class="playground__explain-empty">
-                Aún no hay tools. Envía un mensaje para auditar la respuesta.
+            <div class="import-box">
+              <h3>Importar varias a la vez</h3>
+              <p>
+                Pega texto en bloques (pregunta + respuesta) o líneas
+                <code>Q:</code> / <code>A:</code>. Se crean borradores que tú apruebas.
+              </p>
+              <textarea
+                rows="5"
+                [value]="importDraft()"
+                (input)="onImportDraft($any($event.target).value)"
+                placeholder="Q: ¿Cuál es el horario de atención?&#10;A: De lunes a sábado de 9 a 18.&#10;&#10;Q: ¿Puedo cambiar una talla?&#10;A: Sí, dentro de 7 días con etiqueta."
+              ></textarea>
+              <ds-button
+                type="button"
+                variant="secondary"
+                [disabled]="knowledgeBusy()"
+                (click)="importFaqs()"
+              >
+                Crear borradores
+              </ds-button>
+            </div>
+
+            @if (faqs().length === 0) {
+              <p class="empty-note">
+                Aún no hay preguntas frecuentes. Sin ellas tu vendedor no puede afirmar políticas.
               </p>
             } @else {
-              <ul class="tool-list">
-                @for (tool of lastTools(); track $index) {
-                  <li [attr.data-status]="tool.status">
-                    <strong>{{ toolLabel(tool.name) }}</strong>
-                    <span>{{ tool.summary }}</span>
+              <ul class="faq-list">
+                @for (faq of faqs(); track faq.id) {
+                  <li>
+                    <div>
+                      <div class="faq-list__meta">
+                        @if (faq.reviewStatus === 'DRAFT') {
+                          <span class="pill pill--warn">Borrador</span>
+                        } @else if (faq.isPublished) {
+                          <span class="pill pill--ok">Publicada</span>
+                        }
+                        @if (faq.source === 'PASTE_IMPORT') {
+                          <span class="pill">Importada</span>
+                        }
+                      </div>
+                      <strong>{{ faq.question }}</strong>
+                      <p>{{ faq.answer }}</p>
+                    </div>
+                    <div class="faq-list__actions">
+                      @if (faq.reviewStatus === 'DRAFT') {
+                        <ds-button type="button" [disabled]="knowledgeBusy()" (click)="approveFaq(faq)">
+                          Aprobar
+                        </ds-button>
+                      }
+                      <ds-button
+                        type="button"
+                        variant="ghost"
+                        [disabled]="knowledgeBusy()"
+                        (click)="deleteFaq(faq)"
+                      >
+                        Eliminar
+                      </ds-button>
+                    </div>
                   </li>
                 }
               </ul>
             }
-          </aside>
+          </section>
         </div>
-
+      } @else {
         <form
-          class="playground__composer"
-          (submit)="$event.preventDefault(); sendPlayground()"
+          class="seller__form"
+          [formGroup]="form"
+          (ngSubmit)="save()"
+          (input)="markDirty()"
+          (change)="markDirty()"
         >
-          <label class="sr-only" for="playground-input">Mensaje de prueba</label>
-          <input
-            id="playground-input"
-            type="text"
-            [value]="playgroundDraft()"
-            (input)="onDraftInput($any($event.target).value)"
-            placeholder="Escribe como comprador…"
-            [disabled]="playgroundSending() || playgroundLoading()"
-            autocomplete="off"
-          />
-          <ds-button
-            type="submit"
-            [disabled]="
-              playgroundSending() ||
-              playgroundLoading() ||
-              !playgroundDraft().trim()
-            "
-          >
-            {{ playgroundSending() ? 'Enviando…' : 'Enviar' }}
-          </ds-button>
+          @switch (section()) {
+            @case ('profile') {
+              <section class="block">
+                <header class="block__head">
+                  <h2>Identidad</h2>
+                  <p>Cómo se presenta y a qué negocio representa.</p>
+                </header>
+                <div class="fields">
+                  <label>
+                    Nombre del vendedor
+                    <input formControlName="name" maxlength="80" autocomplete="off" />
+                  </label>
+                  <label>
+                    Nombre del negocio
+                    <input formControlName="companyName" maxlength="120" />
+                  </label>
+                  <label class="fields__full">
+                    Qué vende tu negocio
+                    <textarea
+                      formControlName="companyDescription"
+                      rows="3"
+                      maxlength="2000"
+                      placeholder="Qué vendes, en qué te diferencias, garantías, reseñas o premios reales…"
+                    ></textarea>
+                  </label>
+                  <label class="fields__full">
+                    Cliente ideal
+                    <textarea
+                      formControlName="audienceDescription"
+                      rows="3"
+                      maxlength="1000"
+                      placeholder="Ej. Mujeres de 25 a 40 en Lima que buscan ropa cómoda para el trabajo y valoran la calidad."
+                    ></textarea>
+                  </label>
+                  <label class="toggle fields__full">
+                    <input type="checkbox" formControlName="isActive" />
+                    <span>
+                      <strong>Vendedor activo</strong>
+                      <small>Si lo pausas, no responde chats nuevos automáticamente.</small>
+                    </span>
+                  </label>
+                </div>
+              </section>
+
+              <section class="block">
+                <header class="block__head">
+                  <h2>Canales que atiende</h2>
+                  <p>
+                    @if (currentAgent()?.isPrimary) {
+                      Tu vendedor principal atiende todos los canales que no tengan otro vendedor asignado.
+                    } @else {
+                      Elige dónde responde este vendedor. Los canales sin asignar los atiende tu vendedor principal.
+                    }
+                  </p>
+                </header>
+                @if (channels().length === 0) {
+                  <div class="empty-inline">
+                    <p class="empty-note">Aún no conectaste ningún canal.</p>
+                    <a class="link-btn" routerLink="/app/channels">Conectar WhatsApp</a>
+                  </div>
+                } @else {
+                  <ul
+                    class="channel-list"
+                    (input)="$event.stopPropagation()"
+                    (change)="$event.stopPropagation()"
+                  >
+                    @for (channel of channels(); track channel.id) {
+                      <li>
+                        <label class="toggle">
+                          <input
+                            type="checkbox"
+                            [checked]="isChannelAssigned(channel)"
+                            [disabled]="channelsBusy()"
+                            (change)="toggleChannel(channel)"
+                          />
+                          <span>
+                            <strong>{{ channelLabel(channel) }}</strong>
+                            <small>
+                              @if (channelOwner(channel); as owner) {
+                                @if (owner.id === agentId()) {
+                                  Lo atiende este vendedor
+                                } @else {
+                                  Lo atiende {{ owner.name }}; al marcarlo pasa a este vendedor
+                                }
+                              } @else {
+                                Lo atiende tu vendedor principal
+                              }
+                            </small>
+                          </span>
+                        </label>
+                      </li>
+                    }
+                  </ul>
+                }
+              </section>
+            }
+
+            @case ('personality') {
+              <section class="block">
+                <header class="block__head">
+                  <h2>Punto de partida</h2>
+                  <p>Elige un perfil y ajústalo. Cambia el tono, el estilo y las técnicas de venta.</p>
+                </header>
+                <div class="preset-grid">
+                  @for (preset of presets; track preset.id) {
+                    <button
+                      type="button"
+                      class="preset"
+                      [class.is-active]="activePreset() === preset.id"
+                      [attr.aria-pressed]="activePreset() === preset.id"
+                      (click)="applyPreset(preset)"
+                    >
+                      <strong>{{ preset.label }}</strong>
+                      <span>{{ preset.description }}</span>
+                    </button>
+                  }
+                </div>
+              </section>
+
+              <section class="block">
+                <header class="block__head">
+                  <h2>Tono y estilo</h2>
+                  <p>Lo que hace reconocible a tu vendedor en cada mensaje.</p>
+                </header>
+                <div class="fields">
+                  <label>
+                    Estilo de comunicación
+                    <input formControlName="communicationStyle" maxlength="200" placeholder="Cercano, profesional, juvenil…" />
+                  </label>
+                  <label>
+                    Estilo de venta
+                    <input formControlName="salesStyle" maxlength="200" placeholder="Consultivo, directo, experto…" />
+                  </label>
+                  <fieldset class="segmented fields__full">
+                    <legend>Longitud de respuesta</legend>
+                    <label>
+                      <input type="radio" formControlName="responseLength" value="concise" />
+                      Concisa
+                    </label>
+                    <label>
+                      <input type="radio" formControlName="responseLength" value="balanced" />
+                      Equilibrada
+                    </label>
+                    <label>
+                      <input type="radio" formControlName="responseLength" value="detailed" />
+                      Detallada
+                    </label>
+                  </fieldset>
+                  <label class="toggle">
+                    <input type="checkbox" formControlName="useEmojis" />
+                    <span>
+                      <strong>Usar emojis</strong>
+                      <small>Con moderación, para sonar más cercano.</small>
+                    </span>
+                  </label>
+                  <label>
+                    Emojis preferidos
+                    <input formControlName="emojiPalette" maxlength="120" placeholder="✨ 🙌 💚" />
+                  </label>
+                  <label class="fields__full">
+                    Palabras a evitar
+                    <input formControlName="wordsToAvoid" maxlength="500" placeholder="barato, oferta limitada, garantía eterna…" />
+                  </label>
+                </div>
+              </section>
+
+              <section class="block">
+                <header class="block__head">
+                  <h2>Mensajes clave</h2>
+                  <p>Tu vendedor los usa como base al saludar y al enviar el link de pago.</p>
+                </header>
+                <div class="fields">
+                  <label class="fields__full">
+                    Saludo inicial
+                    <textarea formControlName="initialMessage" rows="3" maxlength="1000" placeholder="¡Hola! Soy… ¿Buscas algo para ti o para regalar?"></textarea>
+                  </label>
+                  <label class="fields__full">
+                    Al enviar el link de pago
+                    <textarea formControlName="purchaseConfirmMessage" rows="3" maxlength="1000" placeholder="¡Excelente elección! Aquí tienes tu link de pago seguro:"></textarea>
+                  </label>
+                </div>
+              </section>
+            }
+
+            @case ('sales') {
+              <section class="block">
+                <header class="block__head">
+                  <h2>Método de venta</h2>
+                  <p>
+                    Tu vendedor siempre sigue un método probado: conecta, entiende la
+                    necesidad, recomienda pocas opciones, resuelve dudas y cierra con un
+                    siguiente paso claro. Nunca usa urgencia falsa ni presiona después de un “no”.
+                  </p>
+                </header>
+                @for (group of techniquesByGroup(); track group.id) {
+                  <fieldset class="technique-group">
+                    <legend>
+                      <strong>{{ group.label }}</strong>
+                      <span>{{ group.hint }}</span>
+                    </legend>
+                    <div class="technique-grid">
+                      @for (technique of group.items; track technique.id) {
+                        <label class="toggle technique" [class.is-on]="selectedTechniques().has(technique.id)">
+                          <input
+                            type="checkbox"
+                            [checked]="selectedTechniques().has(technique.id)"
+                            (change)="$event.stopPropagation(); toggleTechnique(technique.id)"
+                          />
+                          <span>
+                            <strong>{{ technique.label }}</strong>
+                            <small>{{ technique.description }}</small>
+                          </span>
+                        </label>
+                      }
+                    </div>
+                  </fieldset>
+                }
+              </section>
+
+              <section class="block">
+                <header class="block__head">
+                  <h2>Objeciones frecuentes</h2>
+                  <p>Cómo responder cuando el cliente duda. Tu vendedor lo dirá con sus palabras.</p>
+                </header>
+                <label>
+                  <textarea
+                    aria-label="Respuestas a objeciones"
+                    formControlName="objectionHandling"
+                    rows="7"
+                    maxlength="4000"
+                    placeholder="“Está caro”: resalta la calidad del material y que dura años; ofrece la opción de menor precio si existe.&#10;“¿Es confiable?”: pago seguro con Mercado Pago y cambios en 7 días.&#10;“Lo pienso”: pregunta qué le falta para decidir."
+                  ></textarea>
+                </label>
+              </section>
+
+              <section class="block">
+                <header class="block__head">
+                  <h2>Guiones por etapa</h2>
+                  <p>Frases o pasos que quieres que siga en cada etapa. Son una guía, no texto rígido.</p>
+                </header>
+                <div (input)="$event.stopPropagation()" (change)="$event.stopPropagation()">
+                  <div class="fields">
+                    <label>
+                      Título
+                      <input
+                        [value]="journeyTitle()"
+                        (input)="onJourneyTitle($any($event.target).value)"
+                        maxlength="120"
+                        placeholder="Cierre con link de pago"
+                      />
+                    </label>
+                    <label>
+                      Etapa
+                      <select [value]="journeyStage()" (change)="onJourneyStage($any($event.target).value)">
+                        <option value="DISCOVER">Descubrir</option>
+                        <option value="RECOMMEND">Recomendar</option>
+                        <option value="CLOSE">Cerrar</option>
+                        <option value="SUPPORT">Postventa</option>
+                      </select>
+                    </label>
+                    <label class="fields__full">
+                      Guion
+                      <textarea
+                        rows="3"
+                        maxlength="2000"
+                        [value]="journeyScript()"
+                        (input)="onJourneyScript($any($event.target).value)"
+                        placeholder="Confirma el producto y la talla, resume el precio y ofrece el link de pago."
+                      ></textarea>
+                    </label>
+                    <div class="inline-actions">
+                      <ds-button type="button" [disabled]="knowledgeBusy()" (click)="addJourney()">
+                        Guardar guion
+                      </ds-button>
+                    </div>
+                  </div>
+                </div>
+
+                @if (journeys().length === 0) {
+                  <p class="empty-note">Sin guiones, tu vendedor usa solo el método base. Añade al menos uno de cierre.</p>
+                } @else {
+                  <ul class="faq-list">
+                    @for (journey of journeys(); track journey.id) {
+                      <li>
+                        <div>
+                          <div class="faq-list__meta">
+                            <span class="pill">{{ stageLabel(journey.stage) }}</span>
+                            <span class="pill" [class.pill--ok]="journey.isActive" [class.pill--warn]="!journey.isActive">
+                              {{ journey.isActive ? 'Activo' : 'Pausado' }}
+                            </span>
+                          </div>
+                          <strong>{{ journey.title }}</strong>
+                          <p>{{ journey.scriptText }}</p>
+                        </div>
+                        <div class="faq-list__actions">
+                          <ds-button type="button" variant="secondary" [disabled]="knowledgeBusy()" (click)="toggleJourney(journey)">
+                            {{ journey.isActive ? 'Pausar' : 'Activar' }}
+                          </ds-button>
+                          <ds-button type="button" variant="ghost" [disabled]="knowledgeBusy()" (click)="deleteJourney(journey)">
+                            Eliminar
+                          </ds-button>
+                        </div>
+                      </li>
+                    }
+                  </ul>
+                }
+              </section>
+            }
+
+            @case ('rules') {
+              <section class="block">
+                <header class="block__head">
+                  <h2>Reglas del negocio</h2>
+                  <p>Qué debe hacer siempre y qué nunca.</p>
+                </header>
+                <label>
+                  <textarea
+                    aria-label="Reglas del negocio"
+                    formControlName="rulesText"
+                    rows="6"
+                    maxlength="4000"
+                    placeholder="Siempre: confirmar talla y color antes de enviar el link de pago.&#10;Nunca: prometer fechas de entrega exactas."
+                  ></textarea>
+                </label>
+              </section>
+
+              <section class="block">
+                <header class="block__head">
+                  <h2>Límites duros</h2>
+                  <p>Se cumplen siempre, incluso con un prompt personalizado.</p>
+                </header>
+                <div class="fields">
+                  <label class="toggle fields__full">
+                    <input type="checkbox" formControlName="catalogOnlyFacts" />
+                    <span>
+                      <strong>Solo datos del catálogo</strong>
+                      <small>No inventa productos, precios ni stock.</small>
+                    </span>
+                  </label>
+                  <label class="toggle fields__full">
+                    <input type="checkbox" formControlName="neverOfferDiscount" />
+                    <span>
+                      <strong>Sin descuentos inventados</strong>
+                      <small>No ofrece promociones que no configuraste.</small>
+                    </span>
+                  </label>
+                  <label class="toggle fields__full">
+                    <input type="checkbox" formControlName="neverInventShipping" />
+                    <span>
+                      <strong>Sin envíos inventados</strong>
+                      <small>Plazos y costos solo desde tus preguntas frecuentes o un asesor.</small>
+                    </span>
+                  </label>
+                </div>
+              </section>
+
+              <section class="block">
+                <header class="block__head">
+                  <h2>Derivar a un asesor</h2>
+                  <p>Cuando el cliente pide hablar con una persona.</p>
+                </header>
+                <div class="fields">
+                  <label class="fields__full">
+                    Mensaje al derivar
+                    <textarea formControlName="handoffMessage" rows="3" maxlength="1000" placeholder="Te conecto con una persona de nuestro equipo…"></textarea>
+                  </label>
+                  <label class="toggle fields__full">
+                    <input type="checkbox" formControlName="pauseOnHandoff" />
+                    <span>
+                      <strong>Pausar la IA al derivar</strong>
+                      <small>Evita que tu vendedor y un asesor respondan a la vez en la misma conversación.</small>
+                    </span>
+                  </label>
+                </div>
+              </section>
+            }
+
+            @case ('advanced') {
+              <section class="block">
+                <header class="block__head">
+                  <h2>Modo de instrucciones</h2>
+                  <p>Elige cómo se construyen las instrucciones de este vendedor.</p>
+                </header>
+                <div class="mode-grid" role="radiogroup" aria-label="Modo de instrucciones">
+                  <button
+                    type="button"
+                    class="preset"
+                    role="radio"
+                    [class.is-active]="form.controls.promptMode.value === 'guided'"
+                    [attr.aria-checked]="form.controls.promptMode.value === 'guided'"
+                    (click)="setPromptMode('guided')"
+                  >
+                    <strong>Guiado</strong>
+                    <span>Se arma con tu perfil, personalidad, técnicas y reglas. Recomendado.</span>
+                  </button>
+                  <button
+                    type="button"
+                    class="preset"
+                    role="radio"
+                    [class.is-active]="form.controls.promptMode.value === 'custom'"
+                    [attr.aria-checked]="form.controls.promptMode.value === 'custom'"
+                    (click)="setPromptMode('custom')"
+                  >
+                    <strong>Prompt personalizado</strong>
+                    <span>Escribes las instrucciones completas. Reemplaza perfil, personalidad y técnicas.</span>
+                  </button>
+                </div>
+                <p class="note">
+                  <ds-icon name="shieldCheck" [size]="1" />
+                  En ambos modos se mantienen los límites duros, el formato de WhatsApp y
+                  los datos reales de catálogo, stock y link de pago.
+                </p>
+              </section>
+
+              <section class="block">
+                <header class="block__head block__head--row">
+                  <div>
+                    <h2>Prompt personalizado</h2>
+                    <p>
+                      Describe el rol, el método, el tono y los casos especiales. Se usa solo en
+                      modo personalizado.
+                    </p>
+                  </div>
+                  <ds-button type="button" variant="secondary" [disabled]="promptLoading()" (click)="startFromGuided()">
+                    Partir del prompt guiado
+                  </ds-button>
+                </header>
+                <label>
+                  <textarea
+                    aria-label="Prompt personalizado"
+                    class="prompt-editor"
+                    formControlName="customPrompt"
+                    rows="18"
+                    [attr.maxlength]="customPromptMax"
+                    spellcheck="false"
+                    placeholder="ROL: Eres asesora de una tienda de perfumes nicho…&#10;&#10;MÉTODO:&#10;1. Pregunta para quién es y qué aromas le gustan.&#10;2. Recomienda máximo dos opciones del catálogo…&#10;&#10;CASOS ESPECIALES:&#10;- Si pide muestras: …"
+                  ></textarea>
+                </label>
+                <p class="counter" [class.is-over]="customPromptLength() > customPromptMax">
+                  {{ customPromptLength() }} / {{ customPromptMax }} caracteres
+                </p>
+              </section>
+
+              <section class="block">
+                <header class="block__head block__head--row">
+                  <div>
+                    <h2>Instrucciones finales</h2>
+                    <p>Lo que recibe la IA en cada conversación (sin el catálogo ni el historial).</p>
+                  </div>
+                  <div class="inline-actions">
+                    <ds-button type="button" variant="ghost" [disabled]="promptLoading()" (click)="loadPrompt()">
+                      {{ promptLoading() ? 'Generando…' : prompt() ? 'Actualizar' : 'Ver instrucciones' }}
+                    </ds-button>
+                    @if (prompt()) {
+                      <ds-button type="button" variant="ghost" (click)="copyPrompt()">
+                        <ds-icon name="copy" [size]="1" />
+                        Copiar
+                      </ds-button>
+                    }
+                  </div>
+                </header>
+                @if (prompt(); as compiled) {
+                  <pre class="prompt-preview">{{ compiled.effectivePrompt }}</pre>
+                } @else {
+                  <p class="empty-note">Genera la vista para revisar exactamente cómo piensa tu vendedor.</p>
+                }
+              </section>
+            }
+          }
+
+          <div class="seller__actions" [class.is-dirty]="dirty()">
+            <p>
+              @if (dirty()) {
+                Hay cambios sin guardar
+              } @else {
+                Todo guardado
+              }
+            </p>
+            <ds-button type="submit" [disabled]="saving() || !dirty()">
+              {{ saving() ? 'Guardando…' : 'Guardar vendedor' }}
+            </ds-button>
+          </div>
         </form>
-      </div>
+      }
     </div>
+  }
+
+  @if (playgroundOpen()) {
+    <app-seller-playground
+      [agentId]="agentId()"
+      [agentName]="currentAgent()?.name ?? 'tu vendedor'"
+      (closed)="closePlayground()"
+    />
   }
 </section>

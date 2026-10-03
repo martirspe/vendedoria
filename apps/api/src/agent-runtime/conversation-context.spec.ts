@@ -1,5 +1,6 @@
 import {
   allRecommendedProductIds,
+  awaitingDelivery,
   buildAgentContext,
   conversationalIntent,
   lastBrowse,
@@ -66,6 +67,32 @@ describe('catalog browsing memory', () => {
     ]);
     expect(lastBrowse(history)).toEqual({ category: 'Perfumes' });
     expect(allRecommendedProductIds(history)).toEqual(['p1', 'p2', 'p3']);
+  });
+});
+
+describe('pending delivery memory', () => {
+  const asked = {
+    authorType: 'SALES_AGENT',
+    body: '¿A qué distrito te lo enviamos?',
+    metadata: {
+      tools: [
+        {
+          name: 'quote_shipping',
+          status: 'skipped',
+          data: { awaitingDelivery: true, lines: [{ productId: 'p1', variantId: null, quantity: 1 }, { productId: 7 }] },
+        },
+      ],
+    },
+  };
+
+  it('keeps the valid lines while the latest seller turn asked for the district', () => {
+    const { history } = buildAgentContext([asked, { authorType: 'BUYER', body: 'Miraflores', metadata: null }]);
+    expect(awaitingDelivery(history)).toEqual([{ productId: 'p1', variantId: null, quantity: 1 }]);
+  });
+
+  it('forgets them once the seller moved on', () => {
+    const { history } = buildAgentContext([asked, { authorType: 'SALES_AGENT', body: 'Listo', metadata: null }]);
+    expect(awaitingDelivery(history)).toEqual([]);
   });
 });
 

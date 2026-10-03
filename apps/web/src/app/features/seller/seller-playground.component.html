@@ -1,0 +1,95 @@
+<div class="playground" role="dialog" aria-modal="true" aria-labelledby="playground-title">
+  <div class="playground__panel">
+    <header class="playground__head">
+      <div>
+        <p class="playground__eyebrow">No cuenta en tus métricas</p>
+        <h2 id="playground-title">Probar a {{ agentName() }}</h2>
+        <p>
+          Chatea como comprador y mira qué consultó para responder (catálogo,
+          stock, pedido, link). No aparece en Mensajes ni Pedidos.
+        </p>
+      </div>
+      <div class="playground__head-actions">
+        <ds-button type="button" variant="ghost" [disabled]="sending() || !session()" (click)="reset()">
+          Reiniciar
+        </ds-button>
+        <button type="button" class="icon-btn" (click)="close()">Cerrar</button>
+      </div>
+    </header>
+
+    @if (error(); as message) {
+      <div class="playground__error" role="alert">
+        <ds-icon name="alert" />
+        <span>{{ message }}</span>
+      </div>
+    }
+
+    <div class="playground__body">
+      <div class="playground__thread" aria-live="polite">
+        @if (loading()) {
+          <p class="playground__loading" aria-busy="true">Abriendo prueba…</p>
+        } @else if (messages().length === 0) {
+          <div class="playground__empty">
+            <ds-icon name="sparkles" />
+            <strong>Escribe como un comprador</strong>
+            <p>
+              Prueba un saludo, una objeción (“está caro”) o “quiero comprar
+              [producto]” para ver cómo cierra con el link de pago de prueba.
+            </p>
+            <div class="playground__suggestions">
+              @for (suggestion of suggestions; track suggestion.label) {
+                <button type="button" (click)="sendSuggestion(suggestion.text)" [disabled]="sending()">
+                  {{ suggestion.label }}
+                </button>
+              }
+            </div>
+          </div>
+        } @else {
+          @for (message of messages(); track message.id) {
+            <div
+              class="pg-bubble"
+              [class.pg-bubble--buyer]="isBuyer(message)"
+              [class.pg-bubble--agent]="!isBuyer(message)"
+            >
+              <span class="pg-bubble__label">{{ isBuyer(message) ? 'Comprador' : 'Vendedor IA' }}</span>
+              <p>{{ message.body }}</p>
+            </div>
+          }
+        }
+      </div>
+
+      <aside class="playground__explain" aria-label="Por qué respondió">
+        <h3>Por qué respondió</h3>
+        <p class="playground__explain-lead">Precio y stock salen solo de tu catálogo</p>
+        @if (lastTools().length === 0) {
+          <p class="playground__explain-empty">Envía un mensaje para ver qué consultó tu vendedor.</p>
+        } @else {
+          <ul class="tool-list">
+            @for (tool of lastTools(); track $index) {
+              <li [attr.data-status]="tool.status">
+                <strong>{{ toolLabel(tool.name) }}</strong>
+                <span>{{ tool.summary }}</span>
+              </li>
+            }
+          </ul>
+        }
+      </aside>
+    </div>
+
+    <form class="playground__composer" (submit)="$event.preventDefault(); send()">
+      <label class="playground__sr" for="playground-input">Mensaje de prueba</label>
+      <input
+        id="playground-input"
+        type="text"
+        [value]="draft()"
+        (input)="onDraft($any($event.target).value)"
+        placeholder="Escribe como comprador…"
+        [disabled]="sending() || loading()"
+        autocomplete="off"
+      />
+      <ds-button type="submit" [disabled]="sending() || loading() || !draft().trim()">
+        {{ sending() ? 'Enviando…' : 'Enviar' }}
+      </ds-button>
+    </form>
+  </div>
+</div>

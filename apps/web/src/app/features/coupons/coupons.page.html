@@ -8,7 +8,7 @@
         «compra X, lleva Y». El descuento se calcula siempre en el servidor.
       </p>
     </div>
-    @if (editing() === null) {
+    @if (editing() === null && !loading() && active()) {
       <div class="store__actions">
         <ds-button (click)="startCreate()">
           <ds-icon name="plus" [size]="1" /> Nuevo cupón
@@ -203,6 +203,8 @@
 
   @if (loading()) {
     <div class="skeleton" aria-busy="true">Cargando cupones…</div>
+  } @else if (!active()) {
+    <app-integration-gate key="store" />
   } @else if (!coupons().length && editing() === null) {
     <div class="card empty">
       <ds-icon name="ticket" [size]="2" />

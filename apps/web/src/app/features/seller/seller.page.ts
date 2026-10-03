@@ -1,23 +1,25 @@
 import {
   ChangeDetectionStrategy,
   Component,
+  DestroyRef,
   computed,
   inject,
   signal,
 } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
-import { ActivatedRoute } from '@angular/router';
-import { toSignal } from '@angular/core/rxjs-interop';
+import { ActivatedRoute, Router, RouterLink } from '@angular/router';
+import { takeUntilDestroyed, toSignal } from '@angular/core/rxjs-interop';
 import { map, startWith } from 'rxjs';
-import { DsButtonComponent } from '@vendedoria/ui';
+import { DsButtonComponent, DsConfirmService } from '@vendedoria/ui';
 import { DsIconComponent } from '@vendedoria/ui';
+import { SellerPlaygroundComponent } from './seller-playground.component';
 import {
   AgentsApiService,
   AgentQuality,
-  AgentToolTrace,
-  PlaygroundMessageDto,
-  PlaygroundSessionDto,
   SalesAgentDto,
+  SalesAgentPromptDto,
+  SalesAgentPromptMode,
+  SalesAgentSummaryDto,
 } from '../../core/api/agents-api.service';
 import {
   JourneyStage,
@@ -25,21 +27,32 @@ import {
   KnowledgeApiService,
   KnowledgeFaqDto,
 } from '../../core/api/knowledge-api.service';
+import {
+  ChannelDto,
+  MessagingApiService,
+} from '../../core/api/messaging-api.service';
+import {
+  SALES_TECHNIQUES,
+  SELLER_PRESETS,
+  SELLER_SECTIONS,
+  SellerPreset,
+  SellerSectionId,
+  TECHNIQUE_GROUPS,
+  asSellerSection,
+} from './seller-config';
 
-type SellerSectionId =
-  | 'basics'
-  | 'audience'
-  | 'personality'
-  | 'messages'
-  | 'handoff'
-  | 'limits'
-  | 'knowledge'
-  | 'journeys';
+const CUSTOM_PROMPT_MAX = 12000;
 
 @Component({
   selector: 'app-seller-page',
   standalone: true,
-  imports: [ReactiveFormsModule, DsButtonComponent, DsIconComponent],
+  imports: [
+    ReactiveFormsModule,
+    RouterLink,
+    DsButtonComponent,
+    DsIconComponent,
+    SellerPlaygroundComponent,
+  ],
   templateUrl: './seller.page.html',
   styleUrl: './seller.page.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -47,16 +60,37 @@ type SellerSectionId =
 export class SellerPage {
   private readonly api = inject(AgentsApiService);
   private readonly knowledgeApi = inject(KnowledgeApiService);
+  private readonly messagingApi = inject(MessagingApiService);
   private readonly fb = inject(FormBuilder);
   private readonly route = inject(ActivatedRoute);
+  private readonly router = inject(Router);
+  private readonly destroyRef = inject(DestroyRef);
+  private readonly confirmDialog = inject(DsConfirmService);
+
+  readonly sections = SELLER_SECTIONS;
+  readonly techniqueGroups = TECHNIQUE_GROUPS;
+  readonly presets = SELLER_PRESETS;
+  readonly customPromptMax = CUSTOM_PROMPT_MAX;
 
   readonly loading = signal(true);
+  readonly agentLoading = signal(false);
   readonly saving = signal(false);
   readonly dirty = signal(false);
   readonly errorMessage = signal<string | null>(null);
   readonly successMessage = signal<string | null>(null);
   readonly quality = signal<AgentQuality | null>(null);
-  readonly activeSection = signal<SellerSectionId>('basics');
+
+  readonly agents = signal<SalesAgentSummaryDto[]>([]);
+  readonly agentId = signal<string | null>(null);
+  readonly channels = signal<ChannelDto[]>([]);
+  readonly channelsBusy = signal(false);
+  readonly newAgentOpen = signal(false);
+  readonly newAgentName = signal('');
+  readonly newAgentCopy = signal(true);
+  readonly agentBusy = signal(false);
+
+  readonly prompt = signal<SalesAgentPromptDto | null>(null);
+  readonly promptLoading = signal(false);
 
   readonly faqs = signal<KnowledgeFaqDto[]>([]);
   readonly journeys = signal<JourneyTemplateDto[]>([]);
@@ -69,23 +103,17 @@ export class SellerPage {
   readonly journeyScript = signal('');
 
   readonly playgroundOpen = signal(false);
-  readonly playgroundLoading = signal(false);
-  readonly playgroundSending = signal(false);
-  readonly playgroundError = signal<string | null>(null);
-  readonly playgroundSession = signal<PlaygroundSessionDto | null>(null);
-  readonly playgroundDraft = signal('');
-  readonly lastTools = signal<AgentToolTrace[]>([]);
 
-  readonly sections: Array<{ id: SellerSectionId; label: string }> = [
-    { id: 'basics', label: 'Básico' },
-    { id: 'audience', label: 'Audiencia' },
-    { id: 'personality', label: 'Personalidad' },
-    { id: 'messages', label: 'Mensajes' },
-    { id: 'handoff', label: 'Derivar' },
-    { id: 'limits', label: 'Límites' },
-    { id: 'knowledge', label: 'Conocimiento' },
-    { id: 'journeys', label: 'Recorrido' },
-  ];
+  readonly section = toSignal(
+    this.route.paramMap.pipe(
+      map((params) => asSellerSection(params.get('section')) ?? 'profile'),
+    ),
+    { initialValue: 'profile' as SellerSectionId },
+  );
+
+  readonly activeSection = computed(
+    () => this.sections.find((item) => item.id === this.section()) ?? this.sections[0],
+  );
 
   readonly form = this.fb.nonNullable.group({
     name: ['', [Validators.required, Validators.minLength(2)]],
@@ -106,6 +134,10 @@ export class SellerPage {
     neverOfferDiscount: [true],
     neverInventShipping: [true],
     catalogOnlyFacts: [true],
+    salesTechniques: this.fb.nonNullable.control<string[]>([]),
+    objectionHandling: [''],
+    promptMode: ['guided' as SalesAgentPromptMode],
+    customPrompt: ['', [Validators.maxLength(CUSTOM_PROMPT_MAX)]],
     isActive: [true],
   });
 
@@ -115,6 +147,36 @@ export class SellerPage {
       map(() => this.form.getRawValue()),
     ),
     { initialValue: this.form.getRawValue() },
+  );
+
+  readonly currentAgent = computed(
+    () => this.agents().find((agent) => agent.id === this.agentId()) ?? null,
+  );
+
+  readonly selectedTechniques = computed(
+    () => new Set(this.formValues().salesTechniques),
+  );
+
+  readonly techniquesByGroup = computed(() =>
+    this.techniqueGroups.map((group) => ({
+      ...group,
+      items: SALES_TECHNIQUES.filter((item) => item.group === group.id),
+    })),
+  );
+
+  readonly activePreset = computed(() => {
+    const values = this.formValues();
+    return (
+      this.presets.find(
+        (preset) =>
+          preset.communicationStyle === values.communicationStyle &&
+          preset.salesStyle === values.salesStyle,
+      )?.id ?? null
+    );
+  });
+
+  readonly customPromptLength = computed(
+    () => this.formValues().customPrompt.length,
   );
 
   readonly previewGreeting = computed(() => {
@@ -161,33 +223,40 @@ export class SellerPage {
     () => this.journeys().filter((item) => item.isActive).length,
   );
 
-  readonly playgroundMessages = computed(
-    () => this.playgroundSession()?.messages ?? [],
-  );
-
   constructor() {
-    void this.load();
-    this.route.queryParamMap.subscribe((params) => {
-      if (params.get('playground') === '1' && !this.playgroundOpen()) {
-        void this.openPlayground();
-      }
-    });
+    void this.init();
+    this.route.queryParamMap
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe((params) => {
+        if (params.get('playground') === '1' && !this.playgroundOpen()) {
+          void this.openPlayground();
+        }
+        const requested = params.get('agent');
+        if (!this.loading() && requested && requested !== this.agentId()) {
+          void this.loadAgent(requested);
+        }
+      });
   }
 
-  async load(): Promise<void> {
+  async init(): Promise<void> {
     this.loading.set(true);
     this.errorMessage.set(null);
     try {
-      const [agent, faqs, journeys] = await Promise.all([
-        this.api.getPrimary(),
+      const [agents, faqs, journeys, channels] = await Promise.all([
+        this.api.list(),
         this.knowledgeApi.listFaqs(),
         this.knowledgeApi.listJourneys(),
+        this.messagingApi.listChannels().catch(() => [] as ChannelDto[]),
       ]);
-      this.patchForm(agent);
-      this.quality.set(agent.quality);
+      this.agents.set(agents);
       this.faqs.set(faqs);
       this.journeys.set(journeys);
-      this.dirty.set(false);
+      this.channels.set(channels);
+      const requested = this.route.snapshot.queryParamMap.get('agent');
+      const target = agents.find((agent) => agent.id === requested) ?? agents[0];
+      if (target) {
+        await this.loadAgent(target.id);
+      }
     } catch {
       this.errorMessage.set(
         'No pudimos cargar tu vendedor IA. Revisa tu conexión e inténtalo de nuevo.',
@@ -197,112 +266,233 @@ export class SellerPage {
     }
   }
 
+  async loadAgent(id: string): Promise<void> {
+    this.agentLoading.set(true);
+    this.errorMessage.set(null);
+    try {
+      const agent = await this.api.get(id);
+      this.applyAgent(agent);
+      this.prompt.set(null);
+    } catch {
+      this.errorMessage.set('No pudimos cargar este vendedor. Inténtalo de nuevo.');
+    } finally {
+      this.agentLoading.set(false);
+    }
+  }
+
+  async selectAgent(id: string): Promise<void> {
+    if (id === this.agentId()) return;
+    if (
+      this.dirty() &&
+      !(await this.confirmDialog.confirm({
+        title: '¿Descartar los cambios?',
+        message: 'Tienes cambios sin guardar en este vendedor. Si cambias de vendedor, se perderán.',
+        confirmLabel: 'Descartar cambios',
+        cancelLabel: 'Seguir editando',
+        tone: 'danger',
+      }))
+    ) {
+      return;
+    }
+    void this.router.navigate([], {
+      relativeTo: this.route,
+      queryParams: { agent: id },
+      queryParamsHandling: 'merge',
+    });
+  }
+
+  sectionQuery(): Record<string, string> {
+    const id = this.agentId();
+    return id ? { agent: id } : {};
+  }
+
   markDirty(): void {
     this.dirty.set(true);
     this.successMessage.set(null);
     this.quality.set(this.estimateQuality(this.form.getRawValue()));
   }
 
-  scrollTo(section: SellerSectionId): void {
-    this.activeSection.set(section);
-    const el = document.getElementById(`seller-${section}`);
-    el?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  toggleNewAgent(): void {
+    this.newAgentOpen.update((open) => !open);
+    this.newAgentName.set('');
   }
 
-  async openPlayground(): Promise<void> {
-    this.playgroundOpen.set(true);
-    this.playgroundError.set(null);
-    this.playgroundLoading.set(true);
+  onNewAgentName(value: string): void {
+    this.newAgentName.set(value);
+  }
+
+  onNewAgentCopy(value: boolean): void {
+    this.newAgentCopy.set(value);
+  }
+
+  async createAgent(): Promise<void> {
+    const name = this.newAgentName().trim();
+    if (name.length < 2) {
+      this.errorMessage.set('Ponle un nombre de al menos 2 letras al nuevo vendedor.');
+      return;
+    }
+    this.agentBusy.set(true);
+    this.errorMessage.set(null);
+    try {
+      const created = await this.api.create({
+        name,
+        copyFromId: this.newAgentCopy() ? (this.agentId() ?? undefined) : undefined,
+      });
+      this.agents.set(await this.api.list());
+      this.newAgentOpen.set(false);
+      this.dirty.set(false);
+      await this.router.navigate(['/app/seller', 'profile'], {
+        queryParams: { agent: created.id },
+      });
+      this.successMessage.set(`${created.name} está listo. Asígnale un canal para que empiece a vender.`);
+    } catch (error) {
+      this.errorMessage.set(
+        this.apiMessage(error) ?? 'No se pudo crear el vendedor. Inténtalo otra vez.',
+      );
+    } finally {
+      this.agentBusy.set(false);
+    }
+  }
+
+  async deleteAgent(): Promise<void> {
+    const agent = this.currentAgent();
+    if (!agent || agent.isPrimary) return;
+    const confirmed = await this.confirmDialog.confirm({
+      title: `¿Eliminar a ${agent.name}?`,
+      message: 'Sus canales pasarán a tu vendedor principal. Esta acción no se puede deshacer.',
+      confirmLabel: 'Eliminar vendedor',
+      tone: 'danger',
+    });
+    if (!confirmed) return;
+    this.agentBusy.set(true);
+    try {
+      await this.api.remove(agent.id);
+      const agents = await this.api.list();
+      this.agents.set(agents);
+      this.dirty.set(false);
+      await this.router.navigate([], {
+        relativeTo: this.route,
+        queryParams: { agent: agents[0]?.id },
+      });
+      this.successMessage.set(`${agent.name} fue eliminado.`);
+    } catch {
+      this.errorMessage.set('No se pudo eliminar el vendedor.');
+    } finally {
+      this.agentBusy.set(false);
+    }
+  }
+
+  channelOwner(channel: ChannelDto): SalesAgentSummaryDto | null {
+    return this.agents().find((agent) => agent.channelIds.includes(channel.id)) ?? null;
+  }
+
+  isChannelAssigned(channel: ChannelDto): boolean {
+    return this.currentAgent()?.channelIds.includes(channel.id) ?? false;
+  }
+
+  channelLabel(channel: ChannelDto): string {
+    const type = channel.type === 'WHATSAPP' ? 'WhatsApp' : 'Instagram';
+    return channel.displayName ? `${type} · ${channel.displayName}` : type;
+  }
+
+  async toggleChannel(channel: ChannelDto): Promise<void> {
+    const agent = this.currentAgent();
+    if (!agent) return;
+    const next = this.isChannelAssigned(channel)
+      ? agent.channelIds.filter((id) => id !== channel.id)
+      : [...agent.channelIds, channel.id];
+    this.channelsBusy.set(true);
+    this.errorMessage.set(null);
+    try {
+      await this.api.assignChannels(agent.id, next);
+      this.agents.set(await this.api.list());
+      this.successMessage.set('Canales actualizados. Aplica desde el próximo mensaje.');
+    } catch {
+      this.errorMessage.set('No se pudieron actualizar los canales.');
+    } finally {
+      this.channelsBusy.set(false);
+    }
+  }
+
+  applyPreset(preset: SellerPreset): void {
+    this.form.patchValue({
+      communicationStyle: preset.communicationStyle,
+      salesStyle: preset.salesStyle,
+      responseLength: preset.responseLength,
+      salesTechniques: [...preset.salesTechniques],
+    });
+    this.markDirty();
+  }
+
+  toggleTechnique(id: string): void {
+    const current = this.form.controls.salesTechniques.value;
+    this.form.controls.salesTechniques.setValue(
+      current.includes(id) ? current.filter((item) => item !== id) : [...current, id],
+    );
+    this.markDirty();
+  }
+
+  setPromptMode(mode: SalesAgentPromptMode): void {
+    this.form.controls.promptMode.setValue(mode);
+    this.markDirty();
+  }
+
+  async loadPrompt(): Promise<void> {
+    const id = this.agentId();
+    if (!id) return;
+    this.promptLoading.set(true);
     try {
       if (this.dirty()) {
         await this.save(true);
       }
-      const session = await this.api.getPlaygroundSession();
-      this.playgroundSession.set(session);
-      const lastAgent = [...session.messages]
-        .reverse()
-        .find((message) => message.authorType === 'SALES_AGENT');
-      this.lastTools.set(this.asToolTraces(lastAgent?.toolTraces));
+      this.prompt.set(await this.api.getPrompt(id));
     } catch {
-      this.playgroundError.set(
-        'No pudimos abrir la prueba. Guarda el vendedor y reintenta.',
-      );
+      this.errorMessage.set('No pudimos generar la vista del prompt.');
     } finally {
-      this.playgroundLoading.set(false);
+      this.promptLoading.set(false);
     }
+  }
+
+  async startFromGuided(): Promise<void> {
+    const current = this.form.controls.customPrompt.value.trim();
+    if (
+      current &&
+      !(await this.confirmDialog.confirm({
+        title: '¿Reemplazar tu prompt personalizado?',
+        message: 'Cargaremos las instrucciones guiadas en el editor en lugar del texto que tienes ahora.',
+        confirmLabel: 'Reemplazar',
+        tone: 'danger',
+      }))
+    ) {
+      return;
+    }
+    await this.loadPrompt();
+    const prompt = this.prompt();
+    if (!prompt) return;
+    this.form.patchValue({ customPrompt: prompt.guidedPersona, promptMode: 'custom' });
+    this.markDirty();
+  }
+
+  async copyPrompt(): Promise<void> {
+    const text = this.prompt()?.effectivePrompt;
+    if (!text) return;
+    try {
+      await navigator.clipboard.writeText(text);
+      this.successMessage.set('Prompt copiado.');
+    } catch {
+      this.errorMessage.set('No se pudo copiar. Selecciona el texto y cópialo manualmente.');
+    }
+  }
+
+  async openPlayground(): Promise<void> {
+    if (this.dirty()) {
+      await this.save(true);
+    }
+    this.playgroundOpen.set(true);
   }
 
   closePlayground(): void {
     this.playgroundOpen.set(false);
-  }
-
-  async resetPlayground(): Promise<void> {
-    const session = this.playgroundSession();
-    if (!session) return;
-    this.playgroundSending.set(true);
-    this.playgroundError.set(null);
-    try {
-      const refreshed = await this.api.resetPlaygroundSession(session.id);
-      this.playgroundSession.set(refreshed);
-      this.lastTools.set([]);
-    } catch {
-      this.playgroundError.set('No se pudo reiniciar la prueba.');
-    } finally {
-      this.playgroundSending.set(false);
-    }
-  }
-
-  onDraftInput(value: string): void {
-    this.playgroundDraft.set(value);
-  }
-
-  async sendPlayground(): Promise<void> {
-    const session = this.playgroundSession();
-    const text = this.playgroundDraft().trim();
-    if (!session || !text) return;
-
-    this.playgroundSending.set(true);
-    this.playgroundError.set(null);
-    try {
-      const result = await this.api.sendPlaygroundMessage(session.id, text);
-      this.playgroundSession.set(result.session);
-      this.lastTools.set(result.lastAgentReply.tools);
-      this.playgroundDraft.set('');
-    } catch {
-      this.playgroundError.set(
-        'No se pudo enviar. Revisa productos/FAQs e inténtalo otra vez.',
-      );
-    } finally {
-      this.playgroundSending.set(false);
-    }
-  }
-
-  sendSuggestion(text: string): void {
-    this.playgroundDraft.set(text);
-    void this.sendPlayground();
-  }
-
-  toolLabel(name: string): string {
-    switch (name) {
-      case 'search_catalog':
-        return 'Catálogo';
-      case 'get_product_availability':
-        return 'Precio / stock';
-      case 'lookup_faq':
-        return 'FAQ';
-      case 'create_order':
-        return 'Pedido';
-      case 'create_payment_link':
-        return 'Link de pago';
-      case 'escalate':
-        return 'Derivó a asesor';
-      default:
-        return name;
-    }
-  }
-
-  isBuyer(message: PlaygroundMessageDto): boolean {
-    return message.authorType === 'BUYER';
   }
 
   stageLabel(stage: JourneyStage): string {
@@ -314,7 +504,7 @@ export class SellerPage {
       case 'CLOSE':
         return 'Cerrar';
       case 'SUPPORT':
-        return 'Soporte';
+        return 'Postventa';
     }
   }
 
@@ -353,7 +543,7 @@ export class SellerPage {
     const question = this.faqQuestion().trim();
     const answer = this.faqAnswer().trim();
     if (question.length < 4 || answer.length < 4) {
-      this.errorMessage.set('La FAQ necesita pregunta y respuesta claras.');
+      this.errorMessage.set('La pregunta frecuente necesita pregunta y respuesta claras.');
       return;
     }
     this.knowledgeBusy.set(true);
@@ -363,10 +553,10 @@ export class SellerPage {
       this.faqs.update((list) => [created, ...list]);
       this.faqQuestion.set('');
       this.faqAnswer.set('');
-      this.successMessage.set('FAQ publicada. El vendedor ya puede usarla.');
+      this.successMessage.set('Pregunta publicada. Tus vendedores ya pueden usarla.');
       await this.refreshQuality();
     } catch {
-      this.errorMessage.set('No se pudo guardar la FAQ.');
+      this.errorMessage.set('No se pudo guardar la pregunta frecuente.');
     } finally {
       this.knowledgeBusy.set(false);
     }
@@ -379,10 +569,10 @@ export class SellerPage {
       this.faqs.update((list) =>
         list.map((item) => (item.id === faq.id ? updated : item)),
       );
-      this.successMessage.set('FAQ aprobada y publicada.');
+      this.successMessage.set('Pregunta aprobada y publicada.');
       await this.refreshQuality();
     } catch {
-      this.errorMessage.set('No se pudo aprobar la FAQ.');
+      this.errorMessage.set('No se pudo aprobar la pregunta frecuente.');
     } finally {
       this.knowledgeBusy.set(false);
     }
@@ -395,7 +585,7 @@ export class SellerPage {
       this.faqs.update((list) => list.filter((item) => item.id !== faq.id));
       await this.refreshQuality();
     } catch {
-      this.errorMessage.set('No se pudo eliminar la FAQ.');
+      this.errorMessage.set('No se pudo eliminar la pregunta frecuente.');
     } finally {
       this.knowledgeBusy.set(false);
     }
@@ -413,7 +603,7 @@ export class SellerPage {
       const result = await this.knowledgeApi.importPaste(rawText);
       if (result.skipped || !result.created.length) {
         this.errorMessage.set(
-          'No detectamos FAQs. Usa bloques separados o líneas Q:/A:.',
+          'No detectamos preguntas. Usa bloques separados o líneas Q:/A:.',
         );
         return;
       }
@@ -423,7 +613,6 @@ export class SellerPage {
         `${result.created.length} borrador${result.created.length === 1 ? '' : 'es'} listo${result.created.length === 1 ? '' : 's'} para revisar. No se publican hasta que apruebes.`,
       );
       await this.refreshQuality();
-      this.scrollTo('knowledge');
     } catch {
       this.errorMessage.set('No se pudo importar el texto.');
     } finally {
@@ -435,7 +624,7 @@ export class SellerPage {
     const title = this.journeyTitle().trim();
     const scriptText = this.journeyScript().trim();
     if (title.length < 2 || scriptText.length < 8) {
-      this.errorMessage.set('La plantilla necesita título y guion.');
+      this.errorMessage.set('El guion necesita título y texto.');
       return;
     }
     this.knowledgeBusy.set(true);
@@ -448,10 +637,10 @@ export class SellerPage {
       this.journeys.update((list) => [created, ...list]);
       this.journeyTitle.set('');
       this.journeyScript.set('');
-      this.successMessage.set('Plantilla de recorrido activa.');
+      this.successMessage.set('Guion activo.');
       await this.refreshQuality();
     } catch {
-      this.errorMessage.set('No se pudo guardar la plantilla.');
+      this.errorMessage.set('No se pudo guardar el guion.');
     } finally {
       this.knowledgeBusy.set(false);
     }
@@ -468,7 +657,7 @@ export class SellerPage {
       );
       await this.refreshQuality();
     } catch {
-      this.errorMessage.set('No se pudo actualizar la plantilla.');
+      this.errorMessage.set('No se pudo actualizar el guion.');
     } finally {
       this.knowledgeBusy.set(false);
     }
@@ -483,17 +672,22 @@ export class SellerPage {
       );
       await this.refreshQuality();
     } catch {
-      this.errorMessage.set('No se pudo eliminar la plantilla.');
+      this.errorMessage.set('No se pudo eliminar el guion.');
     } finally {
       this.knowledgeBusy.set(false);
     }
   }
 
   async save(quiet = false): Promise<void> {
+    const id = this.agentId();
+    if (!id) return;
     if (this.form.invalid) {
       this.form.markAllAsTouched();
-      this.errorMessage.set('Revisa el nombre del vendedor antes de guardar.');
-      this.scrollTo('basics');
+      this.errorMessage.set(
+        this.form.controls.customPrompt.invalid
+          ? `El prompt personalizado supera los ${CUSTOM_PROMPT_MAX} caracteres.`
+          : 'Revisa el nombre del vendedor antes de guardar.',
+      );
       return;
     }
 
@@ -505,7 +699,7 @@ export class SellerPage {
 
     try {
       const values = this.form.getRawValue();
-      const updated = await this.api.updatePrimary({
+      const updated = await this.api.update(id, {
         ...values,
         companyName: values.companyName.trim() || undefined,
         companyDescription: values.companyDescription.trim() || undefined,
@@ -519,10 +713,17 @@ export class SellerPage {
         purchaseConfirmMessage:
           values.purchaseConfirmMessage.trim() || undefined,
         handoffMessage: values.handoffMessage.trim() || undefined,
+        objectionHandling: values.objectionHandling.trim() || undefined,
+        customPrompt: values.customPrompt.trim() || undefined,
       });
-      this.patchForm(updated);
-      this.quality.set(updated.quality);
-      this.dirty.set(false);
+      this.applyAgent(updated);
+      this.agents.update((list) =>
+        list.map((agent) =>
+          agent.id === updated.id
+            ? { ...agent, name: updated.name, isActive: updated.isActive, promptMode: updated.promptMode }
+            : agent,
+        ),
+      );
       if (!quiet) {
         this.successMessage.set(
           'Vendedor actualizado. Los cambios aplican en el próximo mensaje.',
@@ -537,24 +738,27 @@ export class SellerPage {
     }
   }
 
+  private applyAgent(agent: SalesAgentDto): void {
+    this.agentId.set(agent.id);
+    this.patchForm(agent);
+    this.quality.set(agent.quality);
+    this.dirty.set(false);
+  }
+
   private async refreshQuality(): Promise<void> {
+    const id = this.agentId();
     try {
-      const agent = await this.api.getPrimary();
+      if (!id) throw new Error('no agent');
+      const agent = await this.api.get(id);
       this.quality.set(agent.quality);
     } catch {
       this.quality.set(this.estimateQuality(this.form.getRawValue()));
     }
   }
 
-  private asToolTraces(value: unknown): AgentToolTrace[] {
-    if (!Array.isArray(value)) return [];
-    return value.filter(
-      (item): item is AgentToolTrace =>
-        typeof item === 'object' &&
-        item !== null &&
-        'name' in item &&
-        'summary' in item,
-    );
+  private apiMessage(error: unknown): string | null {
+    const message = (error as { error?: { message?: unknown } })?.error?.message;
+    return typeof message === 'string' ? message : null;
   }
 
   private patchForm(agent: SalesAgentDto): void {
@@ -581,6 +785,10 @@ export class SellerPage {
       neverOfferDiscount: agent.neverOfferDiscount ?? true,
       neverInventShipping: agent.neverInventShipping ?? true,
       catalogOnlyFacts: agent.catalogOnlyFacts ?? true,
+      salesTechniques: agent.salesTechniques ?? [],
+      objectionHandling: agent.objectionHandling ?? '',
+      promptMode: agent.promptMode === 'custom' ? 'custom' : 'guided',
+      customPrompt: agent.customPrompt ?? '',
       isActive: agent.isActive,
     });
   }

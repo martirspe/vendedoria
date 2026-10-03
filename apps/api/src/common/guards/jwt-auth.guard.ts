@@ -7,6 +7,7 @@ import {
 import { Reflector } from '@nestjs/core';
 import { AuthGuard } from '@nestjs/passport';
 import { IS_PUBLIC_KEY } from '../decorators/auth.decorators';
+import { PLATFORM_PERMISSIONS_KEY } from '../../platform/platform-operator';
 
 @Injectable()
 export class JwtAuthGuard extends AuthGuard('jwt') implements CanActivate {
@@ -20,6 +21,13 @@ export class JwtAuthGuard extends AuthGuard('jwt') implements CanActivate {
       context.getClass(),
     ]);
     if (isPublic) {
+      return true;
+    }
+    // @PlatformPermissions() bundles PlatformAuthGuard, which authenticates the platform session itself.
+    const platformPermissions = this.reflector.getAllAndOverride<
+      unknown[] | undefined
+    >(PLATFORM_PERMISSIONS_KEY, [context.getHandler(), context.getClass()]);
+    if (platformPermissions) {
       return true;
     }
     return super.canActivate(context);

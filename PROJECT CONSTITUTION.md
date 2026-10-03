@@ -255,7 +255,7 @@ Acciones globales frecuentes: **Connect WhatsApp**, command palette (`Ctrl+K`), 
 
 ## Billing (flujo A)
 
-**Piso:** sin plan gratuito: prueba de 30 días en Starter con cuota reducida y visible; Starter / Pro / Business; ciclos; overage explícito.
+**Piso:** sin plan gratuito: prueba de 14 días en Crece con cuota reducida y visible, apoyada por una sesión de configuración por Zoom; Inicia / Crece / Escala / Lidera + A medida; pago por 1, 3, 6 o 12 meses; chats extra del mes como overage explícito; tope de respuestas con IA por plan; funciones de plan (tienda web desde Crece, dominio, píxel, Instagram, equipo) que se activan en Integraciones.
 
 **Cuña:** cuotas y overage **transparentes** antes del bloqueo; copy que no confunda A con B.
 

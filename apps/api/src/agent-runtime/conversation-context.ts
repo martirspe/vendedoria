@@ -6,7 +6,11 @@ export type ConversationTurn = {
   productIds?: string[];
   /** Set when that turn browsed the catalog; `category` null means the whole catalog. */
   browse?: { category: string | null };
+  /** Set when that turn asked for the delivery district before creating the order. */
+  pendingDelivery?: { lines: PendingLine[] };
 };
+
+export type PendingLine = { productId: string; variantId: string | null; quantity: number };
 
 export type AgentContext = {
   history: ConversationTurn[];
@@ -46,6 +50,29 @@ function catalogSearch(meta: Record<string, unknown>): Pick<ConversationTurn, 'p
   return {};
 }
 
+/** Order lines a stored agent turn left waiting for the delivery district. */
+function pendingDelivery(meta: Record<string, unknown>): Pick<ConversationTurn, 'pendingDelivery'> {
+  const tools = Array.isArray(meta.tools) ? meta.tools : [];
+  for (const tool of tools) {
+    const trace = asRecord(tool);
+    if (trace.name !== 'quote_shipping') continue;
+    const data = asRecord(trace.data);
+    if (data.awaitingDelivery !== true || !Array.isArray(data.lines)) return {};
+    const lines = data.lines.flatMap((item): PendingLine[] => {
+      const line = asRecord(item);
+      return typeof line.productId === 'string' && Number.isSafeInteger(line.quantity) && (line.quantity as number) > 0
+        ? [{
+            productId: line.productId,
+            variantId: typeof line.variantId === 'string' ? line.variantId : null,
+            quantity: line.quantity as number,
+          }]
+        : [];
+    });
+    return lines.length ? { pendingDelivery: { lines } } : {};
+  }
+  return {};
+}
+
 /** Builds the agent context from stored messages in chronological order. */
 export function buildAgentContext(messages: StoredMessage[]): AgentContext {
   const history: ConversationTurn[] = [];
@@ -61,7 +88,7 @@ export function buildAgentContext(messages: StoredMessage[]): AgentContext {
       history.push({ role: 'buyer', text });
       continue;
     }
-    history.push({ role: 'agent', text, ...catalogSearch(meta) });
+    history.push({ role: 'agent', text, ...catalogSearch(meta), ...pendingDelivery(meta) });
   }
   return { history: history.slice(-HISTORY_LIMIT), shownImageProductIds: [...shown] };
 }
@@ -71,6 +98,15 @@ export function lastRecommendedProductIds(history: ConversationTurn[]): string[]
   for (let i = history.length - 1; i >= 0; i--) {
     const turn = history[i];
     if (turn.role === 'agent' && turn.productIds?.length) return turn.productIds;
+  }
+  return [];
+}
+
+/** Lines waiting for the delivery district, only while the latest seller turn is that question. */
+export function awaitingDelivery(history: ConversationTurn[]): PendingLine[] {
+  for (let i = history.length - 1; i >= 0; i--) {
+    const turn = history[i];
+    if (turn.role === 'agent') return turn.pendingDelivery?.lines ?? [];
   }
   return [];
 }

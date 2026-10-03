@@ -29,9 +29,31 @@ gzip_proxied any;
 gzip_comp_level 5;
 gzip_types text/plain text/css application/json application/javascript text/xml application/xml image/svg+xml;
 
-# Consola de vendedores y API.
+# Dominios propios de las tiendas (Cloudflare for SaaS) y cualquier host desconocido: el servidor
+# de la tienda solo responde si la API confirma que es un dominio verificado; si no, devuelve 404.
 server {
     listen 80 default_server;
+    server_name _;
+
+    client_max_body_size 1m;
+
+    location = /nginx-health {
+        access_log off;
+        default_type text/plain;
+        return 200 'ok';
+    }
+
+    location / {
+        limit_req zone=store_pages burst=120 nodelay;
+        set $store_upstream store:4300;
+        proxy_pass http://$store_upstream;
+        include /etc/nginx/snippets/proxy-params.conf;
+    }
+}
+
+# Consola de vendedores y API.
+server {
+    listen 80;
     server_name ${CONSOLE_HOST};
 
     client_max_body_size 10m;

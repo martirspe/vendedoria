@@ -55,6 +55,22 @@ class EnvironmentVariables {
 
   @IsOptional()
   @IsString()
+  INSTAGRAM_APP_SECRET?: string;
+
+  @IsOptional()
+  @IsString()
+  CLOUDFLARE_SAAS_ZONE_ID?: string;
+
+  @IsOptional()
+  @IsString()
+  CLOUDFLARE_SAAS_API_TOKEN?: string;
+
+  @IsOptional()
+  @IsString()
+  CUSTOM_DOMAIN_CNAME_TARGET?: string;
+
+  @IsOptional()
+  @IsString()
   OPENAI_API_KEY?: string;
 
   @IsOptional()

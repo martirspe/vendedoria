@@ -487,6 +487,8 @@ export class MessagesPage {
         return 'Pedido';
       case 'create_payment_link':
         return 'Link de pago';
+      case 'quote_shipping':
+        return 'Envío';
       case 'lookup_faq':
         return 'FAQ';
       case 'escalate':
