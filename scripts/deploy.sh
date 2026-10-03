@@ -166,8 +166,6 @@ fi
 
 [[ -n "$(read_env META_APP_SECRET)" ]] || warn "META_APP_SECRET empty: the WhatsApp webhook rejects every incoming message."
 [[ -n "$(read_env CERTBOT_EMAIL)$(read_env EMAIL_FROM)" ]] || warn "CERTBOT_EMAIL empty: HTTPS certificates will not be requested."
-[[ -n "$(read_env CLOUDFLARE_API_TOKEN)" ]] || warn "CLOUDFLARE_API_TOKEN empty: no wildcard certificate, stores stay on HTTP (site, www and console use HTTP-01)."
-
 [[ "$FAILED" == false ]] || { err "Fix .env and run the deploy again."; exit 1; }
 
 "${COMPOSE[@]}" config --quiet
