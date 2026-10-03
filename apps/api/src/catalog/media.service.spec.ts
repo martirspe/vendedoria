@@ -134,5 +134,22 @@ describe('MediaService', () => {
       await expect(media.read(file)).resolves.toBeDefined();
       expect(send).not.toHaveBeenCalled();
     });
+
+    it('converts its own photos to JPEG for WhatsApp and never fetches foreign URLs', async () => {
+      jest.spyOn(Logger.prototype, 'warn').mockImplementation(() => undefined);
+      const fetchSpy = jest.spyOn(global, 'fetch');
+      const media = new MediaService(
+        new ConfigService({ UPLOADS_DIR: dir, PUBLIC_API_BASE_URL: 'https://app.example.pe/api/v1' }),
+      );
+      const { url } = await media.upload('tenant-a', asUpload('image/png', png));
+
+      const jpeg = await media.jpegForMessaging(url);
+      expect(await sharp(jpeg!).metadata()).toMatchObject({ format: 'jpeg', width: 1200, height: 600 });
+      await expect(media.jpegForMessaging('http://169.254.169.254/latest/meta-data')).resolves.toBeNull();
+      await expect(
+        media.jpegForMessaging('https://app.example.pe/api/v1/media/../../etc/passwd'),
+      ).resolves.toBeNull();
+      expect(fetchSpy).not.toHaveBeenCalled();
+    });
   });
 });

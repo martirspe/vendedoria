@@ -6,6 +6,7 @@ import {
 import { OrderChannel, OrderStatus, Prisma } from '@prisma/client';
 import { CheckoutService } from '../checkout/checkout.service';
 import { OrderEmailService } from '../checkout/order-email.service';
+import { InboxEventsService } from '../conversations/inbox-events.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { PaymentsService } from '../payments/payments.service';
 import { releaseOrder, settlePaidOrder } from './settlement';
@@ -38,6 +39,7 @@ export class OrdersService {
     private readonly paymentsService: PaymentsService,
     private readonly checkout: CheckoutService,
     private readonly email: OrderEmailService,
+    private readonly inboxEvents: InboxEventsService,
   ) {}
 
   async list(
@@ -157,6 +159,7 @@ export class OrdersService {
           body: `Pedido creado · ${items.length} ítem(s) · ${(totalCents / 100).toFixed(2)} ${currency}`,
         },
       });
+      this.inboxEvents.publish(tenantId, dto.conversationId);
     }
 
     if (dto.createPaymentLink) {
@@ -191,6 +194,7 @@ export class OrdersService {
           body: `Link de pago listo (${(order.totalCents / 100).toFixed(2)} ${order.currency}):\n${payment.checkoutUrl}`,
         },
       });
+      this.inboxEvents.publish(tenantId, order.conversationId);
     }
 
     return this.getById(tenantId, orderId);
@@ -228,6 +232,9 @@ export class OrdersService {
         });
       }
     });
+    if (order.conversationId) {
+      this.inboxEvents.publish(tenantId, order.conversationId, 'conversation');
+    }
     if (dto.status === 'SHIPPED' || dto.status === 'COMPLETED') {
       await this.email.sendLogistics(order.id);
     }

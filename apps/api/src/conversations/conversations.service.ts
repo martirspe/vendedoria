@@ -7,10 +7,13 @@ import {
 } from '@nestjs/common';
 import { ChannelType, Prisma } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
+import { buildAgentContext, HISTORY_LIMIT } from '../agent-runtime/conversation-context';
 import { SalesAgentRuntimeService } from '../agent-runtime/sales-agent-runtime.service';
 import { PlanLimitsService } from '../billing/plan-limits.service';
+import { MediaService } from '../catalog/media.service';
 import { MetaWhatsAppClient } from '../channels/meta-whatsapp.client';
 import { asWhatsAppMetadata } from '../channels/whatsapp-metadata';
+import { InboxEventsService } from './inbox-events.service';
 import {
   findMessageTemplate,
   MESSAGE_TEMPLATES,
@@ -28,6 +31,8 @@ export class ConversationsService {
     private readonly agentRuntime: SalesAgentRuntimeService,
     private readonly metaWhatsApp: MetaWhatsAppClient,
     private readonly planLimits: PlanLimitsService,
+    private readonly media: MediaService,
+    private readonly inboxEvents: InboxEventsService,
   ) {}
 
   list(
@@ -127,7 +132,7 @@ export class ConversationsService {
     },
   ) {
     await this.ensureOwnership(tenantId, conversationId);
-    return this.prisma.conversation.update({
+    const updated = await this.prisma.conversation.update({
       where: { id: conversationId },
       data: {
         agentEnabled: data.agentEnabled,
@@ -136,6 +141,8 @@ export class ConversationsService {
         status: data.status,
       },
     });
+    this.inboxEvents.publish(tenantId, conversationId, 'conversation');
+    return updated;
   }
 
   async sendOperatorMessage(
@@ -191,6 +198,7 @@ export class ConversationsService {
         },
       }),
     ]);
+    this.inboxEvents.publish(tenantId, conversationId);
 
     return {
       message,
@@ -276,6 +284,7 @@ export class ConversationsService {
         },
       }),
     ]);
+    this.inboxEvents.publish(tenantId, conversationId);
 
     return {
       message,
@@ -356,7 +365,7 @@ export class ConversationsService {
       },
     });
 
-    await this.prisma.message.create({
+    const inbound = await this.prisma.message.create({
       data: {
         conversationId: conversation.id,
         direction: 'INBOUND',
@@ -365,6 +374,8 @@ export class ConversationsService {
         externalId: params.externalMessageId,
       },
     });
+    const tenantId = channel.tenantId;
+    this.inboxEvents.publish(tenantId, conversation.id);
 
     await this.prisma.channel.update({
       where: { id: channel.id },
@@ -376,16 +387,27 @@ export class ConversationsService {
         where: { id: conversation.id },
         data: { markedUnattended: true },
       });
+      this.inboxEvents.publish(tenantId, conversation.id, 'conversation');
       return { conversationId: conversation.id, agentSkipped: true };
     }
 
+    const earlier = await this.prisma.message.findMany({
+      where: { conversationId: conversation.id, id: { not: inbound.id } },
+      orderBy: { createdAt: 'desc' },
+      take: HISTORY_LIMIT * 2,
+      select: { authorType: true, body: true, metadata: true },
+    });
+    const context = buildAgentContext(earlier.reverse());
+
     const agentResult = await this.agentRuntime.generateReply({
-      tenantId: channel.tenantId,
+      tenantId,
       conversationId: conversation.id,
       inboundText: params.text,
       mode: 'production',
       customerName: conversation.contactName,
       customerPhone: conversation.contactPhone ?? params.fromPhone,
+      history: context.history,
+      shownImageProductIds: context.shownImageProductIds,
     });
 
     const metadata = asWhatsAppMetadata(channel.metadata);
@@ -420,6 +442,41 @@ export class ConversationsService {
         } as Prisma.InputJsonValue,
       },
     });
+    this.inboxEvents.publish(tenantId, conversation.id);
+
+    for (const image of agentResult.images) {
+      let imageExternalId: string | undefined;
+      if (metadata) {
+        const send = await this.metaWhatsApp.sendImageMessage({
+          phoneNumberId: metadata.phoneNumberId,
+          accessToken: metadata.accessToken,
+          toPhone: params.fromPhone,
+          caption: image.caption,
+          cacheKey: image.imageUrl,
+          loadJpeg: () => this.media.jpegForMessaging(image.imageUrl),
+        });
+        if (!send.ok) {
+          this.logger.warn(`Agent WhatsApp image failed: ${send.error}`);
+          continue;
+        }
+        imageExternalId = send.messageId;
+      }
+      await this.prisma.message.create({
+        data: {
+          conversationId: conversation.id,
+          direction: 'OUTBOUND',
+          authorType: 'SALES_AGENT',
+          body: image.caption,
+          externalId: imageExternalId,
+          metadata: {
+            kind: 'image',
+            imageUrl: image.imageUrl,
+            productId: image.productId,
+          } as Prisma.InputJsonValue,
+        },
+      });
+      this.inboxEvents.publish(tenantId, conversation.id);
+    }
 
     if (agentResult.escalate) {
       await this.prisma.conversation.update({
@@ -431,6 +488,7 @@ export class ConversationsService {
             : {}),
         },
       });
+      this.inboxEvents.publish(tenantId, conversation.id, 'conversation');
     }
 
     return {

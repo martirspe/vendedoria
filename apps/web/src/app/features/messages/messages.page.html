@@ -214,7 +214,8 @@
           </div>
         }
 
-        <div class="messages">          @for (message of thread.messages; track message.id) {
+        <div class="messages" #messageList>
+          @for (message of thread.messages; track message.id) {
             <article
               class="bubble"
               [class.bubble--in]="message.direction === 'INBOUND'"
@@ -222,6 +223,15 @@
               [class.bubble--human]="message.authorType === 'HUMAN_OPERATOR'"
               [class.bubble--agent]="message.authorType === 'SALES_AGENT'"
             >
+              @if (messageImage(message); as imageUrl) {
+                <img
+                  class="bubble__photo"
+                  [src]="imageUrl"
+                  [alt]="message.body"
+                  loading="lazy"
+                  decoding="async"
+                />
+              }
               <p>{{ message.body }}</p>
               @if (
                 message.authorType === 'SALES_AGENT' &&

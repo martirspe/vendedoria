@@ -8,5 +8,6 @@ import { MediaService } from './media.service';
   imports: [BillingModule],
   controllers: [CatalogController, MediaController],
   providers: [CatalogService, MediaService],
+  exports: [MediaService],
 })
 export class CatalogModule {}

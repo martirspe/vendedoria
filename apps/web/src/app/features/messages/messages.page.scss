@@ -320,6 +320,16 @@ ul {
   border: 1px solid var(--ds-color-border);
 }
 
+.bubble__photo {
+  display: block;
+  width: min(16rem, 100%);
+  aspect-ratio: 1;
+  object-fit: cover;
+  margin-bottom: var(--ds-space-2);
+  border-radius: var(--ds-radius-md);
+  background: var(--ds-color-divider);
+}
+
 .bubble p {
   margin: 0;
   white-space: pre-wrap;

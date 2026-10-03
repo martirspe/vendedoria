@@ -45,6 +45,10 @@ export type MessageMetadata = {
   escalate?: boolean;
   orderId?: string | null;
   checkoutUrl?: string | null;
+  /** `image`: product photo sent by the agent; the body holds its caption. */
+  kind?: 'image';
+  imageUrl?: string;
+  productId?: string;
 };
 
 export type ConversationDetail = ConversationListItem & {

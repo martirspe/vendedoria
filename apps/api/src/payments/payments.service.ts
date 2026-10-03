@@ -7,6 +7,7 @@ import {
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { PaymentStatus, Prisma } from '@prisma/client';
+import { InboxEventsService } from '../conversations/inbox-events.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { settlePaidOrder } from '../orders/settlement';
 import { MerchantAccountsService, MerchantCredentials } from './merchant-accounts.service';
@@ -24,6 +25,7 @@ export class PaymentsService {
     private readonly accounts: MerchantAccountsService,
     private readonly mercadoPago: MercadoPagoPaymentProvider,
     private readonly mock: MockPaymentProvider,
+    private readonly inboxEvents: InboxEventsService,
   ) {}
 
   /** The tenant's account when connected; the simulator only outside production. */
@@ -201,6 +203,7 @@ export class PaymentsService {
       return { ok: true, idempotent: true, paymentId: payment.id };
     }
 
+    let settledConversationId: string | null = null;
     const updated = await this.prisma.$transaction(async (tx) => {
       const next = await tx.payment.update({
         where: { id: payment.id },
@@ -215,12 +218,15 @@ export class PaymentsService {
           where: { id: payment.orderId },
           include: { items: true },
         });
-        if (order) {
-          await settlePaidOrder(tx, order, `${event.provider}:${event.externalId ?? ''}`);
+        if (order && (await settlePaidOrder(tx, order, `${event.provider}:${event.externalId ?? ''}`))) {
+          settledConversationId = order.conversationId;
         }
       }
       return next;
     });
+    if (settledConversationId) {
+      this.inboxEvents.publish(tenantId, settledConversationId, 'conversation');
+    }
     return { ok: true, paymentId: updated.id, status: updated.status };
   }
 }

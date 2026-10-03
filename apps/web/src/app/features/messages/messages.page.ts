@@ -1,21 +1,33 @@
 import {
   ChangeDetectionStrategy,
   Component,
+  ElementRef,
+  Injector,
+  afterNextRender,
   computed,
   inject,
   signal,
+  viewChild,
 } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { DatePipe } from '@angular/common';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
+import { auditTime, tap } from 'rxjs';
 import { DsButtonComponent } from '@vendedoria/ui';
 import { DsEmptyStateComponent } from '@vendedoria/ui';
 import { DsIconComponent } from '@vendedoria/ui';
+import { InboxStreamService } from '../../core/api/inbox-stream.service';
 import {
   ConversationDetail,
   ConversationListItem,
   MessagingApiService,
 } from '../../core/api/messaging-api.service';
+
+/** Distance from the bottom (px) under which a refreshed thread keeps following new messages. */
+const FOLLOW_THRESHOLD_PX = 120;
+/** Bursts of events (agent text + photos) collapse into one refetch. */
+const REFRESH_WINDOW_MS = 300;
 import {
   OrdersApiService,
   ProductOption,
@@ -42,6 +54,10 @@ export class MessagesPage {
   private readonly fb = inject(FormBuilder);
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
+  private readonly injector = inject(Injector);
+  private readonly inboxStream = inject(InboxStreamService);
+  private readonly messageList = viewChild<ElementRef<HTMLElement>>('messageList');
+  private threadStale = false;
 
   readonly conversations = signal<ConversationListItem[]>([]);
   readonly selected = signal<ConversationDetail | null>(null);
@@ -98,6 +114,54 @@ export class MessagesPage {
     });
     void this.loadProducts();
     void this.loadTemplates();
+
+    this.inboxStream
+      .events()
+      .pipe(
+        tap((event) => {
+          const current = this.selected();
+          if (event.kind === 'reconnected' || event.conversationId === current?.id) {
+            this.threadStale = true;
+          }
+        }),
+        auditTime(REFRESH_WINDOW_MS),
+        takeUntilDestroyed(),
+      )
+      .subscribe(() => void this.applyLiveUpdate());
+  }
+
+  private async applyLiveUpdate(): Promise<void> {
+    const current = this.threadStale ? this.selected() : null;
+    this.threadStale = false;
+    await Promise.all([
+      this.loadList(true),
+      current ? this.refreshThread(current.id) : Promise.resolve(),
+    ]);
+  }
+
+  /** Refetches the open thread without the loading state and follows new messages. */
+  private async refreshThread(id: string): Promise<void> {
+    try {
+      const list = this.messageList()?.nativeElement;
+      const follow =
+        !list || list.scrollHeight - list.scrollTop - list.clientHeight < FOLLOW_THRESHOLD_PX;
+      const thread = await this.api.getConversation(id);
+      if (this.selected()?.id !== id) return;
+      this.selected.set(thread);
+      if (follow) this.scrollToLatest();
+    } catch {
+      // The next event or a manual reload retries; the current thread stays visible.
+    }
+  }
+
+  private scrollToLatest(): void {
+    afterNextRender(
+      () => {
+        const list = this.messageList()?.nativeElement;
+        if (list) list.scrollTop = list.scrollHeight;
+      },
+      { injector: this.injector },
+    );
   }
 
   async loadTemplates(): Promise<void> {
@@ -120,9 +184,12 @@ export class MessagesPage {
     }
   }
 
-  async loadList(): Promise<void> {
-    this.loadingList.set(true);
-    this.errorMessage.set(null);
+  /** `silent` refreshes in place (live updates) without the loading or error states. */
+  async loadList(silent = false): Promise<void> {
+    if (!silent) {
+      this.loadingList.set(true);
+      this.errorMessage.set(null);
+    }
     try {
       const data = await this.api.listConversations({
         q: this.query() || undefined,
@@ -138,9 +205,9 @@ export class MessagesPage {
         }
       }
     } catch {
-      this.errorMessage.set('No pudimos cargar las conversaciones.');
+      if (!silent) this.errorMessage.set('No pudimos cargar las conversaciones.');
     } finally {
-      this.loadingList.set(false);
+      if (!silent) this.loadingList.set(false);
     }
   }
 
@@ -151,6 +218,7 @@ export class MessagesPage {
     try {
       this.selected.set(await this.api.getConversation(id));
       this.syncFiltersToUrl(id);
+      this.scrollToLatest();
     } catch {
       this.errorMessage.set('No pudimos abrir la conversación.');
     } finally {
@@ -387,6 +455,12 @@ export class MessagesPage {
   initials(item: ConversationListItem | ConversationDetail): string {
     const source = item.contactName || item.contactPhone || '?';
     return source.slice(0, 2).toUpperCase();
+  }
+
+  /** Photo URL when the message is a product image sent by the agent. */
+  messageImage(message: ConversationDetail['messages'][number]): string | null {
+    const meta = message.metadata;
+    return meta?.kind === 'image' && typeof meta.imageUrl === 'string' ? meta.imageUrl : null;
   }
 
   messageTools(

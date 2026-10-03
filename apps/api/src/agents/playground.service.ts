@@ -4,6 +4,7 @@ import {
 } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
+import { buildAgentContext, HISTORY_LIMIT } from '../agent-runtime/conversation-context';
 import { SalesAgentRuntimeService } from '../agent-runtime/sales-agent-runtime.service';
 
 @Injectable()
@@ -61,6 +62,19 @@ export class PlaygroundService {
   async sendMessage(tenantId: string, sessionId: string, text: string) {
     const session = await this.ensureOwnership(tenantId, sessionId);
     const trimmed = text.trim();
+    const earlier = await this.prisma.playgroundMessage.findMany({
+      where: { sessionId: session.id },
+      orderBy: { createdAt: 'desc' },
+      take: HISTORY_LIMIT,
+      select: { authorType: true, body: true, toolTraces: true },
+    });
+    const context = buildAgentContext(
+      earlier.reverse().map((message) => ({
+        authorType: message.authorType,
+        body: message.body,
+        metadata: { tools: message.toolTraces },
+      })),
+    );
 
     await this.prisma.playgroundMessage.create({
       data: {
@@ -78,6 +92,7 @@ export class PlaygroundService {
       mode: 'playground',
       customerName: 'Comprador de prueba',
       customerPhone: null,
+      history: context.history,
     });
 
     await this.prisma.playgroundMessage.create({

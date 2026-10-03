@@ -13,9 +13,10 @@ const product = (handle: string, priceCents: number, variants: CatalogProductVie
   isAvailable: true,
   stockUnlimited: true,
   stockQty: null,
-  stockLabel: 'Stock ilimitado',
+  stockLabel: 'Disponible',
   priceLabel: `PEN ${(priceCents / 100).toFixed(2)}`,
   productUrl: null,
+  imageUrl: null,
   variants,
 });
 
@@ -73,5 +74,69 @@ describe('SalesAgentToolsService product references', () => {
       { handle: 'cafe', variantId: null, quantity: 1, fromCart: false },
     ]);
     expect(matches.map((item) => item.handle)).toEqual(['cafe']);
+  });
+});
+
+describe('SalesAgentToolsService catalog browsing', () => {
+  const overview = {
+    total: 30,
+    storeUrl: null,
+    categories: [
+      { label: 'Perfumes', names: ['Perfumes'], count: 20 },
+      { label: 'Cuidado facial', names: ['Cuidado facial', 'cuidado facial'], count: 10 },
+    ],
+  };
+
+  it('asks for the whole catalog only with browse words', () => {
+    for (const text of ['Quiero ver el catálogo', '¿Qué productos tienen?', 'recomiéndame algo']) {
+      expect(tools.browseRequest(text, overview)).toEqual({ kind: 'catalog' });
+    }
+  });
+
+  it('browses a category named alone, in singular or plural', () => {
+    expect(tools.browseRequest('¿Tienen perfumes?', overview)).toEqual({ kind: 'category', category: overview.categories[0] });
+    expect(tools.browseRequest('muéstrame algo facial', overview)).toEqual({ kind: 'category', category: overview.categories[1] });
+  });
+
+  it('keeps the regular search when the buyer describes what they want', () => {
+    expect(tools.browseRequest('quiero un perfume floral', overview)).toBeNull();
+    expect(tools.browseRequest('¿tienen otros colores?', overview)).toBeNull();
+  });
+
+  it('asks for more of the current listing', () => {
+    expect(tools.browseRequest('ver más', overview)).toEqual({ kind: 'more' });
+    expect(tools.browseRequest('¿Qué más tienen?', overview)).toEqual({ kind: 'more' });
+    expect(tools.browseRequest('muéstrame otros', overview)).toEqual({ kind: 'more' });
+  });
+});
+
+describe('SalesAgentToolsService purchase intent', () => {
+  const named = (handle: string, name: string) => ({ ...product(handle, 12000), name });
+  const catalog = [
+    named('zentro', 'Zentro Eau de Parfum'),
+    named('bloom', 'Bloom Eau de Parfum'),
+    named('crema', 'Crema hidratante'),
+  ];
+
+  it('identifies a product only when a word names exactly one of them', () => {
+    expect(tools.identifyProduct('quiero comprar el Zentro', catalog)?.handle).toBe('zentro');
+    expect(tools.identifyProduct('quiero comprar un perfume eau de parfum', catalog)).toBeNull();
+    expect(tools.identifyProduct('quiero zentro y bloom', catalog)).toBeNull();
+  });
+
+  it('matches without accents and ignores intent words in the search', () => {
+    const { matches } = tools.searchCatalog('Quiero comprar una crema hidratánte', catalog);
+    expect(matches.map((item) => item.handle)).toEqual(['crema']);
+  });
+
+  it('matches plurals against singular product words', () => {
+    const { matches } = tools.searchCatalog('tienen cremas?', catalog);
+    expect(matches.map((item) => item.handle)).toEqual(['crema']);
+  });
+
+  it('does not read an order status question as a purchase', () => {
+    expect(tools.wantsPurchase('¿Dónde está mi pedido?')).toBe(false);
+    expect(tools.wantsPurchase('Quiero comprar un perfume')).toBe(true);
+    expect(tools.wantsPurchase('lo quiero')).toBe(true);
   });
 });

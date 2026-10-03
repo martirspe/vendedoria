@@ -23,6 +23,9 @@ const CONTENT_TYPES: Record<string, string> = { jpg: 'image/jpeg', png: 'image/p
 const MAX_BYTES = 750_000;
 export const MEDIA_MAX_EDGE_PX = 1600;
 export const MEDIA_WEBP_QUALITY = 82;
+const MESSAGING_MAX_EDGE_PX = 1200;
+const MESSAGING_JPEG_QUALITY = 82;
+const MESSAGING_MAX_SOURCE_BYTES = 5_000_000;
 /** Rejects decompression bombs (tiny files declaring huge dimensions). */
 const MAX_INPUT_PIXELS = 40_000_000;
 /** Names are random and never reused, so caches (browser, CloudFront) may keep them forever. */
@@ -94,6 +97,41 @@ export class MediaService {
     } catch {
       throw new NotFoundException();
     }
+  }
+
+  /**
+   * JPEG copy of a stored product photo for channels that reject WebP (WhatsApp accepts
+   * only JPEG/PNG images). Only URLs from this service's own storage are read, so a
+   * product URL can never make the API fetch arbitrary hosts. Null when unavailable.
+   */
+  async jpegForMessaging(url: string): Promise<Buffer | null> {
+    try {
+      const bytes = await this.readOwned(url);
+      if (!bytes) return null;
+      return await sharp(bytes, { failOn: 'error', limitInputPixels: MAX_INPUT_PIXELS, animated: false })
+        .rotate()
+        .resize({ width: MESSAGING_MAX_EDGE_PX, height: MESSAGING_MAX_EDGE_PX, fit: 'inside', withoutEnlargement: true })
+        .flatten({ background: '#ffffff' })
+        .jpeg({ quality: MESSAGING_JPEG_QUALITY, mozjpeg: true })
+        .toBuffer();
+    } catch (error) {
+      this.logger.warn(`Messaging image conversion failed: ${(error as Error).name}`);
+      return null;
+    }
+  }
+
+  private async readOwned(url: string): Promise<Buffer | null> {
+    const localPrefix = `${this.publicBase}/media/`;
+    if (url.startsWith(localPrefix)) {
+      return (await this.read(url.slice(localPrefix.length))).bytes;
+    }
+    const target = this.s3;
+    if (!target || !url.startsWith(`${target.cdnBase}/media/`)) return null;
+    const response = await fetch(url, { signal: AbortSignal.timeout(10_000), redirect: 'error' });
+    const length = Number(response.headers.get('content-length') ?? 0);
+    if (!response.ok || length > MESSAGING_MAX_SOURCE_BYTES) return null;
+    const bytes = Buffer.from(await response.arrayBuffer());
+    return bytes.length > MESSAGING_MAX_SOURCE_BYTES ? null : bytes;
   }
 
   /**

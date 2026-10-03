@@ -8,6 +8,7 @@ import { AgentsModule } from './agents/agents.module';
 import { CatalogModule } from './catalog/catalog.module';
 import { ChannelsModule } from './channels/channels.module';
 import { ConversationsModule } from './conversations/conversations.module';
+import { InboxEventsModule } from './conversations/inbox-events.module';
 import { OrdersModule } from './orders/orders.module';
 import { PaymentsModule } from './payments/payments.module';
 import { MetricsModule } from './metrics/metrics.module';
@@ -35,6 +36,7 @@ import { validateEnv } from './config/env.validation';
     AgentsModule,
     KnowledgeModule,
     CatalogModule,
+    InboxEventsModule,
     ConversationsModule,
     ChannelsModule,
     PaymentsModule,
