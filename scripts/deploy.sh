@@ -165,6 +165,19 @@ if [[ "$(read_env MEDIA_STORAGE)" == "s3" ]]; then
 fi
 
 [[ -n "$(read_env META_APP_SECRET)" ]] || warn "META_APP_SECRET empty: the WhatsApp webhook rejects every incoming message."
+
+# Stores need the wildcard certificate, issued by DNS-01 through Cloudflare.
+if [[ "$SKIP_NGINX" == false && "$SKIP_TLS" == false ]]; then
+  CF_TOKEN="$(read_env CLOUDFLARE_API_TOKEN)"
+  if [[ -z "$CF_TOKEN" ]]; then
+    fail "CLOUDFLARE_API_TOKEN is required: Cloudflare → My Profile → API Tokens → 'Edit zone DNS' on ${STORE_BASE_DOMAIN}"
+  elif ! curl -fsS -m 15 -H "Authorization: Bearer ${CF_TOKEN}" \
+      "https://api.cloudflare.com/client/v4/zones?name=${STORE_BASE_DOMAIN}" 2>/dev/null \
+      | grep -q "\"name\":\"${STORE_BASE_DOMAIN}\""; then
+    fail "CLOUDFLARE_API_TOKEN cannot access the ${STORE_BASE_DOMAIN} zone (needs Zone · DNS · Edit on it)"
+  fi
+  unset CF_TOKEN
+fi
 [[ -n "$(read_env CERTBOT_EMAIL)$(read_env EMAIL_FROM)" ]] || warn "CERTBOT_EMAIL empty: HTTPS certificates will not be requested."
 [[ "$FAILED" == false ]] || { err "Fix .env and run the deploy again."; exit 1; }
 

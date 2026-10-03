@@ -30,6 +30,7 @@ Mínimo:
 STORE_BASE_DOMAIN=marrso.com
 CONSOLE_HOST=app.marrso.com
 CERTBOT_EMAIL=tu@correo.com
+CLOUDFLARE_API_TOKEN=...   # Cloudflare → Mi perfil → Tokens de API → "Editar DNS de zona" → marrso.com
 ```
 
 Contraseñas y secretos se generan solos en el primer deploy. Meta, Mercado Pago, Turnstile, AWS y OpenAI son opcionales: el `.env.production.example` explica cada uno.
@@ -40,7 +41,7 @@ Contraseñas y secretos se generan solos en el primer deploy. Meta, Mercado Pago
 bash scripts/deploy.sh
 ```
 
-Hace todo: secretos, validación, backup, build, arranque, nginx del VPS, firewall 80/443 y certificados HTTPS (se renuevan solos). Para el certificado de las tiendas reutiliza el token de Cloudflare que ya exista en el VPS (p. ej. el de Reclamo Fácil); si no hay ninguno con acceso a `marrso.com`, el deploy lo avisa y basta con añadir `CLOUDFLARE_API_TOKEN` al `.env` y repetir.
+Hace todo: secretos, validación (incluido el token de Cloudflare), backup, build, arranque, nginx del VPS, firewall 80/443 y un certificado HTTPS comodín (`marrso.com` + `*.marrso.com`) que se renueva solo.
 
 ## 4. Día a día
 
@@ -63,4 +64,4 @@ Webhooks a configurar fuera del VPS:
 | El build muere (`SIGKILL`) | Añade 2 GB de swap al VPS |
 | Health check agota el tiempo | `docker compose logs --tail 100 migrate api` |
 | HTTPS muestra otro sitio o certificado | DNS mal apuntado o con nube naranja; corrígelo y `sudo bash scripts/bootstrap-host.sh` |
-| Las tiendas sin HTTPS | Falta token de Cloudflare con acceso al dominio (ver paso 3) |
+| `CLOUDFLARE_API_TOKEN cannot access the … zone` | El token no tiene permiso `Zona · DNS · Editar` sobre `marrso.com`; edítalo en Cloudflare |

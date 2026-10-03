@@ -5,8 +5,7 @@
 # y las tiendas (*.STORE_BASE_DOMAIN). Con root/sudo también instala nginx + Certbot,
 # abre ufw 80/443, instala el vhost y obtiene los certificados (como Reclamo Fácil):
 #   - comodín STORE_BASE_DOMAIN + *.STORE_BASE_DOMAIN por DNS-01 con CLOUDFLARE_API_TOKEN
-#     (Zone · DNS · Edit), o el token de Cloudflare que otra app del VPS ya usa con certbot
-#     si tiene acceso a la zona. Cubre también la consola si es app.STORE_BASE_DOMAIN.
+#     (Zone · DNS · Edit). Cubre también la consola si es app.STORE_BASE_DOMAIN.
 #   - sin token: HTTP-01 para STORE_BASE_DOMAIN, www y la consola (las tiendas quedan en HTTP).
 #   - consola en otro dominio: Let's Encrypt HTTP-01.
 #   STORE_BASE_DOMAIN sirve la web comercial; www.STORE_BASE_DOMAIN redirige a ella.
@@ -424,50 +423,17 @@ obtain_console_tls() {
   fi
 }
 
-cloudflare_zone_visible() {
-  curl -fsS -m 10 -H "Authorization: Bearer $1" \
-    "https://api.cloudflare.com/client/v4/zones?name=${STORE_BASE_DOMAIN}" 2>/dev/null \
-    | grep -q "\"name\":\"${STORE_BASE_DOMAIN}\""
-}
-
-# .env first; otherwise reuse a Cloudflare token another app on this VPS already gave certbot
-# (e.g. Reclamo Fácil), only if it can see this zone. Prints the token on stdout.
-find_cloudflare_token() {
-  if [[ -n "$CLOUDFLARE_API_TOKEN" ]]; then
-    printf '%s' "$CLOUDFLARE_API_TOKEN"
-    return 0
-  fi
-  local f token
-  local files=("$CF_INI" /etc/letsencrypt/cloudflare*.ini)
-  while IFS= read -r f; do files+=("$f"); done < <(
-    sed -n 's/^dns_cloudflare_credentials *= *//p' /etc/letsencrypt/renewal/*.conf 2>/dev/null | sort -u
-  )
-  for f in "${files[@]}"; do
-    [[ -f "$f" ]] || continue
-    token="$(sed -n 's/^dns_cloudflare_api_token *= *//p' "$f" | head -n1 | tr -d '[:space:]')"
-    [[ -n "$token" ]] || continue
-    if cloudflare_zone_visible "$token"; then
-      log "Using the Cloudflare token already on this VPS (${f})" >&2
-      printf '%s' "$token"
-      return 0
-    fi
-  done
-  return 1
-}
-
 obtain_store_tls() {
   if has_cert "$STORE_CERT_NAME"; then
     log "Wildcard certificate already present for *.${STORE_BASE_DOMAIN}"
     return 0
   fi
-  local token
-  if ! token="$(find_cloudflare_token)"; then
-    warn "No Cloudflare token with access to ${STORE_BASE_DOMAIN}: stores ({slug}.${STORE_BASE_DOMAIN}) stay on HTTP."
-    warn "Add CLOUDFLARE_API_TOKEN (Zone · DNS · Edit on ${STORE_BASE_DOMAIN}) to .env and re-run the deploy."
+  if [[ -z "$CLOUDFLARE_API_TOKEN" ]]; then
+    warn "CLOUDFLARE_API_TOKEN empty: stores ({slug}.${STORE_BASE_DOMAIN}) stay on HTTP."
     return 0
   fi
   install -m 600 /dev/null "$CF_INI"
-  printf 'dns_cloudflare_api_token = %s\n' "$token" >"$CF_INI"
+  printf 'dns_cloudflare_api_token = %s\n' "$CLOUDFLARE_API_TOKEN" >"$CF_INI"
   apt-get install -y -qq python3-certbot-dns-cloudflare
   log "Requesting wildcard certificate for *.${STORE_BASE_DOMAIN} (DNS-01, Cloudflare)..."
   set +e

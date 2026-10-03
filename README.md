@@ -51,7 +51,7 @@ npm run test:docker    # tests unitarios + e2e en una base aislada vendedoria_te
 Un comando en el VPS, igual que Reclamo Fácil y gohabix: [`docs/DEPLOY.md`](./docs/DEPLOY.md).
 
 ```bash
-cp .env.production.example .env   # dominio y CERTBOT_EMAIL
+cp .env.production.example .env   # dominio, CERTBOT_EMAIL y CLOUDFLARE_API_TOKEN
 bash scripts/deploy.sh            # actualizar: bash scripts/deploy.sh --pull
 ```
 
