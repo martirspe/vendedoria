@@ -53,6 +53,11 @@
             >
               <span class="pg-bubble__label">{{ isBuyer(message) ? 'Comprador' : 'Vendedor IA' }}</span>
               <p>{{ message.body }}</p>
+              @if (!isBuyer(message) && hasPaymentButton(message)) {
+                <span class="pg-bubble__cta" title="En WhatsApp abre el link de pago">
+                  <ds-icon name="externalLink" [size]="0.85" /> Pagar pedido
+                </span>
+              }
             </div>
           }
         }

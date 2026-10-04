@@ -73,6 +73,44 @@ export class MetaWhatsAppClient {
   }
 
   /**
+   * Interactive message whose link opens from a button instead of a raw URL. Free-form, so
+   * only inside the 24-hour customer service window. Meta limits: body 1024 characters,
+   * button 20, footer 60; the caller must keep `body` and `buttonText` within them.
+   */
+  async sendCtaUrlMessage(params: {
+    phoneNumberId: string;
+    accessToken: string;
+    toPhone: string;
+    body: string;
+    buttonText: string;
+    url: string;
+    footer?: string;
+  }): Promise<{ messageId?: string; ok: boolean; error?: string; dryRun?: boolean }> {
+    if (isPlaceholderToken(params.accessToken)) {
+      return { ok: true, dryRun: true, messageId: `cta_local_${Date.now()}` };
+    }
+    return this.sendPayload({
+      phoneNumberId: params.phoneNumberId,
+      accessToken: params.accessToken,
+      body: {
+        messaging_product: 'whatsapp',
+        recipient_type: 'individual',
+        to: params.toPhone.replace(/\D/g, ''),
+        type: 'interactive',
+        interactive: {
+          type: 'cta_url',
+          body: { text: params.body },
+          ...(params.footer ? { footer: { text: params.footer.slice(0, 60) } } : {}),
+          action: {
+            name: 'cta_url',
+            parameters: { display_text: params.buttonText, url: params.url },
+          },
+        },
+      },
+    });
+  }
+
+  /**
    * Sends a photo with caption. The JPEG is uploaded once per phone number and source
    * (`cacheKey`) and its media id reused; `loadJpeg` only runs on a cache miss.
    */

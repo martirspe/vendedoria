@@ -233,6 +233,11 @@
                 />
               }
               <p>{{ message.body }}</p>
+              @if (messagePaymentLink(message); as paymentUrl) {
+                <a class="bubble__cta" [href]="paymentUrl" target="_blank" rel="noopener">
+                  <ds-icon name="externalLink" [size]="0.85" /> Pagar pedido
+                </a>
+              }
               @if (
                 message.authorType === 'SALES_AGENT' &&
                 messageTools(message).length

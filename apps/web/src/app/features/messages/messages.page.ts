@@ -463,6 +463,12 @@ export class MessagesPage {
     return meta?.kind === 'image' && typeof meta.imageUrl === 'string' ? meta.imageUrl : null;
   }
 
+  /** Payment link the buyer received as a button under this message (older messages carry it in the text). */
+  messagePaymentLink(message: ConversationDetail['messages'][number]): string | null {
+    const url = message.metadata?.checkoutUrl;
+    return typeof url === 'string' && !message.body.includes(url) ? url : null;
+  }
+
   messageTools(
     message: ConversationDetail['messages'][number],
   ): Array<{ name: string; status: string; summary: string }> {

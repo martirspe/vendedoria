@@ -8,6 +8,8 @@ export type ConversationTurn = {
   browse?: { category: string | null };
   /** Set when that turn asked for the delivery district before creating the order. */
   pendingDelivery?: { lines: PendingLine[] };
+  /** That turn sent a payment link (shown as a button, so the URL is not in `text`). */
+  paymentLink?: boolean;
 };
 
 export type PendingLine = { productId: string; variantId: string | null; quantity: number };
@@ -73,6 +75,15 @@ function pendingDelivery(meta: Record<string, unknown>): Pick<ConversationTurn, 
   return {};
 }
 
+function paymentLink(meta: Record<string, unknown>): Pick<ConversationTurn, 'paymentLink'> {
+  const tools = Array.isArray(meta.tools) ? meta.tools : [];
+  const sent = tools.some((tool) => {
+    const trace = asRecord(tool);
+    return trace.name === 'create_payment_link' && typeof asRecord(trace.data).checkoutUrl === 'string';
+  });
+  return sent ? { paymentLink: true } : {};
+}
+
 /** Builds the agent context from stored messages in chronological order. */
 export function buildAgentContext(messages: StoredMessage[]): AgentContext {
   const history: ConversationTurn[] = [];
@@ -88,7 +99,13 @@ export function buildAgentContext(messages: StoredMessage[]): AgentContext {
       history.push({ role: 'buyer', text });
       continue;
     }
-    history.push({ role: 'agent', text, ...catalogSearch(meta), ...pendingDelivery(meta) });
+    history.push({
+      role: 'agent',
+      text,
+      ...catalogSearch(meta),
+      ...pendingDelivery(meta),
+      ...paymentLink(meta),
+    });
   }
   return { history: history.slice(-HISTORY_LIMIT), shownImageProductIds: [...shown] };
 }
@@ -172,6 +189,19 @@ export function toWhatsAppText(text: string): string {
     .replace(/\*\*(.+?)\*\*/g, '*$1*')
     .replace(/__(.+?)__/g, '_$1_')
     .replace(/^#{1,6}\s+/gm, '')
+    .replace(/\n{3,}/g, '\n\n')
+    .trim();
+}
+
+/** Removes a URL the channel sends separately (as a button), including Markdown links to it. */
+export function withoutLink(text: string, url: string): string {
+  const escaped = url.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  return text
+    .replace(new RegExp(`!?\\[[^\\]]*\\]\\(\\s*${escaped}\\s*\\)`, 'g'), '')
+    .replace(new RegExp(`<?${escaped}>?`, 'g'), '')
+    .replace(/\(\s*\)/g, '')
+    .replace(/[^\S\n]{2,}/g, ' ')
+    .replace(/[^\S\n]+$/gm, '')
     .replace(/\n{3,}/g, '\n\n')
     .trim();
 }

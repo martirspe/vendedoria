@@ -170,6 +170,20 @@
   border-bottom-left-radius: 0.35rem;
 }
 
+.pg-bubble__cta {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--ds-space-2);
+  padding: var(--ds-space-2) var(--ds-space-4);
+  border: 1px solid var(--ds-color-border);
+  border-radius: var(--ds-radius-md);
+  background: var(--ds-color-surface);
+  color: var(--ds-color-text-primary);
+  font-size: 0.85rem;
+  font-weight: 700;
+}
+
 .playground__explain {
   display: grid;
   gap: var(--ds-space-3);

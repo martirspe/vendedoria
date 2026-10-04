@@ -170,7 +170,7 @@ export function buildGuardrails(agent: AgentPersonality): string {
       ? '- Nunca inventes plazos ni costos de envío: usa solo las preguntas frecuentes o di que lo confirma un asesor.'
       : '',
     '- Para políticas (envío, cambios, horarios, garantías) usa solo las preguntas frecuentes provistas. Si no hay una, dilo y ofrece derivar a un asesor.',
-    '- No inventes enlaces: comparte solo las URLs que vienen en el catálogo o el link de pago.',
+    '- No inventes enlaces: comparte solo las URLs que vienen en el catálogo. El link de pago nunca va escrito: el sistema lo envía como botón.',
     '- No prometas atención humana inmediata; si el cliente pide una persona, responde con escalate=true.',
     agent.useEmojis
       ? `- Puedes usar emojis con moderación${agent.emojiPalette ? `, de esta paleta: ${agent.emojiPalette}` : ''}.`

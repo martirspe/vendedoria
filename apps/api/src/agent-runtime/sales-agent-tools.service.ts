@@ -3,6 +3,7 @@ import { ConfigService } from '@nestjs/config';
 import type { ProductKind } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { OrderShipping, OrdersService } from '../orders/orders.service';
+import { orderReference } from '../orders/settlement';
 import type { ShippingRules } from '../storefront/shipping';
 import {
   customDomainUrl,
@@ -764,6 +765,8 @@ export class SalesAgentToolsService {
   }): Promise<{
     traces: AgentToolTrace[];
     orderId?: string;
+    /** Reference the buyer sees for the order (code or short id). */
+    orderRef?: string;
     checkoutUrl?: string;
     dryRun: boolean;
   }> {
@@ -874,6 +877,7 @@ export class SalesAgentToolsService {
       return {
         traces,
         orderId: order.id,
+        orderRef: orderReference(order),
         checkoutUrl: payment?.checkoutUrl ?? undefined,
         dryRun: false,
       };

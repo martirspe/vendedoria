@@ -6,7 +6,10 @@ import { asWhatsAppMetadata } from './whatsapp-metadata';
 
 export type ChannelSendResult = { ok: boolean; messageId?: string; error?: string };
 
-/** Free-form text through the channel a conversation belongs to (WhatsApp or Instagram). */
+const PAYMENT_BUTTON_TEXT = 'Pagar pedido';
+const CTA_BODY_MAX = 1024;
+
+/** Free-form messages through the channel a conversation belongs to (WhatsApp or Instagram). */
 @Injectable()
 export class ChannelMessengerService {
   constructor(
@@ -51,5 +54,32 @@ export class ChannelMessengerService {
         : null;
     }
     return null;
+  }
+
+  /**
+   * Payment link of an order (flow B). WhatsApp shows it as a "Pagar pedido" button under the
+   * text; Instagram, a body over Meta's limit or a rejected interactive message fall back to
+   * the text with the URL at the end, so the buyer always gets the link.
+   */
+  async sendPaymentLink(
+    channel: Pick<Channel, 'type' | 'metadata'>,
+    recipient: string,
+    params: { text: string; url: string; footer?: string },
+  ): Promise<ChannelSendResult | null> {
+    const plain = `${params.text}\n\n${params.url}`;
+    const metadata = channel.type === 'WHATSAPP' ? asWhatsAppMetadata(channel.metadata) : null;
+    if (!metadata || params.text.length > CTA_BODY_MAX) {
+      return this.sendText(channel, recipient, plain);
+    }
+    const send = await this.metaWhatsApp.sendCtaUrlMessage({
+      phoneNumberId: metadata.phoneNumberId,
+      accessToken: metadata.accessToken,
+      toPhone: recipient,
+      body: params.text,
+      buttonText: PAYMENT_BUTTON_TEXT,
+      url: params.url,
+      footer: params.footer,
+    });
+    return send.ok ? send : this.sendText(channel, recipient, plain);
   }
 }

@@ -6,6 +6,7 @@ import {
   lastBrowse,
   lastRecommendedProductIds,
   toWhatsAppText,
+  withoutLink,
 } from './conversation-context';
 
 describe('conversationalIntent', () => {
@@ -103,5 +104,40 @@ describe('toWhatsAppText', () => {
     );
     expect(toWhatsAppText('[https://a.pe](https://a.pe)')).toBe('https://a.pe');
     expect(toWhatsAppText('## Opciones\nUno')).toBe('Opciones\nUno');
+  });
+});
+
+describe('withoutLink', () => {
+  const url = 'https://mp.com/checkout?pref=a.1';
+
+  it('removes the URL in any form and keeps the rest of the message', () => {
+    expect(withoutLink(`*Total: PEN 10.00*\n\nPaga aquí:\n${url}\n\nGracias`, url)).toBe(
+      '*Total: PEN 10.00*\n\nPaga aquí:\n\nGracias',
+    );
+    expect(withoutLink(`Paga aquí: [link de pago](${url}) ya`, url)).toBe('Paga aquí: ya');
+    expect(withoutLink(`Link (${url}) listo`, url)).toBe('Link listo');
+    expect(withoutLink(`Paga aquí: <${url}>`, url)).toBe('Paga aquí:');
+  });
+
+  it('leaves other links untouched', () => {
+    expect(withoutLink('Mira https://tienda.pe/p/1', url)).toBe('Mira https://tienda.pe/p/1');
+  });
+});
+
+describe('payment link turns', () => {
+  it('marks the agent turn that sent a payment link', () => {
+    const { history } = buildAgentContext([
+      {
+        authorType: 'SALES_AGENT',
+        body: 'Aquí tienes el link de pago:',
+        metadata: { tools: [{ name: 'create_payment_link', data: { checkoutUrl: 'https://mp.com/x' } }] },
+      },
+      {
+        authorType: 'SALES_AGENT',
+        body: 'No se pudo generar el link',
+        metadata: { tools: [{ name: 'create_payment_link', data: { checkoutUrl: null } }] },
+      },
+    ]);
+    expect(history.map((turn) => turn.paymentLink ?? false)).toEqual([true, false]);
   });
 });

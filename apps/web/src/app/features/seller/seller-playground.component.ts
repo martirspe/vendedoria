@@ -119,6 +119,13 @@ export class SellerPlaygroundComponent implements OnInit {
     return message.authorType === 'BUYER';
   }
 
+  /** The reply carried a (simulated) payment link, shown to the buyer as a button. */
+  hasPaymentButton(message: PlaygroundMessageDto): boolean {
+    return this.asToolTraces(message.toolTraces).some(
+      (tool) => tool.name === 'create_payment_link' && typeof tool.data?.['checkoutUrl'] === 'string',
+    );
+  }
+
   toolLabel(name: string): string {
     switch (name) {
       case 'search_catalog':

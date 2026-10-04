@@ -13,6 +13,7 @@ import {
   normalizeText,
   toWhatsAppText,
   wantsPhoto,
+  withoutLink,
 } from './conversation-context';
 import { DeliveryPlan, planDelivery } from './delivery-plan';
 import {
@@ -57,6 +58,7 @@ export type AgentProductImage = {
 };
 
 export type AgentReplyResult = {
+  /** Never contains `checkoutUrl`: the channel sends the payment link with the text (a button on WhatsApp). */
   replyText: string;
   escalate: boolean;
   usedCatalog: boolean;
@@ -64,6 +66,8 @@ export type AgentReplyResult = {
   tools: AgentToolTrace[];
   images: AgentProductImage[];
   orderId?: string;
+  /** Order reference shown next to the payment button. */
+  orderRef?: string;
   checkoutUrl?: string;
   /** The reply was written by OpenAI (counts toward the plan's AI replies). */
   usedAi?: boolean;
@@ -134,7 +138,10 @@ export class SalesAgentRuntimeService {
 
   async generateReply(params: ReplyParams): Promise<AgentReplyResult> {
     const result = await this.composeReply(params);
-    return { ...result, replyText: toWhatsAppText(result.replyText) };
+    const text = result.checkoutUrl
+      ? withoutLink(result.replyText, result.checkoutUrl)
+      : result.replyText;
+    return { ...result, replyText: toWhatsAppText(text) };
   }
 
   private async composeReply(params: ReplyParams): Promise<AgentReplyResult> {
@@ -235,6 +242,7 @@ export class SalesAgentRuntimeService {
     }
 
     let orderId: string | undefined;
+    let orderRef: string | undefined;
     let checkoutUrl: string | undefined;
     let pending: PendingChoice = null;
     const cartLines = this.tools.orderLinesFromRefs(refs, products);
@@ -375,6 +383,7 @@ export class SalesAgentRuntimeService {
       });
       traces.push(...commerce.traces);
       orderId = commerce.orderId;
+      orderRef = commerce.orderRef;
       checkoutUrl = commerce.checkoutUrl;
       if (checkoutUrl && delivery) {
         deliveryText = this.deliveryText(delivery, lines);
@@ -426,6 +435,7 @@ export class SalesAgentRuntimeService {
             tools: traces,
             images,
             orderId,
+            orderRef,
             checkoutUrl,
             usedAi: true,
           };
@@ -457,6 +467,7 @@ export class SalesAgentRuntimeService {
       tools: traces,
       images,
       orderId,
+      orderRef,
       checkoutUrl,
     };
   }
@@ -554,8 +565,25 @@ export class SalesAgentRuntimeService {
       .map((product) => ({
         productId: product.id,
         imageUrl: product.imageUrl as string,
-        caption: `${product.name} · ${product.priceLabel}`,
+        caption: this.photoCaption(product),
       }));
+  }
+
+  /** WhatsApp photo caption: bold name, then price and availability as the buyer reads them. */
+  private photoCaption(product: CatalogProductView): string {
+    const prices = [...new Set(product.variants.map((variant) => variant.priceCents))];
+    const price = !prices.length
+      ? product.priceLabel
+      : `${prices.length > 1 ? 'Desde ' : ''}${moneyLabel(product.currency, Math.min(...prices))}`;
+    const units = product.stockQty ?? 0;
+    const availability = product.isService
+      ? product.stockLabel
+      : !product.stockUnlimited && units > 0 && units <= LOW_STOCK_UNITS
+        ? units === 1
+          ? 'Última unidad'
+          : `Últimas ${units} unidades`
+        : 'Disponible';
+    return `*${product.name}*\n${price} · ${availability}`;
   }
 
   private closingText(
@@ -569,8 +597,8 @@ export class SalesAgentRuntimeService {
       .some(
         (turn) =>
           turn.role === 'agent' &&
-          /https?:\/\//.test(turn.text) &&
-          /pago/i.test(turn.text),
+          (turn.paymentLink ||
+            (/https?:\/\//.test(turn.text) && /pago/i.test(turn.text))),
       );
     return awaitingPayment
       ? `${thanks} Cuando completes el pago te confirmamos por aquí.`
@@ -638,9 +666,10 @@ export class SalesAgentRuntimeService {
         ? `Recojo en tienda: gratis${plan.pickupAddress ? ` (${plan.pickupAddress})` : ''}`
         : `Envío con ${charge.label}${plan.place ? ` a ${placeLabel(plan.place)}` : ''}: ${cost}`;
     const summary = [
+      '*Resumen de tu pedido*',
       `Productos: ${moneyLabel(currency, subtotal)}`,
       shippingLine,
-      `Total: ${moneyLabel(currency, subtotal + charge.cents)}`,
+      `*Total: ${moneyLabel(currency, subtotal + charge.cents)}*`,
     ].join('\n');
     const note =
       charge.mode !== 'PICKUP' && !plan.address
@@ -684,8 +713,8 @@ export class SalesAgentRuntimeService {
         'Perfecto. Aquí tienes el link de pago para completar tu compra:';
       const dryNote =
         params.mode === 'playground'
-          ? '\n\n(Prueba: este link es simulado y no aparece en Pedidos.)'
-          : '';
+          ? '(Prueba: este link es simulado y no aparece en Pedidos.)'
+          : null;
       const { summary, note } = params.deliveryText;
       return {
         escalate: false,
@@ -693,7 +722,7 @@ export class SalesAgentRuntimeService {
         pauseOnHandoff: agent.pauseOnHandoff,
         replyText: this.applyTone(
           agent,
-          `${summary ? `${summary}\n\n` : ''}${confirm}\n${params.checkoutUrl}${note ? `\n\n${note}` : ''}${dryNote}`,
+          [summary, note, dryNote, confirm].filter(Boolean).join('\n\n'),
           { keepLines: true },
         ),
       };
@@ -936,13 +965,13 @@ export class SalesAgentRuntimeService {
       'Usa el historial para entender referencias como "ese", "el segundo" o "lo quiero".',
       journeyGuide(params.journeys),
       params.checkoutUrl
-        ? `Ya existe un link de pago generado: ${params.checkoutUrl}. Inclúyelo en la respuesta.`
+        ? 'El link de pago ya está generado y se envía como botón "Pagar pedido" justo debajo de tu mensaje: NO escribas ninguna URL. Termina tu mensaje con una frase corta que presente el link (por ejemplo: "Aquí tienes el link de pago para completar tu compra:").'
         : '',
       params.checkoutUrl && params.deliveryText.summary
-        ? `Incluye antes del link este detalle del pedido, línea por línea y sin cambiar ningún monto:\n${params.deliveryText.summary}`
+        ? `Incluye este detalle del pedido tal cual, línea por línea, con sus asteriscos y sin cambiar ningún monto:\n${params.deliveryText.summary}`
         : '',
       params.checkoutUrl && params.deliveryText.note
-        ? `Después del link agrega: "${params.deliveryText.note}"`
+        ? `Agrega después del detalle: "${params.deliveryText.note}"`
         : '',
       params.pending?.kind === 'delivery'
         ? `El cliente quiere comprar, pero antes del link de pago necesitas saber dónde entregar. Pregúntale esto, con tus palabras pero sin cambiar los datos: "${params.pending.question}". No generes ni prometas link de pago todavía.`
@@ -1019,7 +1048,7 @@ export class SalesAgentRuntimeService {
                 : {}),
               faqs: params.faqMatches,
               journeyScripts: params.journeys,
-              checkoutUrl: params.checkoutUrl ?? null,
+              paymentLinkReady: Boolean(params.checkoutUrl),
             }),
           },
         ],

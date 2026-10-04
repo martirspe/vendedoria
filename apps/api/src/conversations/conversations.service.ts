@@ -457,7 +457,13 @@ export class ConversationsService {
       await this.planLimits.recordAiReply(tenantId);
     }
 
-    const send = await this.messenger.sendText(channel, params.threadId, agentResult.replyText);
+    const send = agentResult.checkoutUrl
+      ? await this.messenger.sendPaymentLink(channel, params.threadId, {
+          text: agentResult.replyText,
+          url: agentResult.checkoutUrl,
+          footer: agentResult.orderRef ? `Pedido ${agentResult.orderRef}` : undefined,
+        })
+      : await this.messenger.sendText(channel, params.threadId, agentResult.replyText);
     const outboundExternalId = send?.messageId;
     if (send && !send.ok) {
       this.logger.warn(`Agent ${channel.type} send failed: ${send.error}`);
