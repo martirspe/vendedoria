@@ -180,3 +180,9 @@ select {
   color: var(--store-text);
   font-size: 1.25rem;
 }
+
+.store-eyebrow { font-size: var(--store-type-caption); font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; }
+h1, h2, h3 { overflow-wrap: anywhere; text-wrap: balance; }
+.store-btn { border-radius: var(--store-radius-control); white-space: normal; text-align: center; }
+.store-chip { min-height: var(--ds-touch-target); }
+@media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation: none !important; transition: none !important; scroll-behavior: auto !important; } }

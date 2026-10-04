@@ -136,7 +136,9 @@ describe('Services in the catalog and the web checkout (e2e)', () => {
         basePriceCents: 9000,
         components: [{ productId: serviceId, quantity: 1 }],
       }),
-    ).rejects.toThrow('Un servicio no puede ser pieza de un set.');
+    ).rejects.toThrow(
+      'Los servicios y productos digitales no pueden ser pieza de un set.',
+    );
     await expect(
       catalog.update(tenantId, serviceId, {
         components: [{ productId: goodId, quantity: 1 }],
@@ -149,7 +151,7 @@ describe('Services in the catalog and the web checkout (e2e)', () => {
       catalog.updateInventory(tenantId, {
         items: [{ productId: serviceId, stockQty: 5 }],
       }),
-    ).rejects.toThrow('Los servicios no llevan stock.');
+    ).rejects.toThrow('Los servicios y productos digitales no llevan stock.');
   });
 
   it('turning a product into a service drops its stock', async () => {
@@ -204,7 +206,7 @@ describe('Services in the catalog and the web checkout (e2e)', () => {
         trackingCode: 'X1',
       }),
     ).rejects.toThrow(
-      'Un pedido de servicios no se envía: márcalo como realizado.',
+      'Este pedido no tiene nada que enviar: márcalo como entregado o realizado.',
     );
     const done = await orders.updateStatus(tenantId, order.id, {
       status: 'COMPLETED',
@@ -241,6 +243,64 @@ describe('Services in the catalog and the web checkout (e2e)', () => {
     );
     expect(order.delivery).toMatchObject({ mode: 'PICKUP' });
     expect(order.serviceNote).toBeNull();
+  });
+
+  it('sells a digital product without delivery and reveals its access only once paid', async () => {
+    const ebook = await catalog.create(tenantId, {
+      handle: `ebook-${run}`,
+      name: 'Guía de skincare',
+      basePriceCents: 2500,
+      kind: 'DIGITAL',
+      digitalAccessUrl: 'https://example.com/descarga/guia',
+      digitalInstructions: 'Descarga el PDF.',
+      stockUnlimited: false,
+      stockQty: 3,
+      isPublishedOnStore: true,
+    });
+    expect(
+      await prisma.product.findUniqueOrThrow({ where: { id: ebook.id } }),
+    ).toMatchObject({ kind: 'DIGITAL', stockUnlimited: true, stockQty: null });
+
+    const order = await checkout.create(
+      { tenantId, isPreview: false },
+      {
+        checkoutKey: randomUUID(),
+        items: [{ handle: `ebook-${run}`, quantity: 1 }],
+        customer,
+        acceptTerms: true,
+      },
+    );
+    expect(order).toMatchObject({
+      delivery: null,
+      shippingCents: 0,
+      digitalAccess: [],
+    });
+    expect(JSON.stringify(order)).not.toContain('example.com/descarga');
+
+    await orders.updateStatus(tenantId, order.id, { status: 'PAID' });
+    const paid = await checkout.get(
+      { tenantId, isPreview: false },
+      order.id,
+      order.token,
+    );
+    expect(paid.digitalAccess).toEqual([
+      {
+        title: 'Guía de skincare',
+        url: 'https://example.com/descarga/guia',
+        instructions: 'Descarga el PDF.',
+      },
+    ]);
+    await catalog.update(tenantId, ebook.id, { digitalAccessUrl: 'https://example.com/version-2' });
+    await catalog.remove(tenantId, ebook.id);
+    const preserved = await checkout.get({ tenantId, isPreview: false }, order.id, order.token);
+    expect(preserved.digitalAccess).toEqual(paid.digitalAccess);
+    expect(preserved.kinds).toContain('DIGITAL');
+    await expect(
+      orders.updateStatus(tenantId, order.id, {
+        status: 'SHIPPED',
+        trackingCode: 'X2',
+      }),
+    ).rejects.toThrow('Este pedido no tiene nada que enviar');
   });
 
   it('never sells another tenant service', async () => {

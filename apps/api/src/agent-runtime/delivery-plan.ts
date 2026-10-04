@@ -48,11 +48,44 @@ export function matchDistrict(
     const normalized = words(phrase).trim();
     if (normalized) haystack = haystack.split(` ${normalized} `).join(' ');
   }
+  const aliased = withDistrictAliases(haystack);
+  if (aliased !== haystack) {
+    const literal = bestDistrict(haystack);
+    if (literal.located) return literal.match;
+    return bestDistrict(aliased).match;
+  }
+  return bestDistrict(haystack).match;
+}
+
+/** How Lima buyers name their district: "Surco" is Santiago de Surco, not Surco in Huarochirí. */
+const DISTRICT_ALIASES: Array<[string, string]> = [
+  ['surco', 'santiago de surco'],
+  ['sjl', 'san juan de lurigancho'],
+  ['sjm', 'san juan de miraflores'],
+  ['smp', 'san martin de porres'],
+  ['ves', 'villa el salvador'],
+  ['vmt', 'villa maria del triunfo'],
+  ['magdalena', 'magdalena del mar'],
+];
+
+function withDistrictAliases(haystack: string): string {
+  return DISTRICT_ALIASES.reduce(
+    (text, [short, full]) =>
+      text.split(` ${full} `).join(` ${short} `).split(` ${short} `).join(` ${full} `),
+    haystack,
+  );
+}
+
+/** `located`: the buyer also named the province or department of the district found. */
+function bestDistrict(haystack: string): {
+  match: { district: UbigeoDistrict | null; candidates: UbigeoDistrict[] };
+  located: boolean;
+} {
   const hits = DISTRICT_NAMES.filter((entry) => haystack.includes(entry.name));
   const longest = hits.filter(
     (entry) => !hits.some((other) => other.name.length > entry.name.length && other.name.includes(entry.name)),
   );
-  if (!longest.length) return { district: null, candidates: [] };
+  if (!longest.length) return { match: { district: null, candidates: [] }, located: false };
 
   const scored = longest.map((entry) => {
     const rest = haystack.replace(entry.name, ' ');
@@ -61,9 +94,13 @@ export function matchDistrict(
   });
   const best = Math.max(...scored.map((item) => item.score));
   const top = scored.filter((item) => item.score === best).map((item) => item.entry.district);
-  return top.length === 1
-    ? { district: top[0], candidates: [] }
-    : { district: null, candidates: top.slice(0, MAX_CANDIDATES) };
+  return {
+    match:
+      top.length === 1
+        ? { district: top[0], candidates: [] }
+        : { district: null, candidates: top.slice(0, MAX_CANDIDATES) },
+    located: best > 0,
+  };
 }
 
 /**

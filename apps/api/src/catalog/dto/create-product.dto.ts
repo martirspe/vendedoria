@@ -48,6 +48,27 @@ export class ProductVariantInputDto {
   @IsString()
   option2Value?: string;
 
+  @ApiPropertyOptional({ example: 'Material' })
+  @IsOptional()
+  @IsString()
+  option3Name?: string;
+
+  @ApiPropertyOptional({ example: 'Algodón' })
+  @IsOptional()
+  @IsString()
+  option3Value?: string;
+
+  @ApiPropertyOptional({ description: 'Photo of this variant (from POST /catalog/media)' })
+  @IsOptional()
+  @ValidateIf((_, value) => value !== null)
+  @IsUrl({
+    protocols: ['https', 'http'],
+    require_protocol: true,
+    require_tld: false,
+  })
+  @MaxLength(500)
+  imageUrl?: string | null;
+
   @ApiProperty({ example: 8900 })
   @IsInt()
   @Min(0)
@@ -79,8 +100,84 @@ export class ScentNoteDto {
   description?: string;
 }
 
-/** Rich product content used by templates such as Selecta. */
+export class ProductAttributeDto {
+  @ApiProperty({ example: 'Material' })
+  @IsString()
+  @MinLength(1)
+  @MaxLength(60)
+  name!: string;
+
+  @ApiProperty({ example: 'Algodón pima' })
+  @IsString()
+  @MinLength(1)
+  @MaxLength(200)
+  value!: string;
+}
+
+export class ProductFaqDto {
+  @ApiProperty({ example: '¿Destiñe al lavarlo?' })
+  @IsString()
+  @MinLength(3)
+  @MaxLength(200)
+  question!: string;
+
+  @ApiProperty({ example: 'No, el color es fijo si se lava en frío.' })
+  @IsString()
+  @MinLength(1)
+  @MaxLength(600)
+  answer!: string;
+}
+
+/** Rich product content: shown on the store page and read by the sales agent. */
 export class ProductDetailsDto {
+  @ApiPropertyOptional({ type: [String], description: 'Needs and occasions supported by the product' })
+  @IsOptional()
+  @IsArray()
+  @ArrayMaxSize(10)
+  @IsString({ each: true })
+  @MaxLength(200, { each: true })
+  useCases?: string[];
+
+  @ApiPropertyOptional({ type: [String], description: 'What is excluded or unsuitable' })
+  @IsOptional()
+  @IsArray()
+  @ArrayMaxSize(10)
+  @IsString({ each: true })
+  @MaxLength(200, { each: true })
+  exclusions?: string[];
+
+  @ApiPropertyOptional({ type: [String], description: 'Compatible equipment, software or conditions' })
+  @IsOptional()
+  @IsArray()
+  @ArrayMaxSize(10)
+  @IsString({ each: true })
+  @MaxLength(200, { each: true })
+  compatibility?: string[];
+
+  @ApiPropertyOptional({ description: 'Product-specific return and change conditions' })
+  @IsOptional()
+  @IsString()
+  @MaxLength(300)
+  returns?: string;
+
+  @ApiPropertyOptional({ description: 'Digital file format or access platform' })
+  @IsOptional()
+  @IsString()
+  @MaxLength(80)
+  digitalFormat?: string;
+
+  @ApiPropertyOptional({ description: 'Digital usage rights' })
+  @IsOptional()
+  @IsString()
+  @MaxLength(300)
+  license?: string;
+
+  @ApiPropertyOptional({ description: 'Digital access duration and included updates' })
+  @IsOptional()
+  @IsString()
+  @MaxLength(200)
+  accessDuration?: string;
+
   @ApiPropertyOptional({ example: '50 ml' })
   @IsOptional()
   @IsString()
@@ -148,6 +245,73 @@ export class ProductDetailsDto {
   @IsOptional()
   @IsBoolean()
   montage?: boolean;
+
+  @ApiPropertyOptional({ type: [ProductAttributeDto], description: 'Specifications as name/value pairs' })
+  @IsOptional()
+  @IsArray()
+  @ArrayMaxSize(20)
+  @ValidateNested({ each: true })
+  @Type(() => ProductAttributeDto)
+  attributes?: ProductAttributeDto[];
+
+  @ApiPropertyOptional({ example: 'Piel seca o sensible', description: 'Who it is for' })
+  @IsOptional()
+  @IsString()
+  @MaxLength(200)
+  audience?: string;
+
+  @ApiPropertyOptional({
+    type: [String],
+    description: 'Words buyers use to look for it (search only, not shown)',
+  })
+  @IsOptional()
+  @IsArray()
+  @ArrayMaxSize(20)
+  @IsString({ each: true })
+  @MaxLength(40, { each: true })
+  keywords?: string[];
+
+  @ApiPropertyOptional({ type: [String], description: 'What comes in the box or the service' })
+  @IsOptional()
+  @IsArray()
+  @ArrayMaxSize(20)
+  @IsString({ each: true })
+  @MaxLength(200, { each: true })
+  contents?: string[];
+
+  @ApiPropertyOptional({ example: '6 meses por defectos de fábrica' })
+  @IsOptional()
+  @IsString()
+  @MaxLength(300)
+  warranty?: string;
+
+  @ApiPropertyOptional({ type: [ProductFaqDto] })
+  @IsOptional()
+  @IsArray()
+  @ArrayMaxSize(10)
+  @ValidateNested({ each: true })
+  @Type(() => ProductFaqDto)
+  faqs?: ProductFaqDto[];
+
+  @ApiPropertyOptional({ type: [String], description: 'Services: what the buyer must do or bring' })
+  @IsOptional()
+  @IsArray()
+  @ArrayMaxSize(10)
+  @IsString({ each: true })
+  @MaxLength(200, { each: true })
+  requirements?: string[];
+
+  @ApiPropertyOptional({ example: 'Lima Moderna', description: 'Services: area covered' })
+  @IsOptional()
+  @IsString()
+  @MaxLength(200)
+  coverage?: string;
+
+  @ApiPropertyOptional({ description: 'Services: rescheduling and cancellation policy' })
+  @IsOptional()
+  @IsString()
+  @MaxLength(300)
+  cancellation?: string;
 }
 
 export class ProductMediaInputDto {
@@ -192,7 +356,7 @@ export class ProductComponentInputDto {
   quantity!: number;
 }
 
-export const PRODUCT_KINDS = ['PRODUCT', 'SERVICE'] as const;
+export const PRODUCT_KINDS = ['PRODUCT', 'SERVICE', 'DIGITAL'] as const;
 export const SERVICE_MODES = ['onsite', 'home', 'online'] as const;
 export type ServiceMode = (typeof SERVICE_MODES)[number];
 
@@ -200,7 +364,8 @@ export type ServiceMode = (typeof SERVICE_MODES)[number];
 export class ProductExtrasDto {
   @ApiPropertyOptional({
     enum: PRODUCT_KINDS,
-    description: 'A SERVICE has no stock and is never shipped',
+    description:
+      'SERVICE and DIGITAL have no stock and are never shipped; DIGITAL is delivered by access link once paid',
   })
   @IsOptional()
   @IsIn(PRODUCT_KINDS)
@@ -225,6 +390,27 @@ export class ProductExtrasDto {
   @ValidateIf((_, value) => value !== null)
   @IsIn(SERVICE_MODES)
   serviceMode?: ServiceMode | null;
+
+  @ApiPropertyOptional({
+    example: 'https://drive.google.com/drive/folders/abc',
+    description:
+      'Digital only: access link shown to the buyer once the order is paid; never public',
+  })
+  @IsOptional()
+  @ValidateIf((_, value) => value !== null && value !== '')
+  @IsUrl({ protocols: ['https'], require_protocol: true })
+  @MaxLength(500)
+  digitalAccessUrl?: string | null;
+
+  @ApiPropertyOptional({
+    example: 'Descarga el PDF desde la carpeta compartida.',
+    description: 'Digital only: how to use the access',
+  })
+  @IsOptional()
+  @ValidateIf((_, value) => value !== null)
+  @IsString()
+  @MaxLength(600)
+  digitalInstructions?: string | null;
 
   @ApiPropertyOptional({ example: 'PER-50' })
   @IsOptional()
@@ -279,16 +465,19 @@ export class CreateProductDto extends ProductExtrasDto {
   @ApiProperty({ example: 'Polo básico' })
   @IsString()
   @MinLength(2)
+  @MaxLength(250)
   name!: string;
 
   @ApiPropertyOptional()
   @IsOptional()
   @IsString()
+  @MaxLength(1000)
   descriptionShort?: string;
 
   @ApiPropertyOptional()
   @IsOptional()
   @IsString()
+  @MaxLength(5000)
   descriptionFull?: string;
 
   @ApiPropertyOptional({ type: [String] })

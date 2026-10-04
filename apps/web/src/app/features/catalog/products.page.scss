@@ -82,7 +82,7 @@
   margin: 0;
   padding: 0;
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(15rem, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 15rem), 1fr));
   gap: var(--ds-space-4);
 }
 
@@ -185,6 +185,76 @@
   font-weight: 600;
 }
 
+.product-card__body .product-card__score {
+  font-weight: 600;
+}
+
+.product-card__body .product-card__score--low {
+  color: color-mix(in srgb, var(--ds-color-warning) 55%, black);
+}
+
+.kind-filter {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--ds-space-2);
+}
+
+.kind-filter button {
+  padding: var(--ds-space-1) var(--ds-space-3);
+  border: 1px solid var(--ds-color-border);
+  border-radius: 999px;
+  background: transparent;
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.kind-filter button.is-active {
+  border-color: var(--ds-color-text-primary);
+  background: var(--ds-color-text-primary);
+  color: var(--ds-color-surface);
+}
+
+.kind-filter span {
+  opacity: 0.7;
+}
+
+.link-btn {
+  padding: 0;
+  border: 0;
+  background: none;
+  font: inherit;
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+.faq-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--ds-space-3);
+}
+
+.faq-head h3 {
+  margin: 0;
+  font-size: 0.95rem;
+}
+
+.faq-list {
+  display: grid;
+  gap: var(--ds-space-3);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.faq-row {
+  display: grid;
+  grid-template-columns: 1fr 1.4fr auto;
+  gap: var(--ds-space-3);
+  align-items: end;
+}
+
 .publish {
   display: grid;
   gap: var(--ds-space-5);
@@ -241,6 +311,7 @@
 
 .publish__main,
 .publish__rail {
+  min-width: 0;
   display: grid;
   gap: var(--ds-space-4);
 }
@@ -468,7 +539,7 @@
   margin: 0;
   padding: 0;
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(6.5rem, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 6.5rem), 1fr));
   gap: var(--ds-space-3);
 }
 
@@ -528,7 +599,7 @@
 
 .variant-row {
   display: grid;
-  grid-template-columns: 1fr 1fr 7rem auto;
+  grid-template-columns: 1fr 1fr 6rem 7rem auto auto;
   gap: var(--ds-space-3);
   align-items: end;
 }
@@ -549,6 +620,8 @@
 
 .kind-toggle {
   display: inline-flex;
+  flex-wrap: wrap;
+  max-width: 100%;
   gap: var(--ds-space-1);
   padding: var(--ds-space-1);
   border: 1px solid var(--ds-color-border);
@@ -785,7 +858,7 @@
 
 @media (max-width: 960px) {
   .publish__layout {
-    grid-template-columns: 1fr;
+    grid-template-columns: minmax(0, 1fr);
   }
 
   .publish__rail {
@@ -793,6 +866,7 @@
   }
 
   .variant-row,
+  .faq-row,
   .field-grid {
     grid-template-columns: 1fr;
   }

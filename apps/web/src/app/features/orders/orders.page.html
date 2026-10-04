@@ -65,7 +65,7 @@
 
     <label class="filter">
       Estado
-      <select
+      <ds-select><select
         [value]="statusFilter()"
         (change)="onStatusFilter($any($event.target).value)"
       >
@@ -74,7 +74,7 @@
           <option [value]="column.id">{{ column.label }}</option>
         }
         <option value="CANCELLED">Cancelado</option>
-      </select>
+      </select></ds-select>
     </label>
 
     <div class="view-toggle" role="group" aria-label="Tipo de vista">
@@ -139,7 +139,7 @@
       }
     </div>
   } @else {
-    <div class="table-wrap">
+    <div class="table-wrap" role="region" aria-label="Pedidos, tabla desplazable" tabindex="0">
       <table>
         <thead>
           <tr>
@@ -407,14 +407,14 @@
 
         <label>
           Producto
-          <select formControlName="productId">
+          <ds-select><select formControlName="productId">
             @for (product of products(); track product.id) {
               <option [value]="product.id">
                 {{ product.name }} —
                 {{ formatMoney(product.basePriceCents, product.currency) }}
               </option>
             }
-          </select>
+          </select></ds-select>
         </label>
         <label>
           Cantidad

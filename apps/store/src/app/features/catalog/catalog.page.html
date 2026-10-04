@@ -3,18 +3,47 @@
     <div>
       <h1>{{ heading() }}</h1>
       <p class="catalog__count" aria-live="polite">
-        {{ list().total }} {{ list().total === 1 ? 'producto' : 'productos' }}
+        {{ list().total }} {{ list().total === 1 ? noun().singular : noun().param }}
       </p>
     </div>
     <label class="catalog__sort">
       <span>Ordenar por</span>
-      <select [value]="sort()" (change)="changeSort($any($event.target).value)">
+      <ds-select><select [value]="sort()" (change)="changeSort($any($event.target).value)">
         @for (option of sortOptions; track option.value) {
           <option [value]="option.value">{{ option.label }}</option>
         }
-      </select>
+      </select></ds-select>
     </label>
   </header>
+
+  <form class="catalog__search" role="search" (submit)="$event.preventDefault(); searchCatalog(searchInput.value)">
+    <label>
+      <span>Buscar en el catálogo</span>
+      <input #searchInput type="search" maxlength="80" [value]="q() || ''" placeholder="Nombre, uso o característica" />
+    </label>
+    <button class="store-btn store-btn--primary" type="submit"><ds-icon name="search" [size]="1" />Buscar</button>
+  </form>
+
+  @if (kindTabs().length) {
+    <nav class="catalog__kinds" aria-label="Filtrar por tipo">
+      <a
+        [class.is-active]="!activeKind()"
+        routerLink="/productos"
+        [queryParams]="{ q: q() || null, orden: orden() || null }"
+        [attr.aria-current]="!activeKind() ? 'page' : null"
+        >Todo</a
+      >
+      @for (tab of kindTabs(); track tab.param) {
+        <a
+          [class.is-active]="activeKind()?.param === tab.param"
+          routerLink="/productos"
+          [queryParams]="{ tipo: tab.param, q: q() || null, orden: orden() || null }"
+          [attr.aria-current]="activeKind()?.param === tab.param ? 'page' : null"
+          >{{ tab.label }}</a
+        >
+      }
+    </nav>
+  }
 
   @if (store()?.categories?.length) {
     <nav class="catalog__filters" aria-label="Filtrar por categoría">
@@ -22,7 +51,7 @@
         class="store-chip"
         [class.is-active]="!categoria()"
         routerLink="/productos"
-        [queryParams]="{ q: q() || null, orden: orden() || null }"
+        [queryParams]="{ tipo: activeKind()?.param || null, q: q() || null, orden: orden() || null }"
         [attr.aria-current]="!categoria() ? 'page' : null"
         >Todos</a
       >
@@ -31,7 +60,7 @@
           class="store-chip"
           [class.is-active]="categoria() === category"
           routerLink="/productos"
-          [queryParams]="{ categoria: category, q: q() || null, orden: orden() || null }"
+          [queryParams]="{ categoria: category, tipo: activeKind()?.param || null, q: q() || null, orden: orden() || null }"
           [attr.aria-current]="categoria() === category ? 'page' : null"
           >{{ category }}</a
         >
@@ -76,9 +105,9 @@
   } @else {
     <div class="store-empty">
       <ds-icon name="search" [size]="2" />
-      <h2>No encontramos productos</h2>
+      <h2>No encontramos {{ noun().param }}</h2>
       <p>Prueba con otra búsqueda o revisa todas las categorías.</p>
-      <a class="store-btn store-btn--secondary" routerLink="/productos">Ver todos los productos</a>
+      <a class="store-btn store-btn--secondary" routerLink="/productos">Ver todo el catálogo</a>
     </div>
   }
 </section>

@@ -7,12 +7,14 @@ import {
   computed,
   effect,
   inject,
+  input,
+  output,
   signal,
   untracked,
 } from '@angular/core';
 import { HttpErrorResponse } from '@angular/common/http';
 import { FormsModule } from '@angular/forms';
-import { ActivatedRoute, RouterLink } from '@angular/router';
+import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import type { PayOrderRequest, PublicOrder } from '@vendedoria/contracts';
 import { DsIconComponent } from '@vendedoria/ui';
 import { AnalyticsService } from '../../core/analytics.service';
@@ -54,6 +56,14 @@ const REJECTION_MESSAGES: Record<string, string> = {
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class OrderPage {
+  /** Checkout embeds the same payment engine; receipt links keep using the route. */
+  readonly reserve = input<(() => Promise<PublicOrder | null>) | null>(null);
+  readonly amountCents = input(0);
+  readonly payerEmail = input('');
+  readonly reservationReleased = output<void>();
+  readonly inline = computed(() => typeof this.reserve() === 'function');
+  readonly payableTotal = computed(() => this.order()?.totalCents ?? this.amountCents());
+  private readonly router = inject(Router);
   private readonly api = inject(StoreApiService);
   private readonly cart = inject(CartService);
   private readonly analytics = inject(AnalyticsService);
@@ -61,8 +71,8 @@ export class OrderPage {
   private readonly route = inject(ActivatedRoute);
   readonly store = inject(StoreStateService).store;
 
-  private readonly id = this.route.snapshot.paramMap.get('id') ?? '';
-  private readonly token = this.route.snapshot.queryParamMap.get('t') ?? '';
+  private get id(): string { return this.order()?.id ?? this.route.snapshot.paramMap.get('id') ?? ''; }
+  private get token(): string { return this.order()?.token ?? this.route.snapshot.queryParamMap.get('t') ?? ''; }
 
   readonly order = signal<PublicOrder | null>(null);
   readonly loading = signal(true);
@@ -71,26 +81,39 @@ export class OrderPage {
   readonly errorMessage = signal<string | null>(null);
   readonly method = signal<PayMethod>('card');
   readonly sdkError = signal(false);
+  readonly sdkLoading = signal(false);
   readonly now = signal(Date.now());
   yapePhone = '';
   yapeOtp = '';
 
   private mp: MercadoPagoInstance | null = null;
   private brick: CardBrickController | null = null;
+  private brickRevision = 0;
+  private destroyed = false;
+  private mountingBrick = false;
   private pollTimer: ReturnType<typeof setTimeout> | null = null;
   private polls = 0;
 
   readonly checkout = computed(() => this.store()?.checkout ?? null);
   readonly pending = computed(() => this.order()?.status === 'PENDING_PAYMENT');
   readonly processing = computed(() => this.pending() && ['processing', 'review'].includes(this.order()?.paymentState ?? ''));
-  readonly canPay = computed(() => this.pending() && !this.processing() && this.secondsLeft() > 0);
+  readonly canPay = computed(() =>
+    this.order() ? this.pending() && !this.processing() && this.secondsLeft() > 0 : this.inline() && this.amountCents() > 0,
+  );
   readonly paid = computed(() => ['PAID', 'FULFILLING', 'SHIPPED', 'COMPLETED'].includes(this.order()?.status ?? ''));
+  readonly hasDigital = computed(() => this.order()?.kinds.includes('DIGITAL') ?? false);
+  /** Orders whose products were deleted have no kinds: without delivery they were services. */
+  readonly hasServices = computed(() => {
+    const order = this.order();
+    if (!order) return false;
+    return order.kinds.includes('SERVICE') || (!order.delivery && !order.kinds.length);
+  });
   /** Fulfillment step in buyer words; pickup orders reuse SHIPPED as "ready to pick up". */
   readonly logistics = computed(() => {
     const order = this.order();
     if (!order) return null;
     const pickup = order.delivery?.mode === 'PICKUP';
-    const servicesOnly = !order.delivery;
+    const servicesOnly = !order.delivery && !this.hasDigital();
     switch (order.status) {
       case 'FULFILLING':
         return servicesOnly ? 'Estamos coordinando tu servicio.' : 'Estamos preparando tu pedido.';
@@ -121,16 +144,29 @@ export class OrderPage {
     inject(SeoService).set({ title: 'Tu pedido', path: `/pedido/${this.id}`, noindex: true });
     let clock: ReturnType<typeof setInterval> | null = null;
     inject(DestroyRef).onDestroy(() => {
+      this.destroyed = true;
       if (clock) clearInterval(clock);
       this.stopPolling();
-      this.brick?.unmount();
+      this.unmountBrick();
     });
     effect(() => {
-      if (this.paid() && this.cart.ready() && this.cart.lines().length) {
+      if (!this.inline() && this.paid() && this.cart.ready() && this.cart.lines().length) {
         untracked(() => this.cart.clear());
       }
     });
+    effect(() => {
+      const amount = this.payableTotal();
+      if (this.inline() && amount > 0) untracked(() => this.remountBrick());
+    });
+    effect(() => {
+      const order = this.order();
+      if (this.inline() && this.paid() && order) {
+        sessionStorage.removeItem('vendedoria-checkout-key');
+        untracked(() => void this.router.navigate(['/pedido', order.id], { queryParams: { t: order.token } }));
+      }
+    });
     afterNextRender(() => {
+      if (this.inline()) this.injector.get(SeoService).set({ title: 'Finaliza tu compra', path: '/checkout', noindex: true });
       let expiryChecked = false;
       clock = setInterval(() => {
         this.now.set(Date.now());
@@ -153,10 +189,16 @@ export class OrderPage {
   }
 
   async simulate(): Promise<void> {
-    await this.run(() => this.api.simulate(this.id, this.token));
+    if (this.busy()) return;
+    this.busy.set(true);
+    try {
+      if (this.inline() && !(await this.ensureOrder(this.payableTotal()))) return;
+      await this.run(() => this.api.simulate(this.id, this.token));
+    } finally { this.busy.set(false); }
   }
 
   async payWithYape(): Promise<void> {
+    if (this.busy() || !this.canPay()) return;
     if (!/^9\d{8}$/.test(this.yapePhone) || !/^\d{6}$/.test(this.yapeOtp)) {
       this.errorMessage.set('Escribe tu celular de Yape (9 dígitos) y el código de aprobación (6 dígitos).');
       return;
@@ -165,6 +207,7 @@ export class OrderPage {
     this.busy.set(true);
     this.errorMessage.set(null);
     try {
+      if (this.inline() && !(await this.ensureOrder(this.payableTotal()))) return;
       const { id } = await this.mp.yape({ otp: this.yapeOtp, phoneNumber: this.yapePhone }).create();
       await this.pay({ method: 'yape', cardToken: id, phone: this.yapePhone });
       this.yapeOtp = '';
@@ -190,6 +233,11 @@ export class OrderPage {
   }
 
   private async load(): Promise<void> {
+    if (this.inline()) {
+      this.loading.set(false);
+      await this.retrySdk();
+      return;
+    }
     if (!this.id || !this.token) {
       this.notFound.set(true);
       this.loading.set(false);
@@ -216,6 +264,48 @@ export class OrderPage {
     }
   }
 
+  async editCheckout(): Promise<void> {
+    if (this.busy() || this.processing() || !this.order()) return;
+    await this.cancel();
+    if (this.order()?.status !== 'CANCELLED') return;
+    this.unmountBrick();
+    this.order.set(null);
+    this.errorMessage.set(null);
+    sessionStorage.removeItem('vendedoria-checkout-key');
+    this.reservationReleased.emit();
+    this.mountBrickAfterRender();
+  }
+
+  async retrySdk(): Promise<void> {
+    const checkout = this.checkout();
+    if (!checkout?.publicKey || checkout.simulator || this.sdkLoading()) return;
+    this.sdkError.set(false);
+    this.sdkLoading.set(true);
+    try {
+      const MercadoPago = await loadMercadoPago();
+      this.mp = new MercadoPago(checkout.publicKey, { locale: 'es-PE' });
+      this.mountBrickAfterRender();
+    } catch {
+      this.sdkError.set(true);
+    } finally {
+      this.sdkLoading.set(false);
+    }
+  }
+
+  private async ensureOrder(expectedCents: number): Promise<boolean> {
+    if (!this.order()) {
+      const order = await this.reserve()?.();
+      if (!order) return false;
+      this.apply(order);
+    }
+    if (this.order()!.totalCents !== expectedCents) {
+      this.errorMessage.set('El total de tu pedido se actualizó. Revisa el nuevo importe y vuelve a pulsar Pagar.');
+      this.remountBrick();
+      return false;
+    }
+    return this.canPay();
+  }
+
   private apply(order: PublicOrder): void {
     this.order.set(order);
     if (this.paid()) this.analytics.purchase(order);
@@ -225,19 +315,26 @@ export class OrderPage {
     else this.stopPolling();
   }
 
-  private async onCardSubmit(data: CardFormData, extra?: { paymentTypeId?: string }): Promise<void> {
-    const identification = data.payer?.identification;
-    const type = identification?.type === 'DNI' || identification?.type === 'CE' ? identification.type : null;
-    await this.pay({
-      method: 'card',
-      cardToken: data.token,
-      paymentMethodId: data.payment_method_id,
-      paymentType: extra?.paymentTypeId ?? 'credit_card',
-      ...(type && identification?.number
-        ? { identificationType: type, identificationNumber: identification.number }
-        : {}),
-    });
-    if (this.canPay()) this.remountBrick();
+  private async onCardSubmit(data: CardFormData, extra?: { paymentTypeId?: string }, expectedCents = this.payableTotal()): Promise<void> {
+    if (this.busy() || !this.canPay()) return;
+    this.busy.set(true);
+    try {
+      if (this.inline() && !(await this.ensureOrder(expectedCents))) return;
+      const identification = data.payer?.identification;
+      const type = identification?.type === 'DNI' || identification?.type === 'CE' ? identification.type : null;
+      await this.pay({
+        method: 'card',
+        cardToken: data.token,
+        paymentMethodId: data.payment_method_id,
+        paymentType: extra?.paymentTypeId ?? 'credit_card',
+        ...(type && identification?.number
+          ? { identificationType: type, identificationNumber: identification.number }
+          : {}),
+      });
+      if (this.canPay()) this.remountBrick();
+    } finally {
+      this.busy.set(false);
+    }
   }
 
   private async pay(body: Omit<PayOrderRequest, 'token' | 'paymentKey'>): Promise<void> {
@@ -295,23 +392,31 @@ export class OrderPage {
 
   private async mountBrick(): Promise<void> {
     const order = this.order();
-    if (!this.mp || !order || this.brick || this.method() !== 'card' || !this.canPay()) return;
+    if (this.destroyed || this.mountingBrick || !this.mp || (!order && !this.inline()) || this.brick || this.method() !== 'card' || !this.canPay()) return;
     if (!document.getElementById(BRICK_ID)) return;
+    const revision = ++this.brickRevision;
+    const amount = this.payableTotal();
+    this.mountingBrick = true;
     try {
-      this.brick = await this.mp.bricks().create('cardPayment', BRICK_ID, {
-        initialization: { amount: order.totalCents / 100, payer: { email: order.customer.email } },
+      const brick = await this.mp.bricks().create('cardPayment', BRICK_ID, {
+        initialization: { amount: amount / 100, payer: { email: order?.customer.email ?? this.payerEmail() } },
         customization: {
           paymentMethods: { maxInstallments: 1 },
           visual: { style: { theme: 'default' } },
         },
         callbacks: {
           onReady: () => undefined,
-          onSubmit: (data, extra) => this.onCardSubmit(data, extra),
-          onError: () => undefined,
+          onSubmit: (data, extra) => this.onCardSubmit(data, extra, amount),
+          onError: () => { if (revision === this.brickRevision && !this.destroyed) this.sdkError.set(true); },
         },
       });
+      if (revision !== this.brickRevision || this.destroyed) brick.unmount();
+      else this.brick = brick;
     } catch {
-      this.sdkError.set(true);
+      if (revision === this.brickRevision && !this.destroyed) this.sdkError.set(true);
+    } finally {
+      this.mountingBrick = false;
+      if (revision !== this.brickRevision && !this.destroyed) this.mountBrickAfterRender();
     }
   }
 
@@ -322,6 +427,7 @@ export class OrderPage {
   }
 
   private unmountBrick(): void {
+    this.brickRevision++;
     this.brick?.unmount();
     this.brick = null;
   }

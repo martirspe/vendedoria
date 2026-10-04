@@ -21,6 +21,15 @@
   border: 0;
 }
 
+.store .dropzone__pick input.visually-hidden {
+  width: 1px;
+  height: 1px;
+  min-height: 0;
+  padding: 0;
+  margin: -1px;
+  border: 0;
+}
+
 .dropzone {
   justify-items: center;
   padding: var(--ds-space-8) var(--ds-space-5);
@@ -93,12 +102,12 @@
 .source > div {
   display: grid;
   flex: 1;
-  min-width: 12rem;
+  min-width: min(100%, 12rem);
 }
 
 .stats {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(11rem, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 11rem), 1fr));
   gap: var(--ds-space-3);
   margin: 0;
   padding: 0;

@@ -1,6 +1,7 @@
 @if (store(); as s) {
   <div
     class="shell"
+    [class.shell--checkout]="inCheckout()"
     [style.--store-brand]="brand()?.primary"
     [style.--store-on-brand]="onBrand()"
     [style.--store-accent]="brand()?.accent"
@@ -45,13 +46,19 @@
 
         <nav class="nav" aria-label="Principal">
           <a routerLink="/" routerLinkActive="is-active" [routerLinkActiveOptions]="{ exact: true }">Inicio</a>
-          <a routerLink="/productos" routerLinkActive="is-active">Productos</a>
+          @if (kindTabs().length) {
+            @for (tab of kindTabs(); track tab.param) {
+              <a routerLink="/productos" [queryParams]="{ tipo: tab.param }">{{ tab.label }}</a>
+            }
+          } @else {
+            <a routerLink="/productos" routerLinkActive="is-active">{{ catalogNoun().label }}</a>
+          }
         </nav>
 
         <form class="search" role="search" action="/productos" method="get" (submit)="search($event, query.value)">
-          <label class="visually-hidden" for="store-search">Buscar productos</label>
+          <label class="visually-hidden" for="store-search">Buscar {{ catalogNoun().param }}</label>
           <ds-icon name="search" [size]="1.05" />
-          <input #query id="store-search" type="search" name="q" placeholder="Buscar productos" maxlength="80" />
+          <input #query id="store-search" type="search" name="q" [placeholder]="'Buscar ' + catalogNoun().param" maxlength="80" />
         </form>
 
         <a class="cart-link" routerLink="/carrito" [attr.aria-label]="'Carrito: ' + cart.count() + ' productos'">
@@ -111,7 +118,7 @@
       </div>
     </footer>
 
-    @if (whatsappHref(); as href) {
+    @if (!inCheckout() && whatsappHref(); as href) {
       <a class="wa-fab" [href]="href" target="_blank" rel="noopener" aria-label="Escríbenos por WhatsApp">
         <ds-icon name="message" />
         <span>Escríbenos</span>

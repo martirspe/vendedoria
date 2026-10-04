@@ -163,6 +163,8 @@ label {
 input,
 select,
 textarea {
+  min-width: 0;
+  width: 100%;
   min-height: var(--ds-touch-target);
   padding: var(--ds-space-3) var(--ds-space-4);
   border: 1px solid var(--ds-color-border);
@@ -237,6 +239,6 @@ textarea {
 
 @media (max-width: 960px) {
   .channels__grid {
-    grid-template-columns: 1fr;
+    grid-template-columns: minmax(0, 1fr);
   }
 }

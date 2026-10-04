@@ -1,0 +1,52 @@
+ds-select {
+  --select-bg: var(--store-bg, var(--ds-color-surface));
+  --select-text: var(--store-text, var(--ds-color-text-primary));
+  --select-muted: var(--store-muted, var(--ds-color-text-secondary));
+  --select-border: var(--store-border, var(--ds-color-border));
+  --select-brand: var(--store-brand, var(--ds-color-focus-ring));
+  --select-radius: var(--store-radius-control, var(--ds-radius-md));
+  display: block; position: relative; min-width: 0; width: 100%;
+}
+ds-select > select, ds-select .ds-select-trigger {
+  box-sizing: border-box; width: 100%; min-width: 0; min-height: var(--ds-touch-target);
+  margin: 0; padding: var(--ds-space-3) var(--ds-space-4); border: 1px solid var(--select-border);
+  border-radius: var(--select-radius); background: var(--select-bg); color: var(--select-text);
+  font: inherit; font-size: var(--ds-text-base, 1rem); line-height: 1.5;
+}
+ds-select > select { appearance: auto; padding-inline-end: var(--ds-space-8); }
+ds-select.ds-select-enhanced > select {
+  position: absolute; width: 1px; height: 1px; min-height: 0; padding: 0; border: 0;
+  clip-path: inset(50%); overflow: hidden; white-space: nowrap;
+}
+ds-select .ds-select-trigger {
+  display: flex; align-items: center; justify-content: space-between; gap: var(--ds-space-4);
+  text-align: start; cursor: pointer; font-weight: 400;
+  transition: border-color var(--ds-motion-fast), box-shadow var(--ds-motion-fast);
+}
+ds-select .ds-select-trigger > span { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+ds-select .ds-select-trigger > ds-icon { flex: 0 0 auto; color: var(--select-muted); transition: transform var(--ds-motion-fast); }
+ds-select .ds-select-trigger[aria-expanded=true] > ds-icon { transform: rotate(180deg); }
+ds-select .ds-select-trigger:hover:not(:disabled) { border-color: var(--select-brand); }
+ds-select .ds-select-trigger:focus-visible, ds-select > select:focus-visible {
+  outline: 2px solid var(--select-brand); outline-offset: 2px;
+}
+ds-select .ds-select-trigger[aria-invalid=true] { border-color: var(--store-danger, var(--ds-color-danger)); }
+ds-select .ds-select-trigger:disabled, ds-select > select:disabled { opacity: .55; cursor: not-allowed; }
+ds-select .ds-select-options {
+  box-sizing: border-box; position: fixed; inset: auto; margin: 0; padding: var(--ds-space-2);
+  border: 1px solid var(--select-border); border-radius: var(--select-radius);
+  background: var(--select-bg); color: var(--select-text); box-shadow: var(--ds-shadow-dropdown);
+  overflow-y: auto; overscroll-behavior: contain; font: inherit; font-size: 1rem;
+}
+ds-select .ds-select-option {
+  display: flex; align-items: center; justify-content: space-between; gap: var(--ds-space-3);
+  min-height: var(--ds-touch-target); padding: var(--ds-space-2) var(--ds-space-3);
+  border-radius: var(--ds-radius-sm); cursor: pointer; line-height: 1.5;
+}
+ds-select .ds-select-option > span { min-width: 0; overflow-wrap: anywhere; }
+ds-select .ds-select-option > ds-icon { flex: 0 0 auto; color: var(--select-brand); }
+ds-select .ds-select-option.is-active { background: color-mix(in srgb, var(--select-brand) 9%, var(--select-bg)); }
+ds-select .ds-select-option[aria-selected=true] { font-weight: 600; }
+ds-select .ds-select-option[aria-disabled=true] { color: var(--select-muted); opacity: .55; cursor: not-allowed; }
+ds-select .ds-select-group { padding: var(--ds-space-2) var(--ds-space-3); color: var(--select-muted); font-size: .875rem; font-weight: 700; }
+@media (prefers-reduced-motion: reduce) { ds-select .ds-select-trigger, ds-select .ds-select-trigger > ds-icon { transition: none; } }

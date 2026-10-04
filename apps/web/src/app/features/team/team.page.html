@@ -55,14 +55,14 @@
                 @if (canEdit(member)) {
                   <label class="people__role">
                     <span class="visually-hidden">Rol de {{ member.fullName ?? member.email }}</span>
-                    <select
+                    <ds-select><select
                       [value]="member.role"
                       [disabled]="saving()"
                       (change)="changeRole(member, $event)"
                     >
                       <option value="ADMIN">Administrador</option>
                       <option value="AGENT">Asesor</option>
-                    </select>
+                    </select></ds-select>
                   </label>
                   <ds-button
                     type="button"
@@ -118,10 +118,10 @@
             </label>
             <label>
               Rol
-              <select formControlName="role">
+              <ds-select><select formControlName="role">
                 <option value="AGENT">Asesor: atiende mensajes y pedidos</option>
                 <option value="ADMIN">Administrador: además gestiona la cuenta</option>
-              </select>
+              </select></ds-select>
             </label>
             <ds-button type="submit" [disabled]="saving() || seatsFull()">
               {{ saving() ? 'Creando…' : 'Crear invitación' }}

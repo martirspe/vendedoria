@@ -38,7 +38,7 @@
       </section>
 
       <section class="product-info" storeSection="product">
-        <p class="eyebrow">{{ categoryOf(p) }}@if (p.brand) { · {{ p.brand }}} · {{ isService() ? 'Servicio' : p.format === 'set' ? 'Set' : 'Individual' }}</p>
+        <p class="eyebrow">{{ categoryOf(p) }}@if (p.brand) { · {{ p.brand }}} · {{ isService() ? 'Servicio' : isDigital() ? 'Digital' : p.format === 'set' ? 'Set' : 'Individual' }}</p>
         <h1>{{ p.name }}</h1>
         <p class="summary">{{ p.descriptionShort }}</p>
         <p class="price">
@@ -58,6 +58,8 @@
             {{ isService() ? 'No disponible por ahora' : 'Agotado por ahora' }}
           } @else if (isService()) {
             {{ serviceSummary() || 'Servicio disponible' }} · coordinamos el día y la hora contigo
+          } @else if (isDigital()) {
+            Producto digital · recibes el enlace de acceso al confirmarse el pago
           } @else if (p.stockLeft === 1) {
             <strong>Última unidad disponible</strong>{{ online() ? ' · se reserva para ti al continuar al pago' : '' }}
           } @else if (scarcity(p)) {
@@ -87,11 +89,11 @@
         @if (p.hasVariants) {
           <label class="select-field">
             <span>Elige una opción</span>
-            <select aria-label="Opción del producto" (change)="pickVariant($any($event.target).value)">
+            <ds-select><select aria-label="Opción del producto" (change)="pickVariant($any($event.target).value)">
               @for (v of p.variants; track v.id) {
                 <option [value]="v.id" [selected]="variantId() === v.id" [disabled]="!v.isAvailable">{{ v.label }}{{ v.isAvailable ? '' : ' · agotado' }}</option>
               }
-            </select>
+            </select></ds-select>
           </label>
         }
         @if (canBuy()) {
@@ -102,19 +104,19 @@
               <button (click)="qty.set(qty() + 1)" [disabled]="qty() >= maxUnits(p)" aria-label="Aumentar cantidad"><app-icon name="plus" /></button>
             </div>
             @if (online()) {
-              <a class="button" [routerLink]="['/checkout']" [queryParams]="buyParams()">{{ isService() ? 'Reservar ahora' : 'Comprar ahora' }} <app-icon name="arrow" /></a>
+              <a class="button" [routerLink]="['/checkout']" [queryParams]="buyParams()">{{ isService() ? 'Solicitar servicio' : 'Comprar ahora' }} <app-icon name="arrow" /></a>
             } @else {
-              <button class="button" (click)="add(p)"><app-icon name="bag" />Agregar a mi bolsa</button>
+              <button class="button" (click)="add(p)"><app-icon name="bag" />Agregar al carrito</button>
             }
           </div>
           @if (online()) {
-            <button class="button secondary full" (click)="add(p)"><app-icon name="bag" />Agregar a mi bolsa</button>
+            <button class="button secondary full" (click)="add(p)"><app-icon name="bag" />Agregar al carrito</button>
           }
         }
         <div class="added-panel" role="status" [class.show]="added()">
           @if (added()) {
             <app-icon name="success" /><span>{{ added() }}</span>
-            <a routerLink="/carrito" class="text-link">Ver mi bolsa ({{ cart.count() }}) <app-icon name="arrow" /></a>
+            <a routerLink="/carrito" class="text-link">Ver mi carrito ({{ cart.count() }}) <app-icon name="arrow" /></a>
           }
         </div>
         @if (upsell(); as s) {
@@ -135,7 +137,7 @@
                 </span>
               </span>
             </a>
-            <button type="button" class="button secondary full" (click)="quickAdd(s)"><app-icon name="bag" />Agregar el set a mi bolsa</button>
+            <button type="button" class="button secondary full" (click)="quickAdd(s)"><app-icon name="bag" />Agregar el set al carrito</button>
           </aside>
         }
         @if (pieces().length) {
@@ -145,7 +147,7 @@
               <div class="offer-line">
                 <a class="offer-thumb" [routerLink]="['/producto', x.handle]" [attr.aria-label]="x.name"><app-product-image [product]="x" /></a>
                 <a class="offer-copy" [routerLink]="['/producto', x.handle]"><strong class="offer-name">{{ x.name }}</strong><span class="offer-price">{{ x.priceCents | money }}</span></a>
-                <button type="button" class="offer-add" (click)="quickAdd(x)" [attr.aria-label]="'Agregar ' + x.name + ' a mi bolsa'"><app-icon name="plus" />Agregar</button>
+                <button type="button" class="offer-add" (click)="quickAdd(x)" [attr.aria-label]="'Agregar ' + x.name + ' al carrito'"><app-icon name="plus" />Agregar</button>
               </div>
             }
           </aside>
@@ -171,7 +173,13 @@
             <span><img src="/brands/yape-logo.svg" alt="Yape" width="63" height="80" />Yape</span>
             <span><app-icon name="card" />Tarjetas</span>
           }
-          <span><app-icon name="truck" />{{ freeLabel() ? 'Envío gratis desde ' + freeLabel() : 'Envíos a todo el Perú' }}</span>
+          @if (isDigital()) {
+            <span><app-icon name="check" />Acceso digital tras el pago</span>
+          } @else if (isService()) {
+            <span><app-icon name="check" />Fecha y hora por coordinar</span>
+          } @else {
+            <span><app-icon name="truck" />{{ freeLabel() ? 'Envío gratis desde ' + freeLabel() : 'Entrega según cobertura' }}</span>
+          }
           <span><app-icon name="shield" />Compra como invitado</span>
         </div>
       </section>
@@ -230,6 +238,7 @@
             <p>{{ photo.caption || 'Referencia de la línea. No está incluido en este set.' }}</p>
           </div>
         }
+        <store-product-facts [details]="p.details" [isService]="isService()" [showBasics]="false" />
       </div>
     </section>
 
@@ -263,7 +272,7 @@
   @if (canBuy() && online()) {
     <div class="mobile-buy">
       <strong>{{ price() | money }}</strong>
-      <a class="button" [routerLink]="['/checkout']" [queryParams]="buyParams()">{{ isService() ? 'Reservar ahora' : 'Comprar ahora' }} <app-icon name="arrow" /></a>
+      <a class="button" [routerLink]="['/checkout']" [queryParams]="buyParams()">{{ isService() ? 'Solicitar servicio' : 'Comprar ahora' }} <app-icon name="arrow" /></a>
     </div>
   }
 } @else {

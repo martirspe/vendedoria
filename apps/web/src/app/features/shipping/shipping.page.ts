@@ -1,3 +1,4 @@
+import { DsSelectComponent } from '@vendedoria/ui';
 import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import type { ShippingOption, UbigeoDistrict } from '@vendedoria/contracts';
@@ -19,7 +20,7 @@ const CARRIER_TIER_LABELS = ['Hasta 20 km', 'Hasta 100 km', 'Hasta 400 km', 'Has
 @Component({
   selector: 'app-shipping-page',
   standalone: true,
-  imports: [ReactiveFormsModule, DsButtonComponent, DsIconComponent],
+  imports: [DsSelectComponent, ReactiveFormsModule, DsButtonComponent, DsIconComponent],
   templateUrl: './shipping.page.html',
   styleUrl: './shipping.page.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,

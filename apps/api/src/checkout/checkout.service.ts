@@ -41,6 +41,7 @@ import {
   PayOrderDto,
 } from './dto/checkout.dto';
 import { OrderEmailService } from './order-email.service';
+import { fulfillmentSnapshot, orderFulfillment } from '../orders/digital-access';
 
 const RESERVATION_MS = 15 * 60_000;
 const EXPIRY_SWEEP_MS = 60_000;
@@ -70,6 +71,9 @@ type ResolvedLine = {
   unitCents: number;
   totalCents: number;
   isService: boolean;
+  /** Only physical products ship; services and digital products never do. */
+  ships: boolean;
+  fulfillment: Prisma.InputJsonObject;
   coupon: CouponLine;
 };
 
@@ -144,7 +148,7 @@ export class CheckoutService implements OnModuleInit, OnModuleDestroy {
       email: dto.email,
     });
     if (quote.freeShipping) {
-      if (lines.every((line) => line.isService))
+      if (!lines.some((line) => line.ships))
         throw new BadRequestException(SERVICES_FREE_SHIPPING);
       const storefront = await this.prisma.storefront.findUniqueOrThrow({
         where: { tenantId: access.tenantId },
@@ -241,7 +245,7 @@ export class CheckoutService implements OnModuleInit, OnModuleDestroy {
                   { lock: true },
                 )
               : null;
-            const shipsGoods = lines.some((line) => !line.isService);
+            const shipsGoods = lines.some((line) => line.ships);
             const hasServices = lines.some((line) => line.isService);
             if (coupon?.freeShipping) {
               if (!shipsGoods)
@@ -317,6 +321,7 @@ export class CheckoutService implements OnModuleInit, OnModuleDestroy {
                 items: {
                   create: stocked.map((line) => ({
                     productId: line.productId,
+                    fulfillment: line.fulfillment,
                     variantId: line.variantId,
                     title: line.title,
                     handle: line.handle,
@@ -921,6 +926,9 @@ export class CheckoutService implements OnModuleInit, OnModuleDestroy {
       if (product.currency !== 'PEN') {
         throw new BadRequestException('Solo se aceptan productos en soles.');
       }
+      if (product.kind === 'DIGITAL' && !product.digitalAccessUrl) {
+        throw new ConflictException('Este producto digital aún no tiene su acceso disponible.');
+      }
       if (item.quantity > 20) {
         throw new BadRequestException('Máximo 20 unidades por producto.');
       }
@@ -958,6 +966,8 @@ export class CheckoutService implements OnModuleInit, OnModuleDestroy {
         unitCents,
         totalCents: unitCents * item.quantity,
         isService: product.kind === 'SERVICE',
+        ships: product.kind === 'PRODUCT',
+        fulfillment: fulfillmentSnapshot(product),
         coupon: {
           handle: product.handle,
           categories: product.categories,
@@ -1048,7 +1058,12 @@ export class CheckoutService implements OnModuleInit, OnModuleDestroy {
     return code;
   }
 
-  private view(order: FullOrder): PublicOrder {
+  private async view(order: FullOrder): Promise<PublicOrder> {
+    const { kinds, digitalAccess } = await orderFulfillment(
+      this.prisma,
+      order.tenantId,
+      order,
+    );
     const delivery = order.delivery
       ? (order.delivery as Partial<DeliveryRecord>)
       : null;
@@ -1097,6 +1112,8 @@ export class CheckoutService implements OnModuleInit, OnModuleDestroy {
           }
         : null,
       serviceNote: order.serviceNote,
+      kinds,
+      digitalAccess,
       trackingCode: order.trackingCode,
       expiresAt: order.expiresAt?.toISOString() ?? null,
       cancelReason: order.cancelReason,

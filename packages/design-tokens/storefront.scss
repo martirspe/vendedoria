@@ -22,5 +22,28 @@
   --store-max-width: 1200px;
   --store-radius-card: var(--ds-radius-lg);
   --store-radius-control: var(--ds-radius-md);
+  --store-control-height: 3.25rem;
+  --store-recommendation-thumb: 4rem;
   --store-shadow-card: 0 1px 2px rgb(17 19 24 / 6%), 0 8px 24px rgb(17 19 24 / 6%);
+  // Shared reading and decision hierarchy; templates keep their own font families.
+  --store-type-hero: clamp(2.5rem, 5.5vw, 4.25rem);
+  --store-type-title: clamp(2rem, 4vw, 2.75rem);
+  --store-type-section: clamp(1.625rem, 3vw, 2.125rem);
+  --store-type-subheading: 1.125rem;
+  --store-type-product: 1.25rem;
+  --store-type-price: 1.5rem;
+  --store-type-body: 1rem;
+  --store-type-caption: 0.875rem;
+  --store-type-micro: 0.75rem;
+  --store-leading-heading: 1.15;
+  --store-leading-body: 1.6;
+  --store-section-space: clamp(3rem, 7vw, 5rem);
+  --store-reading-width: 60ch;
+  --store-sticky-offset: 6rem;
+  --store-summary-width: 24rem;
+  --store-filter-width: 14rem;
+  --store-legal-card-min: 18.75rem;
+  --store-hero-surface: color-mix(in srgb, var(--store-brand) 5%, var(--store-bg));
+  --store-overlay: rgb(17 19 24 / 72%);
+  --store-on-overlay: #fff;
 }

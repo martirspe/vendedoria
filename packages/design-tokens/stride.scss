@@ -1,0 +1,56 @@
+// Impulso storefront: editorial scale, square controls and campaign contrast.
+@mixin theme {
+  --store-brand: #181a18;
+  --store-on-brand: #fff;
+  --store-accent: #c8f542;
+  --store-on-accent: #181a18;
+  --store-bg: #fff;
+  --store-surface: #f2f3f0;
+  --store-text: #181a18;
+  --store-muted: #60635c;
+  --store-border: #e1e3dc;
+  --store-radius-card: 0;
+  --store-radius-control: 0;
+  --store-max-width: 1440px;
+  --store-type-hero: clamp(2.75rem, 7.5vw, 7.5rem);
+  --store-type-title: clamp(2.25rem, 4.5vw, 4rem);
+  --store-type-section: clamp(1.5rem, 2.5vw, 2.25rem);
+  --store-type-product: 1.125rem;
+  --store-type-price: 1.5rem;
+  --store-section-space: clamp(2.5rem, 5vw, 4.5rem);
+  --store-stride-campaign: #c5410d;
+  --store-stride-on-campaign: #fff;
+  --store-stride-ink: #181a18;
+  --store-stride-paper: #fff;
+  --store-stride-lime: #c8f542;
+  --store-stride-light-line: rgb(255 255 255 / 32%);
+  --store-stride-hero-scrim: linear-gradient(
+    90deg,
+    rgb(0 0 0 / 72%),
+    rgb(0 0 0 / 35%)
+  );
+  --store-stride-story-scrim: linear-gradient(
+    0deg,
+    rgb(0 0 0 / 85%),
+    rgb(0 0 0 / 8%)
+  );
+  --store-stride-hero-height: clamp(32rem, 47vw, 44rem);
+  --store-stride-editorial-height: clamp(23rem, 34vw, 32rem);
+  --store-stride-hero-width: 15ch;
+  --store-stride-copy-width: 42ch;
+  --store-stride-campaign-title: clamp(2.25rem, 4.8vw, 4.75rem);
+  --store-stride-display-weight: 900;
+  --store-stride-display-tracking: -0.055em;
+  --store-stride-display-leading: 0.95;
+  --store-stride-overline-tracking: 0.12em;
+  --store-stride-wordmark: clamp(1.375rem, 2.5vw, 2rem);
+  --store-stride-header-search: 18rem;
+  --store-stride-logo-width: 10rem;
+  --store-stride-letter: 8rem;
+  --store-stride-footer-brand: 1.5fr;
+  --store-stride-sticky-layer: 20;
+  --store-stride-skip-layer: 30;
+  --store-stride-rule: 1px;
+  --store-stride-focus-width: 3px;
+  --store-stride-focus-offset: 4px;
+}

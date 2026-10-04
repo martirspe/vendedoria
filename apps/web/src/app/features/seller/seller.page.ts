@@ -1,3 +1,4 @@
+import { DsSelectComponent } from '@vendedoria/ui';
 import {
   ChangeDetectionStrategy,
   Component,
@@ -46,7 +47,7 @@ const CUSTOM_PROMPT_MAX = 12000;
 @Component({
   selector: 'app-seller-page',
   standalone: true,
-  imports: [
+  imports: [DsSelectComponent,
     ReactiveFormsModule,
     RouterLink,
     DsButtonComponent,

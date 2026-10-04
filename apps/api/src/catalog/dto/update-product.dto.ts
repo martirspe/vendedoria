@@ -31,11 +31,13 @@ export class UpdateProductDto extends ProductExtrasDto {
   @ApiPropertyOptional()
   @IsOptional()
   @IsString()
+  @MaxLength(1000)
   descriptionShort?: string;
 
   @ApiPropertyOptional()
   @IsOptional()
   @IsString()
+  @MaxLength(5000)
   descriptionFull?: string;
 
   @ApiPropertyOptional({ type: [String] })

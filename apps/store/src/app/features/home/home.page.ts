@@ -12,6 +12,7 @@ import { DsIconComponent, type DsIconName } from '@vendedoria/ui';
 import { HomeBlockComponent, sharedBlockType } from '../../components/home-block.component';
 import { ProductCardComponent } from '../../components/product-card.component';
 import { SeoService } from '../../core/seo.service';
+import { MoneyPipe } from '../../core/money.pipe';
 import { STORE_EDITOR, StoreEditorBridge } from '../../core/store-editor';
 import { defaultFaq } from '../../core/store-faq';
 import { HomeBlock, homeBlock, homeSections } from '../../core/store-layout';
@@ -20,23 +21,23 @@ import { storeBrand } from '../../core/theme';
 import { whatsappUrl } from '../../core/whatsapp';
 
 /** Home sections of the template in default order (API `TEMPLATE_SECTIONS.classic`). */
-const BUILTINS = ['hero', 'featured', 'how'];
+const BUILTINS = ['hero', 'featured', 'how', 'faq', 'closing'];
 
 const STEPS: { icon: DsIconName; title: string; text: string }[] = [
   {
     icon: 'shoppingBag',
     title: 'Elige tus productos',
-    text: 'Agrégalos al carrito con la talla o versión que prefieras.',
+    text: 'Revisa los detalles y elige la opción que mejor va contigo.',
   },
   {
     icon: 'message',
-    title: 'Envía tu pedido por WhatsApp',
-    text: 'Te llega un mensaje listo con el detalle de tu compra.',
+    title: 'Compra a tu manera',
+    text: 'Envía tu selección por WhatsApp para coordinar tu pedido.',
   },
   {
     icon: 'check',
-    title: 'Confirmamos y coordinamos',
-    text: 'Te confirmamos stock, costo de envío y forma de pago antes de cobrar.',
+    title: 'Todo claro antes de comprar',
+    text: 'Confirma disponibilidad, entrega y forma de pago con la tienda.',
   },
 ];
 
@@ -49,7 +50,7 @@ const CLASSIC_CART = {
 
 @Component({
   selector: 'store-home-page',
-  imports: [RouterLink, DsIconComponent, ProductCardComponent, HomeBlockComponent, STORE_EDITOR],
+  imports: [RouterLink, DsIconComponent, ProductCardComponent, HomeBlockComponent, MoneyPipe, STORE_EDITOR],
   templateUrl: './home.page.html',
   styleUrl: './home.page.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -65,16 +66,24 @@ export class HomePage {
     const store = this.store();
     const sections = store?.templateContent.sections ?? {};
     const text = (section: string, field: string, fallback: string) => sections[section]?.[field] ?? fallback;
+    const online = store?.checkout.mode === 'online';
     return {
-      title: text('hero', 'title', store?.displayName ?? ''),
-      text: text('hero', 'text', store?.tagline ?? ''),
-      cta: text('hero', 'cta', 'Ver productos'),
-      featuredTitle: text('featured', 'title', 'Destacados'),
-      howTitle: text('how', 'title', 'Cómo comprar'),
+      eyebrow: text('hero', 'eyebrow', store?.displayName ?? ''),
+      title: text('hero', 'title', 'Encuentra tu próximo favorito'),
+      text: text('hero', 'text', store?.tagline || 'Descubre el catálogo, compara tus opciones y elige lo que va contigo.'),
+      cta: text('hero', 'cta', 'Explorar catálogo'),
+      featuredTitle: text('featured', 'title', 'Una selección para ti'),
+      howTitle: text('how', 'title', 'Comprar aquí es fácil'),
+      faqTitle: text('faq', 'title', 'Resuelve tus dudas antes de comprar'),
+      closingTitle: text('closing', 'title', 'Tu próxima compra empieza aquí'),
+      closingText: text('closing', 'text', 'Encuentra lo que buscas y elige con toda la información a la mano.'),
+      closingCta: text('closing', 'cta', 'Ver catálogo'),
       steps: STEPS.map((step, i) => ({
         icon: step.icon,
-        title: text('how', `step${i + 1}Title`, step.title),
-        text: text('how', `step${i + 1}Text`, step.text),
+        title: text('how', `step${i + 1}Title`, online && i === 1 ? 'Finaliza tu compra' : step.title),
+        text: text('how', `step${i + 1}Text`, online && i === 1
+          ? 'Completa tus datos, entrega y pago en una sola página, sin crear cuenta.'
+          : online && i === 2 ? 'Revisa el resumen y paga con tarjeta o Yape. Guarda la confirmación de tu pedido.' : step.text),
       })),
     };
   });
@@ -101,7 +110,7 @@ export class HomePage {
   readonly heroImage = computed(() => {
     const store = this.store();
     const own = store?.templateContent.sections['hero']?.['image'];
-    return own !== undefined ? own || null : (store?.heroImageUrl ?? null);
+    return own !== undefined ? own || null : (store?.heroImageUrl ?? this.featured().items.find((p) => p.imageUrl)?.imageUrl ?? null);
   });
 
   readonly whatsappHref = computed(() => {

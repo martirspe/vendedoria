@@ -74,7 +74,9 @@ export class CatalogService {
     await this.planLimits.assertCanCreateProduct(tenantId);
     try {
       return await this.prisma.$transaction(async (tx) => {
-        const isService = dto.kind === 'SERVICE';
+        const kind = dto.kind ?? ProductKind.PRODUCT;
+        const stockless = kind !== ProductKind.PRODUCT;
+        this.assertDigitalAccess(kind, dto.digitalAccessUrl, dto.isAvailable ?? true);
         const product = await tx.product.create({
           data: {
             tenantId,
@@ -86,9 +88,9 @@ export class CatalogService {
             basePriceCents: dto.basePriceCents,
             currency: dto.currency ?? 'PEN',
             isAvailable: dto.isAvailable ?? true,
-            stockUnlimited: isService ? true : (dto.stockUnlimited ?? true),
-            stockQty: isService ? null : dto.stockQty,
-            ...this.serviceData(dto, isService),
+            stockUnlimited: stockless ? true : (dto.stockUnlimited ?? true),
+            stockQty: stockless ? null : dto.stockQty,
+            ...this.kindData(dto, kind),
             isPublishedOnStore: dto.isPublishedOnStore ?? false,
             compareAtPriceCents: dto.compareAtPriceCents ?? null,
             brand: dto.brand?.trim() || null,
@@ -99,15 +101,21 @@ export class CatalogService {
             variants: dto.variants?.length
               ? {
                   create: dto.variants.map((variant) =>
-                    this.toVariantData(variant, isService),
+                    this.toVariantData(variant, stockless),
                   ),
                 }
               : undefined,
           },
         });
         await this.writeMedia(tx, product.id, dto);
-        if (isService)
-          await this.assertServiceShape(tx, product.id, dto.components, 0);
+        if (stockless)
+          await this.assertStocklessShape(
+            tx,
+            product.id,
+            kind,
+            dto.components,
+            0,
+          );
         await this.writeComponents(
           tx,
           tenantId,
@@ -127,21 +135,16 @@ export class CatalogService {
 
   async update(tenantId: string, productId: string, dto: UpdateProductDto) {
     const before = await this.getById(tenantId, productId);
-    const isService = (dto.kind ?? before.kind) === 'SERVICE';
+    const kind = dto.kind ?? before.kind;
+    const stockless = kind !== ProductKind.PRODUCT;
+    this.assertDigitalAccess(kind, dto.digitalAccessUrl === undefined ? before.digitalAccessUrl : dto.digitalAccessUrl,
+      dto.isAvailable ?? before.isAvailable);
     let updated;
     try {
       updated = await this.prisma.$transaction(async (tx) => {
         if (dto.variants) {
-          await tx.productVariant.deleteMany({ where: { productId } });
-          if (dto.variants.length) {
-            await tx.productVariant.createMany({
-              data: dto.variants.map((variant) => ({
-                productId,
-                ...this.toVariantData(variant, isService),
-              })),
-            });
-          }
-        } else if (isService) {
+          await this.writeVariants(tx, productId, dto.variants, stockless);
+        } else if (stockless) {
           await tx.productVariant.updateMany({
             where: { productId },
             data: { stockQty: null },
@@ -151,10 +154,11 @@ export class CatalogService {
         const variantCount = dto.variants
           ? dto.variants.length
           : await tx.productVariant.count({ where: { productId } });
-        if (isService) {
-          await this.assertServiceShape(
+        if (stockless) {
+          await this.assertStocklessShape(
             tx,
             productId,
+            kind,
             dto.components,
             before.components.length,
           );
@@ -178,13 +182,13 @@ export class CatalogService {
             basePriceCents: dto.basePriceCents,
             currency: dto.currency,
             isAvailable: dto.isAvailable,
-            ...(isService
+            ...(stockless
               ? { stockUnlimited: true, stockQty: null }
               : {
                   stockUnlimited: dto.stockUnlimited,
                   stockQty: dto.stockQty === null ? null : dto.stockQty,
                 }),
-            ...this.serviceData(dto, isService),
+            ...this.kindData(dto, kind),
             isPublishedOnStore: dto.isPublishedOnStore,
             compareAtPriceCents: dto.compareAtPriceCents,
             brand: this.optionalText(dto.brand),
@@ -345,8 +349,10 @@ export class CatalogService {
           },
         });
         if (!product) throw new NotFoundException('Producto no encontrado.');
-        if (product.kind === ProductKind.SERVICE) {
-          throw new BadRequestException('Los servicios no llevan stock.');
+        if (product.kind !== ProductKind.PRODUCT) {
+          throw new BadRequestException(
+            'Los servicios y productos digitales no llevan stock.',
+          );
         }
         if (product._count.components > 0) {
           throw new BadRequestException(
@@ -379,35 +385,62 @@ export class CatalogService {
     return this.inventory(tenantId);
   }
 
-  private serviceData(dto: ProductExtrasDto, isService: boolean) {
-    return isService
-      ? {
-          kind: ProductKind.SERVICE,
-          durationMinutes: dto.durationMinutes,
-          serviceMode: dto.serviceMode,
-        }
-      : { kind: ProductKind.PRODUCT, durationMinutes: null, serviceMode: null };
+  private kindData(dto: ProductExtrasDto, kind: ProductKind) {
+    const none = {
+      durationMinutes: null,
+      serviceMode: null,
+      digitalAccessUrl: null,
+      digitalInstructions: null,
+    };
+    if (kind === ProductKind.SERVICE) {
+      return {
+        ...none,
+        kind,
+        durationMinutes: dto.durationMinutes,
+        serviceMode: dto.serviceMode,
+      };
+    }
+    if (kind === ProductKind.DIGITAL) {
+      return {
+        ...none,
+        kind,
+        digitalAccessUrl: this.optionalText(dto.digitalAccessUrl),
+        digitalInstructions: this.optionalText(dto.digitalInstructions),
+      };
+    }
+    return { ...none, kind };
   }
 
-  /** A service has no stock of its own, so it can neither be a set nor a set piece. */
-  private async assertServiceShape(
+  private assertDigitalAccess(kind: ProductKind, url: string | null | undefined, available: boolean) {
+    if (kind === ProductKind.DIGITAL && available && !url?.trim()) {
+      throw new BadRequestException('Agrega el enlace de acceso antes de ofrecer este producto digital.');
+    }
+  }
+
+  /** Services and digital products have no stock of their own, so they can neither be a set nor a set piece. */
+  private async assertStocklessShape(
     tx: Tx,
     productId: string,
+    kind: ProductKind,
     components: ProductComponentInputDto[] | undefined,
     currentComponents: number,
   ) {
+    const label =
+      kind === ProductKind.DIGITAL ? 'un producto digital' : 'un servicio';
     if (
       (components ?? []).length > 0 ||
       (components === undefined && currentComponents > 0)
     ) {
-      throw new BadRequestException('Un servicio no puede ser un set.');
+      throw new BadRequestException(
+        `${label.charAt(0).toUpperCase()}${label.slice(1)} no puede ser un set.`,
+      );
     }
     const usedAsPiece = await tx.productComponent.count({
       where: { componentId: productId },
     });
     if (usedAsPiece > 0) {
       throw new BadRequestException(
-        'Este producto es pieza de un set; no puede ser un servicio.',
+        `Este producto es pieza de un set; no puede ser ${label}.`,
       );
     }
   }
@@ -503,9 +536,9 @@ export class CatalogService {
       if (pieces.length !== unique.size) {
         throw new BadRequestException('Alguna pieza del set no existe.');
       }
-      if (pieces.some((piece) => piece.kind === ProductKind.SERVICE)) {
+      if (pieces.some((piece) => piece.kind !== ProductKind.PRODUCT)) {
         throw new BadRequestException(
-          'Un servicio no puede ser pieza de un set.',
+          'Los servicios y productos digitales no pueden ser pieza de un set.',
         );
       }
       if (
@@ -549,16 +582,43 @@ export class CatalogService {
     return value?.trim() || null;
   }
 
-  private toVariantData(variant: ProductVariantInputDto, isService = false) {
+  /** Variants sent with their id keep it, so carts, inventory rows and order lines stay linked. */
+  private async writeVariants(
+    tx: Tx,
+    productId: string,
+    variants: ProductVariantInputDto[],
+    stockless: boolean,
+  ) {
+    const keep = variants.flatMap((variant) => (variant.id ? [variant.id] : []));
+    await tx.productVariant.deleteMany({
+      where: { productId, id: { notIn: keep } },
+    });
+    for (const variant of variants) {
+      const data = this.toVariantData(variant, stockless);
+      if (variant.id) {
+        const { count } = await tx.productVariant.updateMany({
+          where: { id: variant.id, productId },
+          data,
+        });
+        if (count) continue;
+      }
+      await tx.productVariant.create({ data: { productId, ...data } });
+    }
+  }
+
+  private toVariantData(variant: ProductVariantInputDto, stockless = false) {
     return {
-      sku: variant.sku,
-      option1Name: variant.option1Name,
-      option1Value: variant.option1Value,
-      option2Name: variant.option2Name,
-      option2Value: variant.option2Value,
+      sku: variant.sku?.trim() || null,
+      option1Name: variant.option1Name ?? null,
+      option1Value: variant.option1Value ?? null,
+      option2Name: variant.option2Name ?? null,
+      option2Value: variant.option2Value ?? null,
+      option3Name: variant.option3Name ?? null,
+      option3Value: variant.option3Value ?? null,
+      imageUrl: variant.imageUrl?.trim() || null,
       priceCents: variant.priceCents,
       isAvailable: variant.isAvailable ?? true,
-      stockQty: isService ? null : (variant.stockQty ?? null),
+      stockQty: stockless ? null : (variant.stockQty ?? null),
     };
   }
 }

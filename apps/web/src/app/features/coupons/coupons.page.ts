@@ -1,3 +1,4 @@
+import { DsSelectComponent } from '@vendedoria/ui';
 import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
 import { HttpErrorResponse } from '@angular/common/http';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
@@ -36,7 +37,7 @@ const fromLocalInput = (value: string) => (value ? new Date(value).toISOString()
 @Component({
   selector: 'app-coupons-page',
   standalone: true,
-  imports: [ReactiveFormsModule, DsButtonComponent, DsIconComponent, IntegrationGateComponent],
+  imports: [DsSelectComponent, ReactiveFormsModule, DsButtonComponent, DsIconComponent, IntegrationGateComponent],
   templateUrl: './coupons.page.html',
   styleUrls: ['../store/store.page.scss', '../payments/payments.page.scss', './coupons.page.scss'],
   changeDetection: ChangeDetectionStrategy.OnPush,

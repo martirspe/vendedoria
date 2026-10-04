@@ -35,6 +35,8 @@ export type StorefrontView = {
   country: string;
   currency: string;
   categories: string[];
+  /** Kinds present in the published catalog (products, services...), for navigation and filters. */
+  kinds: ProductKind[];
   status: StorefrontStatus;
   isPreview: boolean;
   showPlatformBadge: boolean;
@@ -49,7 +51,7 @@ export type StorefrontView = {
   tracking: StoreTracking | null;
 };
 
-export type StoreTemplate = 'classic' | 'selecta';
+export type StoreTemplate = 'classic' | 'selecta' | 'stride';
 
 export type StoreTemplateFaq = { question: string; answer: string };
 
@@ -75,7 +77,7 @@ export type StoreThemeCorners = 'square' | 'soft' | 'round';
 export type StoreTemplateTheme = {
   /** `#rrggbb`: buttons, links and highlights. */
   primary?: string;
-  /** `#rrggbb`: secondary highlights (Classic). */
+  /** `#rrggbb`: secondary highlights (Classic and Impulso). */
   accent?: string;
   font?: StoreThemeFont;
   /** Buttons and fields (Classic). */
@@ -235,13 +237,13 @@ export type PublicProductCard = {
   imageUrl: string | null;
   isAvailable: boolean;
   hasVariants: boolean;
-  /** `SERVICE`: booked and paid, never shipped and without stock. */
+  /** `SERVICE`: booked and paid, never shipped and without stock. `DIGITAL`: delivered by access link once paid. */
   kind: ProductKind;
   /** Only for services. */
   service: PublicServiceInfo | null;
 };
 
-export type ProductKind = 'PRODUCT' | 'SERVICE';
+export type ProductKind = 'PRODUCT' | 'SERVICE' | 'DIGITAL';
 
 /** Where a service takes place: at the business, at the buyer's home or online. */
 export type ServiceMode = 'onsite' | 'home' | 'online';
@@ -270,6 +272,7 @@ export type PublicProductDetail = PublicProductCard & {
   descriptionFull: string | null;
   media: string[];
   variants: PublicVariant[];
+  details: PublicProductDetails;
   seoTitle: string | null;
   seoDescription: string | null;
   related: PublicProductCard[];
@@ -284,6 +287,13 @@ export type PublicMedia = {
 };
 
 export type PublicProductDetails = {
+  useCases: string[];
+  exclusions: string[];
+  compatibility: string[];
+  returns: string | null;
+  digitalFormat: string | null;
+  license: string | null;
+  accessDuration: string | null;
   size: string | null;
   benefits: string[];
   usage: string[];
@@ -294,6 +304,20 @@ export type PublicProductDetails = {
   scent: Array<{ name: string; description: string }>;
   /** Show the gallery photos together as one composition. */
   montage: boolean;
+  /** Specifications as name/value pairs. */
+  attributes: Array<{ name: string; value: string }>;
+  /** Who it is for. */
+  audience: string | null;
+  /** What comes in the box or the service. */
+  contents: string[];
+  warranty: string | null;
+  faqs: Array<{ question: string; answer: string }>;
+  /** Services: what the buyer must do or bring. */
+  requirements: string[];
+  /** Services: area covered. */
+  coverage: string | null;
+  /** Services: rescheduling and cancellation policy. */
+  cancellation: string | null;
 };
 
 /** Piece of a set (or the product itself when it is sold alone). */
@@ -383,6 +407,13 @@ export type PublicOrderItem = {
   totalCents: number;
 };
 
+export type PublicDigitalAccess = {
+  title: string;
+  /** Null when the business delivers it by other means. */
+  url: string | null;
+  instructions: string | null;
+};
+
 export type PublicOrder = {
   id: string;
   code: string;
@@ -403,6 +434,10 @@ export type PublicOrder = {
   /** Null when the order has only services. */
   delivery: { mode: ShippingMode; label: string; address: string | null; eta: string | null } | null;
   serviceNote: string | null;
+  /** Kinds of the products in the order, to explain what happens after the payment. */
+  kinds: ProductKind[];
+  /** Access to the digital products; empty until the order is paid. */
+  digitalAccess: PublicDigitalAccess[];
   /** Courier tracking code once the order ships. */
   trackingCode: string | null;
   expiresAt: string | null;

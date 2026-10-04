@@ -20,7 +20,7 @@
     <div class="agent-bar">
       <label class="agent-bar__select">
         <span>Vendedor</span>
-        <select
+        <ds-select><select
           [value]="agentId()"
           [disabled]="agentLoading() || agentBusy()"
           (change)="selectAgent($any($event.target).value); $any($event.target).value = agentId()"
@@ -30,7 +30,7 @@
               {{ agent.name }}{{ agent.isPrimary ? ' · principal' : '' }}{{ agent.isActive ? '' : ' · pausado' }}
             </option>
           }
-        </select>
+        </select></ds-select>
       </label>
       <div class="agent-bar__actions">
         <ds-button type="button" variant="ghost" [disabled]="agentBusy()" (click)="toggleNewAgent()">
@@ -532,12 +532,12 @@
                     </label>
                     <label>
                       Etapa
-                      <select [value]="journeyStage()" (change)="onJourneyStage($any($event.target).value)">
+                      <ds-select><select [value]="journeyStage()" (change)="onJourneyStage($any($event.target).value)">
                         <option value="DISCOVER">Descubrir</option>
                         <option value="RECOMMEND">Recomendar</option>
                         <option value="CLOSE">Cerrar</option>
                         <option value="SUPPORT">Postventa</option>
-                      </select>
+                      </select></ds-select>
                     </label>
                     <label class="fields__full">
                       Guion

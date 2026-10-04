@@ -6,6 +6,7 @@ import type {
   CheckoutRequest,
   CouponPreviewResult,
   PayOrderRequest,
+  ProductKind,
   PublicOrder,
   PublicProductDetail,
   PublicProductList,
@@ -20,6 +21,7 @@ import { STORE_PROXY_PREFIX, TURNSTILE_HEADER } from './store-context';
 
 export type ProductListParams = {
   category?: string | null;
+  kind?: ProductKind | null;
   q?: string | null;
   sort?: PublicProductSort | null;
   page?: number | null;
@@ -60,9 +62,13 @@ export class StoreApiService {
     return firstValueFrom(this.http.get<UbigeoDistrict[]>(`${STORE_PROXY_PREFIX}/ubigeos`));
   }
 
-  /** Every published product with details, pieces and media (template catalogs). */
+  /** Bounded featured collection with details, pieces and media. */
   catalog(): Promise<StoreCatalogProduct[]> {
     return firstValueFrom(this.http.get<StoreCatalogProduct[]>(`${STORE_PROXY_PREFIX}/catalog`));
+  }
+
+  catalogProduct(handle: string): Promise<StoreCatalogProduct | null> {
+    return this.orNull(this.http.get<StoreCatalogProduct>(`${STORE_PROXY_PREFIX}/catalog/${encodeURIComponent(handle)}`));
   }
 
   /** Reference Olva/Shalom rates to a district. */

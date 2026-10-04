@@ -1,3 +1,4 @@
+import { DsSelectComponent } from '@vendedoria/ui';
 import {
   ChangeDetectionStrategy,
   Component,
@@ -12,6 +13,7 @@ import {
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import type { PublicVariant } from '@vendedoria/contracts';
+import { ProductFactsComponent } from '../../components/product-facts.component';
 import { AnalyticsService } from '../../core/analytics.service';
 import { CartService } from '../../core/cart.service';
 import { MoneyPipe } from '../../core/money.pipe';
@@ -42,7 +44,15 @@ import { SelectaPhoto, SelectaProductImage } from './selecta-photo';
 
 @Component({
   selector: 'selecta-product',
-  imports: [RouterLink, MoneyPipe, SelectaIcon, SelectaPhoto, SelectaProductImage, STORE_EDITOR],
+  imports: [DsSelectComponent,
+    RouterLink,
+    MoneyPipe,
+    SelectaIcon,
+    SelectaPhoto,
+    SelectaProductImage,
+    ProductFactsComponent,
+    STORE_EDITOR,
+  ],
   templateUrl: './product.page.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
@@ -93,6 +103,7 @@ export class SelectaProductPage {
   );
   readonly price = computed(() => this.variant()?.priceCents ?? this.product()?.priceCents ?? 0);
   readonly isService = computed(() => this.product()?.kind === 'SERVICE');
+  readonly isDigital = computed(() => this.product()?.kind === 'DIGITAL');
   readonly serviceSummary = computed(() => serviceSummary(this.product()?.service));
   /** Ready to buy: in stock and, when it has variants, with an available one chosen. */
   readonly canBuy = computed(() => {

@@ -1,3 +1,4 @@
+import { DsSelectComponent } from '@vendedoria/ui';
 import {
   ChangeDetectionStrategy,
   Component,
@@ -9,7 +10,7 @@ import {
 import { takeUntilDestroyed, toSignal } from '@angular/core/rxjs-interop';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { HttpErrorResponse } from '@angular/common/http';
-import { RouterLink } from '@angular/router';
+import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { map, startWith } from 'rxjs';
 import { DsButtonComponent, DsConfirmService } from '@vendedoria/ui';
 import { DsEmptyStateComponent } from '@vendedoria/ui';
@@ -25,13 +26,27 @@ import {
 } from '../../core/api/catalog-api.service';
 import { IntegrationsStateService } from '../../core/integrations/integrations-state.service';
 import { resizeImage } from '../../core/media/resize-image';
+import { productCompleteness, specificationHint } from './product-completeness';
 
+/** Fields without an input (id, third option, photo) travel untouched so saving never drops them. */
 type VariantDraft = {
+  id?: string;
+  sku: string;
   option1Value: string;
   option2Value: string;
+  option3Name: string | null;
+  option3Value: string | null;
+  imageUrl: string | null;
   price: number;
+  isAvailable: boolean;
   stockQty: number | null;
 };
+
+type FaqDraft = { question: string; answer: string };
+
+export type KindFilter = 'todos' | 'productos' | 'servicios' | 'digitales';
+const KIND_FILTERS: KindFilter[] = ['todos', 'productos', 'servicios', 'digitales'];
+const MAX_FAQS = 10;
 
 type MediaDraft = { url: string; kind: 'image' | 'related'; alt: string; caption: string };
 
@@ -60,7 +75,7 @@ function toCents(amount: number): number {
 @Component({
   selector: 'app-products-page',
   standalone: true,
-  imports: [
+  imports: [DsSelectComponent,
     ReactiveFormsModule,
     RouterLink,
     DsButtonComponent,
@@ -77,9 +92,39 @@ export class ProductsPage {
   private readonly destroyRef = inject(DestroyRef);
   private readonly confirmDialog = inject(DsConfirmService);
   private readonly integrations = inject(IntegrationsStateService);
+  private readonly route = inject(ActivatedRoute);
+  private readonly router = inject(Router);
 
   readonly storeActive = computed(() => this.integrations.isActive('store'));
   readonly products = signal<ProductDto[]>([]);
+  readonly kindFilter = toSignal(
+    this.route.queryParamMap.pipe(
+      map((params): KindFilter => {
+        const value = params.get('tipo') as KindFilter | null;
+        return value && KIND_FILTERS.includes(value) ? value : 'todos';
+      }),
+    ),
+    { initialValue: 'todos' as KindFilter },
+  );
+  readonly kindOptions: Array<{ id: KindFilter; label: string }> = [
+    { id: 'todos', label: 'Todos' },
+    { id: 'productos', label: 'Productos' },
+    { id: 'servicios', label: 'Servicios' },
+    { id: 'digitales', label: 'Digitales' },
+  ];
+  readonly kindCounts = computed((): Record<KindFilter, number> => {
+    const list = this.products();
+    const services = list.filter((product) => product.kind === 'SERVICE').length;
+    const digital = list.filter((product) => product.kind === 'DIGITAL').length;
+    return { todos: list.length, productos: list.length - services - digital, servicios: services, digitales: digital };
+  });
+  readonly visibleProducts = computed(() => {
+    const filter = this.kindFilter();
+    return this.products().filter(
+      (product) =>
+        filter === 'todos' || product.kind === ({ productos: 'PRODUCT', servicios: 'SERVICE', digitales: 'DIGITAL' } as const)[filter],
+    );
+  });
   readonly loading = signal(true);
   readonly saving = signal(false);
   readonly deleting = signal(false);
@@ -98,7 +143,7 @@ export class ProductsPage {
     this.products().filter(
       (product) =>
         product.id !== this.editingId() &&
-        product.kind !== 'SERVICE' &&
+        product.kind === 'PRODUCT' &&
         !(product.variants?.length ?? 0) &&
         !(product.components?.length ?? 0),
     ),
@@ -107,6 +152,9 @@ export class ProductsPage {
   readonly errorMessage = signal<string | null>(null);
   readonly successMessage = signal<string | null>(null);
   readonly variantDrafts = signal<VariantDraft[]>([]);
+  readonly optionNames = signal({ first: '', second: '' });
+  readonly faqs = signal<FaqDraft[]>([]);
+  readonly maxFaqs = MAX_FAQS;
 
   readonly isEditing = computed(() => Boolean(this.editingId()));
 
@@ -114,9 +162,18 @@ export class ProductsPage {
     name: ['', [Validators.required, Validators.minLength(2), Validators.maxLength(250)]],
     handle: ['', [Validators.required, Validators.minLength(2)]],
     descriptionShort: ['', [Validators.maxLength(1000)]],
-    descriptionFull: ['', [Validators.maxLength(2000)]],
+    descriptionFull: ['', [Validators.maxLength(5000)]],
     categoriesText: [''],
     kind: ['PRODUCT' as ProductKind],
+    digitalAccessUrl: ['', [Validators.maxLength(500), Validators.pattern(/^$|^https:\/\/[^\s]+$/)]],
+    digitalInstructions: ['', [Validators.maxLength(600)]],
+    digitalFormat: ['', [Validators.maxLength(80)]],
+    license: ['', [Validators.maxLength(300)]],
+    accessDuration: ['', [Validators.maxLength(200)]],
+    returns: ['', [Validators.maxLength(300)]],
+    useCasesText: [''],
+    exclusionsText: [''],
+    compatibilityText: [''],
     durationMinutes: [null as number | null, [Validators.min(5), Validators.max(1440)]],
     serviceMode: ['' as ServiceMode | ''],
     price: [0, [Validators.required, Validators.min(0)]],
@@ -138,6 +195,14 @@ export class ProductsPage {
     highlightsText: [''],
     scentText: [''],
     montage: [false],
+    audience: ['', [Validators.maxLength(200)]],
+    attributesText: [''],
+    contentsText: [''],
+    warranty: ['', [Validators.maxLength(300)]],
+    requirementsText: [''],
+    coverage: ['', [Validators.maxLength(200)]],
+    cancellation: ['', [Validators.maxLength(300)]],
+    keywordsText: [''],
   });
 
   private readonly formValues = toSignal(
@@ -149,14 +214,16 @@ export class ProductsPage {
   );
 
   readonly isService = computed(() => this.formValues().kind === 'SERVICE');
+  readonly isDigital = computed(() => this.formValues().kind === 'DIGITAL');
+  readonly isPhysical = computed(() => this.formValues().kind === 'PRODUCT');
+  readonly specificationHint = computed(() => specificationHint(this.parseCategories(this.formValues().categoriesText)));
 
   readonly readiness = computed(() => {
     const values = this.formValues();
     const hasName = values.name.trim().length >= 2;
     const hasDescription = values.descriptionShort.trim().length >= 8;
     const hasPrice = Number(values.price) > 0;
-    const hasPhoto = this.media().some((item) => item.kind === 'image');
-    return [
+    const items = [
       {
         id: 'name',
         label: values.kind === 'SERVICE' ? 'Nombre del servicio' : 'Nombre del producto',
@@ -170,13 +237,23 @@ export class ProductsPage {
         required: true,
       },
       { id: 'price', label: 'Precio', done: hasPrice, required: true },
-      {
-        id: 'photo',
-        label: 'Al menos 1 foto — recomendado',
-        done: hasPhoto,
-        required: false,
-      },
     ];
+    if (values.kind === 'DIGITAL') items.push({ id: 'access', label: 'Enlace de acceso seguro', done: /^https:\/\/[^\s]+$/.test(values.digitalAccessUrl.trim()), required: true });
+    return items;
+  });
+
+  readonly completeness = computed(() => {
+    const values = this.formValues();
+    return productCompleteness({
+      kind: values.kind,
+      categories: this.parseCategories(values.categoriesText),
+      photos: this.media().filter((item) => item.kind === 'image').length,
+      details: this.detailsPayload(values),
+      descriptionFull: values.descriptionFull,
+      durationMinutes: values.durationMinutes,
+      serviceMode: values.serviceMode,
+      digitalAccessUrl: values.digitalAccessUrl,
+    });
   });
 
   readonly readinessReady = computed(() =>
@@ -237,18 +314,30 @@ export class ProductsPage {
     this.mediaDraft.set('');
     this.categoryDraft.set('');
     this.variantDrafts.set([]);
+    this.optionNames.set({ first: '', second: '' });
+    this.faqs.set([]);
     this.detailsEnabled.set(false);
     this.setEnabled.set(false);
     this.components.set([]);
     this.errorMessage.set(null);
     this.successMessage.set(null);
     this.productForm.reset({
+      audience: '',
+      attributesText: '',
+      contentsText: '',
+      warranty: '',
+      requirementsText: '',
+      coverage: '',
+      cancellation: '',
+      keywordsText: '',
       name: '',
       handle: '',
       descriptionShort: '',
       descriptionFull: '',
       categoriesText: '',
       kind: 'PRODUCT',
+      digitalAccessUrl: '',
+      digitalInstructions: '',
       durationMinutes: null,
       serviceMode: '',
       price: 0,
@@ -293,7 +382,17 @@ export class ProductsPage {
     this.mediaDraft.set('');
     this.categoryDraft.set('');
     const details = product.details ?? {};
-    this.detailsEnabled.set(Object.keys(details).length > 0);
+    this.detailsEnabled.set(
+      Boolean(
+        details.family ||
+          details.intensity ||
+          details.scent?.length ||
+          details.notes?.length ||
+          details.highlights?.length ||
+          details.montage,
+      ),
+    );
+    this.faqs.set((details.faqs ?? []).map((faq) => ({ ...faq })));
     this.setEnabled.set((product.components?.length ?? 0) > 0);
     this.components.set(
       (product.components ?? []).map((row) => ({ productId: row.componentId, quantity: row.quantity })),
@@ -312,12 +411,31 @@ export class ProductsPage {
         .map((note) => (note.description ? `${note.name}: ${note.description}` : note.name))
         .join('\n'),
       montage: details.montage ?? false,
+      audience: details.audience ?? '',
+      attributesText: (details.attributes ?? [])
+        .map((row) => `${row.name}: ${row.value}`)
+        .join('\n'),
+      contentsText: (details.contents ?? []).join('\n'),
+      warranty: details.warranty ?? '',
+      requirementsText: (details.requirements ?? []).join('\n'),
+      coverage: details.coverage ?? '',
+      cancellation: details.cancellation ?? '',
+      keywordsText: (details.keywords ?? []).join(', '),
       name: product.name,
       handle: product.handle,
       descriptionShort: product.descriptionShort ?? '',
       descriptionFull: product.descriptionFull ?? '',
       categoriesText: (product.categories ?? []).join(', '),
       kind: product.kind,
+      digitalAccessUrl: product.digitalAccessUrl ?? '',
+      digitalInstructions: product.digitalInstructions ?? '',
+      digitalFormat: details.digitalFormat ?? '',
+      license: details.license ?? '',
+      accessDuration: details.accessDuration ?? '',
+      returns: details.returns ?? '',
+      useCasesText: (details.useCases ?? []).join('\n'),
+      exclusionsText: (details.exclusions ?? []).join('\n'),
+      compatibilityText: (details.compatibility ?? []).join('\n'),
       durationMinutes: product.durationMinutes,
       serviceMode: product.serviceMode ?? '',
       price: product.basePriceCents / 100,
@@ -335,11 +453,26 @@ export class ProductsPage {
     } else {
       this.productForm.controls.stockQty.enable({ emitEvent: false });
     }
+    const variants = product.variants ?? [];
+    const firstNamed = (key: 'option1Name' | 'option2Name', fallback: string) => {
+      const name = variants.find((variant) => variant[key]?.trim())?.[key]?.trim() ?? '';
+      return name === fallback ? '' : name;
+    };
+    this.optionNames.set({
+      first: firstNamed('option1Name', 'Opción'),
+      second: firstNamed('option2Name', 'Opción 2'),
+    });
     this.variantDrafts.set(
-      (product.variants ?? []).map((variant) => ({
+      variants.map((variant) => ({
+        id: variant.id,
+        sku: variant.sku ?? '',
         option1Value: variant.option1Value ?? '',
         option2Value: variant.option2Value ?? '',
+        option3Name: variant.option3Name ?? null,
+        option3Value: variant.option3Value ?? null,
+        imageUrl: variant.imageUrl ?? null,
         price: variant.priceCents / 100,
+        isAvailable: variant.isAvailable,
         stockQty: variant.stockQty,
       })),
     );
@@ -360,7 +493,7 @@ export class ProductsPage {
   /** A service has no stock of its own, so it cannot be sold as a set. */
   setKind(kind: ProductKind): void {
     this.productForm.controls.kind.setValue(kind);
-    if (kind === 'SERVICE') this.setEnabled.set(false);
+    if (kind !== 'PRODUCT') this.setEnabled.set(false);
   }
 
   toggleSet(enabled: boolean): void {
@@ -450,8 +583,56 @@ export class ProductsPage {
     const price = this.productForm.controls.price.value || 0;
     this.variantDrafts.update((list) => [
       ...list,
-      { option1Value: '', option2Value: '', price, stockQty: null },
+      {
+        sku: '',
+        option1Value: '',
+        option2Value: '',
+        option3Name: null,
+        option3Value: null,
+        imageUrl: null,
+        price,
+        isAvailable: true,
+        stockQty: null,
+      },
     ]);
+  }
+
+  setOptionName(key: 'first' | 'second', value: string): void {
+    this.optionNames.update((names) => ({ ...names, [key]: value }));
+  }
+
+  addFaq(): void {
+    if (this.faqs().length >= MAX_FAQS) return;
+    this.faqs.update((list) => [...list, { question: '', answer: '' }]);
+  }
+
+  updateFaq(index: number, patch: Partial<FaqDraft>): void {
+    this.faqs.update((list) => list.map((faq, i) => (i === index ? { ...faq, ...patch } : faq)));
+  }
+
+  removeFaq(index: number): void {
+    this.faqs.update((list) => list.filter((_, i) => i !== index));
+  }
+
+  setKindFilter(filter: KindFilter): void {
+    void this.router.navigate([], {
+      relativeTo: this.route,
+      queryParams: { tipo: filter === 'todos' ? null : filter },
+      queryParamsHandling: 'merge',
+    });
+  }
+
+  listScore(product: ProductDto): number {
+    return productCompleteness({
+      kind: product.kind,
+      categories: product.categories ?? [],
+      photos: (product.media ?? []).filter((item) => item.kind !== 'related').length,
+      details: product.details,
+      descriptionFull: product.descriptionFull,
+      durationMinutes: product.durationMinutes,
+      serviceMode: product.serviceMode,
+      digitalAccessUrl: product.digitalAccessUrl,
+    }).score;
   }
 
   removeVariant(index: number): void {
@@ -555,7 +736,8 @@ export class ProductsPage {
     }
 
     const service = values.kind === 'SERVICE';
-    const asSet = this.setEnabled() && !service;
+    const stockless = values.kind !== 'PRODUCT';
+    const asSet = this.setEnabled() && !stockless;
     const components = asSet
       ? this.components().filter((row) => row.productId && row.quantity >= 1)
       : [];
@@ -566,11 +748,13 @@ export class ProductsPage {
     const duration = Number(values.durationMinutes);
     const extras = {
       kind: values.kind,
+      digitalAccessUrl: values.kind === 'DIGITAL' ? values.digitalAccessUrl.trim() || null : null,
+      digitalInstructions: values.kind === 'DIGITAL' ? values.digitalInstructions.trim() || null : null,
       durationMinutes: service && duration > 0 ? Math.round(duration) : null,
       serviceMode: service && values.serviceMode ? values.serviceMode : null,
       sku: values.sku.trim() || null,
       line: values.line.trim() || null,
-      details: this.detailsEnabled() ? this.detailsPayload(values) : null,
+      details: this.detailsPayload(values),
       media: this.media().map(
         (item): MediaInput => ({
           url: item.url,
@@ -582,19 +766,27 @@ export class ProductsPage {
       components,
     };
 
+    const names = this.optionNames();
+    const firstName = names.first.trim() || 'Opción';
+    const secondName = names.second.trim() || 'Opción 2';
     const variants = this.variantsEnabled() && !asSet
       ? this.variantDrafts()
           .filter(
             (item) => item.option1Value.trim() || item.option2Value.trim(),
           )
           .map((item) => ({
-            option1Name: item.option1Value.trim() ? 'Opción' : undefined,
+            ...(item.id ? { id: item.id } : {}),
+            sku: item.sku.trim() || undefined,
+            option1Name: item.option1Value.trim() ? firstName : undefined,
             option1Value: item.option1Value.trim() || undefined,
-            option2Name: item.option2Value.trim() ? 'Opción 2' : undefined,
+            option2Name: item.option2Value.trim() ? secondName : undefined,
             option2Value: item.option2Value.trim() || undefined,
+            option3Name: item.option3Value ? item.option3Name ?? undefined : undefined,
+            option3Value: item.option3Value ?? undefined,
+            imageUrl: item.imageUrl,
             priceCents: toCents(item.price),
-            isAvailable: true,
-            stockQty: service ? null : item.stockQty,
+            isAvailable: item.isAvailable,
+            stockQty: stockless ? null : item.stockQty,
           }))
       : [];
 
@@ -614,8 +806,8 @@ export class ProductsPage {
             basePriceCents: toCents(values.price),
             currency: values.currency,
             isAvailable: values.isAvailable,
-            stockUnlimited: service || values.stockUnlimited,
-            stockQty: service || values.stockUnlimited ? null : Number(values.stockQty),
+            stockUnlimited: stockless || values.stockUnlimited,
+            stockQty: stockless || values.stockUnlimited ? null : Number(values.stockQty),
             variants,
             ...extras,
             ...this.storeFields(values),
@@ -631,8 +823,8 @@ export class ProductsPage {
             basePriceCents: toCents(values.price),
             currency: values.currency,
             isAvailable: values.isAvailable,
-            stockUnlimited: service || values.stockUnlimited,
-            stockQty: service || values.stockUnlimited
+            stockUnlimited: stockless || values.stockUnlimited,
+            stockQty: stockless || values.stockUnlimited
               ? undefined
               : Number(values.stockQty),
             variants,
@@ -692,6 +884,7 @@ export class ProductsPage {
   }
 
   stockLabel(product: ProductDto): string {
+    if (product.kind === 'DIGITAL') return 'Digital · acceso tras el pago';
     if (product.kind === 'SERVICE') {
       return product.durationMinutes ? `Servicio · ${product.durationMinutes} min` : 'Servicio';
     }
@@ -711,28 +904,70 @@ export class ProductsPage {
   private detailsPayload(values: ReturnType<ProductsPage['productForm']['getRawValue']>): ProductDetails | null {
     const details: ProductDetails = {};
     const text = (value: string) => value.trim() || undefined;
+    const service = values.kind === 'SERVICE';
+    const fragrance = this.detailsEnabled() && values.kind === 'PRODUCT';
     details.size = text(values.size);
-    details.family = text(values.family);
-    details.intensity = text(values.intensity);
-    for (const [key, raw] of [
-      ['benefits', values.benefitsText],
-      ['usage', values.usageText],
-      ['notes', values.notesText],
-      ['highlights', values.highlightsText],
-    ] as const) {
-      const list = lines(raw);
-      if (list.length) details[key] = list;
+    details.audience = text(values.audience);
+    details.returns = text(values.returns);
+    if (values.kind === 'DIGITAL') {
+      details.digitalFormat = text(values.digitalFormat);
+      details.license = text(values.license);
+      details.accessDuration = text(values.accessDuration);
     }
-    const scent = lines(values.scentText)
-      .slice(0, 6)
-      .map((row) => {
-        const [name, ...rest] = row.split(':');
-        const description = rest.join(':').trim();
-        return { name: name.trim().slice(0, 80), ...(description ? { description: description.slice(0, 200) } : {}) };
-      })
-      .filter((note) => note.name);
+    if (!service) details.warranty = text(values.warranty);
+    if (service) {
+      details.coverage = text(values.coverage);
+      details.cancellation = text(values.cancellation);
+    }
+    if (fragrance) {
+      details.family = text(values.family);
+      details.intensity = text(values.intensity);
+    }
+    const listFields: Array<[keyof ProductDetails, string, boolean]> = [
+      ['benefits', values.benefitsText, true],
+      ['useCases', values.useCasesText, true],
+      ['exclusions', values.exclusionsText, true],
+      ['compatibility', values.compatibilityText, !service],
+      ['contents', values.contentsText, true],
+      ['usage', values.usageText, !service],
+      ['requirements', values.requirementsText, service || values.kind === 'DIGITAL'],
+      ['notes', values.notesText, fragrance],
+      ['highlights', values.highlightsText, fragrance],
+    ];
+    for (const [key, raw, enabled] of listFields) {
+      const list = enabled ? lines(raw) : [];
+      if (list.length) (details as Record<string, unknown>)[key] = list;
+    }
+    const pairs = (raw: string, max: number) =>
+      lines(raw)
+        .slice(0, max)
+        .map((row) => {
+          const [name, ...rest] = row.split(':');
+          return { name: name.trim(), rest: rest.join(':').trim() };
+        })
+        .filter((row) => row.name);
+    const attributes = pairs(values.attributesText, 20)
+      .filter((row) => row.rest)
+      .map((row) => ({ name: row.name.slice(0, 60), value: row.rest.slice(0, 200) }));
+    if (attributes.length) details.attributes = attributes;
+    const keywords = values.keywordsText
+      .split(',')
+      .map((word) => word.trim().slice(0, 40))
+      .filter(Boolean)
+      .slice(0, 20);
+    if (keywords.length) details.keywords = keywords;
+    const faqs = this.faqs()
+      .map((faq) => ({ question: faq.question.trim(), answer: faq.answer.trim() }))
+      .filter((faq) => faq.question.length >= 3 && faq.answer);
+    if (faqs.length) details.faqs = faqs;
+    const scent = fragrance
+      ? pairs(values.scentText, 6).map((row) => ({
+          name: row.name.slice(0, 80),
+          ...(row.rest ? { description: row.rest.slice(0, 200) } : {}),
+        }))
+      : [];
     if (scent.length) details.scent = scent;
-    if (values.montage) details.montage = true;
+    if (fragrance && values.montage) details.montage = true;
     const clean = Object.fromEntries(
       Object.entries(details).filter(([, value]) => value !== undefined),
     ) as ProductDetails;

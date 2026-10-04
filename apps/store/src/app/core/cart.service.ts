@@ -13,6 +13,8 @@ export type CartLine = {
   quantity: number;
   /** Services are not shipped; carts saved before this flag count as products. */
   isService?: boolean;
+  /** Digital products are not shipped either: the access arrives once the order is paid. */
+  isDigital?: boolean;
 };
 
 const MAX_QUANTITY = 99;
@@ -30,8 +32,11 @@ export class CartService {
     this.lines().reduce((total, line) => total + line.quantity, 0),
   );
   /** Delivery is asked only when something in the bag is shipped. */
-  readonly needsDelivery = computed(() => this.lines().some((line) => !line.isService));
+  readonly needsDelivery = computed(() =>
+    this.lines().some((line) => !line.isService && !line.isDigital),
+  );
   readonly hasServices = computed(() => this.lines().some((line) => line.isService));
+  readonly hasDigital = computed(() => this.lines().some((line) => line.isDigital));
   readonly subtotalCents = computed(() =>
     this.lines().reduce((total, line) => total + line.unitCents * line.quantity, 0),
   );

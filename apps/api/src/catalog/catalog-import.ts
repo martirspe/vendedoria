@@ -1,3 +1,7 @@
+import { Prisma, ProductKind } from '@prisma/client';
+import { plainToInstance } from 'class-transformer';
+import { validateSync } from 'class-validator';
+import { ProductDetailsDto, ProductExtrasDto } from './dto/create-product.dto';
 import { CARRIER_TIERS, MAX_CARRIER_RATE_CENTS } from '../storefront/shipping';
 import {
   INDUSTRIES,
@@ -33,7 +37,7 @@ export type ImportImage = {
   caption: string | null;
 };
 
-export type ImportDetails = {
+export type ImportDetails = Partial<Omit<ProductDetailsDto, 'size'>> & {
   size: string | null;
   benefits: string[];
   usage: string[];
@@ -42,7 +46,35 @@ export type ImportDetails = {
   montage: boolean;
 };
 
+const IMPORT_DETAIL_KEYS = new Set<string>([
+  'size',
+  'benefits',
+  'usage',
+  'notes',
+  'highlights',
+  'montage',
+]);
+
+/** A re-import replaces the fields the package carries and keeps the ones written in the console. */
+export function keepConsoleDetails(
+  previous: Prisma.JsonValue | null | undefined,
+  imported: Prisma.JsonObject,
+): Prisma.JsonObject {
+  const kept =
+    previous && typeof previous === 'object' && !Array.isArray(previous)
+      ? Object.fromEntries(
+          Object.entries(previous).filter(([key]) => !IMPORT_DETAIL_KEYS.has(key)),
+        )
+      : {};
+  return { ...kept, ...imported } as Prisma.JsonObject;
+}
+
 export type ImportProduct = {
+  kind?: ProductKind;
+  durationMinutes?: number | null;
+  serviceMode?: string | null;
+  digitalAccessUrl?: string | null;
+  digitalInstructions?: string | null;
   handle: string;
   name: string;
   descriptionShort: string | null;
@@ -247,6 +279,25 @@ export function parseCatalogPackage(text: string): ParsedCatalog {
       return;
     }
     const price = raw['priceCents'];
+    const extrasInput = Object.fromEntries(['kind', 'durationMinutes', 'serviceMode', 'digitalAccessUrl', 'digitalInstructions']
+      .filter((key) => raw[key] !== undefined).map((key) => [key, raw[key]]));
+    const extras = plainToInstance(ProductExtrasDto, extrasInput);
+    const detailInput = content['details'] ?? {};
+    const extendedDetails = plainToInstance(ProductDetailsDto, isObject(detailInput) ? detailInput : {});
+    if (validateSync(extras, { whitelist: true, forbidNonWhitelisted: true }).length ||
+      !isObject(detailInput) || validateSync(extendedDetails, { whitelist: true, forbidNonWhitelisted: true }).length) {
+      issues.push({ level: 'error', handle, message: `"${name}": revisa el tipo y los campos de la ficha.` });
+      return;
+    }
+    const stockless = extras.kind === 'DIGITAL' || extras.kind === 'SERVICE';
+    if (stockless && e.isSet) {
+      issues.push({ level: 'error', handle, message: `"${name}": servicios y digitales no pueden ser sets.` });
+      return;
+    }
+    if (extras.kind === 'DIGITAL' && !extras.digitalAccessUrl?.trim()) {
+      issues.push({ level: 'error', handle, message: `"${name}": falta el enlace HTTPS de acceso digital.` });
+      return;
+    }
     if (
       price !== null &&
       price !== undefined &&
@@ -259,7 +310,7 @@ export function parseCatalogPackage(text: string): ParsedCatalog {
       });
       return;
     }
-    const holder = holds(e);
+    const holder = stockless || holds(e);
     const pieces: ImportProduct['pieces'] = [];
     if (!holder) {
       const stock = Array.isArray(content['inventory'])
@@ -336,6 +387,7 @@ export function parseCatalogPackage(text: string): ParsedCatalog {
           (value): value is string => value !== null,
         );
     products.push({
+      ...extrasInput,
       handle,
       name,
       descriptionShort: clip(content['summary'], 300),
@@ -359,13 +411,14 @@ export function parseCatalogPackage(text: string): ParsedCatalog {
               ),
             ),
         montage: content['montage'] === true,
+        ...(JSON.parse(JSON.stringify(extendedDetails)) as ProductDetailsDto),
       },
       seoTitle: clip(content['title'], 70) ?? name.slice(0, 70),
       seoDescription: clip(content['summary'], 160),
       sortOrder: Math.min(index, 9999),
       priceCents: typeof price === 'number' ? price : null,
       active: raw['active'] !== false,
-      holdsStock: holder,
+      holdsStock: !stockless && holder,
       stockQty: holder && sku !== null ? (stockOf.get(sku) ?? null) : null,
       images,
       pieces,
@@ -445,6 +498,7 @@ export type ImportOptions = {
 };
 
 export type ExistingProduct = {
+  kind?: ProductKind;
   id: string;
   handle: string;
   name: string;
@@ -528,7 +582,7 @@ export function planImport(
   const byHandle = new Map(ctx.existing.map((row) => [row.handle, row]));
   const inFile = new Set(parsed.products.map((p) => p.handle));
   const setHandles = new Set(
-    parsed.products.filter((p) => !p.holdsStock).map((p) => p.handle),
+    parsed.products.filter((p) => p.pieces.length > 0).map((p) => p.handle),
   );
   const pieceHandles = new Set(
     parsed.products.flatMap((p) => p.pieces.map((piece) => piece.handle)),
@@ -548,10 +602,17 @@ export function planImport(
   const products = parsed.products.map((product): PlannedProduct => {
     const current = byHandle.get(product.handle) ?? null;
     const label = `"${product.name}"`;
+    const effectiveKind = product.kind ?? current?.kind ?? ProductKind.PRODUCT;
+    if (product.kind && current?.kind && product.kind !== current.kind) {
+      issues.push({ level: 'error', handle: product.handle, message: `${label}: cambia el tipo desde su ficha antes de importar.` });
+    }
+    if (effectiveKind !== 'PRODUCT' && pieceHandles.has(product.handle)) {
+      issues.push({ level: 'error', handle: product.handle, message: `${label}: servicios y digitales no pueden ser piezas de un set.` });
+    }
     if (
       current &&
       current.variantCount > 0 &&
-      (!product.holdsStock || pieceHandles.has(product.handle))
+      (product.pieces.length > 0 || pieceHandles.has(product.handle))
     ) {
       issues.push({
         level: 'error',
@@ -561,7 +622,7 @@ export function planImport(
     }
     if (
       current &&
-      !product.holdsStock &&
+      product.pieces.length > 0 &&
       current.usedInSets.some((set) => !setHandles.has(set))
     ) {
       issues.push({
@@ -577,9 +638,9 @@ export function planImport(
     if (!current) {
       commerce.basePriceCents = product.priceCents ?? 0;
       commerce.isPublishedOnStore = sellable;
-      commerce.stockUnlimited = !product.holdsStock;
-      commerce.stockQty = product.holdsStock ? (product.stockQty ?? 0) : null;
-      if (product.holdsStock && product.stockQty === null) {
+      commerce.stockUnlimited = effectiveKind !== 'PRODUCT' || !product.holdsStock;
+      commerce.stockQty = effectiveKind === 'PRODUCT' && product.holdsStock ? (product.stockQty ?? 0) : null;
+      if (effectiveKind === 'PRODUCT' && product.holdsStock && product.stockQty === null) {
         issues.push({
           level: 'warning',
           handle: product.handle,
@@ -601,6 +662,7 @@ export function planImport(
       }
       if (
         ctx.options.updateStock &&
+        effectiveKind === 'PRODUCT' &&
         product.holdsStock &&
         product.stockQty !== null
       ) {

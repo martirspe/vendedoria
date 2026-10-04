@@ -1,3 +1,4 @@
+import { DsSelectComponent } from '@vendedoria/ui';
 import {
   ChangeDetectionStrategy,
   Component,
@@ -35,7 +36,7 @@ const KANBAN_COLUMNS: Array<{ id: OrderStatus; label: string }> = [
 @Component({
   selector: 'app-orders-page',
   standalone: true,
-  imports: [
+  imports: [DsSelectComponent,
     DatePipe,
     ReactiveFormsModule,
     RouterLink,

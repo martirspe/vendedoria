@@ -1,3 +1,4 @@
+import { DsSelectComponent } from '@vendedoria/ui';
 import {
   ChangeDetectionStrategy,
   Component,
@@ -47,6 +48,12 @@ export const TEMPLATE_OPTIONS: {
   industries: StoreIndustry[] | 'all';
 }[] = [
   {
+    value: 'stride',
+    label: 'Impulso',
+    description: 'Moda y calzado con portada editorial, categorías visuales y productos protagonistas. Una compra clara desde el primer vistazo.',
+    industries: ['moda'],
+  },
+  {
     value: 'classic',
     label: 'Clásica',
     description: 'Catálogo limpio con tus colores. Sirve para cualquier rubro.',
@@ -64,7 +71,7 @@ export const TEMPLATE_OPTIONS: {
 @Component({
   selector: 'app-store-page',
   standalone: true,
-  imports: [ReactiveFormsModule, RouterLink, DsButtonComponent, DsIconComponent, IntegrationGateComponent],
+  imports: [DsSelectComponent, ReactiveFormsModule, RouterLink, DsButtonComponent, DsIconComponent, IntegrationGateComponent],
   templateUrl: './store.page.html',
   styleUrl: './store.page.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,

@@ -88,11 +88,11 @@
           <h2>Rubro y plantilla</h2>
           <label>
             Rubro de tu negocio
-            <select formControlName="industry">
+            <ds-select><select formControlName="industry">
               @for (option of industries; track option.value) {
                 <option [value]="option.value">{{ option.label }}</option>
               }
-            </select>
+            </select></ds-select>
             <small>Define qué plantillas puedes usar.</small>
           </label>
           <div class="templates" role="radiogroup" aria-label="Plantilla de la tienda">
@@ -109,7 +109,7 @@
                 <strong>{{ option.label }}</strong>
                 <span>{{ option.description }}</span>
                 @if (!option.available) {
-                  <span class="optional">Disponible para Belleza y cuidado personal</span>
+                  <span class="optional">Disponible para {{ option.value === 'stride' ? 'Moda y accesorios' : 'Belleza y cuidado personal' }}</span>
                 }
               </button>
             }

@@ -2,6 +2,7 @@ import { SESv2Client, SendEmailCommand } from '@aws-sdk/client-sesv2';
 import { Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import type { Order, OrderItem, Storefront } from '@prisma/client';
+import { DigitalAccess, digitalAccessOf } from '../orders/digital-access';
 import { PrismaService } from '../prisma/prisma.service';
 import { publicSellerIdentity } from '../storefront/seller-identity';
 
@@ -139,7 +140,11 @@ export class OrderEmailService {
     if (!order || !order.tenant.storefront)
       throw new NotFoundException('Pedido no encontrado.');
     return {
-      ...this.confirmation(order, order.tenant.storefront),
+      ...this.confirmation(
+        order,
+        order.tenant.storefront,
+        await digitalAccessOf(this.prisma, tenantId, order),
+      ),
       status: order.emailStatus,
     };
   }
@@ -172,7 +177,8 @@ export class OrderEmailService {
     });
     const store = order.tenant.storefront;
     if (!order.customerEmail || !store) return;
-    const email = this.confirmation(order, store);
+    const access = await digitalAccessOf(this.prisma, order.tenantId, order);
+    const email = this.confirmation(order, store, access);
     try {
       await this.send('confirmation', `confirmation/${order.id}`, {
         to: order.customerEmail,
@@ -225,7 +231,7 @@ export class OrderEmailService {
       return;
     const servicesOnly =
       order.items.length > 0 &&
-      order.items.every((item) => item.product?.kind === 'SERVICE');
+      order.items.every((item) => item.product?.kind !== 'PRODUCT');
     const email = this.logistics(order, store, servicesOnly);
     await this.send('logistics', `logistics/${order.id}/${order.status}`, {
       to: order.customerEmail,
@@ -238,7 +244,11 @@ export class OrderEmailService {
     );
   }
 
-  private confirmation(order: EmailOrder, store: Storefront): RenderedEmail {
+  private confirmation(
+    order: EmailOrder,
+    store: Storefront,
+    access: DigitalAccess[],
+  ): RenderedEmail {
     const delivery = order.delivery ? (order.delivery as Delivery) : null;
     const place = delivery
       ? [
@@ -260,7 +270,8 @@ ${order.discountCents > 0 ? `<p>Descuento${order.couponCode ? ` (cupón ${esc(or
 ${delivery ? `<p>Envío: ${order.shippingCents === 0 ? 'Gratis' : soles(order.shippingCents)}</p>` : ''}
 <h2 style="font-size:18px">Total: ${soles(order.totalCents)}</h2>
 ${delivery ? `<p><strong>${esc(delivery.label)}</strong>${place ? ` · ${esc(place)}` : ''}${delivery.eta ? ` · ${esc(delivery.eta)}` : ''}</p>` : ''}
-${order.serviceNote ? `<p>Fecha preferida: ${esc(order.serviceNote)}. Te escribiremos para confirmar el horario.</p>` : ''}`,
+${order.serviceNote ? `<p>Fecha preferida: ${esc(order.serviceNote)}. Te escribiremos para confirmar el horario.</p>` : ''}
+${access.length ? `<h2 style="font-size:18px">Tus productos digitales</h2>${access.map((item) => `<p><strong>${esc(item.title)}</strong><br>${item.url ? `Acceso: <a href="${esc(item.url)}">${esc(item.url)}</a>` : 'Te enviaremos el acceso por este medio.'}${item.instructions ? `<br>${esc(item.instructions)}` : ''}</p>`).join('')}` : ''}`,
     );
     return {
       subject: `Compra confirmada · ${store.displayName} · ${order.code}`,

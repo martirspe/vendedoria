@@ -199,6 +199,7 @@ export function toProductDetail(
     descriptionFull: product.descriptionFull,
     media: sortedMedia(product),
     variants: product.variants.map((variant) => toVariant(product, variant)),
+    details: readDetails(product.details),
     seoTitle: product.seoTitle,
     seoDescription: product.seoDescription,
     related: related.map(toProductCard),
@@ -233,8 +234,32 @@ export function readDetails(
           : [];
       })
     : [];
+  const pairs = <A extends string, B extends string>(
+    key: string,
+    first: A,
+    second: B,
+    max: number,
+    limits: [number, number],
+  ) =>
+    Array.isArray(raw[key])
+      ? (raw[key] as unknown[])
+          .flatMap((item) => {
+            const row = item as Record<string, unknown> | null;
+            const a = text(row?.[first], limits[0]);
+            const b = text(row?.[second], limits[1]);
+            return a && b ? [{ [first]: a, [second]: b } as Record<A | B, string>] : [];
+          })
+          .slice(0, max)
+      : [];
   return {
     size: text(raw['size'], 60),
+    useCases: texts(raw['useCases']),
+    exclusions: texts(raw['exclusions']),
+    compatibility: texts(raw['compatibility']),
+    returns: text(raw['returns'], 300),
+    digitalFormat: text(raw['digitalFormat'], 80),
+    license: text(raw['license'], 300),
+    accessDuration: text(raw['accessDuration'], 200),
     benefits: texts(raw['benefits']),
     usage: texts(raw['usage']),
     notes: texts(raw['notes']),
@@ -243,6 +268,14 @@ export function readDetails(
     intensity: text(raw['intensity'], 80),
     scent: scent.slice(0, 6),
     montage: raw['montage'] === true,
+    attributes: pairs('attributes', 'name', 'value', 20, [60, 200]),
+    audience: text(raw['audience'], 200),
+    contents: texts(raw['contents']),
+    warranty: text(raw['warranty'], 300),
+    faqs: pairs('faqs', 'question', 'answer', 10, [200, 600]),
+    requirements: texts(raw['requirements']),
+    coverage: text(raw['coverage'], 200),
+    cancellation: text(raw['cancellation'], 300),
   };
 }
 

@@ -1,8 +1,7 @@
-import { inject } from '@angular/core';
-import { Router, Routes } from '@angular/router';
-import { storeResolver } from '../../app.resolvers';
+import { Routes } from '@angular/router';
+import { catalogResolver, storeResolver } from '../../app.resolvers';
 import { LEGAL_SLUGS } from '../../features/legal/legal-slugs';
-import { selectaCatalogResolver } from './selecta-catalog';
+import { selectaCatalogResolver, selectaProductResolver } from './selecta-catalog';
 import { SelectaShell } from './selecta-shell';
 
 const legal = () => import('./legal.page').then((m) => m.SelectaLegalPage);
@@ -22,13 +21,16 @@ export const SELECTA_ROUTES: Routes = [
       {
         path: 'productos',
         pathMatch: 'full',
-        redirectTo: () => inject(Router).createUrlTree(['/'], { fragment: 'coleccion' }),
+        loadComponent: () => import('../../features/catalog/catalog.page').then((m) => m.CatalogPage),
+        resolve: { list: catalogResolver },
+        runGuardsAndResolvers: 'paramsOrQueryParamsChange',
       },
       { path: 'productos/:handle', redirectTo: ({ params }) => `/producto/${params['handle']}` },
       { path: 'terminos', redirectTo: '/terminos-y-condiciones' },
       { path: 'privacidad', redirectTo: '/politica-de-privacidad' },
       {
         path: 'producto/:handle',
+        resolve: { productLoaded: selectaProductResolver },
         loadComponent: () => import('./product.page').then((m) => m.SelectaProductPage),
       },
       {
@@ -37,6 +39,8 @@ export const SELECTA_ROUTES: Routes = [
       },
       {
         path: 'checkout',
+        resolve: { productLoaded: selectaProductResolver },
+        runGuardsAndResolvers: 'paramsOrQueryParamsChange',
         loadComponent: () => import('./checkout.page').then((m) => m.SelectaCheckoutPage),
       },
       {

@@ -22,7 +22,7 @@
       <span storeEditText="announcement.text" [editValue]="announcement()" editPlaceholder="Escribe un anuncio o déjalo vacío para ocultarlo"></span>
     </div>
   }
-  <header class="header">
+  <header class="header" [class.is-checkout]="inCheckout()">
     <a routerLink="/" class="brand" [attr.aria-label]="s.displayName + ', ir al inicio'">
       @if (logo(); as src) {
         <img class="brand-logo" [src]="src" [alt]="s.displayName" height="44" />
@@ -32,7 +32,7 @@
       }
     </a>
     <nav aria-label="Principal">
-      <a routerLink="/" fragment="coleccion">Catálogo</a>
+      @if (!inCheckout()) { <a routerLink="/productos">Catálogo</a> }
       <a routerLink="/carrito" class="cart-link">
         <app-icon name="bag" />
         <span>Mi bolsa</span>
@@ -41,7 +41,7 @@
     </nav>
   </header>
   <main id="main"><router-outlet /></main>
-  <footer storeSection="footer">
+  <footer storeSection="footer" [class.is-checkout]="inCheckout()">
     <a routerLink="/" class="brand" [attr.aria-label]="s.displayName + ', ir al inicio'">
       @if (logo(); as src) {
         <img class="brand-logo" [src]="src" [alt]="s.displayName" height="44" />
@@ -76,7 +76,7 @@
       <small>Tienda creada con VendedorIA</small>
     }
   </footer>
-  @if (whatsapp(); as href) {
+  @if (!inCheckout() && !footerInView() && whatsapp(); as href) {
     <a class="chat-float" [href]="href" [class.on-product]="onProduct()" target="_blank" rel="noopener" aria-label="Consultar por WhatsApp">
       <app-icon name="whatsapp" />
     </a>
@@ -84,11 +84,11 @@
   <button
     type="button"
     class="to-top"
-    [class.show]="showTop()"
+    [class.show]="showTop() && !inCheckout() && !footerInView()"
     [class.with-chat]="!!whatsapp()"
     [class.on-product]="onProduct()"
-    [attr.aria-hidden]="!showTop()"
-    [attr.tabindex]="showTop() ? 0 : -1"
+    [attr.aria-hidden]="inCheckout() || !showTop() || footerInView()"
+    [attr.tabindex]="showTop() && !inCheckout() && !footerInView() ? 0 : -1"
     (click)="toTop()"
     aria-label="Volver arriba"
   >

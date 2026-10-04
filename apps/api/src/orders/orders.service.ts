@@ -11,6 +11,7 @@ import { PrismaService } from '../prisma/prisma.service';
 import { PaymentsService } from '../payments/payments.service';
 import { OrderNotificationsService } from './order-notifications.service';
 import { releaseOrder, settlePaidOrder } from './settlement';
+import { fulfillmentSnapshot, readFulfillment } from './digital-access';
 import {
   CreateOrderDto,
   CreatePaymentLinkDto,
@@ -33,11 +34,14 @@ const ORDER_INCLUDE = {
   },
 } satisfies Prisma.OrderInclude;
 
-/** True when every line is a service, so nothing is shipped. */
-export const isServicesOnly = (
-  items: Array<{ product: { kind: ProductKind } | null }>,
+/** True when no line is a physical product (services and digital products), so nothing is shipped. */
+export const isNothingToShip = (
+  items: Array<{ product: { kind: ProductKind } | null; fulfillment?: unknown }>,
 ) =>
-  items.length > 0 && items.every((item) => item.product?.kind === 'SERVICE');
+  items.length > 0 &&
+  items.every(
+    (item) => ['SERVICE', 'DIGITAL'].includes(readFulfillment(item.fulfillment)?.kind ?? item.product?.kind ?? ''),
+  );
 
 /** Delivery already priced on the server from the tenant's shipping settings (never from client input). */
 export type OrderShipping = { cents: number; delivery: Prisma.InputJsonObject };
@@ -110,6 +114,7 @@ export class OrdersService {
       }
     }
 
+    const fulfillment = new Map<string, Prisma.InputJsonObject>();
     for (const item of dto.items) {
       if (item.productId) {
         const product = await this.prisma.product.findFirst({
@@ -120,6 +125,10 @@ export class OrdersService {
             'Algún producto del pedido ya no existe.',
           );
         }
+        if (product.kind === 'DIGITAL' && !product.digitalAccessUrl) {
+          throw new BadRequestException('Este producto digital aún no tiene su acceso disponible.');
+        }
+        fulfillment.set(product.id, fulfillmentSnapshot(product));
       }
     }
 
@@ -130,6 +139,7 @@ export class OrdersService {
     const currency = dto.currency ?? tenant.currency;
     const items = dto.items.map((item) => ({
       productId: item.productId,
+      fulfillment: item.productId ? fulfillment.get(item.productId) : undefined,
       variantId: item.variantId,
       title: item.title,
       quantity: item.quantity,
@@ -243,9 +253,9 @@ export class OrdersService {
       }
       return order;
     }
-    if (dto.status === 'SHIPPED' && isServicesOnly(order.items)) {
+    if (dto.status === 'SHIPPED' && isNothingToShip(order.items)) {
       throw new BadRequestException(
-        'Un pedido de servicios no se envía: márcalo como realizado.',
+        'Este pedido no tiene nada que enviar: márcalo como entregado o realizado.',
       );
     }
     const pickup =

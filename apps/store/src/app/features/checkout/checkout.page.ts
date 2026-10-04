@@ -1,6 +1,8 @@
+import { DsSelectComponent } from '@vendedoria/ui';
 import {
   ChangeDetectionStrategy,
   Component,
+  ElementRef,
   computed,
   effect,
   inject,
@@ -13,12 +15,14 @@ import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
 import type {
   CouponPreviewResult,
+  PublicOrder,
   ShippingMode,
   ShippingQuote,
   UbigeoDistrict,
 } from '@vendedoria/contracts';
 import { DsIconComponent, DsTurnstileComponent } from '@vendedoria/ui';
 import { AnalyticsService } from '../../core/analytics.service';
+import { CheckoutPaymentComponent } from '../../components/checkout-payment.component';
 import { campaignCoupon, forgetCampaignCoupon } from '../../core/campaign-coupon';
 import { CartService } from '../../core/cart.service';
 import { MoneyPipe } from '../../core/money.pipe';
@@ -32,12 +36,13 @@ const CHALLENGE_PENDING = 'Completa la verificación de seguridad para continuar
 
 @Component({
   selector: 'store-checkout-page',
-  imports: [ReactiveFormsModule, RouterLink, DsIconComponent, DsTurnstileComponent, MoneyPipe],
+  imports: [DsSelectComponent, ReactiveFormsModule, RouterLink, DsIconComponent, DsTurnstileComponent, MoneyPipe, CheckoutPaymentComponent],
   templateUrl: './checkout.page.html',
   styleUrl: './checkout.page.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class CheckoutPage {
+  private readonly host = inject<ElementRef<HTMLElement>>(ElementRef);
   private readonly api = inject(StoreApiService);
   private readonly router = inject(Router);
   private readonly fb = inject(FormBuilder);
@@ -46,6 +51,13 @@ export class CheckoutPage {
   private readonly turnstile = viewChild(DsTurnstileComponent);
 
   readonly submitting = signal(false);
+  readonly reservedOrder = signal<PublicOrder | null>(null);
+  readonly reserveOrder = () => this.submit();
+  readonly displayedTotal = computed(() => this.reservedOrder()?.totalCents ?? this.totalCents());
+  readonly displayedSubtotal = computed(() => this.reservedOrder()?.subtotalCents ?? this.cart.subtotalCents());
+  readonly displayedDiscount = computed(() => this.reservedOrder()?.discountCents ?? this.discountCents());
+  readonly displayedShipping = computed(() => this.reservedOrder()?.shippingCents ?? this.shippingCents());
+  releaseReservation(): void { this.reservedOrder.set(null); }
   readonly applyingCoupon = signal(false);
   readonly errorMessage = signal<string | null>(null);
   readonly couponError = signal<string | null>(null);
@@ -146,7 +158,7 @@ export class CheckoutPage {
     this.form.controls.department.valueChanges.subscribe((value) => this.selectDepartment(value, false));
     this.form.controls.province.valueChanges.subscribe((value) => this.selectProvince(value, false));
     effect(() => {
-      if (this.cart.ready() && !this.cart.lines().length && !this.submitting()) {
+      if (this.cart.ready() && !this.cart.lines().length && !this.submitting() && !this.reservedOrder()) {
         void this.router.navigate(['/carrito']);
       }
     });
@@ -241,11 +253,15 @@ export class CheckoutPage {
     forgetCampaignCoupon();
   }
 
-  async submit(): Promise<void> {
-    if (this.form.invalid) {
+  async submit(): Promise<PublicOrder | null> {
+    if (this.reservedOrder()) return this.reservedOrder();
+    if (this.submitting()) return null;
+    if (this.form.invalid || !this.canCheckout() || this.shippingPending() || this.applyingCoupon()) {
       this.form.markAllAsTouched();
-      this.errorMessage.set('Revisa los campos marcados.');
-      return;
+      this.errorMessage.set(this.applyingCoupon() ? 'Espera a que terminemos de validar tu cupón.' : this.shippingPending() ? 'Elige tu distrito y espera a que se confirme la tarifa de envío.' : 'Revisa los campos marcados.');
+      const field = Object.entries(this.form.controls).find(([, control]) => control.invalid)?.[0];
+      if (field) this.host.nativeElement.querySelector<HTMLElement>(`[formControlName="${field}"]`)?.focus();
+      return null;
     }
     const v = this.form.getRawValue();
     const mode = v.mode as ShippingMode;
@@ -256,7 +272,7 @@ export class CheckoutPage {
     if (token === null) {
       this.errorMessage.set(CHALLENGE_PENDING);
       this.submitting.set(false);
-      return;
+      return null;
     }
     try {
       const order = await this.api.checkout({
@@ -287,15 +303,17 @@ export class CheckoutPage {
         ...(this.coupon() ? { couponCode: this.coupon()!.code } : {}),
         acceptTerms: true,
       }, token);
-      sessionStorage.removeItem(CHECKOUT_KEY);
       if (this.coupon()) forgetCampaignCoupon();
-      await this.router.navigate(['/pedido', order.id], { queryParams: { t: order.token } });
+      this.reservedOrder.set(order);
+      return order;
     } catch (error) {
       this.errorMessage.set(this.messageFrom(error, 'No pudimos registrar tu pedido. Inténtalo de nuevo.'));
       if (error instanceof HttpErrorResponse && error.status === 409) {
         sessionStorage.removeItem(CHECKOUT_KEY);
       }
       widget?.reset();
+      return null;
+    } finally {
       this.submitting.set(false);
     }
   }

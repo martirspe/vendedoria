@@ -17,6 +17,7 @@
 }
 
 .console__sidebar {
+  min-width: 0;
   display: flex;
   flex-direction: column;
   gap: var(--ds-space-5);
@@ -73,7 +74,7 @@
   display: flex;
   align-items: center;
   gap: var(--ds-space-2);
-  min-height: 2.35rem;
+  min-height: var(--ds-touch-target);
   padding: 0 var(--ds-space-3);
   border-radius: var(--ds-radius-md);
   font-size: 0.88rem;
@@ -144,7 +145,7 @@
 
 .console__list a,
 .console__logout {
-  min-height: 2.5rem;
+  min-height: var(--ds-touch-target);
   display: flex;
   align-items: center;
   gap: var(--ds-space-3);
@@ -208,8 +209,8 @@
 .console__toggle {
   display: grid;
   place-items: center;
-  width: 2rem;
-  height: 2rem;
+  width: var(--ds-touch-target);
+  height: var(--ds-touch-target);
   border: 0;
   border-radius: var(--ds-radius-sm);
   background: transparent;
@@ -249,7 +250,7 @@
 }
 
 .console__sublist a {
-  min-height: 2.15rem;
+  min-height: var(--ds-touch-target);
   display: flex;
   align-items: center;
   padding: 0 var(--ds-space-3);
@@ -414,6 +415,8 @@
 }
 
 .palette__panel {
+  max-height: calc(88dvh - var(--ds-gutter));
+  overflow-y: auto;
   width: min(100%, 28rem);
   display: grid;
   gap: var(--ds-space-2);
@@ -435,6 +438,7 @@
 }
 
 .palette__search input {
+  min-width: 0;
   flex: 1;
   min-height: 2.75rem;
   border: 0;
@@ -530,7 +534,7 @@
   }
 
   .console__list a {
-    min-height: 2.35rem;
+    min-height: var(--ds-touch-target);
     padding-inline: var(--ds-space-3);
   }
 
@@ -538,9 +542,13 @@
     box-shadow: none;
   }
 
-  .console__toggle,
   .console__sublist {
-    display: none;
+    margin-left: var(--ds-space-2);
+    max-width: 18rem;
+  }
+
+  .console__nav .console__list > li {
+    align-self: start;
   }
 
   .console__footer {

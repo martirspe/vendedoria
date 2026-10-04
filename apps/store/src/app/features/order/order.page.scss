@@ -21,7 +21,7 @@
   display: flex;
   gap: var(--ds-space-2);
   align-items: center;
-  font-size: clamp(1.5rem, 3vw, 2.1rem);
+  font-size: var(--store-type-title);
 }
 
 .order__head h1 ds-icon {
@@ -66,6 +66,12 @@
 
 .panel p {
   margin: 0;
+}
+
+.access {
+  display: grid;
+  gap: var(--ds-space-2);
+  justify-items: start;
 }
 
 .panel--center {

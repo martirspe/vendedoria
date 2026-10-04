@@ -84,6 +84,8 @@
         <p class="info__stock" [class.is-out]="!canAdd()" role="status">
           @if (isService() && canAdd()) {
             <ds-icon name="clock" [size]="1" /> {{ serviceSummary() || 'Servicio disponible' }}
+          } @else if (isDigital() && canAdd()) {
+            <ds-icon name="check" [size]="1" /> Producto digital · sin envío
           } @else if (canAdd()) {
             <ds-icon name="check" [size]="1" /> Disponible
           } @else if (p.hasVariants && p.isAvailable) {
@@ -105,23 +107,29 @@
               <ds-icon name="plus" [size]="1" />
             </button>
           </div>
-          <button type="button" class="store-btn store-btn--primary buy__add" [disabled]="!canAdd()" (click)="addToCart()">
+          <button type="button" class="store-btn store-btn--secondary buy__add" [disabled]="!canAdd()" (click)="addToCart()">
             @if (isService()) {
-              <ds-icon name="calendar" [size]="1.1" /> Reservar
+              <ds-icon name="calendar" [size]="1.1" /> Agregar al carrito
             } @else {
               <ds-icon name="shoppingBag" [size]="1.1" /> Agregar al carrito
             }
           </button>
         </div>
+        @if (online()) {
+          <button type="button" class="store-btn store-btn--primary store-btn--block" [disabled]="!canAdd()" (click)="buyNow()"><ds-icon name="lock" [size]="1.1" /> {{ isService() ? 'Solicitar servicio' : 'Comprar ahora' }}</button>
+          <p class="service-note">Compra sin crear cuenta. Datos, entrega y pago en una sola página.</p>
+        }
 
         @if (added()) {
           <p class="added" role="status">
             <ds-icon name="check" [size]="1" /> Agregado al carrito.
-            <a routerLink="/carrito">{{ isService() ? 'Ver carrito y reservar' : 'Ver carrito y pedir' }}</a>
+            <a routerLink="/carrito">Ver mi carrito</a>
           </p>
         }
         @if (isService()) {
           <p class="service-note">Después de tu pedido te escribimos para coordinar el día y la hora.</p>
+        } @else if (isDigital()) {
+          <p class="service-note">Recibirás el enlace de acceso en la página de tu pedido y en tu correo apenas se confirme el pago.</p>
         }
 
         @if (texts().note || editor.active()) {
@@ -149,6 +157,8 @@
             <p>{{ p.descriptionFull }}</p>
           </div>
         }
+
+        <store-product-facts [details]="p.details" [isService]="isService()" />
       </section>
     </div>
 

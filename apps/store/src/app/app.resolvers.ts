@@ -7,6 +7,7 @@ import type {
   StoreTemplate,
   StorefrontView,
 } from '@vendedoria/contracts';
+import { kindTab } from './core/catalog-kinds';
 import { StoreApiService } from './core/store-api.service';
 import { StoreStateService } from './core/store-state.service';
 
@@ -44,6 +45,7 @@ export const catalogResolver: ResolveFn<PublicProductList> = (route) => {
   const page = Number(params.get('pagina') ?? 1);
   return inject(StoreApiService).products({
     category: params.get('categoria'),
+    kind: kindTab(params.get('tipo'))?.kind ?? null,
     q: params.get('q'),
     sort: sort && SORTS.includes(sort) ? sort : 'featured',
     page: Number.isInteger(page) && page > 0 ? page : 1,

@@ -8,6 +8,8 @@ const order = (lastInboundAt: Date | null, conversation = true) => ({
   code: 'W7K2QD',
   totalCents: 28_800,
   currency: 'PEN',
+  status: 'PAID' as const,
+  items: [],
   conversation: conversation
     ? {
         id: 'conv1',
@@ -41,6 +43,20 @@ describe('OrderNotificationsService', () => {
   it('writes the confirmation with the real total and order reference', () => {
     expect(paymentConfirmationText(order(null))).toBe(
       '¡Recibimos tu pago de PEN 288.00! Tu pedido W7K2QD quedó confirmado. Gracias por tu compra.',
+    );
+  });
+
+  it('adds the digital access to the confirmation', () => {
+    expect(
+      paymentConfirmationText(order(null), [
+        { title: 'Guía', url: 'https://example.com/guia', instructions: 'Descarga el PDF.' },
+        { title: 'Curso', url: null, instructions: null },
+      ]),
+    ).toBe(
+      '¡Recibimos tu pago de PEN 288.00! Tu pedido W7K2QD quedó confirmado. Gracias por tu compra.\n\n' +
+        'Tu acceso a lo que compraste:\n' +
+        '• Guía: https://example.com/guia\nDescarga el PDF.\n' +
+        '• Curso: te enviaremos el acceso por aquí.',
     );
   });
 

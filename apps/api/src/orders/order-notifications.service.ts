@@ -3,19 +3,34 @@ import { Prisma } from '@prisma/client';
 import { ChannelMessengerService } from '../channels/channel-messenger.service';
 import { InboxEventsService } from '../conversations/inbox-events.service';
 import { PrismaService } from '../prisma/prisma.service';
+import { DigitalAccess, digitalAccessOf } from './digital-access';
 import { orderReference } from './settlement';
 
 /** Meta only allows free-form messages within 24 hours of the buyer's last message. */
 const MESSAGING_WINDOW_MS = 24 * 60 * 60 * 1000;
 
-export function paymentConfirmationText(order: {
-  id: string;
-  code: string | null;
-  totalCents: number;
-  currency: string;
-}): string {
+export function paymentConfirmationText(
+  order: {
+    id: string;
+    code: string | null;
+    totalCents: number;
+    currency: string;
+  },
+  access: DigitalAccess[] = [],
+): string {
   const total = `${order.currency} ${(order.totalCents / 100).toFixed(2)}`;
-  return `¡Recibimos tu pago de ${total}! Tu pedido ${orderReference(order)} quedó confirmado. Gracias por tu compra.`;
+  const text = `¡Recibimos tu pago de ${total}! Tu pedido ${orderReference(order)} quedó confirmado. Gracias por tu compra.`;
+  const lines = access.map((item) =>
+    [
+      `• ${item.title}: ${item.url ?? 'te enviaremos el acceso por aquí.'}`,
+      item.instructions,
+    ]
+      .filter(Boolean)
+      .join('\n'),
+  );
+  return lines.length
+    ? `${text}\n\nTu acceso a lo que compraste:\n${lines.join('\n')}`
+    : text;
 }
 
 /** Messages to the buyer in the chat an order came from. */
@@ -41,6 +56,8 @@ export class OrderNotificationsService {
         code: true,
         totalCents: true,
         currency: true,
+        status: true,
+        items: { select: { productId: true, title: true, fulfillment: true } },
         conversation: {
           select: {
             id: true,
@@ -61,7 +78,10 @@ export class OrderNotificationsService {
     const recipient = this.messenger.recipientOf(conversation.channel, conversation);
     if (!recipient) return;
 
-    const text = paymentConfirmationText(order);
+    const text = paymentConfirmationText(
+      order,
+      await digitalAccessOf(this.prisma, tenantId, order),
+    );
     try {
       const send = await this.messenger.sendText(conversation.channel, recipient, text);
       if (!send?.ok) {

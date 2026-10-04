@@ -96,8 +96,27 @@
           </section>
         }
 
+        @if (hasDigital()) {
+          <section class="panel" aria-labelledby="digital-title">
+            <h2 id="digital-title">Tu acceso digital</h2>
+            @for (access of o.digitalAccess; track $index) {
+              <div class="access">
+                <p><strong>{{ access.title }}</strong></p>
+                @if (access.url) {
+                  <a class="store-btn store-btn--primary" [href]="access.url" target="_blank" rel="noopener noreferrer">Abrir contenido</a>
+                } @else {
+                  <p class="muted">Te enviaremos el acceso por correo o WhatsApp.</p>
+                }
+                @if (access.instructions) { <p class="muted">{{ access.instructions }}</p> }
+              </div>
+            } @empty {
+              <p class="muted">Recibirás el enlace de acceso aquí y en tu correo apenas se confirme el pago.</p>
+            }
+          </section>
+        }
+
         <section class="panel" aria-labelledby="delivery-title">
-          <h2 id="delivery-title">{{ o.delivery ? 'Entrega' : 'Tu reserva' }}</h2>
+          <h2 id="delivery-title">{{ o.delivery ? 'Entrega' : hasServices() ? 'Tu reserva' : 'Tus datos' }}</h2>
           @if (logistics(); as step) {
             <p class="notice">{{ step }}</p>
           }
@@ -109,7 +128,7 @@
           @if (o.serviceNote) {
             <p>Fecha preferida: <strong>{{ o.serviceNote }}</strong></p>
           }
-          @if (o.serviceNote || !o.delivery) {
+          @if (o.serviceNote || hasServices()) {
             <p class="muted">Te escribiremos para confirmar el día y la hora del servicio.</p>
           }
           @if (o.trackingCode) {

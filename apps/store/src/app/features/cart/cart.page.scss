@@ -4,7 +4,7 @@
 
 .cart h1 {
   margin-bottom: var(--ds-space-6);
-  font-size: clamp(1.75rem, 4vw, 2.5rem);
+  font-size: var(--store-type-title);
 }
 
 .cart__loading {
@@ -166,7 +166,7 @@
 .summary__total {
   padding-top: var(--ds-space-3);
   border-top: 1px solid var(--store-border);
-  font-size: 1.15rem;
+  font-size: var(--store-type-subheading);
 }
 
 .summary__total dd {

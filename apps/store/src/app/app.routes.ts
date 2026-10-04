@@ -12,6 +12,11 @@ import { StoreShellLayout } from './layout/store-shell.layout';
 export const routes: Routes = [
   {
     path: '',
+    canMatch: [templateMatch('stride')],
+    loadChildren: () => import('./templates/stride/stride.routes').then((m) => m.STRIDE_ROUTES),
+  },
+  {
+    path: '',
     canMatch: [templateMatch('selecta')],
     loadChildren: () =>
       import('./templates/selecta/selecta.routes').then((m) => m.SELECTA_ROUTES),

@@ -126,7 +126,7 @@ function lengthGuide(responseLength: string): string {
 }
 
 function identityLine(agent: AgentPersonality): string {
-  return `Eres ${agent.name}, el vendedor experto de ${agent.companyName}. Tu objetivo es ayudar a cada cliente a encontrar lo que necesita y cerrar la venta en esta conversación.`;
+  return `Eres ${agent.name} y atiendes las ventas de ${agent.companyName} por WhatsApp. Tu objetivo es ayudar a cada cliente a encontrar lo que necesita y cerrar la venta en esta conversación.`;
 }
 
 /** Method, techniques and style compiled from the guided form (without the identity line). */
@@ -148,9 +148,6 @@ export function buildGuidedPersona(agent: AgentPersonality): string {
     agent.rulesText ? `\nREGLAS DEL NEGOCIO:\n${agent.rulesText}` : '',
     agent.wordsToAvoid ? `Palabras a evitar: ${agent.wordsToAvoid}` : '',
     agent.handoffMessage ? `Si derivas a un asesor, usa como base: ${agent.handoffMessage}` : '',
-    agent.purchaseConfirmMessage
-      ? `Si hay link de pago, usa como base: ${agent.purchaseConfirmMessage}`
-      : '',
   ]
     .filter((line) => line !== '')
     .join('\n');
@@ -169,9 +166,11 @@ export function buildGuardrails(agent: AgentPersonality): string {
     agent.neverInventShipping
       ? '- Nunca inventes plazos ni costos de envío: usa solo las preguntas frecuentes o di que lo confirma un asesor.'
       : '',
-    '- Para políticas (envío, cambios, horarios, garantías) usa solo las preguntas frecuentes provistas. Si no hay una, dilo y ofrece derivar a un asesor.',
+    '- Para políticas (envío, cambios, horarios, garantías) usa solo las preguntas frecuentes provistas o, para un producto, sus facts (warranty, cancellation, faqs). Si no hay dato, dilo y ofrece derivar a un asesor.',
     '- No inventes enlaces: comparte solo las URLs que vienen en el catálogo. El link de pago nunca va escrito: el sistema lo envía como botón.',
     '- No prometas atención humana inmediata; si el cliente pide una persona, responde con escalate=true.',
+    `- Si te preguntan si eres un bot, una IA o una persona, no lo niegues ni digas que eres humano: responde con naturalidad que eres el asistente virtual de ${agent.companyName}, ofrece pasarle con alguien del equipo si lo prefiere y sigue ayudando.`,
+    '- Datos de un producto (duración, intensidad, notas, ingredientes, tamaño, tipo de piel) solo si están en su descripción o en facts. Si no están, dilo con naturalidad y ofrece confirmarlo; nunca los supongas.',
     agent.useEmojis
       ? `- Puedes usar emojis con moderación${agent.emojiPalette ? `, de esta paleta: ${agent.emojiPalette}` : ''}.`
       : '- No uses emojis.',

@@ -86,8 +86,8 @@ describe('Shipping without the store (e2e)', () => {
       allowAi: false,
     });
     expect(second.checkoutUrl).toBeTruthy();
-    expect(second.replyText).toContain('Envío con Shalom a San Juan de Lurigancho, Lima: PEN 8.00');
-    expect(second.replyText).toContain('Total: PEN 128.00');
+    expect(second.replyText).toContain('Envío con Shalom a San Juan de Lurigancho, Lima: S/ 8.00');
+    expect(second.replyText).toContain('Total: S/ 128.00');
 
     const order = await prisma.order.findFirstOrThrow({ where: { id: second.orderId, tenantId } });
     expect(order).toMatchObject({ subtotalCents: 12000, shippingCents: 800, totalCents: 12800 });

@@ -4,10 +4,14 @@ import {
   afterNextRender,
   computed,
   inject,
+  signal,
 } from '@angular/core';
-import { Router, RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
+import { NavigationEnd, Router, RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { filter } from 'rxjs';
 import { DsIconComponent } from '@vendedoria/ui';
 import { CartService } from '../core/cart.service';
+import { catalogNoun, visibleKindTabs } from '../core/catalog-kinds';
 import { markNotFound } from '../core/not-found-status';
 import { announcementText } from '../core/page-copy';
 import { STORE_EDITOR, StoreEditorBridge } from '../core/store-editor';
@@ -28,6 +32,8 @@ export class StoreShellLayout {
   private readonly router = inject(Router);
   readonly cart = inject(CartService);
   readonly editor = inject(StoreEditorBridge);
+  private readonly currentUrl = signal(this.router.url);
+  readonly inCheckout = computed(() => this.currentUrl().split(/[?#]/)[0] === '/checkout');
 
   readonly store = this.state.store;
   readonly year = new Date().getFullYear();
@@ -45,6 +51,8 @@ export class StoreShellLayout {
     const store = this.store();
     return (store && announcementText(store.templateContent)) ?? '';
   });
+  readonly kindTabs = computed(() => visibleKindTabs(this.store()?.kinds));
+  readonly catalogNoun = computed(() => catalogNoun(this.store()?.kinds));
   readonly corners = computed(() => THEME_CORNERS[this.store()?.templateContent.theme?.corners ?? 'soft']);
   readonly whatsappHref = computed(() => {
     const store = this.store();
@@ -54,6 +62,8 @@ export class StoreShellLayout {
   });
 
   constructor() {
+    this.router.events.pipe(filter((event): event is NavigationEnd => event instanceof NavigationEnd), takeUntilDestroyed())
+      .subscribe((event) => this.currentUrl.set(event.urlAfterRedirects));
     if (!this.store()) {
       markNotFound();
     }

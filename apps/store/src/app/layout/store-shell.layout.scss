@@ -329,3 +329,9 @@
     justify-content: center;
   }
 }
+
+.shell--checkout .nav, .shell--checkout .search, .shell--checkout .footer__brand, .shell--checkout .footer__contact { display: none; }
+.shell--checkout .header__inner { flex-wrap: nowrap; padding-block: var(--ds-space-3); }
+.shell--checkout .cart-link { margin-left: auto; }
+.shell--checkout .main { padding-bottom: var(--ds-space-6); }
+.shell--checkout .footer { padding-block: var(--ds-space-6); }

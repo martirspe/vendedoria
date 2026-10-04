@@ -1,0 +1,52 @@
+<section class="payment" aria-labelledby="checkout-pay-title" [attr.aria-busy]="busy() || processing()">
+  <div class="payment__heading">
+    @if (!sectionNumber()) { <ds-icon name="lock" [size]="1.2" /> }
+    <h2 id="checkout-pay-title">@if (sectionNumber()) { <span class="payment__number" aria-hidden="true">{{ sectionNumber() }}</span> }Pago</h2>
+  </div>
+  @if (processing()) {
+    <p role="status">Estamos confirmando tu pago. Tu pedido está registrado; espera la confirmación antes de volver a pagar.</p>
+    <button type="button" class="store-btn store-btn--secondary store-btn--block" [disabled]="busy()" (click)="checkStatus()">Verificar pago</button>
+  } @else if (order()?.status === 'CANCELLED' || (order() && !canPay() && !paid())) {
+    <p role="alert">La reserva de este pedido terminó. Vuelve al carrito para revisar tu selección.</p>
+    <a routerLink="/carrito" class="store-btn store-btn--primary store-btn--block">Volver al carrito</a>
+  } @else if (paid()) {
+    <p role="status">¡Pago aprobado! Estamos abriendo la confirmación de tu pedido.</p>
+  } @else if (checkout()?.simulator) {
+    <p class="payment__notice">Compra de prueba: no se realizará ningún cobro.</p>
+    <button type="button" class="store-btn store-btn--primary store-btn--block" [disabled]="busy() || !canPay()" (click)="simulate()">{{ busy() ? 'Procesando…' : 'Probar compra por ' + (payableTotal() | money) }}</button>
+  } @else if (!checkout()?.publicKey) {
+    <p role="alert">El pago en línea no está disponible por ahora. Vuelve al carrito para consultar las opciones de esta tienda.</p>
+    <a routerLink="/carrito" class="store-btn store-btn--secondary">Volver al carrito</a>
+  } @else {
+    <p>Elige cómo pagar. Mercado Pago procesa tu pago de forma segura.</p>
+    @if (sdkLoading()) { <p role="status">Cargando medios de pago…</p> }
+    <div class="payment__methods" role="group" aria-label="Medio de pago">
+      <button type="button" [attr.aria-pressed]="method() === 'card'" [class.is-active]="method() === 'card'" [disabled]="busy()" (click)="selectMethod('card')"><ds-icon name="creditCard" />Tarjeta</button>
+      <button type="button" [attr.aria-pressed]="method() === 'yape'" [class.is-active]="method() === 'yape'" [disabled]="busy()" (click)="selectMethod('yape')"><ds-icon name="wallet" />Yape</button>
+    </div>
+    @if (sdkError()) {
+      <p role="alert">No pudimos cargar el pago. Revisa tu conexión y vuelve a intentar.</p>
+      <button type="button" class="store-btn store-btn--secondary" [disabled]="sdkLoading()" (click)="retrySdk()">Reintentar</button>
+    }
+    @if (method() === 'card') {
+      <div id="mp-card-brick" class="payment__brick" [attr.inert]="busy() ? '' : null"></div>
+    } @else {
+      <div class="payment__yape">
+        <p>En Yape, abre <strong>Código de aprobación</strong> y escribe los 6 dígitos.</p>
+        <label for="checkout-yape-phone">Celular de Yape</label>
+        <input id="checkout-yape-phone" [(ngModel)]="yapePhone" [ngModelOptions]="{ standalone: true }" type="tel" inputmode="numeric" maxlength="9" autocomplete="tel-national" placeholder="987654321" [disabled]="busy()" />
+        <label for="checkout-yape-otp">Código de aprobación</label>
+        <input id="checkout-yape-otp" [(ngModel)]="yapeOtp" [ngModelOptions]="{ standalone: true }" inputmode="numeric" maxlength="6" autocomplete="one-time-code" [disabled]="busy()" />
+        <button type="button" class="store-btn store-btn--primary store-btn--block" [disabled]="busy() || sdkLoading() || sdkError() || !canPay()" (click)="payWithYape()">{{ busy() ? 'Procesando…' : 'Pagar ' + (payableTotal() | money) + ' con Yape' }}</button>
+      </div>
+    }
+    @if (!checkout()?.liveMode) { <p class="payment__notice">Compra de prueba: no se realizará ningún cobro.</p> }
+    <p class="payment__privacy"><ds-icon name="shieldCheck" [size]="1" />Esta tienda no guarda los datos de tu tarjeta ni el código de Yape.</p>
+  }
+  @if (rejection(); as message) { <p class="payment__error" role="alert">{{ message }}</p> }
+  @if (errorMessage(); as message) { <p class="payment__error" role="alert">{{ message }}</p> }
+  @if (order(); as o) {
+    @if (!processing() && !paid()) { <button type="button" class="store-btn store-btn--secondary store-btn--block" [disabled]="busy()" (click)="editCheckout()">Modificar datos del pedido</button> }
+    <a class="payment__receipt" [routerLink]="['/pedido', o.id]" [queryParams]="{ t: o.token }">Ver estado del pedido {{ o.code }}</a>
+  }
+</section>

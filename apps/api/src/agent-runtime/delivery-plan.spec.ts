@@ -34,6 +34,14 @@ describe('matchDistrict', () => {
     );
   });
 
+  it('reads the short names Lima buyers use, unless they name another province', () => {
+    const surco = matchDistrict('surco').district;
+    expect([surco?.district, surco?.province]).toEqual(['Santiago de Surco', 'Lima']);
+    expect(matchDistrict('Santiago de Surco').district?.district).toBe('Santiago de Surco');
+    expect(matchDistrict('vivo en sjl').district?.code).toBe('150132');
+    expect(matchDistrict('Surco, Huarochirí').district?.province).toBe('Huarochirí');
+  });
+
   it('ignores words that are not a place', () => {
     expect(matchDistrict('quiero el perfume Paracas', ['Paracas']).district).toBeNull();
   });

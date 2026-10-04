@@ -1,0 +1,521 @@
+@let c = copy();
+<div class="stride-home store-container">
+  @for (item of sections(); track item.id) { @switch (item.type) { @case
+  ('hero') {
+  <section
+    class="stride-hero"
+    [class.stride-hero--image]="heroImage()"
+    storeSection="hero"
+  >
+    @if (heroImage(); as src) {
+    <img
+      class="stride-hero__image"
+      [src]="src"
+      alt=""
+      width="1600"
+      height="900"
+      fetchpriority="high"
+      storeEditImage="hero.image"
+      [editValue]="src"
+    />
+    } @else if (editing()) {
+    <button
+      class="store-edit-placeholder"
+      type="button"
+      storeEditImage="hero.image"
+      [editValue]="''"
+    >
+      Agregar imagen de portada
+    </button>
+    }
+    <div class="stride-hero__copy">
+      @if (c.hero.eyebrow) {
+      <p
+        class="stride-eyebrow"
+        storeEditText="hero.eyebrow"
+        [editValue]="c.hero.eyebrow"
+      ></p>
+      }
+      <h1>
+        @if (c.hero.title) {
+        <span
+          storeEditText="hero.title"
+          editKind="multiline"
+          [editValue]="c.hero.title"
+        ></span>
+        }@if (c.hero.emphasis) {
+        <em storeEditText="hero.emphasis" [editValue]="c.hero.emphasis"></em> }
+      </h1>
+      @if (c.hero.text) {
+      <p
+        class="stride-hero__text"
+        storeEditText="hero.text"
+        editKind="multiline"
+        [editValue]="c.hero.text"
+      ></p>
+      } @if (c.hero.cta) {
+      <a class="stride-button stride-button--accent" routerLink="/productos"
+        ><span storeEditText="hero.cta" [editValue]="c.hero.cta"></span
+        ><ds-icon name="arrowRight" [size]="1.1"
+      /></a>
+      }
+    </div>
+    <span class="stride-hero__index" aria-hidden="true"
+      >01 / TU PRÓXIMO PASO</span
+    >
+  </section>
+  } @case ('featured') {
+  <section
+    class="stride-section"
+    storeSection="featured"
+    aria-label="Selección de productos"
+  >
+    <div class="stride-heading">
+      <div>
+        @if (c.featured.eyebrow) {
+        <p
+          class="stride-eyebrow"
+          storeEditText="featured.eyebrow"
+          [editValue]="c.featured.eyebrow"
+        ></p>
+        }@if (c.featured.title) {
+        <h2 storeEditText="featured.title" [editValue]="c.featured.title"></h2>
+        }
+      </div>
+      <a class="stride-text-link" routerLink="/productos"
+        >Ver todo <ds-icon name="arrowRight" [size]="1"
+      /></a>
+    </div>
+    @if (loading()) {
+    <div
+      class="stride-products"
+      role="status"
+      aria-label="Cargando productos"
+      aria-busy="true"
+    >
+      @for (n of [1, 2, 3, 4]; track n) {
+      <div class="stride-skeleton">
+        <div></div>
+        <span></span><span></span>
+      </div>
+      }
+    </div>
+    } @else if (failed()) {
+    <div class="store-empty" role="alert">
+      <ds-icon name="alert" [size]="2" />
+      <h3>No pudimos cargar la selección</h3>
+      <p>Inténtalo nuevamente para ver los productos disponibles.</p>
+      <button class="stride-button" type="button" (click)="retry()">
+        Reintentar <ds-icon name="arrowRight" [size]="1" />
+      </button>
+    </div>
+    } @else if (products().length) {
+    <div class="stride-products">
+      @for (product of products().slice(0, 4); track product.handle) {
+      <store-product-card [product]="product" /> }
+    </div>
+    } @else {
+    <div class="store-empty">
+      <ds-icon name="shoppingBag" [size]="2" />
+      <h3>Estamos preparando nuestra selección</h3>
+      <p>Vuelve pronto para descubrir el catálogo.</p>
+      @if (whatsappHref(); as href) {
+      <a class="stride-text-link" [href]="href" target="_blank" rel="noopener"
+        >Consultar por WhatsApp <ds-icon name="arrowRight" [size]="1"
+      /></a>
+      }
+    </div>
+    }
+  </section>
+  } @case ('editorial') {
+  <section
+    class="stride-editorial stride-section"
+    storeSection="editorial"
+    aria-label="Inspiración para vestir"
+  >
+    @for (card of c.editorial; track card.n) { @let photo = image('editorial',
+    'image' + card.n, products()[card.n]?.imageUrl);
+    <article
+      class="stride-editorial__card"
+      [class.stride-editorial__card--photo]="photo"
+      [class.stride-editorial__card--light]="card.n === 2"
+    >
+      @if (photo) {
+      <img
+        [src]="photo"
+        alt=""
+        width="800"
+        height="650"
+        loading="lazy"
+        [storeEditImage]="'editorial.image' + card.n"
+        [editValue]="photo"
+      />
+      } @else if (editing()) {
+      <button
+        class="store-edit-placeholder"
+        type="button"
+        [storeEditImage]="'editorial.image' + card.n"
+        [editValue]="''"
+      >
+        Agregar imagen
+      </button>
+      }
+      <div>
+        @if (card.eyebrow) {
+        <p
+          class="stride-eyebrow"
+          [storeEditText]="'editorial.eyebrow' + card.n"
+          [editValue]="card.eyebrow"
+        ></p>
+        }@if (card.title) {
+        <h2
+          [storeEditText]="'editorial.title' + card.n"
+          editKind="multiline"
+          [editValue]="card.title"
+        ></h2>
+        }@if (card.text) {
+        <p
+          [storeEditText]="'editorial.text' + card.n"
+          editKind="multiline"
+          [editValue]="card.text"
+        ></p>
+        }@if (card.cta) {
+        <a
+          class="stride-text-link"
+          routerLink="/productos"
+          [queryParams]="card.n === 2 ? { orden: 'newest' } : {}"
+          ><span
+            [storeEditText]="'editorial.cta' + card.n"
+            [editValue]="card.cta"
+          ></span
+          ><ds-icon name="arrowRight" [size]="1.1"
+        /></a>
+        }
+      </div>
+    </article>
+    }
+  </section>
+  } @case ('categories') { @if (categories().length || editing()) {
+  <section class="stride-section" storeSection="categories">
+    <div class="stride-heading">
+      @if (c.categories.title) {
+      <h2
+        storeEditText="categories.title"
+        [editValue]="c.categories.title"
+      ></h2>
+      }
+    </div>
+    <div class="stride-categories">
+      @for (category of categories(); track category.name) {
+      <a
+        class="stride-category"
+        routerLink="/productos"
+        [queryParams]="{ categoria: category.name }"
+        ><div>
+          @if (category.image) {
+          <img
+            [src]="category.image"
+            [alt]="category.name"
+            width="600"
+            height="700"
+            loading="lazy"
+          />
+          }@else {
+          <span class="stride-category__letter" aria-hidden="true"
+            >{{ category.name.charAt(0) }}</span
+          >
+          }
+        </div>
+        <span
+          >{{ category.name }} <ds-icon name="arrowRight" [size]="1.1" /></span
+      ></a>
+      }
+    </div>
+  </section>
+  } } @case ('spotlight') { @if (spotlight(); as product) {
+  <section class="stride-spotlight stride-section" storeSection="spotlight">
+    <div class="stride-spotlight__copy">
+      @if (c.spotlight.eyebrow) {
+      <p
+        class="stride-eyebrow"
+        storeEditText="spotlight.eyebrow"
+        [editValue]="c.spotlight.eyebrow"
+      ></p>
+      }@if (c.spotlight.title) {
+      <h2
+        storeEditText="spotlight.title"
+        editKind="multiline"
+        [editValue]="c.spotlight.title"
+      ></h2>
+      }
+      <p class="stride-spotlight__product">
+        {{ product.name }} · @if (product.priceVaries) { Desde } {{
+        product.priceCents | money: product.currency }}
+      </p>
+      @if (c.spotlight.text) {
+      <p
+        storeEditText="spotlight.text"
+        editKind="multiline"
+        [editValue]="c.spotlight.text"
+      ></p>
+      }@if (c.spotlight.cta) {
+      <a
+        class="stride-button stride-button--paper"
+        [routerLink]="['/producto', product.handle]"
+        ><span
+          storeEditText="spotlight.cta"
+          [editValue]="c.spotlight.cta"
+        ></span
+        ><ds-icon name="arrowRight" [size]="1.1"
+      /></a>
+      }
+    </div>
+    <div class="stride-spotlight__media">
+      @if (image('spotlight', 'image', product.imageUrl); as src) {
+      <img
+        [src]="src"
+        [alt]="product.name"
+        width="900"
+        height="750"
+        loading="lazy"
+        storeEditImage="spotlight.image"
+        [editValue]="src"
+      />
+      }@else if (editing()) {
+      <button
+        class="store-edit-placeholder"
+        type="button"
+        storeEditImage="spotlight.image"
+        [editValue]="''"
+      >
+        Agregar imagen de campaña
+      </button>
+      }@else { <ds-icon name="shoppingBag" [size]="6" /> }<span
+        class="stride-spotlight__available"
+        ><ds-icon name="check" [size]="1" />@if (scarcity(); as left) { {{ left
+        === 1 ? 'Queda' : 'Quedan' }} {{ left }} {{ left === 1 ? 'unidad' :
+        'unidades' }} en total · Revisa tus opciones } @else { Disponible ·
+        Revisa tus opciones }</span
+      >
+    </div>
+  </section>
+  } } @case ('stories') {
+  <section class="stride-section" storeSection="stories">
+    <div class="stride-heading">
+      @if (c.stories.title) {
+      <h2 storeEditText="stories.title" [editValue]="c.stories.title"></h2>
+      }<a class="stride-text-link" routerLink="/productos"
+        >Ver catálogo <ds-icon name="arrowRight" [size]="1"
+      /></a>
+    </div>
+    <div class="stride-stories">
+      @for (card of c.stories.cards; track card.n) {
+      <article class="stride-story">
+        @if (image('stories', 'image' + card.n, products()[card.n +
+        3]?.imageUrl); as src) {
+        <img
+          [src]="src"
+          alt=""
+          width="850"
+          height="650"
+          loading="lazy"
+          [storeEditImage]="'stories.image' + card.n"
+          [editValue]="src"
+        />
+        }@else if (editing()) {
+        <button
+          class="store-edit-placeholder"
+          type="button"
+          [storeEditImage]="'stories.image' + card.n"
+          [editValue]="''"
+        >
+          Agregar imagen
+        </button>
+        }
+        <div>
+          @if (card.eyebrow) {
+          <p
+            class="stride-eyebrow"
+            [storeEditText]="'stories.eyebrow' + card.n"
+            [editValue]="card.eyebrow"
+          ></p>
+          }@if (card.title) {
+          <h2
+            [storeEditText]="'stories.title' + card.n"
+            editKind="multiline"
+            [editValue]="card.title"
+          ></h2>
+          }@if (card.cta) {
+          <a
+            class="stride-text-link"
+            routerLink="/productos"
+            [queryParams]="card.n === 2 ? { orden: 'newest' } : {}"
+            ><span
+              [storeEditText]="'stories.cta' + card.n"
+              [editValue]="card.cta"
+            ></span
+            ><ds-icon name="arrowRight" [size]="1.1"
+          /></a>
+          }
+        </div>
+      </article>
+      }
+    </div>
+  </section>
+  } @case ('voices') { @if (c.voices.quotes.length || editing()) {
+  <section class="stride-voices stride-section" storeSection="voices">
+    @if (c.voices.eyebrow) {
+    <p
+      class="stride-eyebrow"
+      storeEditText="voices.eyebrow"
+      [editValue]="c.voices.eyebrow"
+    ></p>
+    }@if (c.voices.title) {
+    <h2 storeEditText="voices.title" [editValue]="c.voices.title"></h2>
+    }@for (quote of c.voices.quotes; track quote.n) {
+    <figure>
+      <blockquote
+        [storeEditText]="'voices.quote' + quote.n"
+        editKind="multiline"
+        [editValue]="quote.quote"
+      ></blockquote>
+      <figcaption
+        [storeEditText]="'voices.author' + quote.n"
+        [editValue]="quote.author"
+      ></figcaption>
+    </figure>
+    }@if (editing() && !c.voices.quotes.length) {
+    <p>
+      Agrega opiniones reales desde los campos de esta sección. Se mostrarán al
+      completar opinión y cliente.
+    </p>
+    }
+  </section>
+  } } @case ('faq') {
+  <section class="stride-faq stride-section" storeSection="faq">
+    @if (c.faq.title) {
+    <div>
+      <p class="stride-eyebrow">ANTES DE TU PRÓXIMO PASO</p>
+      <h2 storeEditText="faq.title" [editValue]="c.faq.title"></h2>
+    </div>
+    }
+    <div>
+      @for (answer of faq(); track $index) {
+      <details>
+        <summary>
+          {{ answer.question }}<ds-icon name="plus" [size]="1.1" />
+        </summary>
+        <p>{{ answer.answer }}</p>
+      </details>
+      }
+    </div>
+  </section>
+  } @case ('closing') {
+  <section class="stride-closing stride-section" storeSection="closing">
+    @if (c.closing.title) {
+    <h2 storeEditText="closing.title" [editValue]="c.closing.title"></h2>
+    }@if (c.closing.text) {
+    <p
+      storeEditText="closing.text"
+      editKind="multiline"
+      [editValue]="c.closing.text"
+    ></p>
+    }@if (c.closing.cta) {
+    <a class="stride-button" routerLink="/productos"
+      ><span storeEditText="closing.cta" [editValue]="c.closing.cta"></span
+      ><ds-icon name="arrowRight" [size]="1.1"
+    /></a>
+    }
+  </section>
+  } @case ('imageText') { @let b = block(item.id);
+  <section
+    class="stride-library-image stride-section"
+    [class.stride-library-image--end]="b.layout === 'end'"
+    [storeSection]="item.id"
+  >
+    @if (b.image) {
+    <img
+      [src]="b.image"
+      alt=""
+      width="800"
+      height="650"
+      loading="lazy"
+      [storeEditImage]="item.id + '.image'"
+      [editValue]="b.image"
+    />
+    }@else if (editing()) {
+    <button
+      class="store-edit-placeholder"
+      type="button"
+      [storeEditImage]="item.id + '.image'"
+      [editValue]="''"
+    >
+      Agregar imagen
+    </button>
+    }
+    <div>
+      @if (b.eyebrow) {
+      <p
+        class="stride-eyebrow"
+        [storeEditText]="item.id + '.eyebrow'"
+        [editValue]="b.eyebrow"
+      ></p>
+      }@if (b.title) {
+      <h2
+        [storeEditText]="item.id + '.title'"
+        editKind="multiline"
+        [editValue]="b.title"
+      ></h2>
+      }@if (b.text) {
+      <p
+        [storeEditText]="item.id + '.text'"
+        editKind="multiline"
+        [editValue]="b.text"
+      ></p>
+      }@if (b.cta) {
+      <a class="stride-button" routerLink="/productos"
+        ><span [storeEditText]="item.id + '.cta'" [editValue]="b.cta"></span
+        ><ds-icon name="arrowRight" [size]="1"
+      /></a>
+      }
+    </div>
+  </section>
+  } @case ('text') { @let b = block(item.id);
+  <section
+    class="stride-closing stride-section"
+    [class.block-tone--soft]="b.tone === 'soft'"
+    [class.block-tone--brand]="b.tone === 'brand'"
+    [storeSection]="item.id"
+  >
+    @if (b.eyebrow) {
+    <p
+      class="stride-eyebrow"
+      [storeEditText]="item.id + '.eyebrow'"
+      [editValue]="b.eyebrow"
+    ></p>
+    }@if (b.title) {
+    <h2
+      [storeEditText]="item.id + '.title'"
+      editKind="multiline"
+      [editValue]="b.title"
+    ></h2>
+    }@if (b.text) {
+    <p
+      [storeEditText]="item.id + '.text'"
+      editKind="multiline"
+      [editValue]="b.text"
+    ></p>
+    }
+  </section>
+  } @default { @if (sharedType(item.type); as type) {
+  <store-home-block
+    class="stride-section"
+    [type]="type"
+    [sectionId]="item.id"
+    [block]="block(item.id)"
+    [whatsappHref]="whatsappHref()"
+    [faq]="faq()"
+    [storeSection]="item.id"
+  />
+  } } } }
+</div>

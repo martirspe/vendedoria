@@ -1,3 +1,5 @@
+@use './selecta-layout';
+
 // Selecta template: original stylesheet, scoped to the template body class.
 // Layer order puts the classic store base below Selecta's own layers.
 @layer store-base, reset, base, components, responsive;
@@ -78,3 +80,119 @@ body.tpl-selecta {
   @layer responsive{@media(max-width:900px){.legal-layout{grid-template-columns:1fr;gap:20px}.legal-toc{position:static;max-height:none;border:1px solid var(--border);border-radius:10px;padding:16px 18px;background:#fff}}@media(max-width:600px){.legal-summary{padding:18px}}
   @media print{.announcement,.header,footer,.chat-float,.to-top,.legal-toc,.legal-more,.legal-print,.breadcrumb,.skip{display:none!important}&{background:#fff}.legal-layout{display:block}.legal-body,.wrap{max-width:none;width:auto}.legal-body section{break-inside:avoid-page}.legal-body a{color:inherit}.legal-summary{background:#fff}}}
 }
+
+// Common hierarchy across the buying journey, with Selecta's own display family.
+body.tpl-selecta {
+  ds-select {
+    --select-bg: var(--cream);
+    --select-text: var(--ink);
+    --select-muted: var(--muted);
+    --select-border: var(--border);
+    --select-brand: var(--wine);
+  }
+  .product-card > .eyebrow { margin: var(--ds-space-4) 0 var(--ds-space-2); font-size: var(--store-type-caption); }
+  .product-card h3 { font-size: var(--store-type-product); font-weight: 500; line-height: 1.3; text-wrap: pretty; }
+  .product-card .card-summary { margin: var(--ds-space-2) 0 0; font-size: var(--store-type-caption); line-height: var(--store-leading-body); }
+  .product-card .card-stock { margin: var(--ds-space-3) 0; font-size: var(--store-type-caption); }
+  .product-card .card-bottom { gap: var(--ds-space-3); padding-top: var(--ds-space-4); }
+  .product-card .card-price strong { font-size: var(--store-type-product); line-height: 1.3; }
+  .product-card .card-cta { min-height: var(--ds-touch-target); font-size: var(--store-type-caption); }
+  .product-info h1, .cart-page > h1, .checkout-title h1, .legal-head h1, .confirmation h1, .not-found h1 { font-size: var(--store-type-title); line-height: var(--store-leading-heading); }
+  .collection-head h2, .faq-intro h2, .related-products h2, .product-details h2 { font-size: var(--store-type-section); line-height: var(--store-leading-heading); }
+  .product-info .subtitle, .product-info .description, .product-info .benefits { font-size: var(--store-type-body); line-height: var(--store-leading-body); }
+  .product-info .availability, .image-caption, .gallery-controls, .optional { font-size: var(--store-type-caption); }
+  .pdp-trust { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--ds-space-4); font-size: var(--store-type-caption); line-height: var(--store-leading-body); }
+  .pdp-trust > span { min-width: 0; }
+  .pdp-trust app-icon, .pdp-trust img { flex-shrink: 0; }
+  .announcement, .trust-strip, .hero-note { font-size: var(--store-type-caption); }
+  .badge, .pill-count, .cart-link b, .photo-note { font-size: var(--store-type-micro); }
+  .product-info .price, .grand-total strong { font-size: var(--store-type-price); }
+  .quantity span, .button { font-size: var(--store-type-body); }
+  .faq-intro { position: static; }
+  .faq { padding-block: 0; }
+  .buy-row { align-items: stretch; }
+  .buy-row > .button, .buy-row > .quantity { min-height: var(--store-control-height); height: auto; margin: 0; }
+  .buy-row > .quantity, .buy-row > .button { border-radius: var(--store-radius-control); }
+  .buy-row > .button { line-height: 1.4; }
+  .cart-row .quantity { height: var(--ds-touch-target); min-height: var(--ds-touch-target); }
+  .cart-layout .order-summary > p:not(.eyebrow) { margin-block: var(--ds-space-4); }
+  .cart-layout .order-summary > .button { margin-top: var(--ds-space-2); }
+  .checkout-layout, .checkout-layout > .checkout-form, .checkout-form > form { width: 100%; min-width: 0; }
+  .checkout-section label { margin-bottom: 0; }
+  .checkout-section label > ds-select { margin-top: var(--ds-space-2); }
+  .checkout-section h2 > span { padding-right: var(--ds-space-4); font-size: var(--store-type-product); color: var(--muted); }
+  .gallery-controls button, .icon-button, .slider-btn, .to-top { min-width: var(--ds-touch-target); min-height: var(--ds-touch-target); }
+  .checkout-section input:not([type=checkbox]):not([type=radio]), .checkout-section ds-select > select, .checkout-section .ds-select-trigger { min-height: var(--store-control-height); }
+  .checkout-fields > .terms-check { padding-block: var(--ds-space-2); align-items: start; }
+  .checkout-fields .check-label > input[type=checkbox] { flex: 0 0 auto; width: var(--ds-space-5); height: var(--ds-space-5); margin-top: var(--ds-space-1); }
+  .consent-shipping { display: block; margin-top: var(--ds-space-2); }
+  .checkout-section .shipping-policy { padding: var(--ds-space-4); background: var(--rose); border-radius: var(--store-radius-control); font-size: var(--store-type-caption); }
+  .checkout-form .payment { padding: var(--ds-space-6) 0 0; border: 0; border-top: 1px solid var(--border); border-radius: 0; background: transparent; color: var(--ink); }
+  .checkout-form .payment__number { color: var(--muted); border-color: var(--border); }
+  .checkout-form store-checkout-payment { --store-brand: var(--wine); --store-bg: var(--cream); --store-text: var(--ink); --store-muted: var(--muted); --store-border: var(--border); --store-surface: var(--rose); }
+  .checkout-fields .order-bump { grid-template-columns: auto minmax(0, 1fr) auto; gap: var(--ds-space-3); margin: 0; padding: var(--ds-space-4); }
+  .checkout-fields .order-bump > input { grid-column: 3; grid-row: 1; }
+  .checkout-fields .order-bump > .bump-thumb { display: block; grid-column: 1; grid-row: 1; width: var(--store-recommendation-thumb); height: var(--store-recommendation-thumb); }
+  .checkout-fields .order-bump > .bump-copy { grid-column: 2; grid-row: 1; min-width: 0; }
+  .checkout-fields .bump-copy > strong { font-size: var(--store-type-caption); }
+  .checkout-fields .bump-copy > span { font-size: var(--store-type-caption); -webkit-line-clamp: 3; }
+  .checkout-fields .bump-copy > small { font-size: var(--store-type-caption); }
+}
+@layer responsive {
+  body.tpl-selecta {
+    font-size: var(--store-type-body); line-height: var(--store-leading-body);
+    h1 { font-size: var(--store-type-title); line-height: var(--store-leading-heading); }
+    .hero h1 { font-size: var(--store-type-hero); }
+    h2 { font-size: var(--store-type-section); line-height: var(--store-leading-heading); }
+    .summary-product h3, .cart-row h3 { font-size: var(--store-type-body); line-height: 1.4; }
+    .product-card h3, .cross-sell-item h3 { font-size: var(--store-type-product); line-height: 1.3; }
+    .eyebrow, .card-summary, .card-stock, .card-saving, .card-cta, .breadcrumb, .optional, .secure, .summary-trust, .order-summary > p, .footer-links, footer small { font-size: var(--store-type-caption); }
+    .card-summary { line-height: var(--store-leading-body); }
+    .ritual-banner, .home-block, .product-details, .related-products { margin-block: var(--store-section-space); }
+    .checkout-title, .cart-title, .order-title { margin-bottom: var(--ds-space-8); }
+    .checkout-section h2, .order-summary h2, .cross-sell h2 { font-size: var(--store-type-subheading); }
+    .checkout-section { display: grid; gap: var(--ds-space-4); padding: var(--ds-space-6) 0; margin-bottom: 0; }
+    .checkout-section > p, .checkout-section label, .checkout-section input, .checkout-section select { font-size: var(--store-type-body); }
+    .checkout-section input:not([type=checkbox]):not([type=radio]), .checkout-section select { min-height: var(--ds-touch-target); }
+    .checkout-fields { display: grid; gap: var(--ds-space-6); border: 0; padding: 0; margin: 0; min-width: 0; }
+    .checkout-form { display: grid; gap: var(--ds-space-6); align-content: start; }
+    .checkout-section > h2, .checkout-section > p { margin: 0; }
+    .checkout-fields > .terms-check { margin: 0; }
+    .form-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .checkout-layout > *, .checkout-form, .form-grid > * { min-width: 0; }
+    .terms-check, .check-label, .field-error, .free-nudge, .coupon-form label { font-size: var(--store-type-caption); line-height: var(--store-leading-body); }
+    .field-error { display: block; margin-top: var(--ds-space-2); }
+    .button, .text-link, .segmented button, .pills button, .delivery-tabs button, .quantity button, .icon-button, .slider-btn { min-height: var(--ds-touch-target); }
+    .summary-product strong, .card-price > strong { font-size: var(--store-type-subheading); }
+    .grand-total strong { font-size: var(--store-type-price); }
+    .order-summary { top: var(--store-sticky-offset); }
+    .checkout-layout .order-summary { align-self: start; }
+    .checkout-layout .summary-product h3 { overflow-wrap: anywhere; }
+    .checkout-layout .summary-product p { font-size: var(--store-type-caption); }
+    .checkout-layout .total-line { flex-wrap: wrap; gap: var(--ds-space-2); }
+    @media (max-width: 900px) {
+      .checkout-layout { display: grid; grid-template-columns: minmax(0, 1fr); gap: var(--ds-space-6); }
+      .checkout-layout .order-summary { grid-row: 1; position: static; }
+    }
+    @media (max-width: 600px) {
+      .form-grid { grid-template-columns: minmax(0, 1fr); }
+      .checkout-section { padding: var(--ds-space-6) 0; }
+      .checkout-title { align-items: start; gap: var(--ds-space-4); }
+      .checkout-title > p { font-size: var(--store-type-caption); }
+      .checkout-title h1 { font-size: var(--store-type-title); }
+    }
+    @media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation: none !important; transition: none !important; scroll-behavior: auto !important; } }
+  }
+}
+
+
+@layer responsive {
+  body.tpl-selecta {
+    .legal-index { grid-template-columns: repeat(auto-fill, minmax(min(100%, var(--store-legal-card-min)), 1fr)); }
+    .quantity button { width: var(--ds-touch-target); min-height: var(--ds-touch-target); }
+    footer.is-checkout > p { display: none; }
+    .legal-head, .legal-layout, .legal-body { min-width: 0; overflow-wrap: anywhere; }
+  }
+}
+
+@include selecta-layout.refinements;

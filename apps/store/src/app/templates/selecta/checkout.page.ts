@@ -1,6 +1,8 @@
+import { DsSelectComponent } from '@vendedoria/ui';
 import {
   ChangeDetectionStrategy,
   Component,
+  ElementRef,
   afterNextRender,
   computed,
   effect,
@@ -14,12 +16,14 @@ import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import type {
   CouponPreviewResult,
+  PublicOrder,
   ShippingMode,
   ShippingQuote,
   UbigeoDistrict,
 } from '@vendedoria/contracts';
 import { DsTurnstileComponent } from '@vendedoria/ui';
 import { AnalyticsService } from '../../core/analytics.service';
+import { CheckoutPaymentComponent } from '../../components/checkout-payment.component';
 import { campaignCoupon, forgetCampaignCoupon, keepCoupon } from '../../core/campaign-coupon';
 import { CartService } from '../../core/cart.service';
 import { MoneyPipe } from '../../core/money.pipe';
@@ -48,11 +52,12 @@ type DeliveryChoice = { mode: ShippingMode; label: string; cents: number; note: 
 
 @Component({
   selector: 'selecta-checkout',
-  imports: [ReactiveFormsModule, RouterLink, MoneyPipe, SelectaIcon, SelectaProductImage, DsTurnstileComponent],
+  imports: [DsSelectComponent, ReactiveFormsModule, RouterLink, MoneyPipe, SelectaIcon, SelectaProductImage, DsTurnstileComponent, CheckoutPaymentComponent],
   templateUrl: './checkout.page.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class SelectaCheckoutPage {
+  private readonly host = inject<ElementRef<HTMLElement>>(ElementRef);
   private readonly api = inject(StoreApiService);
   private readonly router = inject(Router);
   private readonly route = inject(ActivatedRoute);
@@ -73,10 +78,16 @@ export class SelectaCheckoutPage {
     reference: ['', Validators.maxLength(180)],
     serviceNote: ['', Validators.maxLength(300)],
     consent: [false, Validators.requiredTrue],
-    shippingAcknowledged: [false],
   });
 
   readonly busy = signal(false);
+  readonly reservedOrder = signal<PublicOrder | null>(null);
+  readonly reserveOrder = () => this.prepare();
+  readonly displayedTotal = computed(() => this.reservedOrder()?.totalCents ?? this.total());
+  readonly displayedSubtotal = computed(() => this.reservedOrder()?.subtotalCents ?? this.subtotal());
+  readonly displayedDiscount = computed(() => this.reservedOrder()?.discountCents ?? this.discount());
+  readonly displayedShipping = computed(() => this.reservedOrder()?.shippingCents ?? this.shippingCents());
+  releaseReservation(): void { this.reservedOrder.set(null); }
   readonly error = signal('');
   readonly online = computed(() => this.store()?.checkout.mode === 'online');
 
@@ -147,8 +158,11 @@ export class SelectaCheckoutPage {
   });
   readonly ready = computed(() => (this.direct ? this.catalog.loaded() : this.cart.ready()));
   /** A line whose product is still loading counts as shipped until the catalog says otherwise. */
-  readonly needsDelivery = computed(() => this.lines().some((l) => l.product?.kind !== 'SERVICE'));
+  readonly needsDelivery = computed(() =>
+    this.lines().some((l) => l.product?.kind !== 'SERVICE' && l.product?.kind !== 'DIGITAL'),
+  );
   readonly hasServices = computed(() => this.lines().some((l) => l.product?.kind === 'SERVICE'));
+  readonly hasDigital = computed(() => this.lines().some((l) => l.product?.kind === 'DIGITAL'));
   readonly canSubmit = computed(() => !this.needsDelivery() || Boolean(this.choice()));
   readonly subtotal = computed(() => this.lines().reduce((n, l) => n + l.unitCents * l.quantity, 0));
 
@@ -234,6 +248,11 @@ export class SelectaCheckoutPage {
       const choices = this.choices();
       if (choices.length && !choices.some((c) => c.mode === untracked(this.mode))) this.mode.set(choices[0].mode);
     });
+    // A different district or delivery rate requires accepting the updated terms again.
+    effect(() => {
+      this.deliveryMode(); this.ubigeo(); this.choice()?.cents;
+      untracked(() => { if (!this.reservedOrder()) this.form.controls.consent.setValue(false); });
+    });
     /** Lines or delivery changed: re-check the applied code, or retry one that did not apply. */
     effect(() => {
       this.deliveryMode();
@@ -251,6 +270,10 @@ export class SelectaCheckoutPage {
         else this.pendingCoupon = saved;
       }
       void this.loadUbigeos();
+    });
+    effect(() => {
+      const handles = this.cart.lines().map((line) => line.handle);
+      void this.catalog.ensure(handles).catch(() => undefined);
     });
   }
 
@@ -279,7 +302,7 @@ export class SelectaCheckoutPage {
 
   /** Address fields only validate when something travels to the buyer's home. */
   private toggleAddress(off: boolean): void {
-    for (const name of ['department', 'province', 'ubigeo', 'address', 'reference', 'shippingAcknowledged'] as const) {
+    for (const name of ['department', 'province', 'ubigeo', 'address', 'reference'] as const) {
       const control = this.form.controls[name];
       if (off) control.disable();
       else control.enable();
@@ -364,18 +387,18 @@ export class SelectaCheckoutPage {
     forgetCampaignCoupon();
   }
 
-  async prepare(): Promise<void> {
+  async prepare(): Promise<PublicOrder | null> {
+    if (this.reservedOrder()) return this.reservedOrder();
+    if (this.busy()) return null;
     this.error.set('');
     this.form.markAllAsTouched();
     const choice = this.choice();
     const needsDelivery = this.needsDelivery();
-    if (this.form.invalid || (needsDelivery && !choice)) {
-      this.error.set('Completa los campos marcados y acepta los términos.');
-      return;
-    }
-    if (needsDelivery && this.carrierChosen() && !this.form.controls.shippingAcknowledged.value) {
-      this.error.set('Acepta la tarifa referencial de la agencia para continuar.');
-      return;
+    if (this.form.invalid || this.couponBusy() || (needsDelivery && !choice)) {
+      this.error.set(this.couponBusy() ? 'Espera a que terminemos de validar tu cupón.' : 'Completa los campos marcados y acepta los términos.');
+      const field = Object.entries(this.form.controls).find(([, control]) => control.invalid)?.[0];
+      if (field) this.host.nativeElement.querySelector<HTMLElement>(`[formControlName="${field}"]`)?.focus();
+      return null;
     }
     const v = this.form.getRawValue();
     this.busy.set(true);
@@ -384,7 +407,7 @@ export class SelectaCheckoutPage {
     if (token === null) {
       this.error.set(CHALLENGE_PENDING);
       this.busy.set(false);
-      return;
+      return null;
     }
     try {
       const order = await this.api.checkout({
@@ -410,13 +433,15 @@ export class SelectaCheckoutPage {
         ...(this.coupon() ? { couponCode: this.coupon()!.code } : {}),
         acceptTerms: true,
       }, token);
-      sessionStorage.removeItem(CHECKOUT_KEY);
       if (this.coupon()) forgetCampaignCoupon();
-      await this.router.navigate(['/pedido', order.id], { queryParams: { t: order.token } });
+      this.reservedOrder.set(order);
+      return order;
     } catch (error) {
       this.error.set(this.messageFrom(error, 'No pudimos reservar tu pedido. Inténtalo de nuevo.'));
       if (error instanceof HttpErrorResponse && error.status === 409) sessionStorage.removeItem(CHECKOUT_KEY);
       widget?.reset();
+      return null;
+    } finally {
       this.busy.set(false);
     }
   }

@@ -116,7 +116,23 @@
               <p>{{ delivery.eta }}</p>
             }
           }
-          @if (o.serviceNote || !o.delivery) {
+          @if (hasDigital()) {
+            <h3>Tu acceso digital</h3>
+            @for (access of o.digitalAccess; track $index) {
+              <p>
+                <strong>{{ access.title }}</strong> ·
+                @if (access.url) {
+                  <a [href]="access.url" target="_blank" rel="noopener noreferrer">Abrir contenido</a>
+                } @else {
+                  Te enviaremos el acceso por correo o WhatsApp.
+                }
+              </p>
+              @if (access.instructions) {
+                <p>{{ access.instructions }}</p>
+              }
+            }
+          }
+          @if (o.serviceNote || hasServices()) {
             <h3>Tu reserva</h3>
             @if (o.serviceNote) {
               <p>Fecha preferida: {{ o.serviceNote }}</p>
@@ -139,7 +155,7 @@
         <button type="button" class="button" [disabled]="busy()" (click)="checkStatus()">{{ busy() ? 'Consultando…' : 'Consultar estado' }}</button>
       }
       @if (ended()) {
-        <a class="button" routerLink="/carrito">Volver a mi bolsa <app-icon name="arrow" /></a>
+        <a class="button" routerLink="/carrito">Volver al carrito <app-icon name="arrow" /></a>
       }
       @if (errorMessage(); as text) {
         <p class="error" role="alert">{{ text }}</p>

@@ -31,12 +31,16 @@ Do NOT open API code unless the data shape is unclear from the `core/api` servic
 - Accessibility: real `<button>`/`<a>`, labels on inputs, visible focus, touch targets ≥ `--ds-touch-target`, `prefers-reduced-motion` respected.
 - Mobile first; critical console actions (reply, takeover, reactivate agent, payment status) available on mobile.
 - No dead UI: no CTAs, chevrons or headings without real destinations.
+- Buyer store work: apply [commerce-conversion.md](commerce-conversion.md) for template funnels, production Spanish, cross-view hierarchy and checkout on one page. Keep each template's identity and merchant edits; conversion claims need measurement.
+- Whole-app responsive work: apply [responsive-audit.md](responsive-audit.md). Include public pages, authentication, console navigation and every shipped store template; distinguish rendered evidence from source review.
 
 ## Procedure
 1. Identify surface and read the constitution section only if needed: `DESIGN SYSTEM FIRST`, `IDENTIDAD VISUAL`, `CALIDAD UX 2027` (find with `rg -n "^#" "PROJECT CONSTITUTION.md"`).
 2. Compose from existing DS pieces; extend `packages/ui` when a reusable piece is missing.
 3. Wire states (loading/empty/error/success) with signals.
 4. Check responsive behavior at mobile and desktop widths.
+   For a whole-app request, use the responsive reference's route/device matrix and preserve all critical actions at every breakpoint.
+5. Store templates: review discovery → product → cart → checkout → confirmation in every shipped template; report observed results and unavailable verification separately. Use the commerce reference's acceptance matrix.
 
 ## Verification
 - `npm run build:web` and/or `npm run build:store` (both when `packages/` changes).

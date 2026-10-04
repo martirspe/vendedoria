@@ -4,10 +4,9 @@
     @switch (item.type) {
       @case ('hero') {
         <section class="hero" [class.hero--image]="heroImage()" storeSection="hero">
-          @if (heroImage(); as src) {
-            <img class="hero__image" [src]="src" alt="" fetchpriority="high" storeEditImage="hero.image" [editValue]="src" />
-          }
-          <div class="store-container hero__content">
+          <div class="store-container hero__layout">
+          <div class="hero__content">
+            @if (c.eyebrow) { <p class="store-eyebrow" storeEditText="hero.eyebrow" [editValue]="c.eyebrow"></p> }
             @if (c.title) {
               <h1 storeEditText="hero.title" [editValue]="c.title"></h1>
             }
@@ -21,13 +20,24 @@
                 </a>
               }
               @if (whatsappHref(); as href) {
-                <a class="store-btn store-btn--whatsapp" [href]="href" target="_blank" rel="noopener">
-                  <ds-icon name="message" [size]="1.05" /> Escríbenos por WhatsApp
+                <a class="hero__help" [href]="href" target="_blank" rel="noopener">
+                  <ds-icon name="message" [size]="1.05" /> Ayúdame a elegir
                 </a>
               }
             </div>
+            <p class="hero__note">{{ s.checkout.mode === 'online' ? 'Compra sin crear cuenta. Paga con tarjeta o Yape.' : 'Elige aquí y coordina tu pedido por WhatsApp.' }}</p>
+          </div>
+          @if (heroImage(); as src) {
+            <img class="hero__image" [src]="src" alt="" width="720" height="720" fetchpriority="high" storeEditImage="hero.image" [editValue]="src" />
+          }
           </div>
         </section>
+        <div class="store-container trust-strip" aria-label="Información de compra">
+          <span><ds-icon name="shoppingBag" [size]="1.1" /> Compra sin crear cuenta</span>
+          @if (s.checkout.mode === 'online') { <span><ds-icon name="lock" [size]="1.1" /> Pago con tarjeta o Yape</span> }
+          @if (s.shipping.freeShippingFromCents; as minimum) { <span><ds-icon name="truck" [size]="1.1" /> Envío gratis desde {{ minimum | money }}</span> }
+          <a routerLink="/cambios-y-devoluciones"><ds-icon name="book" [size]="1.1" /> Consulta nuestras políticas</a>
+        </div>
       }
 
       @case ('featured') {
@@ -44,7 +54,7 @@
             <h2 id="featured-title" storeEditText="featured.title" [editValue]="c.featuredTitle"></h2>
             @if (featured().total > featured().items.length) {
               <a routerLink="/productos" class="section__more">
-                Ver los {{ featured().total }} productos <ds-icon name="chevronRight" [size]="1" />
+                Ver todo el catálogo <ds-icon name="chevronRight" [size]="1" />
               </a>
             }
           </header>
@@ -80,6 +90,24 @@
               </li>
             }
           </ol>
+        </section>
+      }
+
+      @case ('faq') {
+        <section class="store-container section home-faq" storeSection="faq" aria-labelledby="home-faq-title">
+          <div><p class="store-eyebrow">Compra con claridad</p><h2 id="home-faq-title" storeEditText="faq.title" [editValue]="c.faqTitle"></h2></div>
+          <div class="home-faq__list">
+            @for (answer of faq(); track $index) {
+              <details><summary>{{ answer.question }}<ds-icon name="plus" [size]="1" /></summary><p>{{ answer.answer }}</p></details>
+            }
+          </div>
+        </section>
+      }
+
+      @case ('closing') {
+        <section class="store-container section closing" storeSection="closing">
+          <div><h2 storeEditText="closing.title" [editValue]="c.closingTitle"></h2><p storeEditText="closing.text" editKind="multiline" [editValue]="c.closingText"></p></div>
+          @if (c.closingCta) { <a class="store-btn store-btn--primary" routerLink="/productos"><span storeEditText="closing.cta" [editValue]="c.closingCta"></span><ds-icon name="arrowRight" [size]="1.05" /></a> }
         </section>
       }
 

@@ -173,6 +173,28 @@ export function conversationalIntent(text: string): 'closing' | 'acknowledgement
   return closing ? 'closing' : 'acknowledgement';
 }
 
+const AFFIRMATIVE =
+  /^(si+|claro|claro que si|ok|okey|oki|dale|ya|ya pues|ya dale|listo|va|de una|obvio|perfecto|bueno|porfa|por favor|si por favor|si porfa|si dale|si claro|si ya|sale)$/;
+const CLOSING_QUESTION =
+  /\b(te\s+l[oa]s?\s+(prepar|separ|reserv|apart|envi|mand|pid)[oea]|l[oa]s?\s+(quieres|llevas|separo|preparo|reservo)|prepar[oe]\s+(el|tu)\s+pedido|proceder\s+con\s+(la\s+compra|el\s+pago)|llevarl[oa]s?|hacer\s+(el|tu)\s+pedido|te\s+animas)\b/;
+
+/** A bare "sí" / "dale" answering the seller's closing question ("¿te lo preparo?") is a purchase. */
+export function confirmsPurchase(text: string, history: ConversationTurn[]): boolean {
+  const reply = normalizeText(text)
+    .replace(/[\p{P}\p{S}\p{Extended_Pictographic}]/gu, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+  if (!AFFIRMATIVE.test(reply)) return false;
+  const last = [...history].reverse().find((turn) => turn.role === 'agent');
+  return Boolean(last && !last.paymentLink && CLOSING_QUESTION.test(normalizeText(last.text)));
+}
+
+/** The seller's latest message asked where to deliver, without a payment link yet. */
+export function askedForDistrict(history: ConversationTurn[]): boolean {
+  const last = [...history].reverse().find((turn) => turn.role === 'agent');
+  return Boolean(last && !last.paymentLink && normalizeText(last.text).includes('distrito'));
+}
+
 export function wantsPhoto(text: string): boolean {
   return /\b(foto|fotos|fotito|imagen|imagenes|como se ve|ver como es)\b/.test(normalizeText(text));
 }

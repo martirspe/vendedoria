@@ -70,9 +70,9 @@
         </dl>
         @if (onlineCheckout()) {
           <a class="store-btn store-btn--primary store-btn--block" routerLink="/checkout">
-            <ds-icon name="lock" [size]="1.1" /> Continuar al pago
+            <ds-icon name="lock" [size]="1.1" /> Finalizar compra
           </a>
-          <p class="summary__note">Paga con tarjeta o Yape. El envío se calcula en el siguiente paso.</p>
+          <p class="summary__note">Datos, entrega y pago en una sola página. Sin crear una cuenta.</p>
           @if (orderHref(); as href) {
             <a class="summary__alt" [href]="href" target="_blank" rel="noopener">
               <ds-icon name="message" [size]="1" /> Prefiero pedir por WhatsApp
@@ -84,7 +84,7 @@
               <ds-icon name="message" [size]="1.1" /> Enviar pedido por WhatsApp
             </a>
           } @else {
-            <p class="summary__warning" role="alert">Esta tienda aún no tiene un WhatsApp configurado para recibir pedidos.</p>
+            <p class="summary__warning" role="alert">Los pedidos no están disponibles por ahora. Vuelve a intentarlo más tarde.</p>
           }
           <p class="summary__note">
             Aún no pagas nada. Te confirmaremos stock, costo de envío y forma de pago por WhatsApp.

@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, afterNextRender, computed, inject } from '@angular/core';
+import { ChangeDetectionStrategy, Component, afterNextRender, computed, effect, inject } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { CartLine, CartService } from '../../core/cart.service';
 import { MoneyPipe } from '../../core/money.pipe';
@@ -81,6 +81,10 @@ export class SelectaCartPage {
 
   constructor() {
     inject(SeoService).set({ title: 'Mi bolsa', path: '/carrito', noindex: true });
+    effect(() => {
+      const handles = this.cart.lines().map((line) => line.handle);
+      void this.catalog.ensure(handles).catch(() => undefined);
+    });
     afterNextRender(() => void this.catalog.refresh());
   }
 

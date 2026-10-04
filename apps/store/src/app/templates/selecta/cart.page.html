@@ -34,7 +34,7 @@
         @if (extras().length) {
           <section class="cross-sell" aria-labelledby="cross-sell-title">
             <p class="eyebrow">EL TOQUE FINAL</p>
-            <h2 id="cross-sell-title">Complétalo con.</h2>
+            <h2 id="cross-sell-title">Completa tu selección</h2>
             <div class="cross-sell-list">
               @for (x of extras(); track x.handle) {
                 <article class="cross-sell-item">
@@ -72,19 +72,19 @@
         @if (online()) {
           <p>
             @if (freeFrom() <= 0 || missing() > 0) {
-              Escoge tu distrito para calcular el envío en el siguiente paso.
+              Escoge tu distrito para calcular el envío al finalizar tu compra.
             } @else {
               Solo elige tu distrito en el siguiente paso; el envío corre por nuestra cuenta.
             }
           </p>
-          <a class="button full" routerLink="/checkout" [class.disabled]="invalid()">Ir al checkout <app-icon name="arrow" /></a>
+          <a class="button full" routerLink="/checkout" [class.disabled]="invalid()">Finalizar compra <app-icon name="arrow" /></a>
           <p class="secure"><app-icon name="lock" />Compra sin crear cuenta</p>
-          <div class="summary-trust"><app-icon name="package" /><span>Las unidades se reservan para ti 15 minutos al continuar al pago.</span></div>
+          <div class="summary-trust"><app-icon name="package" /><span>Datos, entrega y pago en una sola página.</span></div>
         } @else if (orderHref(); as href) {
           <p>Te confirmamos el stock, el envío y el pago por WhatsApp.</p>
           <a class="button full" [href]="href" target="_blank" rel="noopener" [class.disabled]="invalid()"><app-icon name="whatsapp" />Enviar pedido por WhatsApp</a>
         } @else {
-          <p class="notice">Esta tienda aún no configuró su canal de pedidos.</p>
+          <p class="notice">Los pedidos no están disponibles por ahora. Vuelve a intentarlo más tarde.</p>
         }
       </aside>
     </div>

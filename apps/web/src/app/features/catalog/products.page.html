@@ -3,7 +3,7 @@
     <header class="catalog__header">
       <div>
         <p class="catalog__eyebrow">Catálogo</p>
-        <h1>Productos</h1>
+        <h1>Catálogo</h1>
         <p>
           Publica lo que tu vendedor IA puede ofrecer por chat: claro, con precio
           y listo para pedir.
@@ -13,7 +13,7 @@
         <a routerLink="/app/products/import" class="catalog__import">
           <ds-icon name="upload" [size]="0.95" /> Importar catálogo
         </a>
-        <ds-button type="button" (click)="openCreate()">Publicar producto</ds-button>
+        <ds-button type="button" (click)="openCreate()">Agregar al catálogo</ds-button>
       </div>
     </header>
 
@@ -41,8 +41,28 @@
         </a>
       </ds-empty-state>
     } @else {
+      @if (kindCounts().servicios > 0 || kindCounts().digitales > 0 || kindFilter() !== 'todos') {
+        <div class="kind-filter" role="group" aria-label="Filtrar por tipo">
+          @for (option of kindOptions; track option.id) {
+            <button
+              type="button"
+              [class.is-active]="kindFilter() === option.id"
+              [attr.aria-pressed]="kindFilter() === option.id"
+              (click)="setKindFilter(option.id)"
+            >
+              {{ option.label }} <span>{{ kindCounts()[option.id] }}</span>
+            </button>
+          }
+        </div>
+      }
+      @if (!visibleProducts().length) {
+        <p class="catalog__muted">
+          No hay {{ kindFilter() === 'servicios' ? 'servicios' : 'productos' }} con este filtro.
+          <button type="button" class="link-btn" (click)="setKindFilter('todos')">Ver todo</button>
+        </p>
+      }
       <ul class="product-grid">
-        @for (product of products(); track product.id) {
+        @for (product of visibleProducts(); track product.id) {
           <li class="product-card">
             <button type="button" class="product-card__hit" (click)="openEdit(product)">
               <div class="product-card__media">
@@ -64,6 +84,10 @@
                 <h2>{{ product.name }}</h2>
                 <p>{{ formatPrice(product.basePriceCents, product.currency) }}</p>
                 <span>{{ stockLabel(product) }}</span>
+                @let score = listScore(product);
+                <span class="product-card__score" [class.product-card__score--low]="score < 50">
+                  Información para recomendar: {{ score }}%
+                </span>
                 @if (storeActive() && product.isPublishedOnStore) {
                   <span class="product-card__store">
                     <ds-icon name="store" [size]="0.9" /> En tienda web
@@ -82,7 +106,7 @@
           <button type="button" class="publish__back" (click)="closeEditor()">
             ← Volver al catálogo
           </button>
-          <h1>{{ isEditing() ? 'Editar producto' : 'Publicación de producto' }}</h1>
+          <h1>{{ isEditing() ? 'Editar ficha' : 'Agregar al catálogo' }}</h1>
           <p>
             Nombre y descripción con los que tu vendedor lo presentará en el chat.
           </p>
@@ -129,11 +153,11 @@
               <button
                 type="button"
                 role="radio"
-                [attr.aria-checked]="!isService()"
-                [class.is-active]="!isService()"
+                [attr.aria-checked]="isPhysical()"
+                [class.is-active]="isPhysical()"
                 (click)="setKind('PRODUCT')"
               >
-                <ds-icon name="package" [size]="1" /> Producto
+                <ds-icon name="package" [size]="1" /> Producto físico
               </button>
               <button
                 type="button"
@@ -144,7 +168,22 @@
               >
                 <ds-icon name="calendar" [size]="1" /> Servicio
               </button>
+              <button type="button" role="radio" [attr.aria-checked]="isDigital()" [class.is-active]="isDigital()" (click)="setKind('DIGITAL')">
+                <ds-icon name="fileText" [size]="1" /> Producto digital
+              </button>
             </div>
+            @if (isDigital()) {
+              <p class="field__hint">Sin stock ni envío. El enlace se entrega al confirmarse el pago.</p>
+              <label class="field">
+                <span>Enlace privado de acceso <em>*</em></span>
+                <input formControlName="digitalAccessUrl" type="url" maxlength="500" placeholder="https://..." />
+                <span class="field__hint">Usa un enlace HTTPS que permita acceder al contenido. Se comparte solo con compradores que hayan pagado.</span>
+              </label>
+              <label class="field">
+                <span>Instrucciones para el comprador</span>
+                <textarea formControlName="digitalInstructions" maxlength="600" rows="2"></textarea>
+              </label>
+            }
             @if (isService()) {
               <p class="field__hint">
                 Sin stock ni envío. El comprador paga y luego coordinas con él el día y la hora.
@@ -156,18 +195,18 @@
                 </label>
                 <label class="field">
                   <span>Dónde se realiza</span>
-                  <select formControlName="serviceMode">
+                  <ds-select><select formControlName="serviceMode">
                     <option value="">Sin indicar</option>
                     <option value="onsite">En tu local</option>
                     <option value="home">A domicilio</option>
                     <option value="online">En línea</option>
-                  </select>
+                  </select></ds-select>
                 </label>
               </div>
             }
 
             <label class="field">
-              <span>Nombre del producto <em>*</em></span>
+              <span>{{ isService() ? 'Nombre del servicio' : 'Nombre del producto' }} <em>*</em></span>
               <input
                 formControlName="name"
                 maxlength="250"
@@ -207,10 +246,9 @@
 
           <section class="pub-card pub-card--row">
             <div>
-              <h2>Ayuda a tu vendedor</h2>
+              <h2>Descripción detallada</h2>
               <p>
-                Detalles extra (tallas, cuidados, FAQs) cuando te pregunten por este
-                producto.
+                Información adicional que se muestra en la tienda y que tu vendedor usa para responder consultas.
               </p>
             </div>
             <label class="switch">
@@ -227,21 +265,157 @@
           @if (sellerHelpEnabled()) {
             <section class="pub-card">
               <label class="field">
-                <span>Detalle para el vendedor</span>
+                <span>Descripción completa</span>
                 <textarea
                   formControlName="descriptionFull"
                   rows="5"
-                  maxlength="2000"
+                  maxlength="5000"
                   placeholder="Materiales, cuidados, tallaje, políticas de cambio…"
                 ></textarea>
               </label>
             </section>
           }
 
+          <section class="pub-card">
+            <header class="pub-card__head">
+              <h2>Ficha para vender mejor</h2>
+              <p>
+                Tu vendedor usa estos datos para recomendar y responder dudas sin inventar; también se muestran en la
+                tienda web.
+              </p>
+            </header>
+            <label class="field">
+              <span>Ideal para</span>
+              <input
+                formControlName="audience"
+                maxlength="200"
+                [placeholder]="isService() ? 'Ej. Quienes buscan relajarse después del trabajo' : 'Ej. Piel seca o sensible, uso diario'"
+              />
+            </label>
+            <label class="field">
+              <span>Necesidades y ocasiones de uso</span>
+              <textarea formControlName="useCasesText" rows="2" placeholder="Una por línea. Ej. Uso diario, regalo de cumpleaños"></textarea>
+            </label>
+            <label class="field">
+              <span>Qué no incluye o cuándo no es adecuado</span>
+              <textarea formControlName="exclusionsText" rows="2" placeholder="Una condición por línea"></textarea>
+            </label>
+            <div class="field-grid field-grid--two">
+              <label class="field">
+                <span>Tamaño o presentación</span>
+                <input formControlName="size" maxlength="60" [placeholder]="isService() ? 'Ej. Sesión individual' : 'Ej. 50 ml'" />
+              </label>
+              <label class="field">
+                <span>Palabras con las que te buscan</span>
+                <input formControlName="keywordsText" maxlength="600" placeholder="Ej. polera, camiseta, t-shirt" />
+                <span class="field__hint">Separadas por comas. No se muestran en la tienda.</span>
+              </label>
+            </div>
+            @if (!isService()) {
+              <label class="field">
+                <span>Características</span>
+                <textarea formControlName="attributesText" rows="3" [placeholder]="specificationHint()"></textarea>
+                <span class="field__hint">Una por línea con el formato «Nombre: valor». Máximo 20.</span>
+              </label>
+            }
+            @if (!isService()) {
+              <label class="field">
+                <span>Compatibilidad</span>
+                <textarea formControlName="compatibilityText" rows="2" placeholder="Equipos, programas o condiciones compatibles, una por línea"></textarea>
+              </label>
+            }
+            <label class="field">
+              <span>{{ isService() ? 'Qué incluye el servicio' : 'Qué incluye' }}</span>
+              <textarea
+                formControlName="contentsText"
+                rows="2"
+                [placeholder]="isService() ? 'Uno por línea. Ej. Limpieza facial profunda' : 'Uno por línea. Ej. Estuche de regalo'"
+              ></textarea>
+            </label>
+            <label class="field">
+              <span>Beneficios</span>
+              <textarea formControlName="benefitsText" rows="3" placeholder="Uno por línea"></textarea>
+            </label>
+            @if (isService() || isDigital()) {
+              <label class="field">
+                <span>{{ isDigital() ? 'Requisitos para acceder o usarlo' : 'Antes del servicio' }}</span>
+                <textarea formControlName="requirementsText" rows="2" [placeholder]="isDigital() ? 'Ej. Excel 2021 o posterior' : 'Ej. Llegar 10 minutos antes'"></textarea>
+              </label>
+            }
+            @if (isService()) {
+              <div class="field-grid field-grid--two">
+                <label class="field">
+                  <span>Zona de atención</span>
+                  <input formControlName="coverage" maxlength="200" placeholder="Ej. Miraflores, San Isidro y Surco" />
+                </label>
+                <label class="field">
+                  <span>Cambios de fecha y cancelación</span>
+                  <input formControlName="cancellation" maxlength="300" placeholder="Ej. Reprograma gratis con 24 h de aviso" />
+                </label>
+              </div>
+            } @else {
+              <label class="field">
+                <span>Modo de uso o cuidados</span>
+                <textarea formControlName="usageText" rows="3" placeholder="Un paso por línea"></textarea>
+              </label>
+              <label class="field">
+                <span>Garantía</span>
+                <input formControlName="warranty" maxlength="300" placeholder="Ej. 6 meses por defectos de fábrica" />
+              </label>
+            }
+            <label class="field">
+              <span>Condiciones de cambios y devoluciones</span>
+              <textarea formControlName="returns" rows="2" maxlength="300" placeholder="Indica las condiciones aplicables o la política del negocio"></textarea>
+            </label>
+            @if (isDigital()) {
+              <label class="field"><span>Formato o plataforma</span><input formControlName="digitalFormat" maxlength="80" placeholder="Ej. PDF, plantilla de Excel o curso en línea" /></label>
+              <label class="field"><span>Licencia y derechos de uso</span><textarea formControlName="license" maxlength="300" rows="2" placeholder="Ej. Uso personal; no incluye reventa"></textarea></label>
+              <label class="field"><span>Duración del acceso y actualizaciones</span><input formControlName="accessDuration" maxlength="200" placeholder="Ej. Acceso permanente a esta versión" /></label>
+            }
+
+            <div class="faq-head">
+              <h3>Preguntas frecuentes</h3>
+              <ds-button type="button" variant="secondary" [disabled]="faqs().length >= maxFaqs" (click)="addFaq()">
+                Añadir pregunta
+              </ds-button>
+            </div>
+            @if (!faqs().length) {
+              <p class="field__hint">Agrega las dudas que más te hacen sobre este {{ isService() ? 'servicio' : 'producto' }}.</p>
+            }
+            <ul class="faq-list">
+              @for (faq of faqs(); track $index; let i = $index) {
+                <li class="faq-row">
+                  <label class="field">
+                    <span>Pregunta</span>
+                    <input
+                      [value]="faq.question"
+                      maxlength="200"
+                      placeholder="¿Destiñe al lavarlo?"
+                      (input)="updateFaq(i, { question: $any($event.target).value })"
+                    />
+                  </label>
+                  <label class="field">
+                    <span>Respuesta</span>
+                    <textarea
+                      rows="2"
+                      maxlength="600"
+                      [value]="faq.answer"
+                      (input)="updateFaq(i, { answer: $any($event.target).value })"
+                    ></textarea>
+                  </label>
+                  <button type="button" class="icon-btn" (click)="removeFaq(i)" aria-label="Quitar pregunta">
+                    <ds-icon name="x" />
+                  </button>
+                </li>
+              }
+            </ul>
+          </section>
+
+          @if (isPhysical()) {
           <section class="pub-card pub-card--row">
             <div>
-              <h2>Ficha detallada</h2>
-              <p>Tamaño, beneficios, modo de uso y notas. Se muestran en la ficha de la tienda.</p>
+              <h2>Detalles de belleza y fragancia</h2>
+              <p>Familia, intensidad, notas y pirámide olfativa para perfumes y cosmética.</p>
             </div>
             <label class="switch">
               <input
@@ -250,17 +424,13 @@
                 (change)="toggleDetails($any($event.target).checked)"
               />
               <span class="switch__track" aria-hidden="true"></span>
-              <span class="visually-hidden">Activar ficha detallada</span>
+              <span class="visually-hidden">Activar detalles de belleza y fragancia</span>
             </label>
           </section>
 
           @if (detailsEnabled()) {
             <section class="pub-card">
-              <div class="field-grid">
-                <label class="field">
-                  <span>Tamaño o presentación</span>
-                  <input formControlName="size" maxlength="60" placeholder="50 ml" />
-                </label>
+              <div class="field-grid field-grid--two">
                 <label class="field">
                   <span>Familia</span>
                   <input formControlName="family" maxlength="80" placeholder="Floral" />
@@ -270,14 +440,6 @@
                   <input formControlName="intensity" maxlength="80" placeholder="Intensa" />
                 </label>
               </div>
-              <label class="field">
-                <span>Beneficios</span>
-                <textarea formControlName="benefitsText" rows="3" placeholder="Uno por línea"></textarea>
-              </label>
-              <label class="field">
-                <span>Modo de uso</span>
-                <textarea formControlName="usageText" rows="3" placeholder="Un paso por línea"></textarea>
-              </label>
               <label class="field">
                 <span>Notas e ingredientes</span>
                 <textarea formControlName="notesText" rows="3" placeholder="Uno por línea"></textarea>
@@ -298,7 +460,9 @@
             </section>
           }
 
-          @if (!isService()) {
+          }
+
+          @if (isPhysical()) {
           <section class="pub-card pub-card--row">
             <div>
               <h2>Se vende como set</h2>
@@ -316,7 +480,7 @@
           </section>
           }
 
-          @if (setEnabled() && !isService()) {
+          @if (setEnabled() && isPhysical()) {
             <section class="pub-card">
               <header class="pub-card__head pub-card__head--inline">
                 <div>
@@ -340,7 +504,7 @@
                   <li class="variant-row variant-row--set">
                     <label class="field">
                       <span>Producto</span>
-                      <select
+                      <ds-select><select
                         [value]="row.productId"
                         (change)="updateComponent(i, { productId: $any($event.target).value })"
                       >
@@ -348,7 +512,7 @@
                         @for (option of pieceOptions(); track option.id) {
                           <option [value]="option.id">{{ option.name }}{{ option.sku ? ' · ' + option.sku : '' }}</option>
                         }
-                      </select>
+                      </select></ds-select>
                     </label>
                     <label class="field">
                       <span>Unidades</span>
@@ -373,9 +537,9 @@
           @if (!setEnabled() || isService()) {
           <section class="pub-card pub-card--row">
             <div>
-              <h2>¿Tu producto tiene variantes?</h2>
+              <h2>¿Tiene opciones para elegir?</h2>
               <p>
-                Colores, tallas, tamaños: cada variante con su propio precio y stock.
+                {{ isPhysical() ? 'Colores, tallas o tamaños: cada opción con su propio precio y stock.' : 'Modalidades o versiones: cada opción con su propio precio, sin stock físico.' }}
               </p>
             </div>
             <label class="switch">
@@ -401,11 +565,32 @@
                 </ds-button>
               </header>
 
+              <div class="field-grid field-grid--two">
+                <label class="field">
+                  <span>Nombre de la opción 1</span>
+                  <input
+                    [value]="optionNames().first"
+                    maxlength="40"
+                    placeholder="Ej. Color"
+                    (input)="setOptionName('first', $any($event.target).value)"
+                  />
+                </label>
+                <label class="field">
+                  <span>Nombre de la opción 2</span>
+                  <input
+                    [value]="optionNames().second"
+                    maxlength="40"
+                    placeholder="Ej. Talla"
+                    (input)="setOptionName('second', $any($event.target).value)"
+                  />
+                </label>
+              </div>
+
               <ul class="variant-list">
                 @for (variant of variantDrafts(); track $index; let i = $index) {
                   <li class="variant-row">
                     <label class="field">
-                      <span>Opción 1</span>
+                      <span>{{ optionNames().first || 'Opción 1' }}</span>
                       <input
                         [value]="variant.option1Value"
                         (input)="
@@ -417,7 +602,7 @@
                       />
                     </label>
                     <label class="field">
-                      <span>Opción 2</span>
+                      <span>{{ optionNames().second || 'Opción 2' }}</span>
                       <input
                         [value]="variant.option2Value"
                         (input)="
@@ -437,6 +622,23 @@
                         [value]="variant.price"
                         (input)="onVariantPriceInput(i, $any($event.target).value)"
                       />
+                    </label>
+                    <label class="field">
+                      <span>SKU</span>
+                      <input
+                        [value]="variant.sku"
+                        maxlength="60"
+                        autocomplete="off"
+                        (input)="updateVariant(i, { sku: $any($event.target).value })"
+                      />
+                    </label>
+                    <label class="check-row variant-row__available">
+                      <input
+                        type="checkbox"
+                        [checked]="variant.isAvailable"
+                        (change)="updateVariant(i, { isAvailable: $any($event.target).checked })"
+                      />
+                      <span>Disponible</span>
                     </label>
                     <button
                       type="button"
@@ -557,6 +759,23 @@
           </section>
 
           <section class="pub-card">
+            <h2>Información para recomendar: {{ completeness().score }}%</h2>
+            <p class="field__hint">Revisa los datos que ayudan al comprador a elegir. El porcentaje mide información registrada, no su exactitud.</p>
+            <ul class="ready-list">
+              @for (item of completeness().items; track item.id) {
+                <li [class.ready-list__item--done]="item.done">
+                  <span class="ready-list__dot" aria-hidden="true">
+                    @if (item.done) {
+                      <ds-icon name="check" />
+                    }
+                  </span>
+                  {{ item.label }}
+                </li>
+              }
+            </ul>
+          </section>
+
+          <section class="pub-card">
             <header class="pub-card__head pub-card__head--inline">
               <div>
                 <h2>Disponibilidad</h2>
@@ -584,7 +803,7 @@
           </section>
 
           <section class="pub-card">
-            <h2>{{ isService() ? 'Precio' : 'Precio y stock' }}</h2>
+            <h2>{{ isPhysical() ? 'Precio y stock' : 'Precio' }}</h2>
             <label class="field">
               <span>Precio <em>*</em></span>
               <div class="price-row">
@@ -607,8 +826,8 @@
               <input formControlName="sku" maxlength="60" autocomplete="off" placeholder="PER-50" />
             </label>
 
-            @if (isService()) {
-              <p class="field__hint">Los servicios no llevan stock: se pueden reservar mientras estén disponibles.</p>
+            @if (!isPhysical()) {
+              <p class="field__hint">{{ isDigital() ? 'Sin stock físico: el acceso se entrega al confirmarse el pago.' : 'Sin stock físico: el día y la hora se coordinan con el comprador.' }}</p>
             } @else if (setEnabled()) {
               <p class="field__hint">El stock del set sale de sus piezas: se vende mientras todas tengan unidades.</p>
             } @else {

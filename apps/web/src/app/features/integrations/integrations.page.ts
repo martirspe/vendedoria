@@ -227,7 +227,7 @@ export class IntegrationsPage {
       case 'locked':
         return card.state?.requiredPlan ? `Desde ${card.state.requiredPlan.name}` : 'No incluida';
       default:
-        return 'Próximamente';
+        return 'No disponible';
     }
   }
 
@@ -288,7 +288,7 @@ export class IntegrationsPage {
       case 'ready':
         return 'Listo';
       default:
-        return 'Próximamente';
+        return 'No disponible';
     }
   }
 

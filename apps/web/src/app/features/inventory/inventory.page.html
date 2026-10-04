@@ -58,7 +58,7 @@
     @if (!visible().length) {
       <p class="hint">Ningún SKU coincide con el filtro.</p>
     } @else {
-      <div class="card inventory">
+      <div class="card inventory" role="region" aria-label="Inventario de productos, tabla desplazable" tabindex="0">
         <table>
           <thead>
             <tr>
@@ -106,6 +106,7 @@
                   }
                 </td>
                 <td>
+                  <label class="inventory__toggle-target">
                   <input
                     type="checkbox"
                     class="inventory__toggle"
@@ -113,6 +114,7 @@
                     [checked]="d.unlimited"
                     (change)="setUnlimited(row, $any($event.target).checked)"
                   />
+                  </label>
                 </td>
               </tr>
             }

@@ -10,11 +10,14 @@ export type BagItem = { handle: string; quantity: number };
 /** Most units a buyer can take of one product, as in the original store. */
 export const MAX_UNITS = 10;
 
-/** Whole published catalog: the template filters, cross-sells and prices in the browser. */
+/** Featured collection plus bounded individual product/cart lookups. */
 @Injectable({ providedIn: 'root' })
 export class SelectaCatalog {
   private readonly api = inject(StoreApiService);
   private pending: Promise<Product[]> | null = null;
+  private readonly individual = new Map<string, Product | null>();
+  private readonly lookups = new Map<string, Promise<void>>();
+  private featured: Product[] = [];
 
   readonly products = signal<Product[]>([]);
   readonly loaded = signal(false);
@@ -29,6 +32,7 @@ export class SelectaCatalog {
   async refresh(): Promise<void> {
     try {
       await this.fetch();
+      await this.ensure([...this.individual.keys()], true);
     } catch {
       // The list already shown stays valid; the API re-checks everything at checkout.
     }
@@ -38,10 +42,38 @@ export class SelectaCatalog {
     return this.products().find((p) => p.handle === handle);
   }
 
+  async ensure(handles: string[], fresh = false): Promise<void> {
+    const unique = [...new Set(handles.filter(Boolean))].slice(0, 40);
+    for (let offset = 0; offset < unique.length; offset += 4) {
+      await Promise.all(unique.slice(offset, offset + 4).map((handle) => {
+        if (!fresh && (this.individual.has(handle) || this.featured.some((p) => p.handle === handle))) return;
+        if (this.lookups.has(handle)) return this.lookups.get(handle);
+        const pending = this.api.catalogProduct(handle).then((product) => {
+          this.individual.delete(handle);
+          this.individual.set(handle, product);
+          while (this.individual.size > 40) this.individual.delete(this.individual.keys().next().value!);
+          this.merge();
+        }).finally(() => this.lookups.delete(handle));
+        this.lookups.set(handle, pending);
+        return pending;
+      }));
+    }
+  }
+
+  private merge(): void {
+    const products = new Map(this.featured.map((p) => [p.handle, p]));
+    for (const [handle, product] of this.individual) {
+      if (product) products.set(handle, product);
+      else products.delete(handle);
+    }
+    this.products.set([...products.values()]);
+  }
+
   private async fetch(): Promise<Product[]> {
     try {
       const items = await this.api.catalog();
-      this.products.set(items);
+      this.featured = items;
+      this.merge();
       this.loaded.set(true);
       this.failed.set(false);
       return items;
@@ -63,6 +95,12 @@ export const selectaCatalogResolver: ResolveFn<boolean> = async () => {
   return true;
 };
 
+export const selectaProductResolver: ResolveFn<boolean> = async (route) => {
+  const handle = route.paramMap.get('handle') ?? route.queryParamMap.get('producto');
+  if (handle) await inject(SelectaCatalog).ensure([handle]);
+  return true;
+};
+
 export const category = (p: Product) => p.categories[0] ?? 'Otros';
 export const photos = (p: Product): PublicMedia[] => p.media.filter((m) => m.kind !== 'related');
 export const stockOf = (p: Product) => (p.isAvailable ? (p.stockLeft ?? MAX_UNITS) : 0);
@@ -79,6 +117,7 @@ export function bagLine(p: Product, variant: PublicVariant | null = null): Omit<
     currency: p.currency,
     imageUrl: variant?.imageUrl ?? p.imageUrl,
     isService: p.kind === 'SERVICE',
+    isDigital: p.kind === 'DIGITAL',
   };
 }
 

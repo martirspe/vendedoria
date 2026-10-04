@@ -10,6 +10,9 @@ export type ProductVariantDto = {
   option1Value?: string | null;
   option2Name?: string | null;
   option2Value?: string | null;
+  option3Name?: string | null;
+  option3Value?: string | null;
+  imageUrl?: string | null;
   priceCents: number;
   isAvailable: boolean;
   stockQty: number | null;
@@ -25,6 +28,13 @@ export type ProductMediaDto = {
 };
 
 export type ProductDetails = {
+  useCases?: string[];
+  exclusions?: string[];
+  compatibility?: string[];
+  returns?: string;
+  digitalFormat?: string;
+  license?: string;
+  accessDuration?: string;
   size?: string;
   benefits?: string[];
   usage?: string[];
@@ -34,6 +44,15 @@ export type ProductDetails = {
   intensity?: string;
   scent?: { name: string; description?: string }[];
   montage?: boolean;
+  attributes?: { name: string; value: string }[];
+  audience?: string;
+  keywords?: string[];
+  contents?: string[];
+  warranty?: string;
+  faqs?: { question: string; answer: string }[];
+  requirements?: string[];
+  coverage?: string;
+  cancellation?: string;
 };
 
 export type ProductComponentDto = {
@@ -46,10 +65,12 @@ export type ProductComponentDto = {
 export type MediaInput = { url: string; kind?: 'image' | 'related'; alt?: string; caption?: string };
 export type ComponentInput = { productId: string; quantity: number };
 
-export type ProductKind = 'PRODUCT' | 'SERVICE';
+export type ProductKind = 'PRODUCT' | 'SERVICE' | 'DIGITAL';
 export type ServiceMode = 'onsite' | 'home' | 'online';
 
 type ProductExtrasPayload = {
+  digitalAccessUrl?: string | null;
+  digitalInstructions?: string | null;
   kind?: ProductKind;
   durationMinutes?: number | null;
   serviceMode?: ServiceMode | null;
@@ -74,6 +95,8 @@ export type InventoryRow = {
 export type InventoryUpdate = { productId: string; variantId?: string; stockQty: number | null };
 
 export type ProductDto = {
+  digitalAccessUrl: string | null;
+  digitalInstructions: string | null;
   id: string;
   handle: string;
   name: string;
@@ -102,11 +125,15 @@ export type ProductDto = {
 };
 
 export type VariantPayload = {
+  id?: string;
   sku?: string;
   option1Name?: string;
   option1Value?: string;
   option2Name?: string;
   option2Value?: string;
+  option3Name?: string;
+  option3Value?: string;
+  imageUrl?: string | null;
   priceCents: number;
   isAvailable?: boolean;
   stockQty?: number | null;

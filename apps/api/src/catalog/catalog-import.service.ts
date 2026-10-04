@@ -15,6 +15,7 @@ import {
   ImportOptions,
   ImportPlan,
   imageKey,
+  keepConsoleDetails,
   parseCatalogPackage,
   ParsedCatalog,
   planImport,
@@ -188,6 +189,7 @@ export class CatalogImportService {
           isPublishedOnStore: true,
           stockUnlimited: true,
           stockQty: true,
+          kind: true,
           media: { select: { url: true } },
           _count: { select: { variants: true } },
           componentOf: { select: { set: { select: { handle: true } } } },
@@ -216,6 +218,7 @@ export class CatalogImportService {
       isPublishedOnStore: row.isPublishedOnStore,
       stockUnlimited: row.stockUnlimited,
       stockQty: row.stockQty,
+      kind: row.kind,
       variantCount: row._count.variants,
       usedInSets: row.componentOf.map((link) => link.set.handle),
     }));
@@ -271,6 +274,11 @@ export class CatalogImportService {
         for (const item of plan.products) {
           const p = item.product;
           const content = {
+            kind: p.kind,
+            durationMinutes: p.durationMinutes,
+            serviceMode: p.serviceMode,
+            digitalAccessUrl: p.digitalAccessUrl,
+            digitalInstructions: p.digitalInstructions,
             name: p.name,
             descriptionShort: p.descriptionShort,
             descriptionFull: p.descriptionFull,
@@ -286,9 +294,17 @@ export class CatalogImportService {
           let id: string;
           if (item.current) {
             id = item.current.id;
+            const previous = await tx.product.findFirst({
+              where: { id, tenantId },
+              select: { details: true },
+            });
             await tx.product.updateMany({
               where: { id, tenantId },
-              data: { ...content, ...item.commerce },
+              data: {
+                ...content,
+                details: keepConsoleDetails(previous?.details, content.details),
+                ...item.commerce,
+              },
             });
             await tx.productMedia.deleteMany({ where: { productId: id } });
             if (p.holdsStock)
@@ -340,7 +356,7 @@ export class CatalogImportService {
 
         const setIds: string[] = [];
         for (const item of plan.products) {
-          if (item.product.holdsStock) continue;
+          if (!item.product.pieces.length) continue;
           const setId = ids.get(item.product.handle)!;
           setIds.push(setId);
           await tx.productComponent.deleteMany({ where: { setId } });
@@ -434,7 +450,7 @@ export class CatalogImportService {
           handle: product.handle,
           name: product.name,
           action: current ? 'update' : 'create',
-          isSet: !product.holdsStock,
+          isSet: product.pieces.length > 0,
           priceCents: price,
           published,
           photos: item.media.length,

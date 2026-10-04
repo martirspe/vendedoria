@@ -36,7 +36,7 @@ const UPSTREAM_TIMEOUT_MS = 8_000;
 /** Paying waits for Mercado Pago (12 s) plus our own work. */
 const PAY_TIMEOUT_MS = 25_000;
 /** Only these endpoints of the tenant store are reachable through the proxy. */
-const PROXY_GET = /^(products(\/[^/]+)?|catalog|orders\/[a-z0-9]{20,40}|ubigeos|shipping-quote)?$/;
+const PROXY_GET = /^(products(\/[^/]+)?|catalog(\/[^/]+)?|orders\/[a-z0-9]{20,40}|ubigeos|shipping-quote)?$/;
 const PROXY_POST = /^(checkout|coupons\/preview|orders\/[a-z0-9]{20,40}\/(pay|cancel|simulate))$/;
 
 /** Mercado Pago SDK, Card Payment Brick and Yape tokenization. */

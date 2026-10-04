@@ -33,6 +33,11 @@
             "styles": [
               "src/styles.scss",
               {
+                "input": "src/app/templates/stride/stride.scss",
+                "bundleName": "stride",
+                "inject": false
+              },
+              {
                 "input": "src/app/templates/selecta/selecta.scss",
                 "bundleName": "selecta",
                 "inject": false

@@ -1,17 +1,19 @@
 <section class="store-container checkout">
   <a class="back" routerLink="/carrito"><ds-icon name="arrowLeft" [size]="1" /> Volver al carrito</a>
-  <h1>Finalizar compra</h1>
+  <header class="checkout__heading"><p class="store-eyebrow">Ya casi es tuyo</p><h1>Finaliza tu compra</h1><p>Datos, entrega y pago en una sola página. Sin crear una cuenta.</p></header>
 
   @if (!cart.ready()) {
     <p aria-busy="true">Cargando tu carrito…</p>
+  } @else if (store()?.checkout?.mode !== 'online') {
+    <div class="store-empty"><h2>Coordina tu pedido con la tienda</h2><p>Vuelve al carrito para enviar tu selección por WhatsApp.</p><a class="store-btn store-btn--primary" routerLink="/carrito">Ver mi carrito</a></div>
   } @else if (store(); as s) {
-    <form class="checkout__layout" [formGroup]="form" (ngSubmit)="submit()" novalidate>
+    <form class="checkout__layout" [formGroup]="form" (ngSubmit)="$event.preventDefault()" novalidate>
       <div class="checkout__main">
-        <fieldset class="panel">
-          <legend>1. Tus datos</legend>
+        <fieldset class="panel" [disabled]="submitting() || !!reservedOrder()">
+          <legend>Contacto</legend>
           <label class="field">
             <span>Nombre y apellido</span>
-            <input formControlName="name" autocomplete="name" maxlength="100" />
+            <input formControlName="name" [attr.aria-invalid]="form.controls.name.touched && form.controls.name.invalid" autocomplete="name" maxlength="100" />
             @if (form.controls.name.touched && form.controls.name.invalid) {
               <small class="field__error">Escribe tu nombre completo.</small>
             }
@@ -19,14 +21,14 @@
           <div class="row">
             <label class="field">
               <span>Correo</span>
-              <input formControlName="email" type="email" autocomplete="email" maxlength="160" />
+              <input formControlName="email" [attr.aria-invalid]="form.controls.email.touched && form.controls.email.invalid" type="email" autocomplete="email" maxlength="160" />
               @if (form.controls.email.touched && form.controls.email.invalid) {
                 <small class="field__error">Escribe un correo válido.</small>
               }
             </label>
             <label class="field">
               <span>Celular</span>
-              <input formControlName="phone" type="tel" inputmode="numeric" autocomplete="tel-national" maxlength="9" placeholder="987654321" />
+              <input formControlName="phone" [attr.aria-invalid]="form.controls.phone.touched && form.controls.phone.invalid" type="tel" inputmode="numeric" autocomplete="tel-national" maxlength="9" placeholder="987654321" />
               @if (form.controls.phone.touched && form.controls.phone.invalid) {
                 <small class="field__error">9 dígitos, empieza con 9.</small>
               }
@@ -34,31 +36,32 @@
           </div>
           <label class="field">
             <span>DNI o CE <em>Opcional</em></span>
-            <input formControlName="document" inputmode="numeric" maxlength="12" />
+            <input formControlName="document" [attr.aria-invalid]="form.controls.document.touched && form.controls.document.invalid" inputmode="numeric" maxlength="12" />
+            @if (form.controls.document.touched && form.controls.document.invalid) { <small class="field__error">Escribe entre 8 y 12 dígitos.</small> }
           </label>
         </fieldset>
 
         @if (cart.hasServices()) {
-          <fieldset class="panel">
-            <legend>2. Tu reserva</legend>
+          <fieldset class="panel" [disabled]="submitting() || !!reservedOrder()">
+            <legend>Coordinación del servicio</legend>
             <label class="field">
               <span>¿Cuándo te gustaría? <em>Opcional</em></span>
-              <input formControlName="serviceNote" maxlength="300" placeholder="Ej.: sábado por la mañana" />
+              <input formControlName="serviceNote" [attr.aria-invalid]="form.controls.serviceNote.touched && form.controls.serviceNote.invalid" maxlength="300" placeholder="Ej.: sábado por la mañana" />
             </label>
             <p class="hint">Es una preferencia: después del pago te escribimos para confirmar el día y la hora.</p>
           </fieldset>
         }
 
         @if (cart.needsDelivery()) {
-        <fieldset class="panel">
-          <legend>{{ cart.hasServices() ? '3' : '2' }}. Entrega</legend>
+        <fieldset class="panel" [disabled]="submitting() || !!reservedOrder()">
+          <legend>Entrega</legend>
           @if (!options().length) {
-            <p class="warning" role="alert">Esta tienda aún no configuró sus formas de entrega.</p>
+            <p class="warning" role="alert">La entrega no está disponible por ahora. Vuelve al carrito para consultar con la tienda.</p>
           }
           <div class="options">
             @for (option of options(); track option.mode) {
               <label class="option">
-                <input type="radio" formControlName="mode" [value]="option.mode" />
+                <input type="radio" formControlName="mode" [attr.aria-invalid]="form.controls.mode.touched && form.controls.mode.invalid" [value]="option.mode" />
                 <span class="option__body">
                   <strong>{{ option.label }}</strong>
                   @if (option.byDistance) {
@@ -92,31 +95,31 @@
                 <div class="row">
                   <label class="field">
                     <span>Departamento</span>
-                    <select formControlName="department" autocomplete="address-level1">
+                    <ds-select><select formControlName="department" [attr.aria-invalid]="form.controls.department.touched && form.controls.department.invalid" autocomplete="address-level1">
                       <option value="">Selecciona</option>
                       @for (d of departments(); track d) {
                         <option [value]="d">{{ d }}</option>
                       }
-                    </select>
+                    </select></ds-select>
                   </label>
                   <label class="field">
                     <span>Provincia</span>
-                    <select formControlName="province" autocomplete="address-level2">
+                    <ds-select><select formControlName="province" [attr.aria-invalid]="form.controls.province.touched && form.controls.province.invalid" autocomplete="address-level2">
                       <option value="">Selecciona</option>
                       @for (p of provinces(); track p) {
                         <option [value]="p">{{ p }}</option>
                       }
-                    </select>
+                    </select></ds-select>
                   </label>
                 </div>
                 <label class="field">
                   <span>Distrito</span>
-                  <select formControlName="ubigeo" autocomplete="address-level3">
+                  <ds-select><select formControlName="ubigeo" [attr.aria-invalid]="form.controls.ubigeo.touched && form.controls.ubigeo.invalid" autocomplete="address-level3">
                     <option value="">Selecciona tu distrito</option>
                     @for (d of districts(); track d.code) {
                       <option [value]="d.code">{{ d.district }}</option>
                     }
-                  </select>
+                  </select></ds-select>
                   @if (form.controls.ubigeo.touched && form.controls.ubigeo.invalid) {
                     <small class="field__error">Selecciona el departamento, la provincia y el distrito.</small>
                   }
@@ -128,7 +131,7 @@
             }
             <label class="field">
               <span>Dirección</span>
-              <input formControlName="address" autocomplete="street-address" maxlength="200" placeholder="Av., calle, número, dpto." />
+              <input formControlName="address" [attr.aria-invalid]="form.controls.address.touched && form.controls.address.invalid" autocomplete="street-address" maxlength="200" placeholder="Av., calle, número, dpto." />
               @if (form.controls.address.touched && form.controls.address.invalid) {
                 <small class="field__error">Escribe la dirección de entrega.</small>
               }
@@ -145,7 +148,7 @@
               </p>
             }
             <label class="consent">
-              <input type="checkbox" formControlName="acknowledgeRate" />
+              <input type="checkbox" formControlName="acknowledgeRate" [attr.aria-invalid]="form.controls.acknowledgeRate.touched && form.controls.acknowledgeRate.invalid" />
               <span>
                 Entiendo que la tarifa de la agencia es referencial y que la tienda me confirmará la
                 cobertura antes del despacho.
@@ -157,62 +160,13 @@
           }
           <label class="field">
             <span>Referencia o indicaciones <em>Opcional</em></span>
-            <input formControlName="reference" maxlength="180" />
+            <input formControlName="reference" [attr.aria-invalid]="form.controls.reference.touched && form.controls.reference.invalid" maxlength="180" />
           </label>
         </fieldset>
         }
-      </div>
-
-      <aside class="summary" aria-labelledby="summary-title">
-        <h2 id="summary-title">Tu pedido</h2>
-        <ul class="summary__items">
-          @for (line of cart.lines(); track line.key) {
-            <li>
-              <span>{{ line.quantity }} × {{ line.name }}@if (line.variantLabel) { · {{ line.variantLabel }} }</span>
-              <span>{{ line.unitCents * line.quantity | money }}</span>
-            </li>
-          }
-        </ul>
-
-        @if (s.checkout.couponsEnabled) {
-          <div class="coupon">
-            @if (coupon(); as c) {
-              <p class="coupon__applied">
-                <ds-icon name="check" [size]="1" />
-                <span><strong>{{ c.code }}</strong> · {{ c.label }}</span>
-                <button type="button" (click)="removeCoupon()">Quitar</button>
-              </p>
-            } @else {
-              <label class="visually-hidden" for="coupon-code">Cupón de descuento</label>
-              <div class="coupon__row">
-                <input id="coupon-code" formControlName="couponCode" placeholder="Cupón de descuento" maxlength="40" autocomplete="off" />
-                <button type="button" class="store-btn store-btn--secondary" [disabled]="applyingCoupon()" (click)="applyCoupon()">
-                  {{ applyingCoupon() ? '…' : 'Aplicar' }}
-                </button>
-              </div>
-              @if (couponError(); as error) {
-                <small class="field__error" role="alert">{{ error }}</small>
-              }
-            }
-          </div>
-        }
-
-        <dl>
-          <div><dt>Subtotal</dt><dd>{{ cart.subtotalCents() | money }}</dd></div>
-          @if (discountCents() > 0) {
-            <div class="summary__discount"><dt>Descuento</dt><dd>−{{ discountCents() | money }}</dd></div>
-          }
-          @if (cart.needsDelivery()) {
-            <div>
-              <dt>Envío</dt>
-              <dd>{{ !selectedOption() ? 'Elige una opción' : shippingPending() ? 'Elige tu distrito' : shippingCents() === 0 ? 'Gratis' : (shippingCents() | money) }}</dd>
-            </div>
-          }
-          <div class="summary__total"><dt>Total</dt><dd>{{ totalCents() | money }}</dd></div>
-        </dl>
-
+<fieldset class="checkout__consent" [disabled]="submitting() || !!reservedOrder()">
         <label class="consent">
-          <input type="checkbox" formControlName="acceptTerms" />
+          <input type="checkbox" formControlName="acceptTerms" [attr.aria-invalid]="form.controls.acceptTerms.touched && form.controls.acceptTerms.invalid" />
           <span>
             Soy mayor de edad y acepto los <a routerLink="/terminos-y-condiciones" target="_blank">Términos y Condiciones</a> y la
             <a routerLink="/cambios-y-devoluciones" target="_blank">Política de Cambios y Devoluciones</a>. He leído la
@@ -231,12 +185,70 @@
           <p class="warning" role="alert">{{ error }}</p>
         }
 
-        <button type="submit" class="store-btn store-btn--primary store-btn--block" [disabled]="submitting() || !canCheckout()">
-          <ds-icon name="lock" [size]="1.05" />
-          {{ submitting() ? 'Reservando tu pedido…' : 'Continuar al pago' }}
-        </button>
+</fieldset>
+<store-checkout-payment [reserve]="reserveOrder" (reservationReleased)="releaseReservation()" [amountCents]="displayedTotal()" [payerEmail]="form.controls.email.value" />
+      </div>
+
+      <aside class="summary" aria-labelledby="summary-title">
+        <h2 id="summary-title">Tu pedido</h2>
+        <ul class="summary__items">
+          @if (reservedOrder(); as order) {
+            @for (item of order.items; track $index) {
+              <li><span>{{ item.quantity }} × {{ item.title }}</span><span>{{ item.totalCents | money }}</span></li>
+            }
+          } @else {
+          @for (line of cart.lines(); track line.key) {
+            <li>
+              @if (line.imageUrl) { <img [src]="line.imageUrl" alt="" width="44" height="44" /> }
+              <span>{{ line.quantity }} × {{ line.name }}@if (line.variantLabel) { · {{ line.variantLabel }} }</span>
+              <span>{{ line.unitCents * line.quantity | money }}</span>
+            </li>
+          }
+          }
+        </ul>
+
+        @if (s.checkout.couponsEnabled) {
+          <fieldset class="coupon" [disabled]="submitting() || !!reservedOrder()">
+            @if (coupon(); as c) {
+              <p class="coupon__applied">
+                <ds-icon name="check" [size]="1" />
+                <span><strong>{{ c.code }}</strong> · {{ c.label }}</span>
+                <button type="button" (click)="removeCoupon()">Quitar</button>
+              </p>
+            } @else {
+              <label class="visually-hidden" for="coupon-code">Cupón de descuento</label>
+              <div class="coupon__row">
+                <input id="coupon-code" formControlName="couponCode" [attr.aria-invalid]="form.controls.couponCode.touched && form.controls.couponCode.invalid" placeholder="Cupón de descuento" maxlength="40" autocomplete="off" />
+                <button type="button" class="store-btn store-btn--secondary" [disabled]="applyingCoupon()" (click)="applyCoupon()">
+                  {{ applyingCoupon() ? '…' : 'Aplicar' }}
+                </button>
+              </div>
+              @if (couponError(); as error) {
+                <small class="field__error" role="alert">{{ error }}</small>
+              }
+            }
+          </fieldset>
+        }
+
+        <dl>
+          <div><dt>Subtotal</dt><dd>{{ displayedSubtotal() | money }}</dd></div>
+          @if (displayedDiscount() > 0) {
+            <div class="summary__discount"><dt>Descuento</dt><dd>−{{ displayedDiscount() | money }}</dd></div>
+          }
+          @if (cart.needsDelivery()) {
+            <div>
+              <dt>Envío</dt>
+              <dd>{{ !reservedOrder() && !selectedOption() ? 'Elige una opción' : !reservedOrder() && shippingPending() ? 'Elige tu distrito' : displayedShipping() === 0 ? 'Gratis' : (displayedShipping() | money) }}</dd>
+            </div>
+          }
+          <div class="summary__total"><dt>Total</dt><dd>{{ displayedTotal() | money }}</dd></div>
+        </dl>
+
         @if (cart.needsDelivery()) {
-          <p class="summary__note">Reservamos tus productos por 15 minutos mientras pagas.</p>
+          <p class="summary__note">El importe de envío es referencial. Cualquier diferencia requiere tu aprobación antes del despacho.</p>
+        }
+        @if (cart.hasDigital()) {
+          <p class="summary__note">Los productos digitales no se envían: recibes el enlace de acceso en tu correo y en la página del pedido al confirmarse el pago.</p>
         }
       </aside>
     </form>

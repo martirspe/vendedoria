@@ -1,0 +1,140 @@
+@if (hasContent()) {
+  @let d = details();
+  <div class="facts">
+    @if (d.audience) {
+      <p class="facts__audience"><strong>Ideal para:</strong> {{ d.audience }}</p>
+    }
+    @if (d.useCases.length) {
+      <section class="facts__block"><h2>Para qué sirve</h2><ul>@for (item of d.useCases; track $index) { <li>{{ item }}</li> }</ul></section>
+    }
+    @if (d.exclusions.length) {
+      <section class="facts__block"><h2>Qué debes tener en cuenta</h2><ul>@for (item of d.exclusions; track $index) { <li>{{ item }}</li> }</ul></section>
+    }
+    @if (d.compatibility.length) {
+      <section class="facts__block"><h2>Compatibilidad</h2><ul>@for (item of d.compatibility; track $index) { <li>{{ item }}</li> }</ul></section>
+    }
+    @if (d.digitalFormat || d.license || d.accessDuration) {
+      <section class="facts__block"><h2>Contenido digital</h2><dl class="facts__specs">
+        @if (d.digitalFormat) { <div><dt>Formato o plataforma</dt><dd>{{ d.digitalFormat }}</dd></div> }
+        @if (d.license) { <div><dt>Licencia y uso</dt><dd>{{ d.license }}</dd></div> }
+        @if (d.accessDuration) { <div><dt>Acceso y actualizaciones</dt><dd>{{ d.accessDuration }}</dd></div> }
+      </dl></section>
+    }
+    @if (d.returns) {
+      <section class="facts__block"><h2>Cambios y devoluciones</h2><p>{{ d.returns }}</p></section>
+    }
+
+    @if (d.attributes.length || (showBasics() && d.size)) {
+      <section class="facts__block">
+        <h2>Características</h2>
+        <dl class="facts__specs">
+          @if (showBasics() && d.size) {
+            <div>
+              <dt>Presentación</dt>
+              <dd>{{ d.size }}</dd>
+            </div>
+          }
+          @for (row of d.attributes; track $index) {
+            <div>
+              <dt>{{ row.name }}</dt>
+              <dd>{{ row.value }}</dd>
+            </div>
+          }
+        </dl>
+      </section>
+    }
+
+    @if (d.contents.length) {
+      <section class="facts__block">
+        <h2>{{ isService() ? 'Qué incluye el servicio' : 'Qué incluye' }}</h2>
+        <ul>
+          @for (item of d.contents; track $index) {
+            <li>{{ item }}</li>
+          }
+        </ul>
+      </section>
+    }
+
+    @if (showBasics()) {
+      @if (d.benefits.length) {
+        <section class="facts__block">
+          <h2>Beneficios</h2>
+          <ul>
+            @for (item of d.benefits; track $index) {
+              <li>{{ item }}</li>
+            }
+          </ul>
+        </section>
+      }
+      @if (d.usage.length) {
+        <section class="facts__block">
+          <h2>Modo de uso</h2>
+          <ol>
+            @for (item of d.usage; track $index) {
+              <li>{{ item }}</li>
+            }
+          </ol>
+        </section>
+      }
+      @if (d.notes.length) {
+        <section class="facts__block">
+          <h2>Ingredientes y notas</h2>
+          <ul>
+            @for (item of d.notes; track $index) {
+              <li>{{ item }}</li>
+            }
+          </ul>
+        </section>
+      }
+    }
+
+    @if (d.requirements.length) {
+      <section class="facts__block">
+        <h2>{{ isService() ? 'Antes del servicio' : 'Requisitos de uso' }}</h2>
+        <ul>
+          @for (item of d.requirements; track $index) {
+            <li>{{ item }}</li>
+          }
+        </ul>
+      </section>
+    }
+
+    @if (d.coverage || d.warranty || d.cancellation) {
+      <section class="facts__block">
+        <h2>Condiciones</h2>
+        <dl class="facts__specs">
+          @if (d.coverage) {
+            <div>
+              <dt>Zona de atención</dt>
+              <dd>{{ d.coverage }}</dd>
+            </div>
+          }
+          @if (d.warranty) {
+            <div>
+              <dt>Garantía</dt>
+              <dd>{{ d.warranty }}</dd>
+            </div>
+          }
+          @if (d.cancellation) {
+            <div>
+              <dt>Cambios de fecha y cancelación</dt>
+              <dd>{{ d.cancellation }}</dd>
+            </div>
+          }
+        </dl>
+      </section>
+    }
+
+    @if (d.faqs.length) {
+      <section class="facts__block">
+        <h2>Preguntas frecuentes</h2>
+        @for (faq of d.faqs; track $index) {
+          <details class="facts__faq">
+            <summary>{{ faq.question }}</summary>
+            <p>{{ faq.answer }}</p>
+          </details>
+        }
+      </section>
+    }
+  </div>
+}

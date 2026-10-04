@@ -9,10 +9,11 @@ import {
   signal,
   untracked,
 } from '@angular/core';
-import { RouterLink } from '@angular/router';
+import { Router, RouterLink } from '@angular/router';
 import type { PublicProductDetail, PublicVariant } from '@vendedoria/contracts';
 import { DsIconComponent } from '@vendedoria/ui';
 import { ProductCardComponent } from '../../components/product-card.component';
+import { ProductFactsComponent } from '../../components/product-facts.component';
 import { AnalyticsService } from '../../core/analytics.service';
 import { CartService } from '../../core/cart.service';
 import { MoneyPipe } from '../../core/money.pipe';
@@ -31,12 +32,21 @@ type OptionGroup = {
 
 @Component({
   selector: 'store-product-page',
-  imports: [RouterLink, DsIconComponent, MoneyPipe, ProductCardComponent, NotFoundPage, STORE_EDITOR],
+  imports: [
+    RouterLink,
+    DsIconComponent,
+    MoneyPipe,
+    ProductCardComponent,
+    ProductFactsComponent,
+    NotFoundPage,
+    STORE_EDITOR,
+  ],
   templateUrl: './product.page.html',
   styleUrl: './product.page.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class ProductPage {
+  private readonly router = inject(Router);
   private readonly seo = inject(SeoService);
   private readonly cart = inject(CartService);
   private readonly analytics = inject(AnalyticsService);
@@ -103,10 +113,17 @@ export class ProductPage {
   });
 
   readonly isService = computed(() => this.product()?.kind === 'SERVICE');
+  readonly isDigital = computed(() => this.product()?.kind === 'DIGITAL');
   readonly serviceSummary = computed(() => serviceSummary(this.product()?.service));
 
   readonly quantity = signal(1);
   readonly added = signal(false);
+  readonly online = computed(() => this.store()?.checkout.mode === 'online');
+
+  buyNow(): void {
+    this.addToCart();
+    if (this.canAdd()) void this.router.navigate(['/checkout']);
+  }
 
   readonly whatsappHref = computed(() => {
     const store = this.store();
@@ -185,6 +202,7 @@ export class ProductPage {
         currency: product.currency,
         imageUrl: variant?.imageUrl ?? product.imageUrl,
         isService: product.kind === 'SERVICE',
+        isDigital: product.kind === 'DIGITAL',
       },
       this.quantity(),
     );

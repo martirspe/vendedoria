@@ -23,7 +23,7 @@
 .hb__eyebrow {
   margin: 0;
   color: var(--store-brand);
-  font-size: 0.75rem;
+  font-size: var(--store-type-caption);
   font-weight: 700;
   letter-spacing: 0.14em;
   text-transform: uppercase;
@@ -31,7 +31,7 @@
 
 .hb__grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(15rem, 24rem));
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 15rem), 24rem));
   justify-content: center;
   gap: var(--ds-space-4);
   margin: 0;
@@ -50,13 +50,13 @@
 
   h3 {
     margin: 0;
-    font-size: 1.1rem;
+    font-size: var(--store-type-subheading);
   }
 
   p {
     margin: 0;
     color: var(--store-muted);
-    line-height: 1.6;
+    line-height: var(--store-leading-body);
   }
 }
 
@@ -205,7 +205,7 @@
 
 .hb__gallery {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(14rem, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 14rem), 1fr));
   gap: var(--ds-space-3);
 
   img,
@@ -217,3 +217,5 @@
     object-fit: cover;
   }
 }
+
+.hb__head h2 { font-size: var(--store-type-section); }

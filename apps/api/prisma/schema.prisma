@@ -114,6 +114,7 @@ enum SellerType {
 enum ProductKind {
   PRODUCT
   SERVICE
+  DIGITAL
 }
 
 enum OrderChannel {
@@ -588,12 +589,16 @@ model Product {
   categories          String[] @default([])
   basePriceCents      Int
   currency            String   @default("PEN")
-  /// A SERVICE has no stock, is never shipped and cannot be a set or a set piece.
+  /// SERVICE and DIGITAL have no stock, are never shipped and cannot be a set or a set piece.
   kind                ProductKind @default(PRODUCT)
   /// Services only: approximate length shown to buyers.
   durationMinutes     Int?
   /// Services only: onsite | home | online
   serviceMode         String?
+  /// Digital only: where the buyer gets the content. Revealed only on paid orders, never in public payloads.
+  digitalAccessUrl    String?
+  /// Digital only: how to use the access (passwords are not stored here).
+  digitalInstructions String?
   isAvailable         Boolean  @default(true)
   stockUnlimited      Boolean  @default(true)
   stockQty            Int?
@@ -623,6 +628,7 @@ model Product {
   @@unique([tenantId, handle])
   @@index([tenantId])
   @@index([tenantId, isPublishedOnStore])
+  @@index([tenantId, isAvailable, sortOrder, updatedAt])
 }
 
 model ProductVariant {
@@ -841,6 +847,8 @@ model OrderItem {
   totalCents Int
   /// Set pieces taken at reservation: [{ productId, quantity }].
   allocations Json?
+  /// Delivery promised at purchase; preserves digital access after catalog edits or deletion.
+  fulfillment Json?
 
   order   Order           @relation(fields: [orderId], references: [id], onDelete: Cascade)
   product Product?        @relation(fields: [productId], references: [id], onDelete: SetNull)

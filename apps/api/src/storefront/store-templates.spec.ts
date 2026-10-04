@@ -1,5 +1,8 @@
 import {
   TEMPLATE_SECTIONS,
+  effectiveTemplate,
+  templateAllowed,
+  themeDefaults,
   readTemplateContent,
   sameContent,
   sanitizeContent,
@@ -7,6 +10,21 @@ import {
 } from './store-templates';
 
 describe('template content', () => {
+  it('allows the fashion template only for fashion and retains its editable layout', () => {
+    expect(templateAllowed('stride', 'moda')).toBe(true);
+    expect(effectiveTemplate('stride', 'belleza')).toBe('classic');
+    const content = sanitizeContent({
+      sections: { spotlight: { title: 'Mi colección', image: '', unknown: 'drop' }, voices: { quote1: '', author1: '' } },
+      layouts: { stride: [{ id: 'voices', type: 'voices', hidden: true }, { id: 'featured', type: 'featured', hidden: true }, { id: 'cta-a1b2c3', type: 'cta' }] },
+    });
+    expect(content.sections['spotlight']).toEqual({ title: 'Mi colección', image: '' });
+    expect(content.sections['voices']).toEqual({ quote1: '', author1: '' });
+    expect(content.layouts?.stride?.[0]).toEqual({ id: 'voices', type: 'voices', hidden: true });
+    expect(content.layouts?.stride?.[1]).toEqual({ id: 'featured', type: 'featured' });
+    expect(content.layouts?.stride).toContainEqual({ id: 'cta-a1b2c3', type: 'cta' });
+    expect(themeDefaults('stride', { brandColor: '#ffffff', accentColor: '#000000', logoUrl: null })).toEqual({ primary: '#181a18', accent: '#c8f542', font: 'modern', corners: 'square', logo: '' });
+  });
+
   it('keeps known fields only and drops anything else', () => {
     const content = sanitizeContent({
       version: 7,
@@ -120,13 +138,13 @@ describe('template content', () => {
   it('omits the default order and caps library blocks', () => {
     const defaults = sanitizeContent({
       sections: {},
-      layouts: { classic: [{ id: 'hero', type: 'hero' }, { id: 'featured', type: 'featured' }, { id: 'how', type: 'how' }] },
+      layouts: { classic: [{ id: 'hero', type: 'hero' }, { id: 'featured', type: 'featured' }, { id: 'how', type: 'how' }, { id: 'faq', type: 'faq' }, { id: 'closing', type: 'closing' }] },
     });
     expect(defaults.layouts).toBeUndefined();
     const many = Array.from({ length: 12 }, (_, i) => ({ id: `text-blk00${i.toString(36)}`, type: 'text' }));
     const layout = sanitizeContent({ sections: {}, layouts: { classic: many } }).layouts?.classic ?? [];
     expect(layout.filter((item) => item.type === 'text')).toHaveLength(8);
-    expect(layout.slice(-3).map((item) => item.id)).toEqual(['hero', 'featured', 'how']);
+    expect(layout.slice(-5).map((item) => item.id)).toEqual(['hero', 'featured', 'how', 'faq', 'closing']);
   });
 
   it('keeps texts of blocks in a layout and drops the ones of removed blocks', () => {

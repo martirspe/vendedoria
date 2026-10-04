@@ -1,10 +1,23 @@
 import {
   ExistingProduct,
   imageKey,
+  keepConsoleDetails,
   parseCatalogPackage,
   PlanContext,
   planImport,
 } from './catalog-import';
+
+describe('keepConsoleDetails', () => {
+  it('replaces the imported fields and keeps the ones written in the console', () => {
+    expect(
+      keepConsoleDetails(
+        { size: '30 ml', benefits: ['Viejo'], faqs: [{ question: '¿A?', answer: 'B' }] },
+        { size: '50 ml', benefits: [] },
+      ),
+    ).toEqual({ size: '50 ml', benefits: [], faqs: [{ question: '¿A?', answer: 'B' }] });
+    expect(keepConsoleDetails(null, { size: null })).toEqual({ size: null });
+  });
+});
 
 const product = (
   slug: string,
@@ -113,6 +126,42 @@ describe('imageKey', () => {
 });
 
 describe('parseCatalogPackage', () => {
+  it('imports digital delivery, services and structured recommendation facts without physical stock', () => {
+    const parsed = parseCatalogPackage(pkg([{ slug: 'curso', name: 'Curso de fotografía', kind: 'DIGITAL',
+      digitalAccessUrl: 'https://example.com/curso', digitalInstructions: 'Usa el correo de tu compra.', priceCents: 9900,
+      content: { details: { useCases: ['Fotografía de productos'], exclusions: ['No incluye cámara'],
+        compatibility: ['Navegador actualizado'], digitalFormat: 'Video', license: 'Uso personal', accessDuration: '12 meses',
+        attributes: [{ name: 'Idioma', value: 'Español' }], faqs: [{ question: '¿Horario?', answer: 'A tu ritmo.' }] } },
+    }, { slug: 'sesion', name: 'Sesión de fotografía', kind: 'SERVICE', durationMinutes: 60, serviceMode: 'home',
+      priceCents: 12000, content: { details: { coverage: 'Lima', requirements: ['Preparar los productos'], cancellation: 'Avisar 24 horas antes' } },
+    }]));
+    expect(parsed.issues).toEqual([]);
+    expect(parsed.products[0]).toMatchObject({ kind: 'DIGITAL', digitalAccessUrl: 'https://example.com/curso', holdsStock: false,
+      details: { license: 'Uso personal', compatibility: ['Navegador actualizado'], attributes: [{ name: 'Idioma', value: 'Español' }] } });
+    expect(parsed.products[1]).toMatchObject({ kind: 'SERVICE', serviceMode: 'home', durationMinutes: 60, holdsStock: false });
+    expect(planImport(parsed, ctx()).issues).toEqual([]);
+    expect(planImport(parsed, ctx()).products[0].commerce).toMatchObject({ stockUnlimited: true, stockQty: null });
+  });
+
+  it('rejects unsafe digital links, unsupported details and nonphysical sets', () => {
+    for (const invalid of [
+      { kind: 'DIGITAL', digitalAccessUrl: 'http://example.com/file', content: {} },
+      { kind: 'DIGITAL', content: {} },
+      { kind: 'SERVICE', content: { format: 'set' } },
+      { content: { details: { compatibility: 'Inventado', unknown: true } } },
+    ]) {
+      expect(parseCatalogPackage(pkg([product('bad', 'A1', invalid)])).issues.some((issue) => issue.level === 'error')).toBe(true);
+    }
+  });
+
+  it('preserves kind and stock when reimporting a legacy file over an existing digital', () => {
+    const parsed = parseCatalogPackage(pkg([product('a', 'A1')]));
+    const plan = planImport(parsed, ctx({ existing: [existing('a', { kind: 'DIGITAL', stockUnlimited: true, stockQty: null })],
+      options: { updatePrices: true, updateStock: true, fullSync: false, applyStoreSettings: false } }));
+    expect(plan.products[0].commerce.stockQty).toBeUndefined();
+    expect(plan.products[0].product.kind).toBeUndefined();
+  });
+
   it('rejects invalid JSON and empty packages', () => {
     expect(parseCatalogPackage('{nope').issues[0].level).toBe('error');
     expect(

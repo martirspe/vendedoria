@@ -1,3 +1,4 @@
+import { DsSelectComponent } from '@vendedoria/ui';
 import {
   ChangeDetectionStrategy,
   Component,
@@ -36,7 +37,7 @@ import {
 @Component({
   selector: 'app-messages-page',
   standalone: true,
-  imports: [
+  imports: [DsSelectComponent,
     ReactiveFormsModule,
     DatePipe,
     RouterLink,

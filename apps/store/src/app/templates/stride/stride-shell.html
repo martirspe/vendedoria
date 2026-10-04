@@ -1,0 +1,195 @@
+@if (store(); as s) {
+<div
+  class="stride-shell"
+  [class.stride-shell--checkout]="inCheckout()"
+  [style.--store-brand]="primary()"
+  [style.--store-on-brand]="onPrimary()"
+  [style.--store-accent]="accent()"
+  [style.--store-on-accent]="onAccent()"
+  [style.font-family]="font()?.body"
+  [style.--ds-font-display]="font()?.display"
+  [style.--store-radius-control]="corners()?.control"
+  [style.--store-radius-card]="corners()?.card"
+>
+  <a class="stride-skip" href="#contenido">Saltar al contenido</a>
+  @if (s.isPreview && !editor.active()) {
+  <div class="stride-preview" role="status">
+    Vista previa: tus clientes verán los cambios cuando los publiques.
+  </div>
+  }
+  <div class="stride-utility">
+    <div class="store-container">
+      <span>MODA · CALZADO · TU ESTILO</span
+      ><a routerLink="/legal"
+        >Información de compra <ds-icon name="arrowRight" [size]="0.9"
+      /></a>
+    </div>
+  </div>
+  <header class="stride-header">
+    <div class="store-container stride-header__inner">
+      <a
+        class="stride-brand"
+        routerLink="/"
+        [attr.aria-label]="s.displayName + ', inicio'"
+      >
+        @if (brand()?.logo; as logo) {
+        <img [src]="logo" [alt]="s.displayName" width="160" height="48" /> }
+        @else {
+        <span
+          >{{ s.displayName }}<span class="stride-brand__dot" aria-hidden="true"
+            >.</span
+          ></span
+        >
+        }
+      </a>
+      <nav class="stride-nav" aria-label="Principal">
+        <a
+          routerLink="/productos"
+          routerLinkActive="is-active"
+          [routerLinkActiveOptions]="{ exact: true }"
+          >Explorar</a
+        >
+        @for (category of s.categories.slice(0, 2); track category) {
+        <a routerLink="/productos" [queryParams]="{ categoria: category }"
+          >{{ category }}</a
+        >
+        }
+        <a routerLink="/productos" [queryParams]="{ orden: 'newest' }"
+          >Novedades <span aria-hidden="true">↗</span></a
+        >
+      </nav>
+      <a
+        class="stride-bag"
+        routerLink="/carrito"
+        [attr.aria-label]="'Carrito: ' + cart.count() + ' productos'"
+        ><ds-icon name="shoppingBag" /><span class="stride-bag__count"
+          >{{ cart.count() }}</span
+        ></a
+      >
+      <form
+        class="stride-search"
+        role="search"
+        action="/productos"
+        method="get"
+        (submit)="search($event, query.value)"
+      >
+        <label class="visually-hidden" for="stride-search"
+          >Buscar en el catálogo</label
+        >
+        <input
+          #query
+          id="stride-search"
+          name="q"
+          type="search"
+          placeholder="Encuentra tu próximo favorito"
+          maxlength="80"
+        />
+        <button type="submit" aria-label="Buscar">
+          <ds-icon name="search" [size]="1.15" />
+        </button>
+      </form>
+    </div>
+  </header>
+  @if (announcement() || editor.active()) {
+  <div class="stride-announcement" storeSection="announcement">
+    <p
+      class="store-container"
+      storeEditText="announcement.text"
+      [editValue]="announcement()"
+      editPlaceholder="Escribe un anuncio o déjalo vacío para ocultarlo"
+    ></p>
+  </div>
+  } @else if (!hasAnnouncementOverride() && freeShipping(); as cents) {
+  <div class="stride-announcement">
+    <p>
+      Envío gratis desde {{ money(cents) }} · Revisa las opciones de entrega al
+      comprar
+    </p>
+  </div>
+  }
+  <main id="contenido"><router-outlet /></main>
+  <aside
+    class="stride-reassurance store-container"
+    aria-label="Información de compra"
+  >
+    <div>
+      <ds-icon name="shoppingBag" /><span
+        ><strong>Compra sin cuenta</strong
+        ><small>Elige y haz tu pedido</small></span
+      >
+    </div>
+    <div>
+      <ds-icon name="creditCard" /><span
+        ><strong
+          >{{ s.checkout.mode === 'online' ? 'Yape y tarjetas' : 'Pedido por
+          WhatsApp' }}</strong
+        ><small
+          >{{ s.checkout.mode === 'online' ? 'Pago con Mercado Pago' : 'Coordina
+          con la tienda' }}</small
+        ></span
+      >
+    </div>
+    <a routerLink="/cambios-y-devoluciones"
+      ><ds-icon name="package" /><span
+        ><strong>Cambios y devoluciones</strong
+        ><small>Consulta las condiciones</small></span
+      ></a
+    >
+    <a routerLink="/legal"
+      ><ds-icon name="check" /><span
+        ><strong>Todo a la vista</strong
+        ><small>Información antes de comprar</small></span
+      ></a
+    >
+  </aside>
+  <footer class="stride-footer">
+    <div class="store-container stride-footer__grid">
+      <div class="stride-footer__brand">
+        <a class="stride-brand" routerLink="/">{{ s.displayName }}.</a>
+        <p>{{ s.tagline || 'Tu estilo. Tu siguiente paso.' }}</p>
+      </div>
+      <nav aria-label="Colecciones">
+        <strong>ENCUENTRA TU ESTILO</strong
+        ><a routerLink="/productos">Todo el catálogo</a
+        ><a routerLink="/productos" [queryParams]="{ orden: 'newest' }"
+          >Novedades</a
+        >@for (category of s.categories.slice(0, 4); track category) {
+        <a routerLink="/productos" [queryParams]="{ categoria: category }"
+          >{{ category }}</a
+        >
+        }
+      </nav>
+      <nav aria-label="Ayuda de compra">
+        <strong>COMPRA CON CONFIANZA</strong
+        ><a routerLink="/carrito">Mi carrito</a
+        ><a routerLink="/legal">Información de compra</a>@if (whatsappHref(); as
+        href) {
+        <a [href]="href" target="_blank" rel="noopener"
+          >Consultar por WhatsApp <ds-icon name="arrowRight" [size]="0.9"
+        /></a>
+        }@if (s.contactEmail) {
+        <a [href]="'mailto:' + s.contactEmail">Escríbenos por correo</a> }
+      </nav>
+      <nav aria-label="Información legal">
+        <strong>POLÍTICAS DE LA TIENDA</strong>@for (doc of legalLinks; track
+        doc.slug) { <a [routerLink]="'/' + doc.slug">{{ doc.label }}</a> }@if
+        (s.legal.complaintsBookUrl) {
+        <a [href]="s.legal.complaintsBookUrl" target="_blank" rel="noopener"
+          >Libro de Reclamaciones</a
+        >
+        }
+      </nav>
+    </div>
+    <div class="store-container stride-footer__bottom">
+      <span>© {{ year }} {{ s.displayName }}</span>@if (s.showPlatformBadge) {
+      <span>Tienda creada con VendedorIA</span> }
+    </div>
+  </footer>
+</div>
+} @else {
+<main class="store-container store-empty">
+  <ds-icon name="store" [size]="2.5" />
+  <h1>Esta tienda no está disponible</h1>
+  <p>Revisa el enlace e inténtalo nuevamente.</p>
+</main>
+}

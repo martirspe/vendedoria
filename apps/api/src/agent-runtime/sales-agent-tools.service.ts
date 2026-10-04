@@ -1,6 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import type { ProductKind } from '@prisma/client';
+import { Prisma, type ProductKind } from '@prisma/client';
+import { CATALOG_CANDIDATES, maximumPrice, searchCatalogIds } from '../catalog/catalog-search';
 import { PrismaService } from '../prisma/prisma.service';
 import { OrderShipping, OrdersService } from '../orders/orders.service';
 import { orderReference } from '../orders/settlement';
@@ -22,8 +23,11 @@ export type DeliveryQuote = Extract<DeliveryPlan, { kind: 'quote' }>;
 const REFERENCE_RATE_NOTE =
   'Tarifa referencial: la cobertura se coordina antes del despacho.';
 
+const CURRENCY_SYMBOLS: Record<string, string> = { PEN: 'S/' };
+
+/** "S/ 98.90": the amount as buyers write it in the chat. */
 export function moneyLabel(currency: string, cents: number): string {
-  return `${currency} ${(cents / 100).toFixed(2)}`;
+  return `${CURRENCY_SYMBOLS[currency] ?? currency} ${(cents / 100).toFixed(2)}`;
 }
 
 const SERVICE_MODE_LABELS: Record<string, string> = {
@@ -44,6 +48,89 @@ export function serviceLabel(
   ]
     .filter(Boolean)
     .join(' · ');
+}
+
+const FACT_LIST_KEYS = [
+  'useCases',
+  'exclusions',
+  'compatibility',
+  'highlights',
+  'benefits',
+  'usage',
+  'notes',
+  'contents',
+  'requirements',
+] as const;
+const FACT_TEXT_KEYS = [
+  'returns',
+  'digitalFormat',
+  'license',
+  'accessDuration',
+  'size',
+  'family',
+  'intensity',
+  'audience',
+  'warranty',
+  'coverage',
+  'cancellation',
+] as const;
+const FACT_PAIR_KEYS = [
+  { key: 'attributes', first: 'name', second: 'value' },
+  { key: 'faqs', first: 'question', second: 'answer' },
+] as const;
+const FAQ_MAX_CHARS = 600;
+const FACT_MAX_ITEMS = 20;
+const FACT_MAX_CHARS = 400;
+const DESCRIPTION_FULL_MAX_CHARS = 5000;
+
+/** Buyer-facing product details as published on the store page, trimmed for the prompt. */
+export function productFacts(details: unknown): Record<string, string | string[]> | undefined {
+  if (!details || typeof details !== 'object' || Array.isArray(details)) return undefined;
+  const source = details as Record<string, unknown>;
+  const text = (value: unknown) =>
+    typeof value === 'string' && value.trim() ? value.trim().slice(0, FACT_MAX_CHARS) : null;
+  const facts: Record<string, string | string[]> = {};
+  for (const key of FACT_TEXT_KEYS) {
+    const value = typeof source[key] === 'string' && source[key].trim() ? source[key].trim() : null;
+    if (value) facts[key] = value;
+  }
+  for (const key of FACT_LIST_KEYS) {
+    const items = Array.isArray(source[key])
+      ? (source[key] as unknown[]).map(text).filter((item): item is string => Boolean(item))
+      : [];
+    if (items.length) facts[key] = ['requirements', 'exclusions', 'compatibility'].includes(key) ? items : items.slice(0, FACT_MAX_ITEMS);
+  }
+  const scent = Array.isArray(source.scent)
+    ? (source.scent as unknown[]).flatMap((item) => {
+        const entry = item && typeof item === 'object' ? (item as Record<string, unknown>) : {};
+        const name = text(entry.name);
+        const description = text(entry.description);
+        return name ? [description ? `${name}: ${description}` : name] : [];
+      })
+    : [];
+  if (scent.length) facts.scent = scent.slice(0, FACT_MAX_ITEMS);
+  for (const { key, first, second } of FACT_PAIR_KEYS) {
+    const items = Array.isArray(source[key])
+      ? (source[key] as unknown[]).flatMap((item) => {
+          const entry = item && typeof item === 'object' ? (item as Record<string, unknown>) : {};
+          const a = text(entry[first]);
+          const b = typeof entry[second] === 'string' ? entry[second].trim() : '';
+          const limit = key === 'faqs' ? FAQ_MAX_CHARS : FACT_MAX_CHARS;
+          return a && b ? [`${a}: ${b.slice(0, limit)}`] : [];
+        })
+      : [];
+    if (items.length) facts[key] = items.slice(0, key === 'faqs' ? 10 : 20);
+  }
+  return Object.keys(facts).length ? facts : undefined;
+}
+
+/** Words the merchant says buyers use for the product; they weigh like its name in searches. */
+export function productKeywords(details: unknown): string[] {
+  if (!details || typeof details !== 'object' || Array.isArray(details)) return [];
+  const keywords = (details as Record<string, unknown>).keywords;
+  return Array.isArray(keywords)
+    ? keywords.filter((item): item is string => typeof item === 'string' && Boolean(item.trim())).slice(0, 20)
+    : [];
 }
 
 export function placeLabel(place: {
@@ -71,7 +158,7 @@ const HUMAN_REQUEST = [
   new RegExp(`\\b(?:pasame|comunicame|conectame|derivame|transfiereme|comunicarme)\\s+(?:con|a)\\s+${HUMAN_TARGET}`),
   /\b(?:quiero|necesito|prefiero|me atiende|me puede atender|me atienda)\s+(?:un|una|algun|alguna)\s+(?:persona|humano|asesor|asesora|agente|operador|operadora|encargado|encargada)\b/,
   /\b(?:persona real|ser humano|atencion humana|atencion personalizada|agente humano|asesor humano|asesora humana|un humano)\b/,
-  /\b(?:eres|sos|es)\s+(?:un\s+)?(?:bot|robot)\b|\bno\s+quiero\s+(?:hablar\s+con\s+)?(?:un\s+)?(?:bot|robot)\b/,
+  /\bno\s+quiero\s+(?:hablar\s+con\s+)?(?:un\s+)?(?:bot|robot)\b/,
   /\bhay alguien(?:\s+ahi)?\s*\??$/,
 ];
 /** Words that say what the buyer wants to do, not which product they mean. */
@@ -133,6 +220,10 @@ const STOPWORDS = new Set([
   'foto',
   'fotos',
   'imagen',
+  'eres',
+  'bot',
+  'robot',
+  'humano',
 ]);
 
 /** Words that ask to browse the catalog rather than naming what to look for. */
@@ -165,6 +256,8 @@ const BROWSE_WORDS = new Set([
   'modelos',
 ]);
 const BROWSE_WINDOW = 3;
+/** A word of the product name weighs more than one found in its description or categories. */
+const NAME_HIT_SCORE = 3;
 /** Same "featured" order as the web store. */
 const FEATURED_ORDER = [
   { sortOrder: 'asc' as const },
@@ -172,6 +265,7 @@ const FEATURED_ORDER = [
 ];
 const PRODUCT_VIEW_INCLUDE = {
   variants: true,
+  components: { select: { quantity: true, component: { select: { isAvailable: true, stockUnlimited: true, stockQty: true } } } },
   media: {
     where: { kind: 'image' },
     orderBy: { sortOrder: 'asc' as const },
@@ -255,8 +349,21 @@ export type CatalogProductView = {
   id: string;
   handle: string;
   name: string;
+  brand?: string | null;
   descriptionShort: string | null;
+  /** Long store description, trimmed for the prompt. */
+  descriptionFull?: string | null;
+  /** Product line inside the brand. */
+  line?: string | null;
+  /** Merchant-written facts (size, notes, usage...): the only product details the seller may state. */
+  facts?: Record<string, string | string[]>;
+  /** Search synonyms; never shown to the buyer. */
+  keywords?: string[];
+  /** Rank from the tenant-wide indexed search, before loading this bounded candidate. */
+  searchRank?: number;
   basePriceCents: number;
+  /** Struck-through price shown in the store, only when it is above the current price. */
+  compareAtPriceLabel?: string | null;
   currency: string;
   categories: string[];
   isAvailable: boolean;
@@ -266,6 +373,8 @@ export type CatalogProductView = {
   priceLabel: string;
   /** Services are booked and paid without shipping; the business confirms the schedule. */
   isService: boolean;
+  /** Digital products are never shipped: the access is sent once the payment is confirmed. */
+  isDigital?: boolean;
   /** Product page in the published store, or null when the store is not public. */
   productUrl: string | null;
   /** Main product photo (first gallery image, else the first variant image). */
@@ -315,14 +424,20 @@ export class SalesAgentToolsService {
   }
 
   /**
-   * Recent available products plus any product the buyer referenced explicitly or the
-   * seller already recommended in this chat (`contextIds`).
+   * Search the full tenant catalog in PostgreSQL, then load only bounded candidates
+   * and the buyer's explicit references. Prices and stock are never cached.
    */
   async listAvailableProducts(
     tenantId: string,
     referencedHandles: string[] = [],
     contextIds: string[] = [],
+    inboundText = '',
   ): Promise<CatalogProductView[]> {
+    const tokens = queryTokens(inboundText).filter((token) => !BROWSE_WORDS.has(token));
+    const ids = await searchCatalogIds(this.prisma, tenantId, tokens, {
+      available: true,
+      maxPriceCents: maximumPrice(inboundText),
+    });
     const pinned = [
       ...(referencedHandles.length
         ? [{ handle: { in: referencedHandles } }]
@@ -331,15 +446,16 @@ export class SalesAgentToolsService {
     ];
     const [products, referenced, base] = await Promise.all([
       this.prisma.product.findMany({
-        where: { tenantId, isAvailable: true },
+        where: { tenantId, isAvailable: true, ...(tokens.length ? { id: { in: ids } } : {}) },
         include: PRODUCT_VIEW_INCLUDE,
-        take: 40,
+        take: CATALOG_CANDIDATES,
         orderBy: FEATURED_ORDER,
       }),
       pinned.length
         ? this.prisma.product.findMany({
             where: { tenantId, isAvailable: true, OR: pinned },
             include: PRODUCT_VIEW_INCLUDE,
+            take: 40,
           })
         : Promise.resolve([]),
       this.storeBase(tenantId),
@@ -347,34 +463,31 @@ export class SalesAgentToolsService {
     const byId = new Map(
       [...referenced, ...products].map((product) => [product.id, product]),
     );
-    return [...byId.values()].map((product) => this.toStoreView(product, base));
+    return [...byId.values()].map((product) => ({
+      ...this.toStoreView(product, base),
+      ...(ids.includes(product.id) ? { searchRank: ids.length - ids.indexOf(product.id) } : {}),
+    }));
   }
 
   /** Category counts of the whole available catalog, used to summarize it instead of listing it. */
   async catalogOverview(tenantId: string): Promise<CatalogOverview> {
     const [rows, storeUrl] = await Promise.all([
-      this.prisma.product.findMany({
-        where: { tenantId, isAvailable: true },
-        select: { categories: true },
-        take: 2000,
-      }),
+      this.prisma.$queryRaw<Array<{ total: number; categories: Array<{ label: string; names: string[]; count: number }> }>>(Prisma.sql`
+        WITH available AS (
+          SELECT categories FROM "Product" WHERE "tenantId" = ${tenantId} AND "isAvailable" = true
+        ), facets AS (
+          SELECT lower(translate(trim(category), 'áéíóúüñ', 'aeiouun')) AS key,
+            min(trim(category)) AS label, array_agg(DISTINCT category) AS names, count(*)::int AS count
+          FROM available CROSS JOIN LATERAL (SELECT DISTINCT unnest(categories) AS category) c
+          WHERE trim(category) <> '' GROUP BY key ORDER BY count DESC, label LIMIT 24
+        )
+        SELECT (SELECT count(*)::int FROM available) AS total,
+          coalesce((SELECT jsonb_agg(to_jsonb(facets) - 'key') FROM facets), '[]'::jsonb) AS categories`),
       this.storeBase(tenantId),
     ]);
-    const byKey = new Map<string, CatalogOverview['categories'][number]>();
-    for (const row of rows) {
-      for (const name of new Set(
-        row.categories.map((item) => item.trim()).filter(Boolean),
-      )) {
-        const key = normalizeText(name);
-        const entry = byKey.get(key) ?? { label: name, names: [], count: 0 };
-        if (!entry.names.includes(name)) entry.names.push(name);
-        entry.count += 1;
-        byKey.set(key, entry);
-      }
-    }
     return {
-      total: rows.length,
-      categories: [...byKey.values()].sort((a, b) => b.count - a.count),
+      total: rows[0]?.total ?? 0,
+      categories: rows[0]?.categories ?? [],
       storeUrl,
     };
   }
@@ -385,7 +498,7 @@ export class SalesAgentToolsService {
    * regular search, which ranks by those words.
    */
   browseRequest(text: string, overview: CatalogOverview): BrowseRequest | null {
-    const normalized = normalizeText(text);
+    const normalized = normalizeText(text).replace(/\bq\b/g, 'que');
     const tokens = queryTokens(text).filter(
       (token) => !BROWSE_WORDS.has(token),
     );
@@ -519,13 +632,20 @@ export class SalesAgentToolsService {
       };
     }
 
-    let matches = products
+    const scored = products
       .map((product) => {
+        const nameWords = wordsOf(
+          [product.name, product.brand ?? '', ...(product.keywords ?? [])].join(' '),
+        );
         const haystack = normalizeText(
           [
             product.name,
             product.handle,
+            product.brand ?? '',
+            product.line ?? '',
             product.descriptionShort ?? '',
+            product.descriptionFull ?? '',
+            ...Object.values(product.facts ?? {}).flat(),
             product.categories.join(' '),
             ...product.variants.flatMap((variant) => [
               variant.label,
@@ -533,17 +653,21 @@ export class SalesAgentToolsService {
             ]),
           ].join(' '),
         );
-        const score = tokens.reduce(
-          (acc, token) =>
-            wordForms(token).some((form) => haystack.includes(form))
-              ? acc + 1
-              : acc,
-          0,
-        );
-        return { product, score };
+        const score = tokens.reduce((acc, token) => {
+          if (nameWords.some((word) => sameWord(token, word))) {
+            return acc + NAME_HIT_SCORE;
+          }
+          return wordForms(token).some((form) => haystack.includes(form))
+            ? acc + 1
+            : acc;
+        }, 0);
+        return { product, score: score + (product.searchRank ?? 0) / CATALOG_CANDIDATES };
       })
       .filter((item) => item.score > 0)
-      .sort((a, b) => b.score - a.score)
+      .sort((a, b) => b.score - a.score);
+    const best = scored[0]?.score ?? 0;
+    let matches = scored
+      .filter((item) => item.score * 2 >= best)
       .slice(0, 3)
       .map((item) => item.product);
 
@@ -932,8 +1056,19 @@ export class SalesAgentToolsService {
     return HUMAN_REQUEST.some((pattern) => pattern.test(normalizeText(text)));
   }
 
+  /** A complaint about an order already placed: the team must follow it up, the seller cannot. */
+  isOrderComplaint(text: string): boolean {
+    const normalized = normalizeText(text);
+    return (
+      /\bpedido\b/.test(normalized) &&
+      /\b(no\s+(me\s+)?(llega|llego|ha\s+llegado)|todavia\s+no\s+llega|demora|retras\w*|lleg[oa]\s+(mal|rot[oa]|incomplet[oa]|abiert[oa]|equivocad[oa])|reclamo)\b/.test(
+        normalized,
+      )
+    );
+  }
+
   wantsPurchase(text: string): boolean {
-    return /comprar|hacer\s+(un|el|mi|este)\s+pedido|pagar|checkout|link\s+de\s+pago|quiero\s+(ese|este|esa|esta|el|la)\b|lo\s+quiero|la\s+quiero|me\s+lo\s+llevo|me\s+la\s+llevo/.test(
+    return /comprar|hacer\s+(un|el|mi|este)\s+pedido|pagar|checkout|link\s+de\s+pago|quiero\s+(ese|este|esa|esta|el|la)\b|lo\s+quiero|la\s+quiero|\bl[oa]\s+(llevo|compro|pido)\b|\b(separ|reserv|apart)(a|as|ame|alo|ala|amelo|amela|ar)\b|\bme\s+l[oa]\s+(separas|reservas|envias|mandas)\b/.test(
       normalizeText(text),
     );
   }
@@ -975,8 +1110,13 @@ export class SalesAgentToolsService {
     id: string;
     handle: string;
     name: string;
+    brand?: string | null;
     descriptionShort: string | null;
+    descriptionFull?: string | null;
+    line?: string | null;
+    details?: unknown;
     basePriceCents: number;
+    compareAtPriceCents?: number | null;
     currency: string;
     categories: string[];
     isAvailable: boolean;
@@ -986,61 +1126,90 @@ export class SalesAgentToolsService {
     durationMinutes?: number | null;
     serviceMode?: string | null;
     media?: Array<{ url: string }>;
+    components?: Array<{ quantity: number; component: { isAvailable: boolean; stockUnlimited: boolean; stockQty: number | null } }>;
     variants?: Array<{
       id: string;
       option1Name: string | null;
       option1Value: string | null;
       option2Name: string | null;
       option2Value: string | null;
+      option3Value?: string | null;
       priceCents: number;
       isAvailable: boolean;
       stockQty: number | null;
       imageUrl?: string | null;
     }>;
   }): CatalogProductView {
-    const priceLabel = `${product.currency} ${(product.basePriceCents / 100).toFixed(2)}`;
     const isService = product.kind === 'SERVICE';
+    const isDigital = product.kind === 'DIGITAL';
+    const stockless = isService || isDigital;
+    const units = stockless ? Number.POSITIVE_INFINITY
+      : product.components?.length ? Math.min(...product.components.map(({ quantity, component }) =>
+        !component.isAvailable ? 0 : component.stockUnlimited || component.stockQty === null
+          ? Number.POSITIVE_INFINITY : Math.floor(component.stockQty / Math.max(quantity, 1))))
+        : product.stockUnlimited || product.stockQty === null ? Number.POSITIVE_INFINITY : product.stockQty;
     const stockLabel = isService
       ? serviceLabel(
           product.durationMinutes ?? null,
           product.serviceMode ?? null,
         )
-      : product.stockUnlimited
+      : isDigital
+        ? 'Producto digital · acceso por enlace tras el pago'
+        : !Number.isFinite(units)
         ? 'Disponible'
-        : `${product.stockQty ?? 0} en stock`;
+        : units > 0
+          ? `${units} en stock`
+          : 'Agotado';
     const variants = (product.variants ?? [])
       .filter((variant) => variant.isAvailable)
       .map((variant) => {
-        const parts = [variant.option1Value, variant.option2Value].filter(
+        const parts = [variant.option1Value, variant.option2Value, variant.option3Value].filter(
           Boolean,
         );
         return {
           id: variant.id,
           label: parts.join(' / ') || 'Variante',
           priceCents: variant.priceCents,
-          priceLabel: `${product.currency} ${(variant.priceCents / 100).toFixed(2)}`,
-          stockLabel: isService
+          priceLabel: moneyLabel(product.currency, variant.priceCents),
+          stockLabel:
+            isService || isDigital
             ? stockLabel
             : variant.stockQty == null
-              ? 'Stock no tipado'
+              ? stockLabel
               : `${variant.stockQty} en stock`,
-          isAvailable: variant.isAvailable,
+          isAvailable: product.isAvailable && (stockless || (variant.stockQty === null ? units > 0 : variant.stockQty > 0)),
         };
       });
+    const basePriceCents = variants.length ? Math.min(...variants.map((variant) => variant.priceCents)) : product.basePriceCents;
+    const priceLabel = moneyLabel(product.currency, basePriceCents);
+    const isAvailable = product.isAvailable && (product.variants?.length ? variants.some((variant) => variant.isAvailable) : units > 0);
     return {
       id: product.id,
       handle: product.handle,
       name: product.name,
+      brand: product.brand ?? null,
       descriptionShort: product.descriptionShort,
-      basePriceCents: product.basePriceCents,
+      descriptionFull:
+        product.descriptionFull?.trim().slice(0, DESCRIPTION_FULL_MAX_CHARS) ||
+        null,
+      line: product.line ?? null,
+      facts: productFacts(product.details),
+      keywords: productKeywords(product.details),
+      basePriceCents,
+      compareAtPriceLabel:
+        product.compareAtPriceCents &&
+        product.compareAtPriceCents > product.basePriceCents
+          ? moneyLabel(product.currency, product.compareAtPriceCents)
+          : null,
       currency: product.currency,
       categories: product.categories,
-      isAvailable: product.isAvailable,
+      isAvailable,
       stockUnlimited: product.stockUnlimited,
       stockQty: product.stockQty,
-      stockLabel,
+      stockLabel: !stockless && product.variants?.length ? (isAvailable ? 'Disponible en variantes' : 'Agotado') : stockLabel,
       priceLabel,
       isService,
+      isDigital,
       productUrl: null,
       imageUrl:
         product.media?.[0]?.url ??

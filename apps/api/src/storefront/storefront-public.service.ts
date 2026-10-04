@@ -1,7 +1,9 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { Prisma } from '@prisma/client';
+import { catalogSearchWhere } from '../catalog/catalog-search';
 import type {
+  ProductKind,
   PublicProductDetail,
   PublicProductList,
   PublicProductSort,
@@ -60,7 +62,7 @@ const PRODUCT_INCLUDE = {
 } satisfies Prisma.ProductInclude;
 
 const MAX_PAGE_SIZE = 48;
-const MAX_CATALOG = 500;
+const MAX_CATALOG = 48;
 export type StoreAccess = {
   tenantId: string;
   isPreview: boolean;
@@ -70,6 +72,7 @@ export type ProductListQuery = {
   category?: string;
   q?: string;
   sort?: PublicProductSort;
+  kind?: ProductKind;
   page?: number;
   pageSize?: number;
 };
@@ -181,6 +184,7 @@ export class StorefrontPublicService {
     if (!storefront) {
       throw new NotFoundException('Store not found');
     }
+    const { categories, kinds } = await this.catalogFacets(access.tenantId);
     return {
       slug: tenant.slug,
       displayName: storefront.displayName,
@@ -195,7 +199,8 @@ export class StorefrontPublicService {
       seoDescription: storefront.seoDescription,
       country: tenant.country,
       currency: tenant.currency,
-      categories: await this.categories(access.tenantId),
+      categories,
+      kinds,
       status: storefront.status,
       isPreview: access.isPreview,
       showPlatformBadge: resolvePlanState(tenant).platformBadge,
@@ -227,7 +232,7 @@ export class StorefrontPublicService {
     };
   }
 
-  /** Whole published catalog for templates that filter and recommend in the browser. */
+  /** Bounded featured collection; the complete catalog uses paginated products. */
   async catalog(access: StoreAccess): Promise<StoreCatalogProduct[]> {
     const products = await this.prisma.product.findMany({
       where: { tenantId: access.tenantId, isPublishedOnStore: true },
@@ -236,6 +241,15 @@ export class StorefrontPublicService {
       take: MAX_CATALOG,
     });
     return products.map(toCatalogProduct);
+  }
+
+  async catalogProduct(access: StoreAccess, handle: string): Promise<StoreCatalogProduct> {
+    const product = await this.prisma.product.findFirst({
+      where: { tenantId: access.tenantId, handle, isPublishedOnStore: true },
+      include: PRODUCT_INCLUDE,
+    });
+    if (!product) throw new NotFoundException('Product not found');
+    return toCatalogProduct(product);
   }
 
   async checkout(tenantId: string): Promise<StorefrontCheckout> {
@@ -261,31 +275,44 @@ export class StorefrontPublicService {
     const pageSize = Math.min(Math.max(query.pageSize ?? 24, 1), MAX_PAGE_SIZE);
     const page = Math.max(query.page ?? 1, 1);
     const search = query.q?.trim().slice(0, 80);
+    let searchIds: string[] | undefined;
+    let searchTotal = 0;
+    if (search) {
+      const { where: searchWhere } = catalogSearchWhere(access.tenantId, search.split(/\s+/), {
+        published: true, category: query.category, kind: query.kind,
+      });
+      const sort = query.sort === 'price-asc' ? Prisma.sql`p."basePriceCents" ASC`
+        : query.sort === 'price-desc' ? Prisma.sql`p."basePriceCents" DESC`
+        : query.sort === 'newest' ? Prisma.sql`p."createdAt" DESC`
+        : Prisma.sql`p."sortOrder" ASC, p."createdAt" DESC`;
+      const [hits, counts] = await Promise.all([
+        this.prisma.$queryRaw<Array<{ id: string }>>(Prisma.sql`SELECT p.id FROM "Product" p
+          WHERE ${searchWhere} ORDER BY ${sort}, p.id LIMIT ${pageSize} OFFSET ${(page - 1) * pageSize}`),
+        this.prisma.$queryRaw<Array<{ total: number }>>(Prisma.sql`SELECT count(*)::int AS total
+          FROM "Product" p WHERE ${searchWhere}`),
+      ]);
+      searchIds = hits.map((hit) => hit.id);
+      searchTotal = counts[0]?.total ?? 0;
+    }
     const where: Prisma.ProductWhereInput = {
       tenantId: access.tenantId,
       isPublishedOnStore: true,
       ...(query.category ? { categories: { has: query.category } } : {}),
-      ...(search
-        ? {
-            OR: [
-              { name: { contains: search, mode: 'insensitive' } },
-              { descriptionShort: { contains: search, mode: 'insensitive' } },
-              { brand: { contains: search, mode: 'insensitive' } },
-            ],
-          }
-        : {}),
+      ...(query.kind ? { kind: query.kind } : {}),
+      ...(searchIds ? { id: { in: searchIds } } : {}),
     };
-    const [total, products] = await this.prisma.$transaction([
-      this.prisma.product.count({ where }),
+    const [total, products] = await Promise.all([
+      searchIds ? Promise.resolve(searchTotal) : this.prisma.product.count({ where }),
       this.prisma.product.findMany({
         where,
         include: PRODUCT_INCLUDE,
         orderBy: this.orderBy(query.sort),
-        skip: (page - 1) * pageSize,
+        skip: searchIds ? 0 : (page - 1) * pageSize,
         take: pageSize,
       }),
     ]);
-    return { items: products.map(toProductCard), total, page, pageSize };
+    if (searchIds) products.sort((a, b) => searchIds.indexOf(a.id) - searchIds.indexOf(b.id));
+    return { items: products.map(toProductCard), total: searchIds ? searchTotal : total, page, pageSize };
   }
 
   async getProduct(
@@ -328,16 +355,16 @@ export class StorefrontPublicService {
     }));
   }
 
-  private async categories(tenantId: string): Promise<string[]> {
-    const rows = await this.prisma.product.findMany({
-      where: { tenantId, isPublishedOnStore: true },
-      select: { categories: true },
-    });
-    const unique = new Set(
-      rows.flatMap((row) => row.categories.map((category) => category.trim())),
-    );
-    unique.delete('');
-    return [...unique].sort((a, b) => a.localeCompare(b, 'es'));
+  private async catalogFacets(
+    tenantId: string,
+  ): Promise<{ categories: string[]; kinds: ProductKind[] }> {
+    const [row] = await this.prisma.$queryRaw<Array<{ categories: string[]; kinds: ProductKind[] }>>(Prisma.sql`
+      WITH published AS (
+        SELECT categories, kind FROM "Product" WHERE "tenantId" = ${tenantId} AND "isPublishedOnStore" = true
+      ) SELECT
+        ARRAY(SELECT DISTINCT trim(c) FROM published, unnest(categories) c WHERE trim(c) <> '' ORDER BY trim(c)) AS categories,
+        ARRAY(SELECT DISTINCT kind::text FROM published ORDER BY kind::text) AS kinds`);
+    return { categories: row?.categories ?? [], kinds: row?.kinds ?? [] };
   }
 
   private orderBy(

@@ -1,8 +1,57 @@
 import {
   CatalogProductView,
+  moneyLabel,
+  productFacts,
+  productKeywords,
   SalesAgentToolsService,
   serviceLabel,
 } from './sales-agent-tools.service';
+
+describe('moneyLabel', () => {
+  it('writes soles with their symbol and keeps other currency codes', () => {
+    expect(moneyLabel('PEN', 9890)).toBe('S/ 98.90');
+    expect(moneyLabel('USD', 1000)).toBe('USD 10.00');
+  });
+});
+
+describe('productFacts', () => {
+  it('keeps the published details and drops empty or malformed ones', () => {
+    expect(
+      productFacts({
+        size: '100 ml',
+        family: '',
+        notes: [],
+        highlights: ['Menta · mandarina · sándalo', 3],
+        scent: [{ name: 'Salida', description: 'Menta' }, {}],
+        montage: false,
+      }),
+    ).toEqual({
+      size: '100 ml',
+      highlights: ['Menta · mandarina · sándalo'],
+      scent: ['Salida: Menta'],
+    });
+    expect(productFacts(null)).toBeUndefined();
+    expect(productFacts({ notes: [] })).toBeUndefined();
+  });
+
+  it('flattens specifications and product questions for the prompt', () => {
+    expect(
+      productFacts({
+        audience: 'Piel seca',
+        attributes: [{ name: 'Material', value: 'Algodón' }, { name: 'Vacío' }],
+        faqs: [{ question: '¿Destiñe?', answer: 'No.' }],
+        contents: ['Estuche'],
+        keywords: ['polera'],
+      }),
+    ).toEqual({
+      audience: 'Piel seca',
+      contents: ['Estuche'],
+      attributes: ['Material: Algodón'],
+      faqs: ['¿Destiñe?: No.'],
+    });
+    expect(productKeywords({ keywords: ['polera', '', 3] })).toEqual(['polera']);
+  });
+});
 
 describe('serviceLabel', () => {
   it('describes the service without stock words', () => {
@@ -141,9 +190,69 @@ describe('SalesAgentToolsService product references', () => {
     ]);
     expect(matches.map((item) => item.handle)).toEqual(['cafe']);
   });
+
+  it('finds products by their published benefits and long description', () => {
+    const catalog = [
+      { ...product('crema-a', 4500), facts: { benefits: ['Hidrata la piel seca'] } },
+      { ...product('crema-b', 4500), descriptionFull: 'Ideal para piel grasa.' },
+      product('perfume', 9000),
+    ];
+    expect(
+      tools.searchCatalog('algo para piel seca', catalog).matches[0]?.handle,
+    ).toBe('crema-a');
+    expect(
+      tools.searchCatalog('tienen para piel grasa?', catalog).matches[0]?.handle,
+    ).toBe('crema-b');
+  });
+
+  it('treats merchant keywords as synonyms of the product name', () => {
+    const catalog = [
+      { ...product('polo-basico', 4500), keywords: ['polera', 'camiseta'] },
+      product('casaca', 9000),
+    ];
+    expect(
+      tools.searchCatalog('tienen camisetas?', catalog).matches.map((item) => item.handle),
+    ).toEqual(['polo-basico']);
+  });
+
+  it('exposes the offer price only when it is above the current price', () => {
+    const view = (compareAtPriceCents: number | null) =>
+      tools['toView']({
+        id: 'p1',
+        handle: 'polo',
+        name: 'Polo',
+        descriptionShort: null,
+        descriptionFull: `  ${'a'.repeat(700)}  `,
+        basePriceCents: 5000,
+        compareAtPriceCents,
+        currency: 'PEN',
+        categories: [],
+        isAvailable: true,
+        stockUnlimited: true,
+        stockQty: null,
+      });
+    expect(view(7000).compareAtPriceLabel).toBe('S/ 70.00');
+    expect(view(4000).compareAtPriceLabel).toBeNull();
+    expect(view(null).compareAtPriceLabel).toBeNull();
+    expect(view(null).descriptionFull).toHaveLength(700);
+  });
 });
 
 describe('SalesAgentToolsService catalog browsing', () => {
+  it('derives availability from variant and set stock instead of the enabled flag alone', () => {
+    const record = { id: 'p', handle: 'polo', name: 'Polo', descriptionShort: null, basePriceCents: 5000,
+      currency: 'PEN', categories: [], isAvailable: true, stockUnlimited: false, stockQty: 0 };
+    const variant = { id: 'v', option1Name: 'Talla', option1Value: 'M', option2Name: null, option2Value: null,
+      priceCents: 6500, isAvailable: true, stockQty: 2 };
+    expect(tools['toView']({ ...record, variants: [variant] })).toMatchObject({ isAvailable: true, basePriceCents: 6500,
+      stockLabel: 'Disponible en variantes' });
+    expect(tools['toView']({ ...record, variants: [{ ...variant, stockQty: 0 }] }).isAvailable).toBe(false);
+    expect(tools['toView']({ ...record, variants: [{ ...variant, isAvailable: false }] }).isAvailable).toBe(false);
+    expect(tools['toView']({ ...record, stockQty: 10, components: [{ quantity: 2,
+      component: { isAvailable: true, stockUnlimited: false, stockQty: 3 } }] }).stockLabel).toBe('1 en stock');
+    expect(tools['toView']({ ...record, kind: 'DIGITAL' }).isAvailable).toBe(true);
+  });
+
   const overview = {
     total: 30,
     storeUrl: null,
@@ -162,6 +271,7 @@ describe('SalesAgentToolsService catalog browsing', () => {
       'Quiero ver el catálogo',
       '¿Qué productos tienen?',
       'recomiéndame algo',
+      'ok q venden?',
     ]) {
       expect(tools.browseRequest(text, overview)).toEqual({ kind: 'catalog' });
     }
@@ -203,7 +313,6 @@ describe('SalesAgentToolsService human handoff', () => {
     'Pásame con alguien del equipo',
     'necesito un asesor',
     'quiero atención humana',
-    '¿Eres un bot?',
     'no quiero hablar con un robot',
     'hay alguien ahí?',
     'Me comunicas con un humano por favor',
@@ -217,6 +326,7 @@ describe('SalesAgentToolsService human handoff', () => {
     'Tienen extensiones de cabello humano?',
     'Quiero el perfume para regalar a una persona especial',
     'el asesoramiento de talla es gratis?',
+    '¿Eres un bot?',
   ])('keeps selling when "persona" or "humano" is part of the question: %s', (text) => {
     expect(tools.wantsHuman(text)).toBe(false);
   });
@@ -256,9 +366,39 @@ describe('SalesAgentToolsService purchase intent', () => {
     expect(matches.map((item) => item.handle)).toEqual(['crema']);
   });
 
+  it('ranks words of the product name above loose description hits', () => {
+    const lipstick = {
+      ...named('labial', 'Labial Larga Duración'),
+      descriptionShort: 'Labial semimate',
+    };
+    const { matches } = tools.searchCatalog('y el zentro cuanto dura?', [
+      lipstick,
+      ...catalog,
+    ]);
+    expect(matches.map((item) => item.handle)).toEqual(['zentro']);
+  });
+
+  it('does not search the catalog for questions about the seller', () => {
+    const bottle = {
+      ...named('colonia', 'Colonia Floral'),
+      descriptionShort: 'Botella de vidrio',
+    };
+    expect(tools.searchCatalog('eres un bot?', [bottle]).matches).toEqual([]);
+  });
+
+  it('detects complaints about an order already placed', () => {
+    expect(tools.isOrderComplaint('oigan mi pedido no llega hace una semana!!!')).toBe(true);
+    expect(tools.isOrderComplaint('el pedido llegó roto')).toBe(true);
+    expect(tools.isOrderComplaint('quiero hacer un pedido')).toBe(false);
+    expect(tools.isOrderComplaint('cuanto demora el envio?')).toBe(false);
+  });
+
   it('does not read an order status question as a purchase', () => {
     expect(tools.wantsPurchase('¿Dónde está mi pedido?')).toBe(false);
     expect(tools.wantsPurchase('Quiero comprar un perfume')).toBe(true);
     expect(tools.wantsPurchase('lo quiero')).toBe(true);
+    expect(tools.wantsPurchase('el de color me interesa, me lo separas?')).toBe(true);
+    expect(tools.wantsPurchase('ya, lo llevo')).toBe(true);
+    expect(tools.wantsPurchase('lo voy a pensar')).toBe(false);
   });
 });

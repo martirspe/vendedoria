@@ -71,11 +71,11 @@
         @if (brandOptions().length > 2) {
           <label class="select-field">
             <span>Marca</span>
-            <select aria-label="Marca del producto" (change)="filter(brand, $any($event.target).value)">
+            <ds-select><select aria-label="Marca del producto" (change)="filter(brand, $any($event.target).value)">
               @for (b of brandOptions(); track b) {
                 <option [value]="b" [selected]="brand() === b">{{ b === 'Todo' ? 'Todas' : b }}</option>
               }
-            </select>
+            </select></ds-select>
           </label>
         }
       </div>
@@ -88,6 +88,7 @@
       }
     </div>
     <div class="catalog-meta">
+      <a class="text-link" routerLink="/productos" [queryParams]="{ q: search() || null }">Buscar en todo el catálogo <app-icon name="arrow" /></a>
       <p aria-live="polite"><strong>{{ filtered().length }}</strong> {{ filtered().length === 1 ? 'producto' : 'productos' }}@if (search()) { para «{{ search() }}»}</p>
       @if (activeFilters()) {
         <button type="button" class="clear-filters" (click)="clearFilters()"><app-icon name="close" />Limpiar filtros ({{ activeFilters() }})</button>
@@ -140,7 +141,7 @@
           } @else {
             <h3>No encontramos coincidencias.</h3>
             <p>Prueba con otra palabra o quita algún filtro para ver más opciones.</p>
-            <button type="button" class="button secondary" (click)="clearFilters()">Ver todo el catálogo</button>
+            <a class="button secondary" routerLink="/productos" [queryParams]="{ q: search() || null }">Buscar en todo el catálogo</a>
           }
         </div>
       }
@@ -198,6 +199,14 @@
           <div class="faq-a"><p>{{ f.answer }}</p></div>
         </details>
       }
+    </div>
+    <div class="funnel-close">
+      <div class="funnel-close-copy">
+        <p class="eyebrow">TU PRÓXIMA ELECCIÓN</p>
+        <h2>Encuentra tu próximo favorito</h2>
+        <p>Explora la selección, conoce cada detalle y elige lo que va contigo.</p>
+      </div>
+      <a class="button" href="#coleccion">Ver catálogo <app-icon name="arrow" /></a>
     </div>
   </section>
   }

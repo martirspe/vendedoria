@@ -292,7 +292,7 @@ select {
 .mode-grid {
   display: grid;
   gap: var(--ds-space-3);
-  grid-template-columns: repeat(auto-fill, minmax(13rem, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 13rem), 1fr));
 }
 
 .preset {
@@ -348,7 +348,7 @@ select {
 .technique-grid {
   display: grid;
   gap: var(--ds-space-3);
-  grid-template-columns: repeat(auto-fill, minmax(15rem, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 15rem), 1fr));
 }
 
 .technique {

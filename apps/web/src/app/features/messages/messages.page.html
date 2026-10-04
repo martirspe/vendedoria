@@ -192,7 +192,7 @@
             <div class="template-box">
               <label>
                 Plantilla
-                <select
+                <ds-select><select
                   [value]="selectedTemplateId()"
                   (change)="onTemplateChange($any($event.target).value)"
                 >
@@ -201,7 +201,7 @@
                       {{ template.description }}
                     </option>
                   }
-                </select>
+                </select></ds-select>
               </label>
               <ds-button
                 type="button"
@@ -310,14 +310,14 @@
 
         <label>
           Producto
-          <select formControlName="productId">
+          <ds-select><select formControlName="productId">
             @for (product of products(); track product.id) {
               <option [value]="product.id">
                 {{ product.name }} —
                 {{ formatMoney(product.basePriceCents, product.currency) }}
               </option>
             }
-          </select>
+          </select></ds-select>
         </label>
         <label>
           Cantidad

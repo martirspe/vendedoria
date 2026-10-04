@@ -1,3 +1,4 @@
+import { DsSelectComponent } from '@vendedoria/ui';
 import {
   ChangeDetectionStrategy,
   Component,
@@ -17,7 +18,7 @@ import {
 @Component({
   selector: 'app-channels-page',
   standalone: true,
-  imports: [
+  imports: [DsSelectComponent,
     ReactiveFormsModule,
     DsButtonComponent,
     DsEmptyStateComponent,

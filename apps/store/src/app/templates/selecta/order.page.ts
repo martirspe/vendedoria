@@ -31,7 +31,13 @@ export class SelectaOrderPage extends OrderPage {
   );
   readonly title = computed(() => {
     if (this.refunded()) return 'Tu pago fue actualizado.';
-    if (this.paid()) return this.order()?.status === 'COMPLETED' ? 'Tu pedido fue entregado.' : 'Tu ritual ya está en camino.';
+    if (this.paid()) {
+      const order = this.order()!;
+      if (order.status === 'COMPLETED') return 'Tu pedido se completó.';
+      if (order.status === 'SHIPPED') return order.delivery?.mode === 'PICKUP' ? 'Tu pedido está listo para recoger.' : 'Tu pedido está en camino.';
+      if (order.status === 'FULFILLING') return order.delivery ? 'Estamos preparando tu pedido.' : 'Estamos coordinando tu pedido.';
+      return '¡Gracias, tu pago fue aprobado!';
+    }
     if (this.cancelledByChoice()) return 'Tu pedido fue cancelado.';
     if (this.ended() && this.rejected()) return 'El pago no fue aprobado.';
     if (this.ended()) return 'La reserva terminó.';
@@ -39,9 +45,11 @@ export class SelectaOrderPage extends OrderPage {
   });
   readonly message = computed(() => {
     if (this.refunded()) return 'Mercado Pago registró una devolución o un contracargo de este pago. La tienda te contactará por correo con el detalle.';
-    if (this.paid()) return 'Gracias por elegirnos. Prepararemos tu pedido y te avisaremos por correo cada avance de la entrega.';
-    if (this.cancelledByChoice()) return 'No se realizó ningún cobro. Puedes volver a comprar cuando quieras.';
-    if (this.ended() && this.rejected()) return 'No se realizó ningún cobro. Vuelve a tu bolsa para intentarlo con otro medio de pago.';
+    if (this.paid()) return this.hasDigital() && !this.order()?.delivery && !this.hasServices()
+      ? 'Tu compra está confirmada. Revisa tu acceso digital y guarda este enlace para volver a tu pedido.'
+      : 'Tu compra está confirmada. Guarda este enlace para consultar el estado de tu pedido y revisa las indicaciones de entrega o coordinación.';
+    if (this.cancelledByChoice()) return 'Este pedido fue cancelado. Puedes volver a comprar cuando quieras.';
+    if (this.ended() && this.rejected()) return 'Vuelve a tu carrito para intentarlo con otro medio de pago.';
     if (this.ended()) return 'Actualiza tu compra para consultar la disponibilidad actual.';
     return 'Conserva tu número de pedido. Evita enviar un segundo pago mientras lo verificamos.';
   });

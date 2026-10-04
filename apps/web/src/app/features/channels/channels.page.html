@@ -3,8 +3,7 @@
     <div>
       <h1>Canales</h1>
       <p>
-        Conecta tu número de WhatsApp Business con Meta. Instagram llegará muy
-        pronto.
+        Conecta WhatsApp Business y administra los canales de venta de tu negocio.
       </p>
     </div>
   </header>
@@ -128,10 +127,10 @@
           </label>
           <label>
             Tipo de conexión
-            <select formControlName="connectionMode">
+            <ds-select><select formControlName="connectionMode">
               <option value="COEXISTENCE">Coexistencia (número actual)</option>
               <option value="NEW_WABA_NUMBER">Número API / WABA nuevo</option>
-            </select>
+            </select></ds-select>
           </label>
           <ds-button type="submit" [disabled]="saving()">
             {{ saving() ? 'Guardando…' : 'Guardar conexión' }}

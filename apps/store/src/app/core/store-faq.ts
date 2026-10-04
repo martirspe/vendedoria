@@ -56,7 +56,7 @@ export function defaultFaq(store: StorefrontView, cart: FaqCartCopy): StoreTempl
       {
         question: '¿Mi producto queda reservado mientras pago?',
         answer:
-          'Sí. Al continuar al pago separamos tu selección durante 15 minutos, para que nadie más se lleve la última unidad mientras completas tu compra.',
+          'Sí. Al enviar tu pago reservamos la selección durante 15 minutos mientras se confirma el resultado. Si la reserva vence, puedes revisar la disponibilidad y volver a comprar.',
       },
       {
         question: '¿Cómo sé que mi pago se confirmó?',

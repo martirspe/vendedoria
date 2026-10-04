@@ -31,6 +31,7 @@ export type Industry = (typeof INDUSTRIES)[number];
 export const TEMPLATES: Record<StoreTemplate, { industries: readonly Industry[] | 'all' }> = {
   classic: { industries: 'all' },
   selecta: { industries: ['belleza'] },
+  stride: { industries: ['moda'] },
 };
 
 export function templateAllowed(template: string, industry: string): template is StoreTemplate {
@@ -98,8 +99,8 @@ const BLOCKS: StoreEditorSection[] = [
     ],
     defaults: {
       eyebrow: 'Novedad',
-      title: 'Cuéntales algo especial a tus clientes',
-      text: 'Presenta un lanzamiento, una promoción o la historia de tu marca.',
+      title: 'Descubre tu próximo favorito',
+      text: 'Explora el catálogo y encuentra una opción para ti.',
       cta: 'Ver productos',
       image: '',
     },
@@ -114,8 +115,8 @@ const BLOCKS: StoreEditorSection[] = [
     fields: [text('eyebrow', 'Antetítulo', 60), lines('title', 'Título', 120), lines('text', 'Texto', 600), tone],
     defaults: {
       eyebrow: 'Sobre nosotros',
-      title: 'Escribe aquí lo que hace única a tu tienda',
-      text: 'Cuenta en pocas líneas qué ofreces, cómo trabajas o por qué tus clientes vuelven.',
+      title: 'Elige con toda la información',
+      text: 'Revisa los detalles de cada producto y consulta nuestras políticas antes de comprar.',
     },
   },
   {
@@ -134,12 +135,12 @@ const BLOCKS: StoreEditorSection[] = [
     defaults: {
       eyebrow: 'Por qué elegirnos',
       title: 'Comprar aquí es fácil',
-      item1Title: 'Atención cercana',
-      item1Text: 'Resolvemos tus dudas por WhatsApp antes y después de tu compra.',
+      item1Title: 'Información a la mano',
+      item1Text: 'Revisa las características y el precio antes de elegir.',
       item2Title: 'Productos elegidos',
-      item2Text: 'Seleccionamos cada producto pensando en lo que buscas.',
+      item2Text: 'Explora el catálogo y compara las opciones disponibles.',
       item3Title: 'Compra sin cuenta',
-      item3Text: 'Haz tu pedido en pocos pasos, sin registrarte.',
+      item3Text: 'Haz tu pedido sin crear una cuenta.',
     },
   },
   {
@@ -158,8 +159,8 @@ const BLOCKS: StoreEditorSection[] = [
     defaults: {
       eyebrow: 'Lo que dicen',
       title: 'Opiniones de nuestros clientes',
-      quote1: 'Pega aquí la opinión real de un cliente.',
-      author1: 'Nombre del cliente',
+      quote1: '',
+      author1: '',
       quote2: '',
       author2: '',
       quote3: '',
@@ -207,7 +208,7 @@ const BLOCKS: StoreEditorSection[] = [
     defaults: {
       eyebrow: '',
       title: 'Encuentra tu próximo favorito',
-      text: 'Mira todo el catálogo y haz tu pedido en pocos pasos.',
+      text: 'Explora el catálogo y elige lo que va contigo.',
       cta: 'Ver productos',
       tone: 'brand',
     },
@@ -262,6 +263,117 @@ const PRODUCT_PAGE: StoreEditorSection = {
  * renders the same `section.field` keys and the same section types.
  */
 export const TEMPLATE_SECTIONS: Record<StoreTemplate, StoreEditorSection[]> = {
+  stride: [
+    {
+      id: 'hero',
+      label: 'Portada',
+      role: 'builtin',
+      canHide: true,
+      faq: false,
+      fields: [
+        text('eyebrow', 'Antetítulo', 60),
+        lines('title', 'Título', 80),
+        text('emphasis', 'Frase destacada', 80),
+        lines('text', 'Texto', 300),
+        text('cta', 'Botón al catálogo', 30),
+        image('image', 'Imagen de portada'),
+      ],
+    },
+    {
+      id: 'featured',
+      label: 'Selección de productos',
+      role: 'builtin',
+      canHide: false,
+      faq: false,
+      fields: [text('eyebrow', 'Antetítulo', 60), text('title', 'Título', 80)],
+    },
+    {
+      id: 'editorial',
+      label: 'Inspiración para vestir',
+      role: 'builtin',
+      canHide: true,
+      faq: false,
+      fields: [1, 2].flatMap((n) => [
+        text(`eyebrow${n}`, `Antetítulo ${n}`, 60),
+        lines(`title${n}`, `Título ${n}`, 80),
+        lines(`text${n}`, `Texto ${n}`, 240),
+        text(`cta${n}`, `Botón ${n}`, 30),
+        image(`image${n}`, `Imagen ${n}`),
+      ]),
+    },
+    {
+      id: 'categories',
+      label: 'Categorías del catálogo',
+      role: 'builtin',
+      canHide: true,
+      faq: false,
+      fields: [text('title', 'Título', 80)],
+    },
+    {
+      id: 'spotlight',
+      label: 'Producto protagonista',
+      role: 'builtin',
+      canHide: true,
+      faq: false,
+      description:
+        'Destaca un producto disponible de tu selección, priorizando calzado. El precio y el enlace vienen del catálogo.',
+      fields: [
+        text('eyebrow', 'Antetítulo', 60),
+        lines('title', 'Título', 100),
+        lines('text', 'Texto', 240),
+        text('cta', 'Botón al producto', 30),
+        image('image', 'Imagen de campaña'),
+      ],
+    },
+    {
+      id: 'stories',
+      label: 'Colecciones para descubrir',
+      role: 'builtin',
+      canHide: true,
+      faq: false,
+      fields: [
+        text('title', 'Título de sección', 80),
+        ...[1, 2].flatMap((n) => [
+          text(`eyebrow${n}`, `Antetítulo ${n}`, 60),
+          lines(`title${n}`, `Título ${n}`, 80),
+          text(`cta${n}`, `Botón ${n}`, 30),
+          image(`image${n}`, `Imagen ${n}`),
+        ]),
+      ],
+    },
+    {
+      id: 'voices',
+      label: 'Opiniones reales',
+      role: 'builtin',
+      canHide: true,
+      faq: false,
+      description: 'Publica solo testimonios reales con autorización. Sin opiniones, esta sección se oculta.',
+      fields: [
+        text('eyebrow', 'Antetítulo', 60),
+        text('title', 'Título', 80),
+        ...[1, 2, 3].flatMap((n) => [lines(`quote${n}`, `Opinión ${n}`, 300), text(`author${n}`, `Cliente ${n}`, 60)]),
+      ],
+    },
+    {
+      id: 'faq',
+      label: 'Preguntas frecuentes',
+      role: 'builtin',
+      canHide: true,
+      faq: true,
+      fields: [text('title', 'Título', 80)],
+    },
+    {
+      id: 'closing',
+      label: 'Invitación final',
+      role: 'builtin',
+      canHide: true,
+      faq: false,
+      fields: [text('title', 'Título', 80), lines('text', 'Texto', 240), text('cta', 'Botón al catálogo', 30)],
+    },
+    ...libraryOf('stride'),
+    ANNOUNCEMENT,
+    PRODUCT_PAGE,
+  ],
   classic: [
     {
       id: 'hero',
@@ -270,10 +382,11 @@ export const TEMPLATE_SECTIONS: Record<StoreTemplate, StoreEditorSection[]> = {
       canHide: true,
       faq: false,
       fields: [
+        text('eyebrow', 'Antetítulo', 60),
         text('title', 'Título', 80),
         lines('text', 'Texto', 300),
         text('cta', 'Botón principal', 30),
-        image('image', 'Imagen de fondo'),
+        image('image', 'Imagen de portada'),
       ],
     },
     {
@@ -299,6 +412,14 @@ export const TEMPLATE_SECTIONS: Record<StoreTemplate, StoreEditorSection[]> = {
         text('step3Title', 'Paso 3', 60),
         lines('step3Text', 'Detalle del paso 3', 200),
       ],
+    },
+    {
+      id: 'faq', label: 'Preguntas frecuentes', role: 'builtin', canHide: true, faq: true,
+      fields: [text('title', 'Título', 80)],
+    },
+    {
+      id: 'closing', label: 'Cierre de compra', role: 'builtin', canHide: true, faq: false,
+      fields: [text('title', 'Título', 80), lines('text', 'Texto', 240), text('cta', 'Botón hacia el catálogo', 30)],
     },
     ...libraryOf('classic'),
     ANNOUNCEMENT,
@@ -474,6 +595,7 @@ const HEX_COLOR = /^#[0-9a-f]{6}$/i;
 export const TEMPLATE_THEME_OPTIONS: Record<StoreTemplate, StoreThemeOption[]> = {
   classic: ['logo', 'primary', 'accent', 'font', 'corners'],
   selecta: ['logo', 'primary', 'font'],
+  stride: ['logo', 'primary', 'accent', 'font', 'corners'],
 };
 
 /**
@@ -484,6 +606,9 @@ export function themeDefaults(
   template: StoreTemplate,
   storefront: { brandColor: string; accentColor: string; logoUrl: string | null },
 ): Required<StoreTemplateTheme> {
+  if (template === 'stride') {
+    return { primary: '#181a18', accent: '#c8f542', font: 'modern', corners: 'square', logo: storefront.logoUrl ?? '' };
+  }
   return template === 'selecta'
     ? { primary: '#4a1429', accent: '#23604a', font: 'editorial', corners: 'soft', logo: '' }
     : {

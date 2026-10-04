@@ -113,13 +113,13 @@
         <h2>Productos participantes</h2>
         <label>
           Aplica a
-          <select formControlName="scope">
+          <ds-select><select formControlName="scope">
             <option value="ALL">Toda la tienda</option>
             <option value="CATEGORY">Categorías</option>
             <option value="BRAND">Marcas</option>
             <option value="LINE">Líneas o colecciones</option>
             <option value="PRODUCTS">Productos específicos</option>
-          </select>
+          </select></ds-select>
         </label>
         <label class="check">
           <input type="checkbox" formControlName="applyToSets" />

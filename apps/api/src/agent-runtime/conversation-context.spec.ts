@@ -1,13 +1,48 @@
 import {
   allRecommendedProductIds,
+  askedForDistrict,
   awaitingDelivery,
   buildAgentContext,
+  confirmsPurchase,
   conversationalIntent,
   lastBrowse,
   lastRecommendedProductIds,
   toWhatsAppText,
   withoutLink,
 } from './conversation-context';
+
+describe('askedForDistrict', () => {
+  it('is true only while the latest seller message asks for the district', () => {
+    expect(askedForDistrict([{ role: 'agent', text: '¿Me confirmas tu distrito para el envío?' }])).toBe(true);
+    expect(
+      askedForDistrict([
+        { role: 'agent', text: '¿A qué distrito?' },
+        { role: 'buyer', text: 'espera' },
+        { role: 'agent', text: 'Claro, aquí estoy.' },
+      ]),
+    ).toBe(false);
+    expect(askedForDistrict([{ role: 'agent', text: 'Envío a tu distrito', paymentLink: true }])).toBe(false);
+  });
+});
+
+describe('confirmsPurchase', () => {
+  const asked = [{ role: 'agent' as const, text: 'Está a S/ 46. ¿Te lo preparo?' }];
+
+  it('reads a bare yes to the closing question as a purchase', () => {
+    for (const text of ['sí', 'Dale!', 'ya pues', 'si porfa 😊']) {
+      expect(confirmsPurchase(text, asked)).toBe(true);
+    }
+    expect(
+      confirmsPurchase('si', [{ role: 'agent', text: 'Es ideal para él. ¿Quieres que te lo prepare?' }]),
+    ).toBe(true);
+  });
+
+  it('ignores a yes to any other question or after the payment link', () => {
+    expect(confirmsPurchase('si', [{ role: 'agent', text: '¿Es para ti o para regalar?' }])).toBe(false);
+    expect(confirmsPurchase('si, pero en otro color', asked)).toBe(false);
+    expect(confirmsPurchase('ok', [{ ...asked[0], paymentLink: true }])).toBe(false);
+  });
+});
 
 describe('conversationalIntent', () => {
   it('detects farewells and thanks', () => {

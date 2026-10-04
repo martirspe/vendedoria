@@ -1,3 +1,4 @@
+import { DsSelectComponent } from '@vendedoria/ui';
 import { ChangeDetectionStrategy, Component, computed, effect, inject, signal } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { HomeBlockComponent, sharedBlockType } from '../../components/home-block.component';
@@ -20,7 +21,7 @@ const BUILTINS = ['hero', 'collection', 'banner', 'faq'];
 
 @Component({
   selector: 'selecta-home',
-  imports: [RouterLink, MoneyPipe, SelectaIcon, SelectaProductImage, HomeBlockComponent, STORE_EDITOR],
+  imports: [DsSelectComponent, RouterLink, MoneyPipe, SelectaIcon, SelectaProductImage, HomeBlockComponent, STORE_EDITOR],
   templateUrl: './home.page.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })

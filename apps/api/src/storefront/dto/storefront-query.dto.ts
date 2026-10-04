@@ -8,9 +8,10 @@ import {
   MaxLength,
   Min,
 } from 'class-validator';
-import type { PublicProductSort } from '@vendedoria/contracts';
+import type { ProductKind, PublicProductSort } from '@vendedoria/contracts';
 
 const SORTS: PublicProductSort[] = ['featured', 'newest', 'price-asc', 'price-desc'];
+const KINDS: ProductKind[] = ['PRODUCT', 'SERVICE', 'DIGITAL'];
 
 export class ResolveStoreQueryDto {
   @ApiPropertyOptional({ example: 'acme-1a2b3c.localhost:4300' })
@@ -36,6 +37,11 @@ export class ProductListQueryDto {
   @IsOptional()
   @IsIn(SORTS)
   sort?: PublicProductSort;
+
+  @ApiPropertyOptional({ enum: KINDS })
+  @IsOptional()
+  @IsIn(KINDS)
+  kind?: ProductKind;
 
   @ApiPropertyOptional({ example: 1 })
   @IsOptional()

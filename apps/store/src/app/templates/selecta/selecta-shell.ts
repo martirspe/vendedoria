@@ -16,7 +16,7 @@ import { CartService } from '../../core/cart.service';
 import { announcementText } from '../../core/page-copy';
 import { STORE_EDITOR, StoreEditorBridge } from '../../core/store-editor';
 import { StoreStateService } from '../../core/store-state.service';
-import { THEME_FONTS } from '../../core/theme';
+import { readableTextOn, THEME_FONTS } from '../../core/theme';
 import { productReference, whatsappUrl } from '../../core/whatsapp';
 import { SelectaCatalog } from './selecta-catalog';
 import { wholeMoney } from '../../core/store-faq';
@@ -34,6 +34,7 @@ const STYLESHEET = '/selecta.css';
   changeDetection: ChangeDetectionStrategy.OnPush,
   host: {
     '[style.--wine]': 'theme()?.primary',
+    '[style.--sel-on-wine]': 'onBrand()',
     '[style.font-family]': 'font()?.body',
     '[style.--sel-body]': 'font()?.body',
     '[style.--sel-display]': 'font()?.display',
@@ -73,6 +74,10 @@ export class SelectaShell {
     return store?.tagline || 'Una selección para regalar. Un ritual para ti.';
   });
   readonly theme = computed(() => this.store()?.templateContent.theme);
+  readonly onBrand = computed(() => {
+    const primary = this.theme()?.primary;
+    return primary ? readableTextOn(primary) : null;
+  });
   readonly font = computed(() => {
     const font = this.theme()?.font;
     return font ? THEME_FONTS[font] : null;
@@ -82,7 +87,9 @@ export class SelectaShell {
   readonly symbol = computed(() => (this.store()?.displayName.trim().charAt(0).toUpperCase() ?? '') + '.');
   readonly currentUrl = signal(this.router.url);
   readonly onProduct = computed(() => this.currentUrl().startsWith('/producto/'));
+  readonly inCheckout = computed(() => this.currentUrl().split(/[?#]/)[0] === '/checkout');
   readonly showTop = signal(false);
+  readonly footerInView = signal(false);
 
   readonly whatsapp = computed(() => {
     const store = this.store();
@@ -108,7 +115,8 @@ export class SelectaShell {
       renderer.setAttribute(link, 'href', STYLESHEET);
       renderer.appendChild(document.head, link);
     }
-    inject(DestroyRef).onDestroy(() => renderer.removeClass(document.body, BODY_CLASS));
+    const destroyRef = inject(DestroyRef);
+    destroyRef.onDestroy(() => renderer.removeClass(document.body, BODY_CLASS));
 
     this.router.events
       .pipe(
@@ -123,6 +131,15 @@ export class SelectaShell {
       const onScroll = () => this.showTop.set(scrollY > 700);
       addEventListener('scroll', onScroll, { passive: true });
       onScroll();
+      destroyRef.onDestroy(() => removeEventListener('scroll', onScroll));
+      const footer = document.querySelector('selecta-shell > footer');
+      if (footer && typeof IntersectionObserver !== 'undefined') {
+        const observer = new IntersectionObserver(([entry]) => {
+          this.footerInView.set(entry?.isIntersecting ?? false);
+        });
+        observer.observe(footer);
+        destroyRef.onDestroy(() => observer.disconnect());
+      }
     });
   }
 

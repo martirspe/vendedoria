@@ -402,7 +402,9 @@
   }
 
   .editor__devices {
-    display: none;
+    grid-column: 1 / -1;
+    grid-row: 2;
+    justify-self: center;
   }
 }
 
@@ -415,6 +417,11 @@
 
   .editor__bar {
     grid-template-columns: 1fr;
+  }
+
+  .editor__devices {
+    grid-row: auto;
+    flex-wrap: wrap;
   }
 
   .editor__tools {

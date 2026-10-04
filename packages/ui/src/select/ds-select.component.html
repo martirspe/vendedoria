@@ -1,0 +1,25 @@
+<ng-content />
+@if (enhanced()) {
+  <button type="button" class="ds-select-trigger" role="combobox"
+    [disabled]="disabled()" [attr.aria-label]="label()" aria-haspopup="listbox"
+    [attr.aria-expanded]="open()" [attr.aria-controls]="panelId()"
+    [attr.aria-activedescendant]="open() && active() >= 0 ? panelId() + '-' + active() : null"
+    [attr.aria-invalid]="invalid() || null" [attr.aria-required]="required() || null"
+    [attr.aria-describedby]="describedBy()" (click)="toggle($event)" (keydown)="keydown($event)" (blur)="touch()">
+    <span>{{ selectedLabel() }}</span><ds-icon name="chevronDown" [size]="1" />
+  </button>
+  <div class="ds-select-options" popover="auto" role="listbox" [id]="panelId()"
+    [attr.aria-label]="label()" (toggle)="onToggle($event)">
+    @for (option of options(); track $index; let index = $index) {
+      @if (option.group && (index === 0 || options()[index - 1].group !== option.group)) {
+        <div class="ds-select-group" role="presentation">{{ option.group }}</div>
+      }
+      <div class="ds-select-option" role="option" [id]="panelId() + '-' + index"
+        [attr.data-option-index]="index" [attr.aria-selected]="option.selected"
+        [attr.aria-disabled]="option.disabled || null" [class.is-active]="active() === index"
+        (pointermove)="!option.disabled && active.set(index)" (mousedown)="$event.preventDefault()" (click)="choose(index, $event)">
+        <span>{{ option.label }}</span>@if (option.selected) { <ds-icon name="check" [size]="1" /> }
+      </div>
+    }
+  </div>
+}

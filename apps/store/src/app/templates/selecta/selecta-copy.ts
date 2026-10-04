@@ -3,7 +3,7 @@ import { defaultFaq } from '../../core/store-faq';
 
 const SELECTA_CART = {
   online:
-    'No. Usa Comprar ahora para ir directo al checkout o reúne varios favoritos en Mi bolsa. Completas tus datos, la entrega y el pago en una sola página, como invitado.',
+    'No. Usa Comprar ahora para finalizar tu compra directamente o reúne varios favoritos en Mi bolsa. Completas tus datos, la entrega y el pago en una sola página, como invitado.',
   whatsapp:
     'No. Reúne tus favoritos en Mi bolsa y envíanos el pedido por WhatsApp. Te confirmamos el stock, la entrega y el pago antes de preparar tu pedido.',
 };
@@ -48,7 +48,7 @@ export function selectaCopy(store: StorefrontView): SelectaCopy {
       'text',
       'Fragancias que dejan huella y cuidado que se siente. Descubre nuestra selección de perfumes y cuidado personal.',
     ),
-    heroCta: text('hero', 'cta', 'Encuentra el tuyo'),
+    heroCta: text('hero', 'cta', 'Explorar catálogo'),
     heroNote: text('hero', 'note', 'Pequeños detalles. Grandes momentos.'),
     heroPhotoNote: text('hero', 'photoNote', 'EL ARTE DE CUIDARTE'),
     heroImage: content.sections['hero']?.['image'],

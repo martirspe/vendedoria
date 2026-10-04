@@ -1,3 +1,4 @@
+import { DsSelectComponent } from '@vendedoria/ui';
 import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
 import { DatePipe } from '@angular/common';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
@@ -28,7 +29,7 @@ const ROLE_LABELS: Record<MembershipRole, string> = {
 @Component({
   selector: 'app-team-page',
   standalone: true,
-  imports: [
+  imports: [DsSelectComponent,
     DatePipe,
     ReactiveFormsModule,
     DsButtonComponent,

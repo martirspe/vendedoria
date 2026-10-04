@@ -1,5 +1,6 @@
 @let b = block();
 @let id = sectionId();
+@if (type() !== 'testimonials' || b.quotes.length || editing()) {
 <div [class]="'hb hb--' + type() + (b.tone ? ' hb--tone hb--' + b.tone : '')">
   @if (b.eyebrow || b.title) {
     <header class="hb__head">
@@ -98,3 +99,4 @@
     }
   }
 </div>
+}

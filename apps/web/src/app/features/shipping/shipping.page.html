@@ -63,30 +63,30 @@
             <div class="row row--3">
               <label>
                 Departamento de despacho
-                <select (change)="setOriginDepartment($any($event.target).value)">
+                <ds-select><select (change)="setOriginDepartment($any($event.target).value)">
                   <option value="" [selected]="!originDepartment()">Elige…</option>
                   @for (department of departments(); track department) {
                     <option [value]="department" [selected]="department === originDepartment()">{{ department }}</option>
                   }
-                </select>
+                </select></ds-select>
               </label>
               <label>
                 Provincia
-                <select [disabled]="!originDepartment()" (change)="setOriginProvince($any($event.target).value)">
+                <ds-select><select [disabled]="!originDepartment()" (change)="setOriginProvince($any($event.target).value)">
                   <option value="" [selected]="!originProvince()">Elige…</option>
                   @for (province of provinces(); track province) {
                     <option [value]="province" [selected]="province === originProvince()">{{ province }}</option>
                   }
-                </select>
+                </select></ds-select>
               </label>
               <label>
                 Distrito
-                <select formControlName="shippingOriginUbigeo">
+                <ds-select><select formControlName="shippingOriginUbigeo">
                   <option value="">Elige…</option>
                   @for (district of originDistricts(); track district.code) {
                     <option [value]="district.code">{{ district.district }}</option>
                   }
-                </select>
+                </select></ds-select>
               </label>
             </div>
             @for (carrier of carriers; track carrier.key) {
