@@ -22,8 +22,19 @@ const order = {
   },
 };
 
+const handoffConversation = {
+  channel: { type: 'WHATSAPP' },
+  tenant: {
+    name: 'Tienda & Co',
+    memberships: [{ user: { email: 'duena@example.pe' } }, { user: { email: 'equipo@example.pe' } }],
+  },
+};
+
 function build(env: Record<string, string>) {
-  const prisma = { order: { findUnique: jest.fn().mockResolvedValue(order) } };
+  const prisma = {
+    order: { findUnique: jest.fn().mockResolvedValue(order) },
+    conversation: { findFirst: jest.fn().mockResolvedValue(handoffConversation) },
+  };
   return new OrderEmailService(prisma as unknown as PrismaService, new ConfigService(env));
 }
 
@@ -83,5 +94,37 @@ describe('OrderEmailService transport', () => {
     expect(url).toBe('https://api.resend.com/emails');
     expect((init.headers as Record<string, string>)['Idempotency-Key']).toBe('logistics/order-1/SHIPPED');
     expect(JSON.parse(init.body as string)).toMatchObject({ to: ['ana@example.pe'], reply_to: 'ventas@example.pe' });
+  });
+});
+
+describe('OrderEmailService handoff alert', () => {
+  afterEach(() => jest.restoreAllMocks());
+  const live = {
+    EMAIL_MODE: 'live',
+    EMAIL_FROM: 'avisos@example.pe',
+    AWS_REGION: 'us-east-1',
+    CORS_ORIGIN: 'https://app.example.pe,https://www.example.pe',
+  };
+
+  it('emails each team member a link to the conversation, without buyer data', async () => {
+    const send = jest.spyOn(SESv2Client.prototype, 'send').mockResolvedValue({} as never);
+    await build(live).sendHandoffAlert('tenant-1', 'conv-1', true);
+
+    const inputs = send.mock.calls.map(([command]) => (command as SendEmailCommand).input);
+    expect(inputs.map((input) => input.Destination?.ToAddresses)).toEqual([
+      ['duena@example.pe'],
+      ['equipo@example.pe'],
+    ]);
+    const html = inputs[0].Content?.Simple?.Body?.Html?.Data ?? '';
+    expect(inputs[0].Content?.Simple?.Subject?.Data).toBe('Un cliente quiere hablar con una persona · WhatsApp');
+    expect(html).toContain('https://app.example.pe/app/messages?conversation=conv-1');
+    expect(html).toContain('se pausó');
+    expect(inputs[0].EmailTags).toEqual([{ Name: 'kind', Value: 'handoff' }]);
+  });
+
+  it('sends nothing in preview mode', async () => {
+    const send = jest.spyOn(SESv2Client.prototype, 'send');
+    await build({ ...live, EMAIL_MODE: 'preview' }).sendHandoffAlert('tenant-1', 'conv-1', true);
+    expect(send).not.toHaveBeenCalled();
   });
 });

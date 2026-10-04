@@ -196,6 +196,32 @@ describe('SalesAgentToolsService catalog browsing', () => {
   });
 });
 
+describe('SalesAgentToolsService human handoff', () => {
+  it.each([
+    'Quiero hablar con una persona',
+    'puedo hablar con un asesor?',
+    'Pásame con alguien del equipo',
+    'necesito un asesor',
+    'quiero atención humana',
+    '¿Eres un bot?',
+    'no quiero hablar con un robot',
+    'hay alguien ahí?',
+    'Me comunicas con un humano por favor',
+  ])('hands off when the buyer asks for a person: %s', (text) => {
+    expect(tools.wantsHuman(text)).toBe(true);
+  });
+
+  it.each([
+    '¿Alcanza para 4 personas?',
+    'Es para una persona mayor',
+    'Tienen extensiones de cabello humano?',
+    'Quiero el perfume para regalar a una persona especial',
+    'el asesoramiento de talla es gratis?',
+  ])('keeps selling when "persona" or "humano" is part of the question: %s', (text) => {
+    expect(tools.wantsHuman(text)).toBe(false);
+  });
+});
+
 describe('SalesAgentToolsService purchase intent', () => {
   const named = (handle: string, name: string) => ({
     ...product(handle, 12000),

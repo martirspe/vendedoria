@@ -15,6 +15,7 @@ import { PlanLimitsService } from '../billing/plan-limits.service';
 import { MediaService } from '../catalog/media.service';
 import { MetaWhatsAppClient } from '../channels/meta-whatsapp.client';
 import { asWhatsAppMetadata } from '../channels/whatsapp-metadata';
+import { OrderEmailService } from '../checkout/order-email.service';
 import { InboxEventsService } from './inbox-events.service';
 import {
   findMessageTemplate,
@@ -36,6 +37,7 @@ export class ConversationsService {
     private readonly planLimits: PlanLimitsService,
     private readonly media: MediaService,
     private readonly inboxEvents: InboxEventsService,
+    private readonly emails: OrderEmailService,
   ) {}
 
   list(
@@ -515,16 +517,25 @@ export class ConversationsService {
     }
 
     if (agentResult.escalate) {
-      await this.prisma.conversation.update({
-        where: { id: conversation.id },
-        data: {
-          markedUnattended: true,
-          ...(agentResult.pauseOnHandoff
-            ? { agentEnabled: false, status: 'PAUSED' as const }
-            : {}),
-        },
+      const newlyUnattended = await this.prisma.conversation.updateMany({
+        where: { id: conversation.id, tenantId, markedUnattended: false },
+        data: { markedUnattended: true },
       });
+      if (agentResult.pauseOnHandoff) {
+        await this.prisma.conversation.update({
+          where: { id: conversation.id },
+          data: { agentEnabled: false, status: 'PAUSED' },
+        });
+      }
       this.inboxEvents.publish(tenantId, conversation.id, 'conversation');
+      if (newlyUnattended.count) {
+        // Not awaited: an email provider outage must not delay or fail the channel webhook.
+        void this.emails
+          .sendHandoffAlert(tenantId, conversation.id, agentResult.pauseOnHandoff)
+          .catch((error: unknown) =>
+            this.logger.warn(`Handoff alert failed: ${error instanceof Error ? error.name : 'unknown error'}`),
+          );
+      }
     }
 
     return {

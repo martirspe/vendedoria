@@ -3,6 +3,7 @@ import { Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import type { Order, OrderItem, Storefront } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
+import { publicSellerIdentity } from '../storefront/seller-identity';
 
 const CLAIM_TTL_MS = 60_000;
 
@@ -25,7 +26,9 @@ export function htmlToText(html: string): string {
     .join('\n\n');
 }
 
-type EmailKind = 'confirmation' | 'merchant' | 'logistics';
+type EmailKind = 'confirmation' | 'merchant' | 'logistics' | 'handoff';
+const MAX_HANDOFF_RECIPIENTS = 10;
+const CHANNEL_LABELS: Record<string, string> = { WHATSAPP: 'WhatsApp', INSTAGRAM: 'Instagram' };
 type OutgoingEmail = {
   to: string;
   subject: string;
@@ -65,11 +68,63 @@ export class OrderEmailService {
   private readonly logger = new Logger(OrderEmailService.name);
   private readonly transport: Transport | null;
 
+  private readonly consoleOrigin: string;
+
   constructor(
     private readonly prisma: PrismaService,
     config: ConfigService,
   ) {
     this.transport = OrderEmailService.createTransport(config);
+    this.consoleOrigin =
+      config.get<string>('CORS_ORIGIN')?.split(',')[0]?.trim() || 'http://localhost:4200';
+  }
+
+  /**
+   * Tells the business team a buyer asked for a person. Carries no buyer data (name, phone or
+   * messages): only the channel and a link to the conversation in the console.
+   */
+  async sendHandoffAlert(tenantId: string, conversationId: string, agentPaused: boolean): Promise<void> {
+    if (!this.transport) return;
+    const conversation = await this.prisma.conversation.findFirst({
+      where: { id: conversationId, tenantId },
+      select: {
+        channel: { select: { type: true } },
+        tenant: {
+          select: {
+            name: true,
+            memberships: {
+              select: { user: { select: { email: true } } },
+              orderBy: { createdAt: 'asc' },
+              take: MAX_HANDOFF_RECIPIENTS,
+            },
+          },
+        },
+      },
+    });
+    if (!conversation) return;
+    const channel = CHANNEL_LABELS[conversation.channel.type] ?? 'tu canal';
+    const link = `${this.consoleOrigin}/app/messages?conversation=${encodeURIComponent(conversationId)}`;
+    const html = `<div style="font-family:Arial,sans-serif;max-width:600px;margin:auto;padding:24px;color:#0b0d12">
+<p style="font-weight:700">${esc(conversation.tenant.name)}</p>
+<h1 style="font-size:20px">Un cliente quiere hablar con una persona</h1>
+<p>Un cliente pidió atención de tu equipo por ${channel}.</p>
+<p>${agentPaused ? 'Tu vendedor IA se pausó en esa conversación y no responderá hasta que lo reactives.' : 'Tu vendedor IA sigue respondiendo en esa conversación.'}</p>
+<p><a href="${esc(link)}" style="display:inline-block;padding:12px 20px;border-radius:8px;background:#0b0d12;color:#fff;text-decoration:none;font-weight:700">Responder ahora</a></p>
+<p style="font-size:12px;color:#667">Recibes este aviso porque eres parte del equipo de ${esc(conversation.tenant.name)} en VendedorIA.</p>
+</div>`;
+    const subject = `Un cliente quiere hablar con una persona · ${channel}`;
+    await Promise.all(
+      conversation.tenant.memberships.map(({ user }, index) =>
+        this.send('handoff', `handoff/${conversationId}/${Date.now()}/${index}`, {
+          to: user.email,
+          subject,
+          html,
+        }).catch((error: unknown) =>
+          // Provider messages can quote the recipient address: log only the error name.
+          this.logger.warn(`Handoff email failed for ${conversationId}: ${(error as Error).name}`),
+        ),
+      ),
+    );
   }
 
   /** What the buyer receives (or would receive in preview mode), for the console. */
@@ -244,11 +299,12 @@ ${order.serviceNote ? `<p>Fecha preferida: ${esc(order.serviceNote)}. Te escribi
   }
 
   private layout(store: Storefront, content: string): string {
+    const seller = publicSellerIdentity(store);
     return `<div style="font-family:Arial,sans-serif;max-width:600px;margin:auto;padding:24px;color:#0b0d12">
 <p style="font-weight:700">${esc(store.displayName)}</p>
 ${content}
 <p>Si tienes dudas responde este correo${store.whatsappPhone ? ` o escríbenos al WhatsApp +${esc(store.whatsappPhone)}` : ''}.</p>
-<p style="font-size:11px;color:#667;border-top:1px solid #dde;padding-top:12px">${esc(store.legalName)}${store.ruc ? ` · RUC ${esc(store.ruc)}` : ''}${store.legalAddress ? ` · ${esc(store.legalAddress)}` : ''}${store.complaintsBookUrl ? ` · Libro de Reclamaciones: ${esc(store.complaintsBookUrl)}` : ''}</p>
+<p style="font-size:11px;color:#667;border-top:1px solid #dde;padding-top:12px">${esc(seller.legalName)}${seller.ruc ? ` · RUC ${esc(seller.ruc)}` : ''}${seller.legalAddress ? ` · ${esc(seller.legalAddress)}` : ''}${store.complaintsBookUrl ? ` · Libro de Reclamaciones: ${esc(store.complaintsBookUrl)}` : ''}</p>
 </div>`;
   }
 

@@ -62,6 +62,17 @@ const CART_LINE =
   /^\s*•\s*(\d{1,3})\s*[×x]\s.*\[P-([a-z0-9][a-z0-9-]{0,99})(?::([a-z0-9]{10,40}))?\]\s*$/gim;
 const PRODUCT_REF = /\bP-([a-z0-9][a-z0-9-]{0,99})/gi;
 const MAX_REFS = 10;
+/** Someone to talk to, as buyers name it. Matched against normalized text (lowercase, no accents). */
+const HUMAN_TARGET =
+  '(?:(?:una?|algun|alguna)\\s+)?(?:persona|humano|humana|ser humano|asesor|asesora|agente|operador|operadora|encargado|encargada|alguien|vendedor real|vendedora real)\\b';
+const HUMAN_REQUEST = [
+  new RegExp(`\\b(?:hablar|conversar|comunicarme|comunicar|contactarme|contactar|chatear|atenderme|atiendame)\\s+(?:con|por)\\s+${HUMAN_TARGET}`),
+  new RegExp(`\\b(?:pasame|comunicame|conectame|derivame|transfiereme|comunicarme)\\s+(?:con|a)\\s+${HUMAN_TARGET}`),
+  /\b(?:quiero|necesito|prefiero|me atiende|me puede atender|me atienda)\s+(?:un|una|algun|alguna)\s+(?:persona|humano|asesor|asesora|agente|operador|operadora|encargado|encargada)\b/,
+  /\b(?:persona real|ser humano|atencion humana|atencion personalizada|agente humano|asesor humano|asesora humana|un humano)\b/,
+  /\b(?:eres|sos|es)\s+(?:un\s+)?(?:bot|robot)\b|\bno\s+quiero\s+(?:hablar\s+con\s+)?(?:un\s+)?(?:bot|robot)\b/,
+  /\bhay alguien(?:\s+ahi)?\s*\??$/,
+];
 /** Words that say what the buyer wants to do, not which product they mean. */
 const STOPWORDS = new Set([
   'hola',
@@ -912,10 +923,9 @@ export class SalesAgentToolsService {
     };
   }
 
+  /** Explicit requests only: "persona" or "humano" alone also appear in product questions. */
   wantsHuman(text: string): boolean {
-    return /humano|asesor|persona|agent(e|a)?\s+humano|hablar con alguien|atenci[oó]n\s+humana/.test(
-      text.toLowerCase(),
-    );
+    return HUMAN_REQUEST.some((pattern) => pattern.test(normalizeText(text)));
   }
 
   wantsPurchase(text: string): boolean {
