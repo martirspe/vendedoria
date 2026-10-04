@@ -22,6 +22,7 @@ export type OrderItemDto = {
   quantity: number;
   unitCents: number;
   totalCents: number;
+  product: { kind: 'PRODUCT' | 'SERVICE' } | null;
 };
 
 export type PaymentDto = {
@@ -51,6 +52,8 @@ export type OrderDto = {
   status: OrderStatus;
   channel: string;
   delivery: OrderDelivery | null;
+  /** Buyer's preferred date for the services; the merchant confirms it in the chat. */
+  serviceNote: string | null;
   trackingCode: string | null;
   currency: string;
   totalCents: number;

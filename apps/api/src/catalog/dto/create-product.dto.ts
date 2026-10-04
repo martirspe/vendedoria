@@ -111,7 +111,10 @@ export class ProductDetailsDto {
   @MaxLength(400, { each: true })
   notes?: string[];
 
-  @ApiPropertyOptional({ type: [String], description: 'What the piece contains (shown in sets)' })
+  @ApiPropertyOptional({
+    type: [String],
+    description: 'What the piece contains (shown in sets)',
+  })
   @IsOptional()
   @IsArray()
   @ArrayMaxSize(20)
@@ -139,7 +142,9 @@ export class ProductDetailsDto {
   @Type(() => ScentNoteDto)
   scent?: ScentNoteDto[];
 
-  @ApiPropertyOptional({ description: 'Show the gallery photos together as one composition' })
+  @ApiPropertyOptional({
+    description: 'Show the gallery photos together as one composition',
+  })
   @IsOptional()
   @IsBoolean()
   montage?: boolean;
@@ -147,7 +152,11 @@ export class ProductDetailsDto {
 
 export class ProductMediaInputDto {
   @ApiProperty()
-  @IsUrl({ protocols: ['https', 'http'], require_protocol: true, require_tld: false })
+  @IsUrl({
+    protocols: ['https', 'http'],
+    require_protocol: true,
+    require_tld: false,
+  })
   @MaxLength(500)
   url!: string;
 
@@ -183,8 +192,40 @@ export class ProductComponentInputDto {
   quantity!: number;
 }
 
-/** Fields shared by create and update for templates, sets and inventory. */
+export const PRODUCT_KINDS = ['PRODUCT', 'SERVICE'] as const;
+export const SERVICE_MODES = ['onsite', 'home', 'online'] as const;
+export type ServiceMode = (typeof SERVICE_MODES)[number];
+
+/** Fields shared by create and update for templates, sets, inventory and services. */
 export class ProductExtrasDto {
+  @ApiPropertyOptional({
+    enum: PRODUCT_KINDS,
+    description: 'A SERVICE has no stock and is never shipped',
+  })
+  @IsOptional()
+  @IsIn(PRODUCT_KINDS)
+  kind?: (typeof PRODUCT_KINDS)[number];
+
+  @ApiPropertyOptional({
+    example: 60,
+    description: 'Services only: approximate length in minutes',
+  })
+  @IsOptional()
+  @ValidateIf((_, value) => value !== null)
+  @IsInt()
+  @Min(5)
+  @Max(1440)
+  durationMinutes?: number | null;
+
+  @ApiPropertyOptional({
+    enum: SERVICE_MODES,
+    description: 'Services only: where it is delivered',
+  })
+  @IsOptional()
+  @ValidateIf((_, value) => value !== null)
+  @IsIn(SERVICE_MODES)
+  serviceMode?: ServiceMode | null;
+
   @ApiPropertyOptional({ example: 'PER-50' })
   @IsOptional()
   @ValidateIf((_, value) => value !== null)
@@ -206,7 +247,10 @@ export class ProductExtrasDto {
   @Type(() => ProductDetailsDto)
   details?: ProductDetailsDto | null;
 
-  @ApiPropertyOptional({ type: [ProductMediaInputDto], description: 'Replaces mediaUrls when sent' })
+  @ApiPropertyOptional({
+    type: [ProductMediaInputDto],
+    description: 'Replaces mediaUrls when sent',
+  })
   @IsOptional()
   @IsArray()
   @ArrayMaxSize(12)
@@ -214,7 +258,10 @@ export class ProductExtrasDto {
   @Type(() => ProductMediaInputDto)
   media?: ProductMediaInputDto[];
 
-  @ApiPropertyOptional({ type: [ProductComponentInputDto], description: 'Pieces when sold as a set' })
+  @ApiPropertyOptional({
+    type: [ProductComponentInputDto],
+    description: 'Pieces when sold as a set',
+  })
   @IsOptional()
   @IsArray()
   @ArrayMaxSize(20)
@@ -297,7 +344,10 @@ export class CreateProductDto extends ProductExtrasDto {
   @IsBoolean()
   isPublishedOnStore?: boolean;
 
-  @ApiPropertyOptional({ example: 12900, description: 'Struck-through price in cents' })
+  @ApiPropertyOptional({
+    example: 12900,
+    description: 'Struck-through price in cents',
+  })
   @IsOptional()
   @ValidateIf((_, value) => value !== null)
   @IsInt()
@@ -311,7 +361,10 @@ export class CreateProductDto extends ProductExtrasDto {
   @MaxLength(60)
   brand?: string | null;
 
-  @ApiPropertyOptional({ example: 0, description: 'Lower numbers appear first in the store' })
+  @ApiPropertyOptional({
+    example: 0,
+    description: 'Lower numbers appear first in the store',
+  })
   @IsOptional()
   @IsInt()
   @Min(0)

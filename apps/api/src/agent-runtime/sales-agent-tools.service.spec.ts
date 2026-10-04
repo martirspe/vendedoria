@@ -1,8 +1,29 @@
-import { CatalogProductView, SalesAgentToolsService } from './sales-agent-tools.service';
+import {
+  CatalogProductView,
+  SalesAgentToolsService,
+  serviceLabel,
+} from './sales-agent-tools.service';
 
-const tools = new SalesAgentToolsService(null as never, null as never, null as never);
+describe('serviceLabel', () => {
+  it('describes the service without stock words', () => {
+    expect(serviceLabel(60, 'home')).toBe(
+      'Servicio · 60 min aprox. · a domicilio',
+    );
+    expect(serviceLabel(null, null)).toBe('Servicio');
+  });
+});
 
-const product = (handle: string, priceCents: number, variants: CatalogProductView['variants'] = []): CatalogProductView => ({
+const tools = new SalesAgentToolsService(
+  null as never,
+  null as never,
+  null as never,
+);
+
+const product = (
+  handle: string,
+  priceCents: number,
+  variants: CatalogProductView['variants'] = [],
+): CatalogProductView => ({
   id: `id-${handle}`,
   handle,
   name: handle,
@@ -15,6 +36,7 @@ const product = (handle: string, priceCents: number, variants: CatalogProductVie
   stockQty: null,
   stockLabel: 'Disponible',
   priceLabel: `PEN ${(priceCents / 100).toFixed(2)}`,
+  isService: false,
   productUrl: null,
   imageUrl: null,
   variants,
@@ -29,19 +51,40 @@ describe('SalesAgentToolsService product references', () => {
       'Subtotal: S/ 121.00',
     ].join('\n');
     expect(tools.extractProductRefs(text)).toEqual([
-      { handle: 'cafe-de-altura', variantId: null, quantity: 2, fromCart: true },
-      { handle: 'polo-basico', variantId: 'cmur4h7sy0007o63j0ek23stc', quantity: 1, fromCart: true },
+      {
+        handle: 'cafe-de-altura',
+        variantId: null,
+        quantity: 2,
+        fromCart: true,
+      },
+      {
+        handle: 'polo-basico',
+        variantId: 'cmur4h7sy0007o63j0ek23stc',
+        quantity: 1,
+        fromCart: true,
+      },
     ]);
   });
 
   it('reads the product page reference without treating it as an order', () => {
-    expect(tools.extractProductRefs('Hola, me interesa este producto. Ref: P-cafe-de-altura')).toEqual([
-      { handle: 'cafe-de-altura', variantId: null, quantity: 1, fromCart: false },
+    expect(
+      tools.extractProductRefs(
+        'Hola, me interesa este producto. Ref: P-cafe-de-altura',
+      ),
+    ).toEqual([
+      {
+        handle: 'cafe-de-altura',
+        variantId: null,
+        quantity: 1,
+        fromCart: false,
+      },
     ]);
   });
 
   it('caps quantities and ignores text without references', () => {
-    expect(tools.extractProductRefs('• 500 × Café — S/ 1.00 [P-cafe]')[0].quantity).toBe(99);
+    expect(
+      tools.extractProductRefs('• 500 × Café — S/ 1.00 [P-cafe]')[0].quantity,
+    ).toBe(99);
     expect(tools.extractProductRefs('Hola, ¿tienen café?')).toEqual([]);
   });
 
@@ -49,20 +92,43 @@ describe('SalesAgentToolsService product references', () => {
     const catalog = [
       product('cafe', 3800),
       product('polo', 4500, [
-        { id: 'variantm000001', label: 'M', priceCents: 5000, priceLabel: 'PEN 50.00', stockLabel: '3 en stock', isAvailable: true },
+        {
+          id: 'variantm000001',
+          label: 'M',
+          priceCents: 5000,
+          priceLabel: 'PEN 50.00',
+          stockLabel: '3 en stock',
+          isAvailable: true,
+        },
       ]),
     ];
     const lines = tools.orderLinesFromRefs(
       [
         { handle: 'cafe', variantId: null, quantity: 2, fromCart: true },
-        { handle: 'polo', variantId: 'variantm000001', quantity: 1, fromCart: true },
-        { handle: 'polo', variantId: 'variantx999999', quantity: 1, fromCart: true },
+        {
+          handle: 'polo',
+          variantId: 'variantm000001',
+          quantity: 1,
+          fromCart: true,
+        },
+        {
+          handle: 'polo',
+          variantId: 'variantx999999',
+          quantity: 1,
+          fromCart: true,
+        },
         { handle: 'ghost', variantId: null, quantity: 1, fromCart: true },
         { handle: 'cafe', variantId: null, quantity: 1, fromCart: false },
       ],
       catalog,
     );
-    expect(lines.map((line) => [line.product.handle, line.variant?.priceCents ?? line.product.basePriceCents, line.quantity])).toEqual([
+    expect(
+      lines.map((line) => [
+        line.product.handle,
+        line.variant?.priceCents ?? line.product.basePriceCents,
+        line.quantity,
+      ]),
+    ).toEqual([
       ['cafe', 3800, 2],
       ['polo', 5000, 1],
     ]);
@@ -83,35 +149,58 @@ describe('SalesAgentToolsService catalog browsing', () => {
     storeUrl: null,
     categories: [
       { label: 'Perfumes', names: ['Perfumes'], count: 20 },
-      { label: 'Cuidado facial', names: ['Cuidado facial', 'cuidado facial'], count: 10 },
+      {
+        label: 'Cuidado facial',
+        names: ['Cuidado facial', 'cuidado facial'],
+        count: 10,
+      },
     ],
   };
 
   it('asks for the whole catalog only with browse words', () => {
-    for (const text of ['Quiero ver el catálogo', '¿Qué productos tienen?', 'recomiéndame algo']) {
+    for (const text of [
+      'Quiero ver el catálogo',
+      '¿Qué productos tienen?',
+      'recomiéndame algo',
+    ]) {
       expect(tools.browseRequest(text, overview)).toEqual({ kind: 'catalog' });
     }
   });
 
   it('browses a category named alone, in singular or plural', () => {
-    expect(tools.browseRequest('¿Tienen perfumes?', overview)).toEqual({ kind: 'category', category: overview.categories[0] });
-    expect(tools.browseRequest('muéstrame algo facial', overview)).toEqual({ kind: 'category', category: overview.categories[1] });
+    expect(tools.browseRequest('¿Tienen perfumes?', overview)).toEqual({
+      kind: 'category',
+      category: overview.categories[0],
+    });
+    expect(tools.browseRequest('muéstrame algo facial', overview)).toEqual({
+      kind: 'category',
+      category: overview.categories[1],
+    });
   });
 
   it('keeps the regular search when the buyer describes what they want', () => {
-    expect(tools.browseRequest('quiero un perfume floral', overview)).toBeNull();
+    expect(
+      tools.browseRequest('quiero un perfume floral', overview),
+    ).toBeNull();
     expect(tools.browseRequest('¿tienen otros colores?', overview)).toBeNull();
   });
 
   it('asks for more of the current listing', () => {
     expect(tools.browseRequest('ver más', overview)).toEqual({ kind: 'more' });
-    expect(tools.browseRequest('¿Qué más tienen?', overview)).toEqual({ kind: 'more' });
-    expect(tools.browseRequest('muéstrame otros', overview)).toEqual({ kind: 'more' });
+    expect(tools.browseRequest('¿Qué más tienen?', overview)).toEqual({
+      kind: 'more',
+    });
+    expect(tools.browseRequest('muéstrame otros', overview)).toEqual({
+      kind: 'more',
+    });
   });
 });
 
 describe('SalesAgentToolsService purchase intent', () => {
-  const named = (handle: string, name: string) => ({ ...product(handle, 12000), name });
+  const named = (handle: string, name: string) => ({
+    ...product(handle, 12000),
+    name,
+  });
   const catalog = [
     named('zentro', 'Zentro Eau de Parfum'),
     named('bloom', 'Bloom Eau de Parfum'),
@@ -119,13 +208,20 @@ describe('SalesAgentToolsService purchase intent', () => {
   ];
 
   it('identifies a product only when a word names exactly one of them', () => {
-    expect(tools.identifyProduct('quiero comprar el Zentro', catalog)?.handle).toBe('zentro');
-    expect(tools.identifyProduct('quiero comprar un perfume eau de parfum', catalog)).toBeNull();
+    expect(
+      tools.identifyProduct('quiero comprar el Zentro', catalog)?.handle,
+    ).toBe('zentro');
+    expect(
+      tools.identifyProduct('quiero comprar un perfume eau de parfum', catalog),
+    ).toBeNull();
     expect(tools.identifyProduct('quiero zentro y bloom', catalog)).toBeNull();
   });
 
   it('matches without accents and ignores intent words in the search', () => {
-    const { matches } = tools.searchCatalog('Quiero comprar una crema hidratánte', catalog);
+    const { matches } = tools.searchCatalog(
+      'Quiero comprar una crema hidratánte',
+      catalog,
+    );
     expect(matches.map((item) => item.handle)).toEqual(['crema']);
   });
 

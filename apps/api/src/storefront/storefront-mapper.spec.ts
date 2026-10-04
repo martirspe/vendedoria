@@ -1,6 +1,12 @@
-import { StoreProductRecord, toProductCard, toProductDetail } from './storefront-mapper';
+import {
+  StoreProductRecord,
+  toProductCard,
+  toProductDetail,
+} from './storefront-mapper';
 
-function product(overrides: Partial<StoreProductRecord> = {}): StoreProductRecord {
+function product(
+  overrides: Partial<StoreProductRecord> = {},
+): StoreProductRecord {
   return {
     handle: 'polo-basico',
     name: 'Polo básico',
@@ -22,7 +28,9 @@ function product(overrides: Partial<StoreProductRecord> = {}): StoreProductRecor
   };
 }
 
-function variant(overrides: Partial<StoreProductRecord['variants'][number]> = {}) {
+function variant(
+  overrides: Partial<StoreProductRecord['variants'][number]> = {},
+) {
   return {
     id: 'v1',
     option1Name: 'Talla',
@@ -42,15 +50,18 @@ function variant(overrides: Partial<StoreProductRecord['variants'][number]> = {}
 describe('storefront product mapping', () => {
   it('marks a simple product without stock as unavailable', () => {
     expect(toProductCard(product({ stockQty: 0 })).isAvailable).toBe(false);
-    expect(toProductCard(product({ stockQty: 0, stockUnlimited: true })).isAvailable).toBe(
-      true,
-    );
+    expect(
+      toProductCard(product({ stockQty: 0, stockUnlimited: true })).isAvailable,
+    ).toBe(true);
   });
 
   it('uses the lowest variant price and flags varying prices', () => {
     const card = toProductCard(
       product({
-        variants: [variant({ priceCents: 6900 }), variant({ id: 'v2', priceCents: 5900 })],
+        variants: [
+          variant({ priceCents: 6900 }),
+          variant({ id: 'v2', priceCents: 5900 }),
+        ],
       }),
     );
     expect(card.priceCents).toBe(5900);
@@ -59,21 +70,29 @@ describe('storefront product mapping', () => {
   });
 
   it('only keeps a compare-at price that is higher than the selling price', () => {
-    expect(toProductCard(product({ compareAtPriceCents: 7900 })).compareAtPriceCents).toBe(
-      7900,
-    );
-    expect(toProductCard(product({ compareAtPriceCents: 5000 })).compareAtPriceCents).toBeNull();
+    expect(
+      toProductCard(product({ compareAtPriceCents: 7900 })).compareAtPriceCents,
+    ).toBe(7900);
+    expect(
+      toProductCard(product({ compareAtPriceCents: 5000 })).compareAtPriceCents,
+    ).toBeNull();
   });
 
   it('variants without their own stock follow the product stock', () => {
     const detail = toProductDetail(
       product({
         stockQty: 0,
-        variants: [variant(), variant({ id: 'v2', option1Value: 'L', stockQty: 2 })],
+        variants: [
+          variant(),
+          variant({ id: 'v2', option1Value: 'L', stockQty: 2 }),
+        ],
       }),
       [],
     );
-    expect(detail.variants.map((item) => item.isAvailable)).toEqual([false, true]);
+    expect(detail.variants.map((item) => item.isAvailable)).toEqual([
+      false,
+      true,
+    ]);
     expect(detail.isAvailable).toBe(true);
     expect(detail.variants[1].label).toBe('L');
   });
@@ -92,5 +111,33 @@ describe('storefront product mapping', () => {
       product({ variants: [variant({ imageUrl: 'https://cdn/v.jpg' })] }),
     );
     expect(fromVariant.imageUrl).toBe('https://cdn/v.jpg');
+  });
+
+  it('exposes service details only for services and drops unknown modes', () => {
+    expect(toProductCard(product())).toMatchObject({
+      kind: 'PRODUCT',
+      service: null,
+    });
+    const service = toProductCard(
+      product({
+        kind: 'SERVICE',
+        durationMinutes: 45,
+        serviceMode: 'home',
+        stockUnlimited: true,
+      }),
+    );
+    expect(service).toMatchObject({
+      kind: 'SERVICE',
+      service: { durationMinutes: 45, mode: 'home' },
+    });
+    expect(
+      toProductCard(
+        product({
+          kind: 'SERVICE',
+          durationMinutes: null,
+          serviceMode: 'moon',
+        }),
+      ).service,
+    ).toEqual({ durationMinutes: null, mode: null });
   });
 });

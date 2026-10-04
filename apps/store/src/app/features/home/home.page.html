@@ -1,78 +1,148 @@
 @if (store(); as s) {
-  <section class="hero" [class.hero--image]="s.heroImageUrl">
-    @if (s.heroImageUrl) {
-      <img class="hero__image" [src]="s.heroImageUrl" alt="" fetchpriority="high" />
-    }
-    <div class="store-container hero__content">
-      <h1>{{ s.displayName }}</h1>
-      @if (s.tagline) {
-        <p class="hero__tagline">{{ s.tagline }}</p>
+  @let c = copy();
+  @for (item of sections(); track item.id) {
+    @switch (item.type) {
+      @case ('hero') {
+        <section class="hero" [class.hero--image]="heroImage()" storeSection="hero">
+          @if (heroImage(); as src) {
+            <img class="hero__image" [src]="src" alt="" fetchpriority="high" storeEditImage="hero.image" [editValue]="src" />
+          }
+          <div class="store-container hero__content">
+            @if (c.title) {
+              <h1 storeEditText="hero.title" [editValue]="c.title"></h1>
+            }
+            @if (c.text) {
+              <p class="hero__tagline" storeEditText="hero.text" editKind="multiline" [editValue]="c.text"></p>
+            }
+            <div class="hero__actions">
+              @if (c.cta) {
+                <a class="store-btn store-btn--primary" routerLink="/productos">
+                  <span storeEditText="hero.cta" [editValue]="c.cta"></span> <ds-icon name="arrowRight" [size]="1.05" />
+                </a>
+              }
+              @if (whatsappHref(); as href) {
+                <a class="store-btn store-btn--whatsapp" [href]="href" target="_blank" rel="noopener">
+                  <ds-icon name="message" [size]="1.05" /> Escríbenos por WhatsApp
+                </a>
+              }
+            </div>
+          </div>
+        </section>
       }
-      <div class="hero__actions">
-        <a class="store-btn store-btn--primary" routerLink="/productos">
-          Ver productos <ds-icon name="arrowRight" [size]="1.05" />
-        </a>
-        @if (whatsappHref(); as href) {
-          <a class="store-btn store-btn--whatsapp" [href]="href" target="_blank" rel="noopener">
-            <ds-icon name="message" [size]="1.05" /> Escríbenos por WhatsApp
-          </a>
-        }
-      </div>
-    </div>
-  </section>
 
-  @if (s.categories.length) {
-    <nav class="store-container categories" aria-label="Categorías">
-      @for (category of s.categories; track category) {
-        <a class="store-chip" routerLink="/productos" [queryParams]="{ categoria: category }">{{ category }}</a>
+      @case ('featured') {
+        @if (s.categories.length) {
+          <nav class="store-container categories" aria-label="Categorías">
+            @for (category of s.categories; track category) {
+              <a class="store-chip" routerLink="/productos" [queryParams]="{ categoria: category }">{{ category }}</a>
+            }
+          </nav>
+        }
+
+        <section class="store-container section" aria-labelledby="featured-title" storeSection="featured">
+          <header class="section__header">
+            <h2 id="featured-title" storeEditText="featured.title" [editValue]="c.featuredTitle"></h2>
+            @if (featured().total > featured().items.length) {
+              <a routerLink="/productos" class="section__more">
+                Ver los {{ featured().total }} productos <ds-icon name="chevronRight" [size]="1" />
+              </a>
+            }
+          </header>
+          @if (featured().items.length) {
+            <div class="store-grid">
+              @for (product of featured().items; track product.handle) {
+                <store-product-card [product]="product" />
+              }
+            </div>
+          } @else {
+            <div class="store-empty">
+              <ds-icon name="package" [size]="2" />
+              <h2>Pronto verás nuestros productos aquí</h2>
+              @if (whatsappHref(); as href) {
+                <p>Mientras tanto, <a [href]="href" target="_blank" rel="noopener">escríbenos por WhatsApp</a>.</p>
+              }
+            </div>
+          }
+        </section>
       }
-    </nav>
+
+      @case ('how') {
+        <section class="store-container section how" aria-labelledby="how-title" storeSection="how">
+          @if (c.howTitle) {
+            <h2 id="how-title" storeEditText="how.title" [editValue]="c.howTitle"></h2>
+          }
+          <ol class="how__steps">
+            @for (step of c.steps; track step.icon; let i = $index) {
+              <li>
+                <span class="how__icon"><ds-icon [name]="step.icon" /></span>
+                <strong [storeEditText]="'how.step' + (i + 1) + 'Title'" [editValue]="step.title"></strong>
+                <p [storeEditText]="'how.step' + (i + 1) + 'Text'" editKind="multiline" [editValue]="step.text"></p>
+              </li>
+            }
+          </ol>
+        </section>
+      }
+
+      @case ('imageText') {
+        @let b = block(item.id);
+        <section
+          class="store-container section block-image"
+          [class.block-image--text]="!b.image && !editing()"
+          [class.block-image--end]="b.layout === 'end'"
+          [storeSection]="item.id"
+        >
+          @if (b.image) {
+            <img class="block-image__media" [src]="b.image" alt="" loading="lazy" [storeEditImage]="item.id + '.image'" [editValue]="b.image" />
+          } @else if (editing()) {
+            <button type="button" class="store-edit-placeholder block-image__media" [storeEditImage]="item.id + '.image'" [editValue]="''">Agregar imagen</button>
+          }
+          <div class="block-image__copy">
+            @if (b.eyebrow) {
+              <p class="block-eyebrow" [storeEditText]="item.id + '.eyebrow'" [editValue]="b.eyebrow"></p>
+            }
+            @if (b.title) {
+              <h2 [storeEditText]="item.id + '.title'" editKind="multiline" [editValue]="b.title"></h2>
+            }
+            @if (b.text) {
+              <p class="block-text__body" [storeEditText]="item.id + '.text'" editKind="multiline" [editValue]="b.text"></p>
+            }
+            @if (b.cta) {
+              <a class="store-btn store-btn--primary" routerLink="/productos">
+                <span [storeEditText]="item.id + '.cta'" [editValue]="b.cta"></span> <ds-icon name="arrowRight" [size]="1.05" />
+              </a>
+            }
+          </div>
+        </section>
+      }
+
+      @case ('text') {
+        @let b = block(item.id);
+        <section class="store-container section block-text" [class]="b.tone ? 'block-tone block-tone--' + b.tone : ''" [storeSection]="item.id">
+          @if (b.eyebrow) {
+            <p class="block-eyebrow" [storeEditText]="item.id + '.eyebrow'" [editValue]="b.eyebrow"></p>
+          }
+          @if (b.title) {
+            <h2 [storeEditText]="item.id + '.title'" editKind="multiline" [editValue]="b.title"></h2>
+          }
+          @if (b.text) {
+            <p class="block-text__body" [storeEditText]="item.id + '.text'" editKind="multiline" [editValue]="b.text"></p>
+          }
+        </section>
+      }
+
+      @default {
+        @if (sharedType(item.type); as type) {
+          <store-home-block
+            class="store-container section"
+            [type]="type"
+            [sectionId]="item.id"
+            [block]="block(item.id)"
+            [whatsappHref]="whatsappHref()"
+            [faq]="faq()"
+            [storeSection]="item.id"
+          />
+        }
+      }
+    }
   }
-
-  <section class="store-container section" aria-labelledby="featured-title">
-    <header class="section__header">
-      <h2 id="featured-title">Destacados</h2>
-      @if (featured().total > featured().items.length) {
-        <a routerLink="/productos" class="section__more">
-          Ver los {{ featured().total }} productos <ds-icon name="chevronRight" [size]="1" />
-        </a>
-      }
-    </header>
-    @if (featured().items.length) {
-      <div class="store-grid">
-        @for (product of featured().items; track product.handle) {
-          <store-product-card [product]="product" />
-        }
-      </div>
-    } @else {
-      <div class="store-empty">
-        <ds-icon name="package" [size]="2" />
-        <h2>Pronto verás nuestros productos aquí</h2>
-        @if (whatsappHref(); as href) {
-          <p>Mientras tanto, <a [href]="href" target="_blank" rel="noopener">escríbenos por WhatsApp</a>.</p>
-        }
-      </div>
-    }
-  </section>
-
-  <section class="store-container section how" aria-labelledby="how-title">
-    <h2 id="how-title">Cómo comprar</h2>
-    <ol class="how__steps">
-      <li>
-        <span class="how__icon"><ds-icon name="shoppingBag" /></span>
-        <strong>Elige tus productos</strong>
-        <p>Agrégalos al carrito con la talla o versión que prefieras.</p>
-      </li>
-      <li>
-        <span class="how__icon"><ds-icon name="message" /></span>
-        <strong>Envía tu pedido por WhatsApp</strong>
-        <p>Te llega un mensaje listo con el detalle de tu compra.</p>
-      </li>
-      <li>
-        <span class="how__icon"><ds-icon name="check" /></span>
-        <strong>Confirmamos y coordinamos</strong>
-        <p>Te confirmamos stock, costo de envío y forma de pago antes de cobrar.</p>
-      </li>
-    </ol>
-  </section>
 }

@@ -20,6 +20,8 @@ export type PlanDefinition = {
   priceCents: number | null;
   conversationQuota: number | null;
   aiReplyQuota: number | null;
+  aiTextQuota: number | null;
+  aiImageQuota: number | null;
   productQuota: number | null;
   couponQuota: number | null;
   seatQuota: number | null;
@@ -51,6 +53,11 @@ export type PlanUsage = {
   extraChats: number;
   aiRepliesUsed: number;
   aiReplyQuota: number | null;
+  /** Store editor AI, capped apart from the agent replies. */
+  aiTextsUsed: number;
+  aiTextQuota: number | null;
+  aiImagesUsed: number;
+  aiImageQuota: number | null;
   productsUsed: number;
   productQuota: number | null;
   couponsActive: number;
@@ -59,6 +66,8 @@ export type PlanUsage = {
   seatQuota: number | null;
   conversationAtLimit: boolean;
   aiAtLimit: boolean;
+  aiTextAtLimit: boolean;
+  aiImageAtLimit: boolean;
   productAtLimit: boolean;
   couponAtLimit: boolean;
   seatAtLimit: boolean;
@@ -85,14 +94,32 @@ export type BillingOverview = {
   checkoutHint: string;
 };
 
+/** Pending plan payment, paid in the console with the Card Payment Brick or Yape. */
 export type PlanCheckout = {
   paymentId: string;
-  checkoutUrl: string;
+  title: string;
+  amountCents: number;
+  currency: string;
   simulated: boolean;
+  publicKey: string | null;
+  payerEmail: string;
 };
 
 export type PlanPaymentResult = {
   status: 'active' | 'pending' | 'failed' | 'review';
+  /** Mercado Pago `status_detail` of a declined payment. */
+  detail?: string | null;
+};
+
+export type PayPlanRequest = {
+  method: 'card' | 'yape';
+  cardToken: string;
+  paymentMethodId?: string;
+  paymentType?: string;
+  phone?: string;
+  payerEmail?: string;
+  identificationType?: 'DNI' | 'CE' | 'RUC';
+  identificationNumber?: string;
 };
 
 @Injectable({ providedIn: 'root' })
@@ -117,11 +144,19 @@ export class BillingApiService {
     );
   }
 
-  confirmPayment(providerPaymentId: string): Promise<PlanPaymentResult> {
+  payPlan(paymentId: string, body: PayPlanRequest): Promise<PlanPaymentResult> {
     return firstValueFrom(
       this.http.post<PlanPaymentResult>(
-        `${environment.apiBaseUrl}/billing/checkout/confirm`,
-        { providerPaymentId },
+        `${environment.apiBaseUrl}/billing/payments/${encodeURIComponent(paymentId)}/pay`,
+        body,
+      ),
+    );
+  }
+
+  paymentStatus(paymentId: string): Promise<PlanPaymentResult> {
+    return firstValueFrom(
+      this.http.get<PlanPaymentResult>(
+        `${environment.apiBaseUrl}/billing/payments/${encodeURIComponent(paymentId)}`,
       ),
     );
   }

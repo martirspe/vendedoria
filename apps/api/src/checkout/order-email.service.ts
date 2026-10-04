@@ -16,7 +16,9 @@ export function htmlToText(html: string): string {
     .replace(/<\/(p|h1|h2|div)>/gi, '\n')
     .replace(/<br\s*\/?>/gi, '\n')
     .replace(/<[^>]+>/g, '')
-    .replace(/&#(\d+);/g, (_, code: string) => String.fromCharCode(Number(code)))
+    .replace(/&#(\d+);/g, (_, code: string) =>
+      String.fromCharCode(Number(code)),
+    )
     .split('\n')
     .map((line) => line.trim())
     .filter(Boolean)
@@ -24,9 +26,19 @@ export function htmlToText(html: string): string {
 }
 
 type EmailKind = 'confirmation' | 'merchant' | 'logistics';
-type OutgoingEmail = { to: string; subject: string; html: string; replyTo?: string | null };
+type OutgoingEmail = {
+  to: string;
+  subject: string;
+  html: string;
+  replyTo?: string | null;
+};
 type Transport =
-  | { provider: 'ses'; client: SESv2Client; from: string; configurationSet?: string }
+  | {
+      provider: 'ses';
+      client: SESv2Client;
+      from: string;
+      configurationSet?: string;
+    }
   | { provider: 'resend'; apiKey: string; from: string };
 
 type EmailOrder = Order & { items: OrderItem[] };
@@ -61,13 +73,20 @@ export class OrderEmailService {
   }
 
   /** What the buyer receives (or would receive in preview mode), for the console. */
-  async preview(tenantId: string, orderId: string): Promise<RenderedEmail & { status: string }> {
+  async preview(
+    tenantId: string,
+    orderId: string,
+  ): Promise<RenderedEmail & { status: string }> {
     const order = await this.prisma.order.findFirst({
       where: { id: orderId, tenantId },
       include: { items: true, tenant: { include: { storefront: true } } },
     });
-    if (!order || !order.tenant.storefront) throw new NotFoundException('Pedido no encontrado.');
-    return { ...this.confirmation(order, order.tenant.storefront), status: order.emailStatus };
+    if (!order || !order.tenant.storefront)
+      throw new NotFoundException('Pedido no encontrado.');
+    return {
+      ...this.confirmation(order, order.tenant.storefront),
+      status: order.emailStatus,
+    };
   }
 
   async sendConfirmation(orderId: string): Promise<void> {
@@ -83,7 +102,10 @@ export class OrderEmailService {
         id: orderId,
         status: 'PAID',
         emailStatus: { not: 'sent' },
-        OR: [{ emailClaimedAt: null }, { emailClaimedAt: { lt: new Date(Date.now() - CLAIM_TTL_MS) } }],
+        OR: [
+          { emailClaimedAt: null },
+          { emailClaimedAt: { lt: new Date(Date.now() - CLAIM_TTL_MS) } },
+        ],
       },
       data: { emailClaimedAt: new Date() },
     });
@@ -107,7 +129,9 @@ export class OrderEmailService {
         data: { emailStatus: 'sent', emailClaimedAt: null },
       });
     } catch (error) {
-      this.logger.warn(`Confirmation email failed for ${order.id}: ${(error as Error).message}`);
+      this.logger.warn(
+        `Confirmation email failed for ${order.id}: ${(error as Error).message}`,
+      );
       await this.prisma.order.update({
         where: { id: order.id },
         data: { emailStatus: 'failed', emailClaimedAt: null },
@@ -120,7 +144,9 @@ export class OrderEmailService {
         subject: `Nuevo pedido pagado · ${order.code} · ${soles(order.totalCents)}`,
         html: email.html,
       }).catch((error: unknown) =>
-        this.logger.warn(`Merchant email failed for ${order.id}: ${(error as Error).message}`),
+        this.logger.warn(
+          `Merchant email failed for ${order.id}: ${(error as Error).message}`,
+        ),
       );
     }
   }
@@ -130,25 +156,45 @@ export class OrderEmailService {
     if (!this.transport) return;
     const order = await this.prisma.order.findUnique({
       where: { id: orderId },
-      include: { items: true, tenant: { include: { storefront: true } } },
+      include: {
+        items: { include: { product: { select: { kind: true } } } },
+        tenant: { include: { storefront: true } },
+      },
     });
     const store = order?.tenant.storefront;
-    if (!order?.customerEmail || !store || !['SHIPPED', 'COMPLETED'].includes(order.status)) return;
-    const email = this.logistics(order, store);
+    if (
+      !order?.customerEmail ||
+      !store ||
+      !['SHIPPED', 'COMPLETED'].includes(order.status)
+    )
+      return;
+    const servicesOnly =
+      order.items.length > 0 &&
+      order.items.every((item) => item.product?.kind === 'SERVICE');
+    const email = this.logistics(order, store, servicesOnly);
     await this.send('logistics', `logistics/${order.id}/${order.status}`, {
       to: order.customerEmail,
       ...email,
       replyTo: store.contactEmail,
     }).catch((error: unknown) =>
-      this.logger.warn(`Logistics email failed for ${order.id}: ${(error as Error).message}`),
+      this.logger.warn(
+        `Logistics email failed for ${order.id}: ${(error as Error).message}`,
+      ),
     );
   }
 
   private confirmation(order: EmailOrder, store: Storefront): RenderedEmail {
-    const delivery = (order.delivery ?? {}) as Delivery;
-    const place = [delivery.address, delivery.district, delivery.province, delivery.department]
-      .filter(Boolean)
-      .join(', ');
+    const delivery = order.delivery ? (order.delivery as Delivery) : null;
+    const place = delivery
+      ? [
+          delivery.address,
+          delivery.district,
+          delivery.province,
+          delivery.department,
+        ]
+          .filter(Boolean)
+          .join(', ')
+      : '';
     const html = this.layout(
       store,
       `<h1 style="font-size:22px">Gracias, ${esc(order.customerName)}. Tu pago está confirmado.</h1>
@@ -156,19 +202,29 @@ export class OrderEmailService {
 ${order.items.map((i) => `<p>${esc(i.title)} · ${i.quantity} × ${soles(i.unitCents)}</p>`).join('')}
 <p>Subtotal: ${soles(order.subtotalCents)}</p>
 ${order.discountCents > 0 ? `<p>Descuento${order.couponCode ? ` (cupón ${esc(order.couponCode)})` : ''}: −${soles(order.discountCents)}</p>` : ''}
-<p>Envío: ${order.shippingCents === 0 ? 'Gratis' : soles(order.shippingCents)}</p>
+${delivery ? `<p>Envío: ${order.shippingCents === 0 ? 'Gratis' : soles(order.shippingCents)}</p>` : ''}
 <h2 style="font-size:18px">Total: ${soles(order.totalCents)}</h2>
-<p><strong>${esc(delivery.label)}</strong>${place ? ` · ${esc(place)}` : ''}${delivery.eta ? ` · ${esc(delivery.eta)}` : ''}</p>`,
+${delivery ? `<p><strong>${esc(delivery.label)}</strong>${place ? ` · ${esc(place)}` : ''}${delivery.eta ? ` · ${esc(delivery.eta)}` : ''}</p>` : ''}
+${order.serviceNote ? `<p>Fecha preferida: ${esc(order.serviceNote)}. Te escribiremos para confirmar el horario.</p>` : ''}`,
     );
-    return { subject: `Compra confirmada · ${store.displayName} · ${order.code}`, html };
+    return {
+      subject: `Compra confirmada · ${store.displayName} · ${order.code}`,
+      html,
+    };
   }
 
-  private logistics(order: EmailOrder, store: Storefront): RenderedEmail {
+  private logistics(
+    order: EmailOrder,
+    store: Storefront,
+    servicesOnly: boolean,
+  ): RenderedEmail {
     const delivery = (order.delivery ?? {}) as Delivery;
     const pickup = delivery.mode === 'PICKUP';
     const delivered = order.status === 'COMPLETED';
     const title = delivered
-      ? 'Tu pedido fue entregado.'
+      ? servicesOnly
+        ? 'Tu servicio fue realizado.'
+        : 'Tu pedido fue entregado.'
       : pickup
         ? 'Tu pedido está listo para recoger.'
         : 'Tu pedido está en camino.';
@@ -201,22 +257,33 @@ ${content}
     if (config.get<string>('EMAIL_MODE') !== 'live') return null;
     const from = config.getOrThrow<string>('EMAIL_FROM');
     if (config.get<string>('EMAIL_PROVIDER') === 'resend') {
-      return { provider: 'resend', apiKey: config.getOrThrow<string>('RESEND_API_KEY'), from };
+      return {
+        provider: 'resend',
+        apiKey: config.getOrThrow<string>('RESEND_API_KEY'),
+        from,
+      };
     }
     return {
       provider: 'ses',
       client: new SESv2Client({
-        region: config.get<string>('SES_REGION') || config.getOrThrow<string>('AWS_REGION'),
+        region:
+          config.get<string>('SES_REGION') ||
+          config.getOrThrow<string>('AWS_REGION'),
         maxAttempts: 3,
         requestHandler: { connectionTimeout: 3_000, requestTimeout: 10_000 },
       }),
       from,
-      configurationSet: config.get<string>('SES_CONFIGURATION_SET') || undefined,
+      configurationSet:
+        config.get<string>('SES_CONFIGURATION_SET') || undefined,
     };
   }
 
   /** `dedupeKey` is honoured by Resend; with SES the order claim and status guards prevent repeats. */
-  private async send(kind: EmailKind, dedupeKey: string, email: OutgoingEmail): Promise<void> {
+  private async send(
+    kind: EmailKind,
+    dedupeKey: string,
+    email: OutgoingEmail,
+  ): Promise<void> {
     const transport = this.transport;
     if (!transport) return;
     const text = htmlToText(email.html);
@@ -229,7 +296,10 @@ ${content}
           Content: {
             Simple: {
               Subject: { Data: email.subject, Charset: 'UTF-8' },
-              Body: { Html: { Data: email.html, Charset: 'UTF-8' }, Text: { Data: text, Charset: 'UTF-8' } },
+              Body: {
+                Html: { Data: email.html, Charset: 'UTF-8' },
+                Text: { Data: text, Charset: 'UTF-8' },
+              },
             },
           },
           ConfigurationSetName: transport.configurationSet,

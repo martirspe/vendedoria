@@ -125,6 +125,47 @@
               <p>Nombre y descripción con los que tu vendedor lo presentará.</p>
             </header>
 
+            <div class="kind-toggle" role="radiogroup" aria-label="Qué vendes">
+              <button
+                type="button"
+                role="radio"
+                [attr.aria-checked]="!isService()"
+                [class.is-active]="!isService()"
+                (click)="setKind('PRODUCT')"
+              >
+                <ds-icon name="package" [size]="1" /> Producto
+              </button>
+              <button
+                type="button"
+                role="radio"
+                [attr.aria-checked]="isService()"
+                [class.is-active]="isService()"
+                (click)="setKind('SERVICE')"
+              >
+                <ds-icon name="calendar" [size]="1" /> Servicio
+              </button>
+            </div>
+            @if (isService()) {
+              <p class="field__hint">
+                Sin stock ni envío. El comprador paga y luego coordinas con él el día y la hora.
+              </p>
+              <div class="field-grid field-grid--two">
+                <label class="field">
+                  <span>Duración aproximada (minutos)</span>
+                  <input type="number" min="5" max="1440" step="5" formControlName="durationMinutes" placeholder="60" />
+                </label>
+                <label class="field">
+                  <span>Dónde se realiza</span>
+                  <select formControlName="serviceMode">
+                    <option value="">Sin indicar</option>
+                    <option value="onsite">En tu local</option>
+                    <option value="home">A domicilio</option>
+                    <option value="online">En línea</option>
+                  </select>
+                </label>
+              </div>
+            }
+
             <label class="field">
               <span>Nombre del producto <em>*</em></span>
               <input
@@ -257,6 +298,7 @@
             </section>
           }
 
+          @if (!isService()) {
           <section class="pub-card pub-card--row">
             <div>
               <h2>Se vende como set</h2>
@@ -272,8 +314,9 @@
               <span class="visually-hidden">Vender como set</span>
             </label>
           </section>
+          }
 
-          @if (setEnabled()) {
+          @if (setEnabled() && !isService()) {
             <section class="pub-card">
               <header class="pub-card__head pub-card__head--inline">
                 <div>
@@ -327,7 +370,7 @@
             </section>
           }
 
-          @if (!setEnabled()) {
+          @if (!setEnabled() || isService()) {
           <section class="pub-card pub-card--row">
             <div>
               <h2>¿Tu producto tiene variantes?</h2>
@@ -541,7 +584,7 @@
           </section>
 
           <section class="pub-card">
-            <h2>Precio y stock</h2>
+            <h2>{{ isService() ? 'Precio' : 'Precio y stock' }}</h2>
             <label class="field">
               <span>Precio <em>*</em></span>
               <div class="price-row">
@@ -564,7 +607,9 @@
               <input formControlName="sku" maxlength="60" autocomplete="off" placeholder="PER-50" />
             </label>
 
-            @if (setEnabled()) {
+            @if (isService()) {
+              <p class="field__hint">Los servicios no llevan stock: se pueden reservar mientras estén disponibles.</p>
+            } @else if (setEnabled()) {
               <p class="field__hint">El stock del set sale de sus piezas: se vende mientras todas tengan unidades.</p>
             } @else {
             <label class="field">

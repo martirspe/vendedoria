@@ -1,5 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
+import type { ProductKind } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { OrderShipping, OrdersService } from '../orders/orders.service';
 import type { ShippingRules } from '../storefront/shipping';
@@ -8,49 +9,155 @@ import {
   DEFAULT_STOREFRONT_URL_TEMPLATE,
   storefrontUrl,
 } from '../storefront/storefront-host';
-import { activeCustomDomain, isIntegrationActive } from '../integrations/integration-state';
+import {
+  activeCustomDomain,
+  isIntegrationActive,
+} from '../integrations/integration-state';
 import { normalizeText, PendingLine } from './conversation-context';
 import type { DeliveryPlan } from './delivery-plan';
 
 export type DeliveryQuote = Extract<DeliveryPlan, { kind: 'quote' }>;
 
-const REFERENCE_RATE_NOTE = 'Tarifa referencial: la cobertura se coordina antes del despacho.';
+const REFERENCE_RATE_NOTE =
+  'Tarifa referencial: la cobertura se coordina antes del despacho.';
 
 export function moneyLabel(currency: string, cents: number): string {
   return `${currency} ${(cents / 100).toFixed(2)}`;
 }
 
-export function placeLabel(place: { district: string; province: string }): string {
-  return place.district === place.province ? place.district : `${place.district}, ${place.province}`;
+const SERVICE_MODE_LABELS: Record<string, string> = {
+  onsite: 'en el local',
+  home: 'a domicilio',
+  online: 'en línea',
+};
+
+/** "Servicio · 60 min · a domicilio": what the agent may state about a service, nothing more. */
+export function serviceLabel(
+  durationMinutes: number | null,
+  mode: string | null,
+): string {
+  return [
+    'Servicio',
+    durationMinutes ? `${durationMinutes} min aprox.` : null,
+    mode ? SERVICE_MODE_LABELS[mode] : null,
+  ]
+    .filter(Boolean)
+    .join(' · ');
+}
+
+export function placeLabel(place: {
+  district: string;
+  province: string;
+}): string {
+  return place.district === place.province
+    ? place.district
+    : `${place.district}, ${place.province}`;
 }
 
 /**
  * Product references written by the store: `Ref: P-{handle}` on product pages and
  * `• {qty} × {name} — {total} [P-{handle}:{variantId}]` per cart line.
  */
-const CART_LINE = /^\s*•\s*(\d{1,3})\s*[×x]\s.*\[P-([a-z0-9][a-z0-9-]{0,99})(?::([a-z0-9]{10,40}))?\]\s*$/gim;
+const CART_LINE =
+  /^\s*•\s*(\d{1,3})\s*[×x]\s.*\[P-([a-z0-9][a-z0-9-]{0,99})(?::([a-z0-9]{10,40}))?\]\s*$/gim;
 const PRODUCT_REF = /\bP-([a-z0-9][a-z0-9-]{0,99})/gi;
 const MAX_REFS = 10;
 /** Words that say what the buyer wants to do, not which product they mean. */
 const STOPWORDS = new Set([
-  'hola', 'buenas', 'buenos', 'dias', 'tardes', 'noches', 'gracias', 'quiero', 'queria',
-  'quisiera', 'comprar', 'compro', 'comprarlo', 'comprarla', 'busco', 'buscando', 'necesito',
-  'tienes', 'tienen', 'tiene', 'hay', 'venden', 'vendes', 'para', 'por', 'como', 'cuanto',
-  'cuesta', 'precio', 'una', 'uno', 'unos', 'unas', 'los', 'las', 'del', 'que', 'con', 'sin',
-  'este', 'esta', 'ese', 'esa', 'eso', 'algo', 'mas', 'favor', 'porfa', 'interesa', 'ver',
-  'pedido', 'pagar', 'link', 'pago', 'foto', 'fotos', 'imagen',
+  'hola',
+  'buenas',
+  'buenos',
+  'dias',
+  'tardes',
+  'noches',
+  'gracias',
+  'quiero',
+  'queria',
+  'quisiera',
+  'comprar',
+  'compro',
+  'comprarlo',
+  'comprarla',
+  'busco',
+  'buscando',
+  'necesito',
+  'tienes',
+  'tienen',
+  'tiene',
+  'hay',
+  'venden',
+  'vendes',
+  'para',
+  'por',
+  'como',
+  'cuanto',
+  'cuesta',
+  'precio',
+  'una',
+  'uno',
+  'unos',
+  'unas',
+  'los',
+  'las',
+  'del',
+  'que',
+  'con',
+  'sin',
+  'este',
+  'esta',
+  'ese',
+  'esa',
+  'eso',
+  'algo',
+  'mas',
+  'favor',
+  'porfa',
+  'interesa',
+  'ver',
+  'pedido',
+  'pagar',
+  'link',
+  'pago',
+  'foto',
+  'fotos',
+  'imagen',
 ]);
 
 /** Words that ask to browse the catalog rather than naming what to look for. */
 const BROWSE_WORDS = new Set([
-  'catalogo', 'producto', 'productos', 'opcion', 'opciones', 'muestrame', 'muestra', 'ensename',
-  'mostrar', 'otros', 'otras', 'otro', 'otra', 'siguiente', 'siguientes', 'recomiendame',
-  'recomienda', 'recomiendas', 'recomendacion', 'recomendaciones', 'ofrecen', 'todo', 'todos',
-  'disponible', 'disponibles', 'modelos',
+  'catalogo',
+  'producto',
+  'productos',
+  'opcion',
+  'opciones',
+  'muestrame',
+  'muestra',
+  'ensename',
+  'mostrar',
+  'otros',
+  'otras',
+  'otro',
+  'otra',
+  'siguiente',
+  'siguientes',
+  'recomiendame',
+  'recomienda',
+  'recomiendas',
+  'recomendacion',
+  'recomendaciones',
+  'ofrecen',
+  'todo',
+  'todos',
+  'disponible',
+  'disponibles',
+  'modelos',
 ]);
 const BROWSE_WINDOW = 3;
 /** Same "featured" order as the web store. */
-const FEATURED_ORDER = [{ sortOrder: 'asc' as const }, { updatedAt: 'desc' as const }];
+const FEATURED_ORDER = [
+  { sortOrder: 'asc' as const },
+  { updatedAt: 'desc' as const },
+];
 const PRODUCT_VIEW_INCLUDE = {
   variants: true,
   media: {
@@ -145,6 +252,8 @@ export type CatalogProductView = {
   stockQty: number | null;
   stockLabel: string;
   priceLabel: string;
+  /** Services are booked and paid without shipping; the business confirms the schedule. */
+  isService: boolean;
   /** Product page in the published store, or null when the store is not public. */
   productUrl: string | null;
   /** Main product photo (first gallery image, else the first variant image). */
@@ -182,7 +291,12 @@ export class SalesAgentToolsService {
     for (const match of text.matchAll(PRODUCT_REF)) {
       const handle = match[1].toLowerCase();
       if (![...refs.values()].some((ref) => ref.handle === handle)) {
-        refs.set(`${handle}:`, { handle, variantId: null, quantity: 1, fromCart: false });
+        refs.set(`${handle}:`, {
+          handle,
+          variantId: null,
+          quantity: 1,
+          fromCart: false,
+        });
       }
     }
     return [...refs.values()].slice(0, MAX_REFS);
@@ -198,7 +312,9 @@ export class SalesAgentToolsService {
     contextIds: string[] = [],
   ): Promise<CatalogProductView[]> {
     const pinned = [
-      ...(referencedHandles.length ? [{ handle: { in: referencedHandles } }] : []),
+      ...(referencedHandles.length
+        ? [{ handle: { in: referencedHandles } }]
+        : []),
       ...(contextIds.length ? [{ id: { in: contextIds } }] : []),
     ];
     const [products, referenced, base] = await Promise.all([
@@ -216,7 +332,9 @@ export class SalesAgentToolsService {
         : Promise.resolve([]),
       this.storeBase(tenantId),
     ]);
-    const byId = new Map([...referenced, ...products].map((product) => [product.id, product]));
+    const byId = new Map(
+      [...referenced, ...products].map((product) => [product.id, product]),
+    );
     return [...byId.values()].map((product) => this.toStoreView(product, base));
   }
 
@@ -232,7 +350,9 @@ export class SalesAgentToolsService {
     ]);
     const byKey = new Map<string, CatalogOverview['categories'][number]>();
     for (const row of rows) {
-      for (const name of new Set(row.categories.map((item) => item.trim()).filter(Boolean))) {
+      for (const name of new Set(
+        row.categories.map((item) => item.trim()).filter(Boolean),
+      )) {
         const key = normalizeText(name);
         const entry = byKey.get(key) ?? { label: name, names: [], count: 0 };
         if (!entry.names.includes(name)) entry.names.push(name);
@@ -254,23 +374,40 @@ export class SalesAgentToolsService {
    */
   browseRequest(text: string, overview: CatalogOverview): BrowseRequest | null {
     const normalized = normalizeText(text);
-    const tokens = queryTokens(text).filter((token) => !BROWSE_WORDS.has(token));
-    if (/\b(ver mas|mas opciones|otr[oa]s|que mas (tienen|hay)|mas productos|siguientes)\b/.test(normalized) && !tokens.length) {
+    const tokens = queryTokens(text).filter(
+      (token) => !BROWSE_WORDS.has(token),
+    );
+    if (
+      /\b(ver mas|mas opciones|otr[oa]s|que mas (tienen|hay)|mas productos|siguientes)\b/.test(
+        normalized,
+      ) &&
+      !tokens.length
+    ) {
       return { kind: 'more' };
     }
     const scored = overview.categories
       .map((category) => {
         const words = category.names.flatMap(wordsOf);
-        return { category, hits: tokens.filter((token) => words.some((word) => sameWord(token, word))) };
+        return {
+          category,
+          hits: tokens.filter((token) =>
+            words.some((word) => sameWord(token, word)),
+          ),
+        };
       })
       .filter((item) => item.hits.length > 0)
-      .sort((a, b) => b.hits.length - a.hits.length || b.category.count - a.category.count);
+      .sort(
+        (a, b) =>
+          b.hits.length - a.hits.length || b.category.count - a.category.count,
+      );
     const best = scored[0];
     if (best && tokens.every((token) => best.hits.includes(token))) {
       return { kind: 'category', category: best.category };
     }
     const asksCatalog =
-      /\b(productos?|catalogo|que (tienen|venden|hay|ofrecen)|recomiend\w*|opciones|muestrame|ensename)\b/.test(normalized);
+      /\b(productos?|catalogo|que (tienen|venden|hay|ofrecen)|recomiend\w*|opciones|muestrame|ensename)\b/.test(
+        normalized,
+      );
     return asksCatalog && !tokens.length ? { kind: 'catalog' } : null;
   }
 
@@ -285,8 +422,12 @@ export class SalesAgentToolsService {
     const where = {
       tenantId,
       isAvailable: true,
-      ...(options.categoryNames?.length ? { categories: { hasSome: options.categoryNames } } : {}),
-      ...(options.excludeIds?.length ? { id: { notIn: options.excludeIds } } : {}),
+      ...(options.categoryNames?.length
+        ? { categories: { hasSome: options.categoryNames } }
+        : {}),
+      ...(options.excludeIds?.length
+        ? { id: { notIn: options.excludeIds } }
+        : {}),
     };
     const [rows, total, base] = await Promise.all([
       this.prisma.product.findMany({
@@ -310,17 +451,23 @@ export class SalesAgentToolsService {
       select: { status: true, tenant: { select: { slug: true } } },
     });
     if (storefront?.status !== 'PUBLISHED') return null;
-    if (!(await isIntegrationActive(this.prisma, tenantId, 'store'))) return null;
-    const template = this.config.get<string>('STOREFRONT_URL_TEMPLATE') ?? DEFAULT_STOREFRONT_URL_TEMPLATE;
+    if (!(await isIntegrationActive(this.prisma, tenantId, 'store')))
+      return null;
+    const template =
+      this.config.get<string>('STOREFRONT_URL_TEMPLATE') ??
+      DEFAULT_STOREFRONT_URL_TEMPLATE;
     const domain = await activeCustomDomain(this.prisma, tenantId);
-    return (domain ? customDomainUrl(template, domain) : storefrontUrl(template, storefront.tenant.slug)).replace(
-      /\/$/,
-      '',
-    );
+    return (
+      domain
+        ? customDomainUrl(template, domain)
+        : storefrontUrl(template, storefront.tenant.slug)
+    ).replace(/\/$/, '');
   }
 
   private toStoreView(
-    product: Parameters<SalesAgentToolsService['toView']>[0] & { isPublishedOnStore: boolean },
+    product: Parameters<SalesAgentToolsService['toView']>[0] & {
+      isPublishedOnStore: boolean;
+    },
     base: string | null,
   ): CatalogProductView {
     return {
@@ -351,7 +498,11 @@ export class SalesAgentToolsService {
           name: 'search_catalog',
           status: 'ok',
           summary: `Productos referenciados: ${referenced.map((item) => item.name).join(', ')}`,
-          data: { matchIds: referenced.map((item) => item.id), count: referenced.length, byReference: true },
+          data: {
+            matchIds: referenced.map((item) => item.id),
+            count: referenced.length,
+            byReference: true,
+          },
         },
       };
     }
@@ -371,7 +522,10 @@ export class SalesAgentToolsService {
           ].join(' '),
         );
         const score = tokens.reduce(
-          (acc, token) => (wordForms(token).some((form) => haystack.includes(form)) ? acc + 1 : acc),
+          (acc, token) =>
+            wordForms(token).some((form) => haystack.includes(form))
+              ? acc + 1
+              : acc,
           0,
         );
         return { product, score };
@@ -447,7 +601,8 @@ export class SalesAgentToolsService {
 
     const scored = faqs
       .map((faq) => {
-        const haystack = `${faq.question} ${faq.answer} ${faq.tags.join(' ')}`.toLowerCase();
+        const haystack =
+          `${faq.question} ${faq.answer} ${faq.tags.join(' ')}`.toLowerCase();
         const score = tokens.reduce(
           (acc, token) => (haystack.includes(token) ? acc + 1 : acc),
           0,
@@ -485,7 +640,10 @@ export class SalesAgentToolsService {
   }
 
   /** Order lines for referenced cart items, priced from the catalog (never from the message). */
-  orderLinesFromRefs(refs: ProductRef[], products: CatalogProductView[]): OrderLine[] {
+  orderLinesFromRefs(
+    refs: ProductRef[],
+    products: CatalogProductView[],
+  ): OrderLine[] {
     return refs
       .filter((ref) => ref.fromCart)
       .flatMap((ref) => {
@@ -516,17 +674,25 @@ export class SalesAgentToolsService {
 
   subtotalCents(lines: OrderLine[]): number {
     return lines.reduce(
-      (sum, line) => sum + Math.max(1, line.quantity) * (line.variant?.priceCents ?? line.product.basePriceCents),
+      (sum, line) =>
+        sum +
+        Math.max(1, line.quantity) *
+          (line.variant?.priceCents ?? line.product.basePriceCents),
       0,
     );
   }
 
   /** Lines a previous turn left waiting for delivery, re-read from the current catalog. */
-  orderLinesFromPending(pending: PendingLine[], products: CatalogProductView[]): OrderLine[] {
+  orderLinesFromPending(
+    pending: PendingLine[],
+    products: CatalogProductView[],
+  ): OrderLine[] {
     const lines = pending.flatMap((line): OrderLine[] => {
       const product = products.find((item) => item.id === line.productId);
       if (!product) return [];
-      const variant = line.variantId ? product.variants.find((item) => item.id === line.variantId) : undefined;
+      const variant = line.variantId
+        ? product.variants.find((item) => item.id === line.variantId)
+        : undefined;
       if (line.variantId && !variant) return [];
       return [{ product, variant, quantity: line.quantity }];
     });
@@ -542,7 +708,12 @@ export class SalesAgentToolsService {
         name: 'quote_shipping',
         status: 'ok',
         summary: `${plan.charge.label}${where}: ${plan.charge.free ? 'gratis' : moneyLabel(currency, plan.charge.cents)}`,
-        data: { mode: plan.charge.mode, cents: plan.charge.cents, free: plan.charge.free, ubigeo: plan.place?.code ?? null },
+        data: {
+          mode: plan.charge.mode,
+          cents: plan.charge.cents,
+          free: plan.charge.free,
+          ubigeo: plan.place?.code ?? null,
+        },
       };
     }
     if (plan.kind === 'ask') {
@@ -565,7 +736,8 @@ export class SalesAgentToolsService {
     return {
       name: 'quote_shipping',
       status: 'skipped',
-      summary: 'Sin formas de entrega configuradas: la entrega se coordina en el chat',
+      summary:
+        'Sin formas de entrega configuradas: la entrega se coordina en el chat',
     };
   }
 
@@ -588,13 +760,20 @@ export class SalesAgentToolsService {
       ...line,
       quantity: Math.max(1, line.quantity),
       unitCents: line.variant?.priceCents ?? line.product.basePriceCents,
-      title: line.variant ? `${line.product.name} (${line.variant.label})` : line.product.name,
+      title: line.variant
+        ? `${line.product.name} (${line.variant.label})`
+        : line.product.name,
     }));
-    const shipping = params.delivery ? this.orderShipping(params.delivery) : undefined;
+    const shipping = params.delivery
+      ? this.orderShipping(params.delivery)
+      : undefined;
     const totalCents =
-      lines.reduce((sum, line) => sum + line.quantity * line.unitCents, 0) + (shipping?.cents ?? 0);
+      lines.reduce((sum, line) => sum + line.quantity * line.unitCents, 0) +
+      (shipping?.cents ?? 0);
     const currency = lines[0].product.currency;
-    const label = lines.map((line) => `${line.quantity}× ${line.title}`).join(', ');
+    const label = lines
+      .map((line) => `${line.quantity}× ${line.title}`)
+      .join(', ');
 
     if (params.mode === 'playground') {
       const fakeOrderId = `pg_order_${lines[0].product.handle}`;
@@ -755,15 +934,24 @@ export class SalesAgentToolsService {
     refs: ProductRef[] = [],
   ): CatalogProductView | null {
     const referenced = new Set(
-      refs.map((ref) => products.find((product) => product.handle === ref.handle)).filter(Boolean),
+      refs
+        .map((ref) => products.find((product) => product.handle === ref.handle))
+        .filter(Boolean),
     );
     if (referenced.size) {
-      return referenced.size === 1 ? ([...referenced][0] as CatalogProductView) : null;
+      return referenced.size === 1
+        ? ([...referenced][0] as CatalogProductView)
+        : null;
     }
-    const names = products.map((product) => ({ product, words: wordsOf(product.name) }));
+    const names = products.map((product) => ({
+      product,
+      words: wordsOf(product.name),
+    }));
     const hits = new Set<CatalogProductView>();
     for (const token of queryTokens(text)) {
-      const owners = names.filter((item) => item.words.some((word) => sameWord(token, word)));
+      const owners = names.filter((item) =>
+        item.words.some((word) => sameWord(token, word)),
+      );
       if (owners.length === 1) hits.add(owners[0].product);
     }
     return hits.size === 1 ? [...hits][0] : null;
@@ -780,6 +968,9 @@ export class SalesAgentToolsService {
     isAvailable: boolean;
     stockUnlimited: boolean;
     stockQty: number | null;
+    kind?: ProductKind;
+    durationMinutes?: number | null;
+    serviceMode?: string | null;
     media?: Array<{ url: string }>;
     variants?: Array<{
       id: string;
@@ -794,23 +985,29 @@ export class SalesAgentToolsService {
     }>;
   }): CatalogProductView {
     const priceLabel = `${product.currency} ${(product.basePriceCents / 100).toFixed(2)}`;
-    const stockLabel = product.stockUnlimited
-      ? 'Disponible'
-      : `${product.stockQty ?? 0} en stock`;
+    const isService = product.kind === 'SERVICE';
+    const stockLabel = isService
+      ? serviceLabel(
+          product.durationMinutes ?? null,
+          product.serviceMode ?? null,
+        )
+      : product.stockUnlimited
+        ? 'Disponible'
+        : `${product.stockQty ?? 0} en stock`;
     const variants = (product.variants ?? [])
       .filter((variant) => variant.isAvailable)
       .map((variant) => {
-        const parts = [
-          variant.option1Value,
-          variant.option2Value,
-        ].filter(Boolean);
+        const parts = [variant.option1Value, variant.option2Value].filter(
+          Boolean,
+        );
         return {
           id: variant.id,
           label: parts.join(' / ') || 'Variante',
           priceCents: variant.priceCents,
           priceLabel: `${product.currency} ${(variant.priceCents / 100).toFixed(2)}`,
-          stockLabel:
-            variant.stockQty == null
+          stockLabel: isService
+            ? stockLabel
+            : variant.stockQty == null
               ? 'Stock no tipado'
               : `${variant.stockQty} en stock`,
           isAvailable: variant.isAvailable,
@@ -829,6 +1026,7 @@ export class SalesAgentToolsService {
       stockQty: product.stockQty,
       stockLabel,
       priceLabel,
+      isService,
       productUrl: null,
       imageUrl:
         product.media?.[0]?.url ??

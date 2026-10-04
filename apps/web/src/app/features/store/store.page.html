@@ -82,26 +82,6 @@
             <span class="label-text">Frase corta <span class="optional">Opcional</span></span>
             <input formControlName="tagline" maxlength="140" placeholder="Ej. Moda urbana con envío a todo Lima" />
           </label>
-          <div class="row">
-            <label>
-              <span class="label-text">Logo (URL) <span class="optional">Opcional</span></span>
-              <input formControlName="logoUrl" type="url" placeholder="https://" />
-            </label>
-            <label>
-              <span class="label-text">Portada (URL) <span class="optional">Opcional</span></span>
-              <input formControlName="heroImageUrl" type="url" placeholder="https://" />
-            </label>
-          </div>
-          <div class="row">
-            <label class="color">
-              Color de marca
-              <input formControlName="brandColor" type="color" />
-            </label>
-            <label class="color">
-              Color de acento
-              <input formControlName="accentColor" type="color" />
-            </label>
-          </div>
         </section>
 
         <section class="card">
@@ -135,90 +115,19 @@
             }
           </div>
 
-          @if (form.controls.template.value === 'selecta') {
-            <div class="copy" formGroupName="copy">
-              <p class="hint">Textos de la plantilla. Si dejas un campo vacío se usa el texto sugerido con el nombre de tu tienda.</p>
-              <div class="row">
-                <label>
-                  <span class="label-text">Antetítulo de portada <span class="optional">Opcional</span></span>
-                  <input formControlName="heroEyebrow" maxlength="60" placeholder="TU PRÓXIMO FAVORITO" />
-                </label>
-                <label>
-                  <span class="label-text">Frase destacada <span class="optional">Opcional</span></span>
-                  <input formControlName="heroEmphasis" maxlength="80" placeholder="tu esencia." />
-                </label>
-              </div>
-              <label>
-                <span class="label-text">Título de portada <span class="optional">Opcional</span></span>
-                <textarea formControlName="heroTitle" rows="2" maxlength="80" placeholder="Hay un ritual&#10;que lleva"></textarea>
-                <span class="hint">Cada línea se muestra en un renglón, antes de la frase destacada.</span>
-              </label>
-              <label>
-                <span class="label-text">Texto de portada <span class="optional">Opcional</span></span>
-                <textarea formControlName="heroText" rows="2" maxlength="300"></textarea>
-              </label>
-              <label>
-                <span class="label-text">Nota bajo la portada <span class="optional">Opcional</span></span>
-                <input formControlName="heroNote" maxlength="80" placeholder="Pequeños detalles. Grandes momentos." />
-              </label>
-              <div class="row">
-                <label>
-                  <span class="label-text">Antetítulo del banner <span class="optional">Opcional</span></span>
-                  <input formControlName="bannerEyebrow" maxlength="60" placeholder="UN REGALO CON INTENCIÓN" />
-                </label>
-                <label>
-                  <span class="label-text">Título del banner <span class="optional">Opcional</span></span>
-                  <textarea formControlName="bannerTitle" rows="2" maxlength="100" placeholder="Para alguien especial.&#10;También puedes ser tú."></textarea>
-                  <span class="hint">La última línea se destaca.</span>
-                </label>
-              </div>
-              <label>
-                <span class="label-text">Texto del banner <span class="optional">Opcional</span></span>
-                <textarea formControlName="bannerText" rows="2" maxlength="400"></textarea>
-              </label>
-              <label>
-                <span class="label-text">Imagen del banner (URL) <span class="optional">Opcional</span></span>
-                <input formControlName="bannerImageUrl" type="url" placeholder="https://" />
-              </label>
-              <div class="row">
-                <label>
-                  <span class="label-text">Frase de cierre <span class="optional">Opcional</span></span>
-                  <input formControlName="closingPhrase" maxlength="60" placeholder="Una selección para tus momentos favoritos." />
-                </label>
-                <label>
-                  <span class="label-text">Nota del pie de página <span class="optional">Opcional</span></span>
-                  <input formControlName="footerNote" maxlength="400" placeholder="Por ejemplo: comercio independiente, no somos distribuidores oficiales." />
-                </label>
-              </div>
+          <div class="design-link">
+            <div>
+              <strong>Logo, colores, textos e imágenes</strong>
+              <span>Edítalos directamente sobre tu tienda y publica cuando te guste cómo quedó.</span>
             </div>
-
-            <div class="faq" formArrayName="faq">
-              <div class="faq__head">
-                <strong>Preguntas frecuentes</strong>
-                <ds-button variant="secondary" type="button" [disabled]="faq.length >= 12" (click)="addFaq()">
-                  <ds-icon name="plus" /> Agregar pregunta
-                </ds-button>
-              </div>
-              @if (!faq.length) {
-                <p class="hint">Sin preguntas propias: la tienda muestra las de envíos, pagos y cambios según tu configuración.</p>
-              }
-              @for (row of faq.controls; track row; let i = $index) {
-                <div class="faq__row" [formGroupName]="i">
-                  <label>
-                    Pregunta
-                    <input formControlName="question" maxlength="200" />
-                  </label>
-                  <label>
-                    Respuesta
-                    <textarea formControlName="answer" rows="2" maxlength="1200"></textarea>
-                  </label>
-                  <ds-button variant="ghost" type="button" (click)="removeFaq(i)">
-                    <ds-icon name="trash" /> Quitar
-                  </ds-button>
-                </div>
-              }
-            </div>
-          }
+            @if (form.controls.template.dirty) {
+              <span class="hint">Guarda los cambios para editar la plantilla elegida.</span>
+            } @else {
+              <a routerLink="/app/store/editor" class="design-link__cta">
+                <ds-icon name="pencil" [size]="1" /> Editar diseño
+              </a>
+            }
+          </div>
         </section>
 
         <section class="card">

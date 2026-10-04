@@ -2,6 +2,7 @@ import { DOCUMENT, Injectable, REQUEST_CONTEXT, inject } from '@angular/core';
 import { Meta, Title } from '@angular/platform-browser';
 import { StoreRequestContext } from './store-context';
 import { StoreStateService } from './store-state.service';
+import { storeBrand } from './theme';
 
 export type SeoInput = {
   title: string;
@@ -38,7 +39,7 @@ export class SeoService {
     const description =
       input.description?.trim() || store?.seoDescription || store?.tagline || storeName;
     const url = this.absolute(input.path);
-    const image = input.image ?? store?.heroImageUrl ?? store?.logoUrl ?? null;
+    const image = input.image ?? store?.heroImageUrl ?? (store ? storeBrand(store).logo : null);
 
     this.title.setTitle(fullTitle);
     this.tag('name', 'description', description.slice(0, 160));

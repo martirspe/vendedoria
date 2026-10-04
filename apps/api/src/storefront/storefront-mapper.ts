@@ -5,7 +5,9 @@ import type {
   PublicProductDetail,
   PublicProductDetails,
   PublicSetPiece,
+  ProductKind,
   PublicVariant,
+  ServiceMode,
   StoreCatalogProduct,
 } from '@vendedoria/contracts';
 
@@ -52,6 +54,9 @@ export type StoreProductRecord = {
   stockQty: number | null;
   seoTitle: string | null;
   seoDescription: string | null;
+  kind?: ProductKind;
+  durationMinutes?: number | null;
+  serviceMode?: string | null;
   sku?: string | null;
   line?: string | null;
   details?: Prisma.JsonValue | null;
@@ -86,7 +91,8 @@ function unitsLeft(product: StoreProductRecord): number {
       ),
     );
   }
-  if (product.stockUnlimited || product.stockQty === null) return Number.POSITIVE_INFINITY;
+  if (product.stockUnlimited || product.stockQty === null)
+    return Number.POSITIVE_INFINITY;
   return product.stockQty;
 }
 
@@ -102,7 +108,9 @@ function variantIsAvailable(
   if (!product.isAvailable || !variant.isAvailable) {
     return false;
   }
-  return variant.stockQty === null ? productHasStock(product) : variant.stockQty > 0;
+  return variant.stockQty === null
+    ? productHasStock(product)
+    : variant.stockQty > 0;
 }
 
 function toVariant(
@@ -137,7 +145,9 @@ function sortedMedia(product: StoreProductRecord): string[] {
 }
 
 export function toProductCard(product: StoreProductRecord): PublicProductCard {
-  const variants = product.variants.map((variant) => toVariant(product, variant));
+  const variants = product.variants.map((variant) =>
+    toVariant(product, variant),
+  );
   const prices = variants.length
     ? variants.map((variant) => variant.priceCents)
     : [product.basePriceCents];
@@ -159,11 +169,26 @@ export function toProductCard(product: StoreProductRecord): PublicProductCard {
       product.compareAtPriceCents && product.compareAtPriceCents > priceCents
         ? product.compareAtPriceCents
         : null,
-    imageUrl: media[0] ?? variants.find((variant) => variant.imageUrl)?.imageUrl ?? null,
+    imageUrl:
+      media[0] ??
+      variants.find((variant) => variant.imageUrl)?.imageUrl ??
+      null,
     isAvailable,
     hasVariants: variants.length > 0,
+    kind: product.kind ?? 'PRODUCT',
+    service:
+      product.kind === 'SERVICE'
+        ? {
+            durationMinutes: product.durationMinutes ?? null,
+            mode:
+              SERVICE_MODES.find((mode) => mode === product.serviceMode) ??
+              null,
+          }
+        : null,
   };
 }
+
+const SERVICE_MODES: readonly ServiceMode[] = ['onsite', 'home', 'online'];
 
 export function toProductDetail(
   product: StoreProductRecord,
@@ -184,16 +209,28 @@ const text = (value: unknown, max = 600): string | null =>
   typeof value === 'string' && value.trim() ? value.trim().slice(0, max) : null;
 
 const texts = (value: unknown): string[] =>
-  Array.isArray(value) ? value.map((item) => text(item, 400)).filter((item): item is string => !!item).slice(0, 20) : [];
+  Array.isArray(value)
+    ? value
+        .map((item) => text(item, 400))
+        .filter((item): item is string => !!item)
+        .slice(0, 20)
+    : [];
 
 /** Merchant-entered JSON is read defensively: unknown or malformed fields are dropped. */
-export function readDetails(value: Prisma.JsonValue | null | undefined): PublicProductDetails {
-  const raw = value && typeof value === 'object' && !Array.isArray(value) ? (value as Record<string, unknown>) : {};
+export function readDetails(
+  value: Prisma.JsonValue | null | undefined,
+): PublicProductDetails {
+  const raw =
+    value && typeof value === 'object' && !Array.isArray(value)
+      ? (value as Record<string, unknown>)
+      : {};
   const scent = Array.isArray(raw['scent'])
     ? raw['scent'].flatMap((item) => {
         const row = item as Record<string, unknown> | null;
         const name = text(row?.['name'], 80);
-        return name ? [{ name, description: text(row?.['description'], 300) ?? '' }] : [];
+        return name
+          ? [{ name, description: text(row?.['description'], 300) ?? '' }]
+          : [];
       })
     : [];
   return {
@@ -230,7 +267,10 @@ function toMedia(product: StoreProductRecord): PublicMedia[] {
     }));
 }
 
-function toPieces(product: StoreProductRecord, details: PublicProductDetails): PublicSetPiece[] {
+function toPieces(
+  product: StoreProductRecord,
+  details: PublicProductDetails,
+): PublicSetPiece[] {
   const components = product.components ?? [];
   if (!components.length) {
     return [
@@ -257,7 +297,9 @@ function toPieces(product: StoreProductRecord, details: PublicProductDetails): P
   });
 }
 
-export function toCatalogProduct(product: StoreProductRecord): StoreCatalogProduct {
+export function toCatalogProduct(
+  product: StoreProductRecord,
+): StoreCatalogProduct {
   const details = readDetails(product.details);
   const left = unitsLeft(product);
   return {
@@ -266,7 +308,8 @@ export function toCatalogProduct(product: StoreProductRecord): StoreCatalogProdu
     line: product.line ?? null,
     lineKey: lineKey(product.line),
     format: product.components?.length ? 'set' : 'individual',
-    stockLeft: Number.isFinite(left) && left <= LOW_STOCK ? Math.max(left, 0) : null,
+    stockLeft:
+      Number.isFinite(left) && left <= LOW_STOCK ? Math.max(left, 0) : null,
     media: toMedia(product),
     variants: product.variants.map((variant) => toVariant(product, variant)),
     details,

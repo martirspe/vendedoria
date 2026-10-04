@@ -8,7 +8,7 @@ import { PlanLimitsService } from '../billing/plan-limits.service';
 import { assertManager } from '../common/roles';
 import type { AuthUserPayload } from '../common/types/auth-user';
 import { PrismaService } from '../prisma/prisma.service';
-import { readTemplateCopy } from '../storefront/store-templates';
+import { readTemplateContent, withContentField } from '../storefront/store-templates';
 import {
   ExistingProduct,
   ImportIssue,
@@ -243,7 +243,7 @@ export class CatalogImportService {
         hasCarrierRates: Boolean(storefront?.carrierRates),
         heroImageUrl: storefront?.heroImageUrl ?? null,
         bannerImageUrl:
-          readTemplateCopy(storefront?.templateCopy).bannerImageUrl ?? null,
+          readTemplateContent(storefront?.templateContent).sections['banner']?.['image'] || null,
       },
     });
     const replaced = new Set(
@@ -379,10 +379,11 @@ export class CatalogImportService {
           const current = await tx.storefront.findUnique({
             where: { tenantId },
           });
-          const copy = readTemplateCopy(current?.templateCopy);
           const banner = patch.bannerImageHash
             ? stored.get(patch.bannerImageHash)
             : undefined;
+          const withBanner = (value: Prisma.JsonValue | undefined) =>
+            withContentField(readTemplateContent(value), 'banner', 'image', banner!) as Prisma.JsonObject;
           const data = {
             industry: patch.industry,
             template: patch.template,
@@ -392,9 +393,8 @@ export class CatalogImportService {
             heroImageUrl: patch.heroImageHash
               ? stored.get(patch.heroImageHash)
               : undefined,
-            templateCopy: banner
-              ? ({ ...copy, bannerImageUrl: banner } as Prisma.JsonObject)
-              : undefined,
+            templateContent: banner ? withBanner(current?.templateContent) : undefined,
+            templateDraft: banner && current?.templateDraft ? withBanner(current.templateDraft) : undefined,
           };
           if (current) {
             await tx.storefront.update({ where: { tenantId }, data });

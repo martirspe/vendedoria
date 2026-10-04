@@ -159,14 +159,23 @@ resource "aws_acm_certificate" "media" {
   }
 }
 
+# Keys must be known at plan time, so they come from the variable (ACM lowercases domain_name);
+# the record values stay unknown until the certificate exists.
 resource "cloudflare_dns_record" "media_certificate_validation" {
-  for_each = {
-    for option in try(aws_acm_certificate.media[0].domain_validation_options, []) : option.domain_name => option
-  }
-  zone_id = var.cloudflare_zone_id
-  name    = trimsuffix(each.value.resource_record_name, ".")
-  type    = each.value.resource_record_type
-  content = trimsuffix(each.value.resource_record_value, ".")
+  for_each = local.has_media_domain ? toset([lower(var.media_domain)]) : toset([])
+  zone_id  = var.cloudflare_zone_id
+  name = trimsuffix(one([
+    for option in aws_acm_certificate.media[0].domain_validation_options : option.resource_record_name
+    if option.domain_name == each.key
+  ]), ".")
+  type = one([
+    for option in aws_acm_certificate.media[0].domain_validation_options : option.resource_record_type
+    if option.domain_name == each.key
+  ])
+  content = trimsuffix(one([
+    for option in aws_acm_certificate.media[0].domain_validation_options : option.resource_record_value
+    if option.domain_name == each.key
+  ]), ".")
   ttl     = 1
   proxied = false
   comment = "ACM validation for ${local.name} media (Terraform)"

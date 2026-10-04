@@ -12,7 +12,7 @@ import {
 import { HttpErrorResponse } from '@angular/common/http';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { RouterLink } from '@angular/router';
-import type { StoreTemplate, StoreTemplateCopy } from '@vendedoria/contracts';
+import type { StoreTemplate } from '@vendedoria/contracts';
 import { DsButtonComponent, DsIconComponent } from '@vendedoria/ui';
 import {
   StoreApiService,
@@ -23,7 +23,6 @@ import {
 import { IntegrationsStateService } from '../../core/integrations/integrations-state.service';
 import { IntegrationGateComponent } from '../integrations/integration-gate.component';
 
-const HEX_COLOR = /^#[0-9a-fA-F]{6}$/;
 /** Mirrors `CHOOSABLE_SLUG` in `apps/api/src/storefront/storefront-host.ts`. */
 const SUBDOMAIN = /^(?!.*--)[a-z0-9](?:[a-z0-9-]{1,38}[a-z0-9])$/;
 
@@ -60,21 +59,6 @@ export const TEMPLATE_OPTIONS: {
     industries: ['belleza'],
   },
 ];
-
-const COPY_FIELDS = [
-  'heroEyebrow',
-  'heroTitle',
-  'heroEmphasis',
-  'heroText',
-  'heroNote',
-  'bannerEyebrow',
-  'bannerTitle',
-  'bannerText',
-  'bannerImageUrl',
-  'closingPhrase',
-  'footerNote',
-] as const;
-type CopyField = (typeof COPY_FIELDS)[number];
 
 @Component({
   selector: 'app-store-page',
@@ -126,10 +110,6 @@ export class StorePage {
   readonly form = this.fb.nonNullable.group({
     displayName: ['', [Validators.required, Validators.minLength(2), Validators.maxLength(80)]],
     tagline: ['', [Validators.maxLength(140)]],
-    logoUrl: ['', [Validators.maxLength(500)]],
-    heroImageUrl: ['', [Validators.maxLength(500)]],
-    brandColor: ['#0b0d12', [Validators.pattern(HEX_COLOR)]],
-    accentColor: ['#5b8cff', [Validators.pattern(HEX_COLOR)]],
     whatsappPhone: ['', [Validators.pattern(/^\+?[\d\s-]{8,20}$/)]],
     contactEmail: ['', [Validators.email, Validators.maxLength(160)]],
     seoTitle: ['', [Validators.maxLength(70)]],
@@ -142,13 +122,6 @@ export class StorePage {
     dataBankCode: ['', [Validators.maxLength(60)]],
     industry: ['general' as StoreIndustry],
     template: ['classic' as StoreTemplate],
-    copy: this.fb.nonNullable.group(
-      Object.fromEntries(COPY_FIELDS.map((field) => [field, ['', [Validators.maxLength(600)]]])) as Record<
-        CopyField,
-        [string, ReturnType<typeof Validators.maxLength>[]]
-      >,
-    ),
-    faq: this.fb.array<ReturnType<StorePage['faqGroup']>>([]),
   });
 
   readonly industries = INDUSTRY_OPTIONS;
@@ -166,20 +139,6 @@ export class StorePage {
       const allowed = this.templates().find((t) => t.value === this.form.controls.template.value)?.available;
       if (!allowed) this.form.controls.template.setValue('classic');
     });
-  }
-
-  get faq() {
-    return this.form.controls.faq;
-  }
-
-  addFaq(): void {
-    this.faq.push(this.faqGroup('', ''));
-    this.faq.markAsDirty();
-  }
-
-  removeFaq(index: number): void {
-    this.faq.removeAt(index);
-    this.faq.markAsDirty();
   }
 
   pickTemplate(template: StoreTemplate): void {
@@ -212,10 +171,6 @@ export class StorePage {
     const payload: UpdateStorePayload = {
       displayName: values.displayName.trim(),
       tagline: values.tagline.trim() || null,
-      logoUrl: values.logoUrl.trim() || null,
-      heroImageUrl: values.heroImageUrl.trim() || null,
-      brandColor: values.brandColor,
-      accentColor: values.accentColor,
       whatsappPhone: values.whatsappPhone.replace(/\D/g, '') || null,
       contactEmail: values.contactEmail.trim() || null,
       seoTitle: values.seoTitle.trim() || null,
@@ -228,7 +183,6 @@ export class StorePage {
       dataBankCode: values.dataBankCode.trim() || null,
       industry: values.industry,
       template: values.template,
-      templateCopy: this.copyPayload(values.copy, values.faq),
     };
     this.saving.set(true);
     this.clearMessages();
@@ -351,46 +305,15 @@ export class StorePage {
     }
   }
 
-  private faqGroup(question: string, answer: string) {
-    return this.fb.nonNullable.group({
-      question: [question, [Validators.required, Validators.maxLength(200)]],
-      answer: [answer, [Validators.required, Validators.maxLength(1200)]],
-    });
-  }
-
-  private copyPayload(
-    copy: Record<CopyField, string>,
-    faq: { question: string; answer: string }[],
-  ): StoreTemplateCopy | null {
-    const result: StoreTemplateCopy = {};
-    for (const field of COPY_FIELDS) {
-      const text = copy[field].trim();
-      if (text) result[field] = text;
-    }
-    const rows = faq
-      .map((row) => ({ question: row.question.trim(), answer: row.answer.trim() }))
-      .filter((row) => row.question && row.answer);
-    if (rows.length) result.faq = rows;
-    return Object.keys(result).length ? result : null;
-  }
-
   private apply(view: StoreSettingsView): void {
     const store = view.storefront;
     this.view.set(view);
-    const copy = store.templateCopy ?? {};
-    this.faq.clear();
-    for (const row of copy.faq ?? []) this.faq.push(this.faqGroup(row.question, row.answer));
     this.industry.set(store.industry);
     this.form.reset({
       industry: store.industry,
       template: store.template,
-      copy: Object.fromEntries(COPY_FIELDS.map((field) => [field, copy[field] ?? ''])) as Record<CopyField, string>,
       displayName: store.displayName,
       tagline: store.tagline ?? '',
-      logoUrl: store.logoUrl ?? '',
-      heroImageUrl: store.heroImageUrl ?? '',
-      brandColor: store.brandColor,
-      accentColor: store.accentColor,
       whatsappPhone: store.whatsappPhone ?? '',
       contactEmail: store.contactEmail ?? '',
       seoTitle: store.seoTitle ?? '',

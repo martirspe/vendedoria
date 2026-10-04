@@ -543,6 +543,39 @@
   gap: var(--ds-space-3);
 }
 
+.field-grid--two {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.kind-toggle {
+  display: inline-flex;
+  gap: var(--ds-space-1);
+  padding: var(--ds-space-1);
+  border: 1px solid var(--ds-color-border);
+  border-radius: var(--ds-radius-md);
+  width: fit-content;
+
+  button {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--ds-space-2);
+    min-height: 2.25rem;
+    padding: 0 var(--ds-space-3);
+    border: 0;
+    border-radius: var(--ds-radius-sm);
+    background: transparent;
+    color: var(--ds-color-text-secondary);
+    font-weight: 600;
+    cursor: pointer;
+  }
+
+  .is-active {
+    background: var(--ds-color-bg);
+    color: var(--ds-color-text-primary);
+    box-shadow: inset 0 0 0 1px var(--ds-color-border);
+  }
+}
+
 .check-row {
   display: flex;
   gap: var(--ds-space-2);

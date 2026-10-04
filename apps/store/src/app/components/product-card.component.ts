@@ -3,6 +3,7 @@ import { RouterLink } from '@angular/router';
 import type { PublicProductCard } from '@vendedoria/contracts';
 import { DsIconComponent } from '@vendedoria/ui';
 import { MoneyPipe } from '../core/money.pipe';
+import { serviceSummary } from '../core/service-info';
 
 @Component({
   selector: 'store-product-card',
@@ -26,7 +27,7 @@ import { MoneyPipe } from '../core/money.pipe';
           </span>
         }
         @if (!p.isAvailable) {
-          <span class="card__tag card__tag--muted">Agotado</span>
+          <span class="card__tag card__tag--muted">{{ p.kind === 'SERVICE' ? 'No disponible' : 'Agotado' }}</span>
         } @else if (discount()) {
           <span class="card__tag">-{{ discount() }}%</span>
         }
@@ -36,6 +37,9 @@ import { MoneyPipe } from '../core/money.pipe';
           <span class="card__brand">{{ p.brand }}</span>
         }
         <h3 class="card__name">{{ p.name }}</h3>
+        @if (service(); as summary) {
+          <span class="card__service"><ds-icon name="clock" [size]="0.85" /> {{ summary }}</span>
+        }
         <p class="card__price">
           @if (p.priceVaries) {
             <span class="card__from">Desde</span>
@@ -123,6 +127,14 @@ import { MoneyPipe } from '../core/money.pipe';
       overflow: hidden;
     }
 
+    .card__service {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.3rem;
+      color: var(--store-muted);
+      font-size: 0.82rem;
+    }
+
     .card__price {
       display: flex;
       flex-wrap: wrap;
@@ -144,6 +156,8 @@ import { MoneyPipe } from '../core/money.pipe';
 })
 export class ProductCardComponent {
   readonly product = input.required<PublicProductCard>();
+
+  readonly service = computed(() => serviceSummary(this.product().service));
 
   readonly discount = computed(() => {
     const p = this.product();

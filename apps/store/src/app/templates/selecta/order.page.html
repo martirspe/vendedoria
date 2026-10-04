@@ -78,9 +78,13 @@
           @if (o.discountCents > 0) {
             <div class="total-line discount-line"><span>Descuento@if (o.couponCode) { · {{ o.couponCode }}}</span><span>−{{ o.discountCents | money }}</span></div>
           }
-          <div class="total-line"><span>Entrega {{ o.delivery.label }}</span><span>@if (o.shippingCents === 0) {<strong class="free-tag">Gratis</strong>} @else {{{ o.shippingCents | money }}}</span></div>
+          @if (o.delivery; as delivery) {
+            <div class="total-line"><span>Entrega {{ delivery.label }}</span><span>@if (o.shippingCents === 0) {<strong class="free-tag">Gratis</strong>} @else {{{ o.shippingCents | money }}}</span></div>
+          }
           <div class="total-line grand-total"><strong>Total en soles</strong><strong>{{ o.totalCents | money }}</strong></div>
-          <div class="summary-trust"><app-icon name="package" /><span>Tu pedido queda reservado durante 15 minutos al continuar al pago.</span></div>
+          @if (o.delivery) {
+            <div class="summary-trust"><app-icon name="package" /><span>Tu pedido queda reservado durante 15 minutos al continuar al pago.</span></div>
+          }
         </aside>
       </div>
     </section>
@@ -98,15 +102,26 @@
         @if (o.discountCents > 0) {
           <div class="total-line discount-line"><span>Descuento@if (o.couponCode) { · {{ o.couponCode }}}</span><strong>−{{ o.discountCents | money }}</strong></div>
         }
-        <div class="total-line"><span>Entrega · {{ o.delivery.label }}</span><strong>{{ o.shippingCents === 0 ? 'Gratis' : (o.shippingCents | money) }}</strong></div>
+        @if (o.delivery; as delivery) {
+          <div class="total-line"><span>Entrega · {{ delivery.label }}</span><strong>{{ o.shippingCents === 0 ? 'Gratis' : (o.shippingCents | money) }}</strong></div>
+        }
         <div class="total-line grand-total"><strong>Total</strong><strong>{{ o.totalCents | money }}</strong></div>
         @if (paid()) {
-          <h3>Tu entrega</h3>
-          @if (o.delivery.address) {
-            <p>{{ o.delivery.address }}</p>
+          @if (o.delivery; as delivery) {
+            <h3>Tu entrega</h3>
+            @if (delivery.address) {
+              <p>{{ delivery.address }}</p>
+            }
+            @if (delivery.eta) {
+              <p>{{ delivery.eta }}</p>
+            }
           }
-          @if (o.delivery.eta) {
-            <p>{{ o.delivery.eta }}</p>
+          @if (o.serviceNote || !o.delivery) {
+            <h3>Tu reserva</h3>
+            @if (o.serviceNote) {
+              <p>Fecha preferida: {{ o.serviceNote }}</p>
+            }
+            <p>Te escribiremos para confirmar el día y la hora del servicio.</p>
           }
           <p>Confirmación para {{ o.customer.email }}</p>
           @if (o.trackingCode) {

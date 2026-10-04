@@ -1,20 +1,26 @@
-import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, effect, inject, signal } from '@angular/core';
 import { RouterLink } from '@angular/router';
+import { HomeBlockComponent, sharedBlockType } from '../../components/home-block.component';
 import { MoneyPipe } from '../../core/money.pipe';
 import { SeoService } from '../../core/seo.service';
+import { STORE_EDITOR, StoreEditorBridge } from '../../core/store-editor';
+import { HomeBlock, homeBlock, homeSections } from '../../core/store-layout';
 import { StoreStateService } from '../../core/store-state.service';
 import { whatsappUrl } from '../../core/whatsapp';
 import { Product, SelectaCatalog, category, photos, scarcity, setSaving } from './selecta-catalog';
-import { selectaCopy, wholeMoney } from './selecta-copy';
+import { wholeMoney } from '../../core/store-faq';
+import { selectaCopy } from './selecta-copy';
 import { SelectaIcon } from './selecta-icon';
 import { SelectaProductImage } from './selecta-photo';
 
 const PAGE = 18;
 const ALL = 'Todo';
+/** Home sections of the template in default order (API `TEMPLATE_SECTIONS.selecta`). */
+const BUILTINS = ['hero', 'collection', 'banner', 'faq'];
 
 @Component({
   selector: 'selecta-home',
-  imports: [RouterLink, MoneyPipe, SelectaIcon, SelectaProductImage],
+  imports: [RouterLink, MoneyPipe, SelectaIcon, SelectaProductImage, HomeBlockComponent, STORE_EDITOR],
   templateUrl: './home.page.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
@@ -28,23 +34,33 @@ export class SelectaHomePage {
     const store = this.store();
     return store ? selectaCopy(store) : null;
   });
+  readonly sections = computed(() => {
+    const store = this.store();
+    return store ? homeSections(store.templateContent, 'selecta', BUILTINS) : [];
+  });
+  readonly editing = inject(StoreEditorBridge).active;
+  readonly sharedType = sharedBlockType;
   readonly online = computed(() => this.store()?.checkout.mode === 'online');
   readonly freeLabel = computed(() => {
     const store = this.store();
     const free = store?.shipping.freeShippingFromCents;
     return store && free ? wholeMoney(store, free) : '';
   });
-  /** Store hero, or the first product photo when the merchant has none. */
-  readonly heroImage = computed(
-    () => this.store()?.heroImageUrl ?? this.products().flatMap((p) => photos(p))[0]?.url ?? null,
-  );
-  readonly bannerImage = computed(
-    () =>
-      this.copy()?.bannerImageUrl ??
+  /** Merchant image, else the store cover, else the first product photo; '' means no image. */
+  readonly heroImage = computed(() => {
+    const own = this.copy()?.heroImage;
+    if (own !== undefined) return own || null;
+    return this.store()?.heroImageUrl ?? this.products().flatMap((p) => photos(p))[0]?.url ?? null;
+  });
+  readonly bannerImage = computed(() => {
+    const own = this.copy()?.bannerImage;
+    if (own !== undefined) return own || null;
+    return (
       this.products().flatMap((p) => p.media.filter((m) => m.kind === 'related'))[0]?.url ??
       this.products().flatMap((p) => photos(p))[1]?.url ??
-      null,
-  );
+      null
+    );
+  });
 
   readonly category = signal(ALL);
   readonly search = signal('');
@@ -110,7 +126,13 @@ export class SelectaHomePage {
   readonly categoryOf = category;
   readonly scarcity = scarcity;
 
+  block(id: string): HomeBlock {
+    return homeBlock(this.store()?.templateContent ?? { version: 1, sections: {} }, id);
+  }
+
   constructor() {
+    const editor = inject(StoreEditorBridge);
+    effect(() => editor.registerFaq(this.copy()?.faq ?? []));
     const store = this.store();
     inject(SeoService).set({
       title: store?.seoTitle || store?.displayName || 'Tienda',

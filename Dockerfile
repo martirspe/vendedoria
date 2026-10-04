@@ -1,4 +1,6 @@
 FROM node:24-bookworm-slim AS base
+# npm comes with the image: upgrade it by bumping the Node base image, not inside containers.
+ENV NPM_CONFIG_UPDATE_NOTIFIER=false
 RUN apt-get update && apt-get install -y --no-install-recommends openssl ca-certificates && rm -rf /var/lib/apt/lists/*
 
 FROM base AS manifests

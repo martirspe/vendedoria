@@ -26,7 +26,7 @@ import {
 } from './storefront-host';
 import { toCatalogProduct, toProductCard, toProductDetail } from './storefront-mapper';
 import { verifyPreviewToken } from './storefront-preview';
-import { effectiveTemplate, readTemplateCopy } from './store-templates';
+import { effectiveTemplate, readTemplateContent } from './store-templates';
 import { findUbigeo } from '../ubigeo/ubigeo';
 
 /** "San Juan de Lurigancho, Lima": where orders ship from, for buyer-facing copy. */
@@ -160,12 +160,13 @@ export class StorefrontPublicService {
     if (!tenant || !status || status === 'SUSPENDED' || !(await this.storeEnabled(tenant.id))) {
       throw new NotFoundException('Store not found');
     }
+    // A valid token also previews a published store: the merchant sees the unpublished template draft.
+    const secret = this.config.getOrThrow<string>('JWT_ACCESS_SECRET');
+    if (previewToken && verifyPreviewToken(secret, tenant.id, previewToken)) {
+      return { tenantId: tenant.id, isPreview: true };
+    }
     if (status === 'PUBLISHED') {
       return { tenantId: tenant.id, isPreview: false };
-    }
-    const secret = this.config.getOrThrow<string>('JWT_ACCESS_SECRET');
-    if (verifyPreviewToken(secret, tenant.id, previewToken)) {
-      return { tenantId: tenant.id, isPreview: true };
     }
     throw new NotFoundException('Store not found');
   }
@@ -214,7 +215,9 @@ export class StorefrontPublicService {
       checkout: await this.checkout(access.tenantId),
       industry: storefront.industry,
       template: effectiveTemplate(storefront.template, storefront.industry),
-      templateCopy: readTemplateCopy(storefront.templateCopy),
+      templateContent: readTemplateContent(
+        access.isPreview && storefront.templateDraft ? storefront.templateDraft : storefront.templateContent,
+      ),
       tracking:
         !access.isPreview &&
         (storefront.metaPixelId || storefront.ga4MeasurementId) &&

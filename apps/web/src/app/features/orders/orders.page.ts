@@ -380,10 +380,19 @@ export class OrdersPage {
     }).format(cents / 100);
   }
 
+  /** Every line is a service: nothing is prepared or shipped, the service is carried out. */
+  isServicesOnly(order: OrderDto): boolean {
+    return order.items.length > 0 && order.items.every((item) => item.product?.kind === 'SERVICE');
+  }
+
   statusLabel(status: OrderStatus, order?: OrderDto): string {
     if (order && this.isPickup(order)) {
       if (status === 'SHIPPED') return 'Listo para recoger';
       if (status === 'COMPLETED') return 'Entregado';
+    }
+    if (order && this.isServicesOnly(order)) {
+      if (status === 'FULFILLING') return 'Por realizar';
+      if (status === 'COMPLETED') return 'Realizado';
     }
     switch (status) {
       case 'DRAFT':
@@ -422,9 +431,14 @@ export class OrdersPage {
       status: 'SHIPPED',
       label: pickup ? 'Listo para recoger' : 'Marcar enviado',
     };
+    const services = this.isServicesOnly(order);
     const complete: { status: OrderStatus; label: string } = {
       status: 'COMPLETED',
-      label: order.delivery ? 'Marcar entregado' : 'Completar',
+      label: services ? 'Marcar realizado' : order.delivery ? 'Marcar entregado' : 'Completar',
+    };
+    const prepare: { status: OrderStatus; label: string } = {
+      status: 'FULFILLING',
+      label: services ? 'Marcar agendado' : 'Preparar',
     };
     switch (order.status) {
       case 'DRAFT':
@@ -432,11 +446,9 @@ export class OrdersPage {
       case 'PENDING_PAYMENT':
         return [{ status: 'CANCELLED', label: 'Cancelar' }];
       case 'PAID':
-        return order.delivery
-          ? [{ status: 'FULFILLING', label: 'Preparar' }, ship, complete]
-          : [{ status: 'FULFILLING', label: 'Preparar' }, complete];
+        return order.delivery ? [prepare, ship, complete] : [prepare, complete];
       case 'FULFILLING':
-        return [ship, complete];
+        return order.delivery ? [ship, complete] : [complete];
       case 'SHIPPED':
         return [complete];
       default:

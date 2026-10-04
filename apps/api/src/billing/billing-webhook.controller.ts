@@ -13,7 +13,7 @@ import { ConfigService } from '@nestjs/config';
 import { ApiExcludeController } from '@nestjs/swagger';
 import { Prisma } from '@prisma/client';
 import { Public } from '../common/decorators/auth.decorators';
-import { verifyMercadoPagoSignature } from '../payments/mercadopago.client';
+import { isProviderOrderId, verifyMercadoPagoSignature } from '../payments/mercadopago.client';
 import { PrismaService } from '../prisma/prisma.service';
 import { BillingService } from './billing.service';
 
@@ -21,7 +21,8 @@ type NotificationBody = { type?: string; data?: { id?: string | number } };
 
 /**
  * Plan payments (flow A) on VendedorIA's own Mercado Pago account, signed with the platform
- * webhook secret. Without that secret every notification is rejected.
+ * webhook secret. Without that secret every notification is rejected. `order` covers payments
+ * made in the console; `payment` only older Checkout Pro payments.
  */
 @ApiExcludeController()
 @Public()
@@ -58,7 +59,8 @@ export class BillingWebhookController {
       throw new UnauthorizedException();
     }
 
-    if (type !== 'payment' || !/^\d{1,20}$/.test(dataId)) {
+    const order = type === 'order' && isProviderOrderId(dataId);
+    if (!order && (type !== 'payment' || !/^\d{1,20}$/.test(dataId))) {
       return { ok: true, ignored: true };
     }
     const key = createHash('sha256').update(`billing:${type}:${dataId}:${requestId}`).digest('hex');
@@ -66,7 +68,8 @@ export class BillingWebhookController {
       return { ok: true, duplicate: true };
     }
 
-    await this.billing.applyProviderPayment(dataId);
+    if (order) await this.billing.applyProviderOrder(dataId);
+    else await this.billing.applyProviderPayment(dataId);
 
     try {
       await this.prisma.webhookEvent.create({ data: { key, providerId: dataId } });

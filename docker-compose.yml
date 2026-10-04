@@ -119,6 +119,7 @@ services:
       PORT: '4300'
       STORE_API_URL: http://api:3000/api/v1
       STORE_ALLOWED_HOSTS: '*.${STORE_BASE_DOMAIN}'
+      STORE_EDITOR_ORIGIN: https://${CONSOLE_HOST}
       NG_TRUST_PROXY_HEADERS: x-forwarded-host,x-forwarded-proto
       NODE_OPTIONS: ${STORE_NODE_OPTIONS:---max-old-space-size=384}
     deploy:

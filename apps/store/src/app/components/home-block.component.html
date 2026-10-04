@@ -1,0 +1,100 @@
+@let b = block();
+@let id = sectionId();
+<div [class]="'hb hb--' + type() + (b.tone ? ' hb--tone hb--' + b.tone : '')">
+  @if (b.eyebrow || b.title) {
+    <header class="hb__head">
+      @if (b.eyebrow) {
+        <p class="hb__eyebrow" [storeEditText]="id + '.eyebrow'" [editValue]="b.eyebrow"></p>
+      }
+      @if (b.title) {
+        <h2 [storeEditText]="id + '.title'" editKind="multiline" [editValue]="b.title"></h2>
+      }
+    </header>
+  }
+
+  @switch (type()) {
+    @case ('benefits') {
+      <ul class="hb__grid">
+        @for (item of b.items; track item.n) {
+          <li class="hb__card">
+            <span class="hb__icon" aria-hidden="true"><ds-icon name="check" [size]="1.1" /></span>
+            @if (item.title) {
+              <h3 [storeEditText]="id + '.item' + item.n + 'Title'" [editValue]="item.title"></h3>
+            }
+            @if (item.text) {
+              <p [storeEditText]="id + '.item' + item.n + 'Text'" editKind="multiline" [editValue]="item.text"></p>
+            }
+          </li>
+        }
+      </ul>
+    }
+    @case ('testimonials') {
+      <ul class="hb__grid">
+        @for (q of b.quotes; track q.n) {
+          <li class="hb__card">
+            <blockquote class="hb__quote">
+              <p [storeEditText]="id + '.quote' + q.n" editKind="multiline" [editValue]="q.quote"></p>
+            </blockquote>
+            @if (q.author) {
+              <p class="hb__author" [storeEditText]="id + '.author' + q.n" [editValue]="q.author"></p>
+            }
+          </li>
+        }
+      </ul>
+    }
+    @case ('whatsapp') {
+      @if (b.text) {
+        <p class="hb__text" [storeEditText]="id + '.text'" editKind="multiline" [editValue]="b.text"></p>
+      }
+      @if (b.cta) {
+        @if (whatsappHref(); as href) {
+          <a class="hb__button" [href]="href" target="_blank" rel="noopener">
+            <ds-icon name="whatsapp" [size]="1.15" />
+            <span [storeEditText]="id + '.cta'" [editValue]="b.cta"></span>
+          </a>
+        } @else if (editing()) {
+          <span class="hb__button">
+            <ds-icon name="whatsapp" [size]="1.15" />
+            <span [storeEditText]="id + '.cta'" [editValue]="b.cta"></span>
+          </span>
+          <p class="hb__note">Agrega tu WhatsApp de ventas en Tienda web para que este botón aparezca en tu tienda.</p>
+        }
+      }
+    }
+    @case ('cta') {
+      @if (b.text) {
+        <p class="hb__text" [storeEditText]="id + '.text'" editKind="multiline" [editValue]="b.text"></p>
+      }
+      @if (b.cta) {
+        <a class="hb__button hb__button--store" routerLink="/productos">
+          <span [storeEditText]="id + '.cta'" [editValue]="b.cta"></span>
+          <ds-icon name="arrowRight" [size]="1.05" />
+        </a>
+      }
+    }
+    @case ('questions') {
+      <div class="hb__faq">
+        @for (f of faq(); track $index) {
+          <details class="hb__question">
+            <summary>
+              <span>{{ f.question }}</span>
+              <ds-icon name="chevronDown" [size]="1.05" />
+            </summary>
+            <p>{{ f.answer }}</p>
+          </details>
+        }
+      </div>
+    }
+    @case ('gallery') {
+      <div class="hb__gallery">
+        @for (img of b.images; track img.n) {
+          @if (img.url) {
+            <img [src]="img.url" alt="" width="800" height="800" loading="lazy" [storeEditImage]="id + '.image' + img.n" [editValue]="img.url" />
+          } @else if (editing()) {
+            <button type="button" class="store-edit-placeholder" [storeEditImage]="id + '.image' + img.n" [editValue]="''">Agregar foto</button>
+          }
+        }
+      </div>
+    }
+  }
+</div>

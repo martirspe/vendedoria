@@ -1,17 +1,30 @@
 @if (copy(); as c) {
-  <section class="hero">
+  @for (item of sections(); track item.id) {
+  @switch (item.type) {
+  @case ('hero') {
+  <section class="hero" storeSection="hero">
     <div class="hero-copy">
-      <p class="eyebrow">{{ c.heroEyebrow }}</p>
-      <h1>@for (line of c.heroTitle; track $index) {{{ line }}<br />}<em>{{ c.heroEmphasis }}</em></h1>
-      <p>{{ c.heroText }}</p>
-      <a class="button" href="#coleccion">Encuentra el tuyo <app-icon name="arrow" /></a>
-      <div class="hero-note"><span class="line"></span>{{ c.heroNote }}</div>
+      @if (c.heroEyebrow) {
+        <p class="eyebrow" storeEditText="hero.eyebrow" [editValue]="c.heroEyebrow"></p>
+      }
+      <h1>@if (c.heroTitle) {<span storeEditText="hero.title" editKind="multiline" [editValue]="c.heroTitle"></span><br />}@if (c.heroEmphasis) {<em storeEditText="hero.emphasis" [editValue]="c.heroEmphasis"></em>}</h1>
+      @if (c.heroText) {
+        <p storeEditText="hero.text" editKind="multiline" [editValue]="c.heroText"></p>
+      }
+      @if (c.heroCta) {
+        <a class="button" href="#coleccion"><span storeEditText="hero.cta" [editValue]="c.heroCta"></span> <app-icon name="arrow" /></a>
+      }
+      @if (c.heroNote) {
+        <div class="hero-note"><span class="line"></span><span storeEditText="hero.note" [editValue]="c.heroNote"></span></div>
+      }
     </div>
     <div class="hero-photo">
       @if (heroImage(); as src) {
-        <img [src]="src" [alt]="store()?.displayName" width="1024" height="1024" fetchpriority="high" />
+        <img [src]="src" [alt]="store()?.displayName" width="1024" height="1024" fetchpriority="high" storeEditImage="hero.image" [editValue]="src" />
       }
-      <span class="photo-note">EL ARTE DE CUIDARTE</span>
+      @if (c.heroPhotoNote) {
+        <span class="photo-note" storeEditText="hero.photoNote" [editValue]="c.heroPhotoNote"></span>
+      }
     </div>
   </section>
 
@@ -24,14 +37,22 @@
     }
     <span><app-icon name="truck" />{{ freeLabel() ? 'Envío gratis desde ' + freeLabel() : 'Envíos a todo el Perú' }}</span>
   </div>
+  }
 
+  @case ('collection') {
   <section id="coleccion" class="collection wrap">
-    <div class="section-heading">
+    <div class="section-heading" storeSection="collection">
       <div>
-        <p class="eyebrow">ELEGIDOS PARA TI</p>
-        <h2>Tu esencia, tu elección.</h2>
+        @if (c.collectionEyebrow) {
+          <p class="eyebrow" storeEditText="collection.eyebrow" [editValue]="c.collectionEyebrow"></p>
+        }
+        @if (c.collectionTitle) {
+          <h2 storeEditText="collection.title" [editValue]="c.collectionTitle"></h2>
+        }
       </div>
-      <p>Sets para regalar.<br />Favoritos para quedarte.</p>
+      @if (c.collectionText) {
+        <p storeEditText="collection.text" editKind="multiline" [editValue]="c.collectionText"></p>
+      }
     </div>
     <div class="catalog-tools" role="search">
       <label class="search">
@@ -128,23 +149,33 @@
       <button class="button secondary load-more" (click)="limit.set(limit() + 18)">Ver más productos <app-icon name="plus" /></button>
     }
   </section>
+  }
 
-  <section class="ritual-banner wrap">
+  @case ('banner') {
+  <section class="ritual-banner wrap" storeSection="banner">
     <div>
-      <p class="eyebrow">{{ c.bannerEyebrow }}</p>
-      <h2>@for (line of c.bannerTitle; track $index; let last = $last) {@if (last && c.bannerTitle.length > 1) {<em>{{ line }}</em>} @else {{{ line }}<br />}}</h2>
-      <p>{{ c.bannerText }}</p>
+      @if (c.bannerEyebrow) {
+        <p class="eyebrow" storeEditText="banner.eyebrow" [editValue]="c.bannerEyebrow"></p>
+      }
+      <h2>@if (c.bannerTitle) {<span storeEditText="banner.title" editKind="multiline" [editValue]="c.bannerTitle"></span>@if (c.bannerEmphasis) {<br />}}@if (c.bannerEmphasis) {<em storeEditText="banner.emphasis" [editValue]="c.bannerEmphasis"></em>}</h2>
+      @if (c.bannerText) {
+        <p storeEditText="banner.text" editKind="multiline" [editValue]="c.bannerText"></p>
+      }
       <a class="text-link" href="#coleccion">Explorar la selección <app-icon name="arrow" /></a>
     </div>
     @if (bannerImage(); as src) {
-      <img [src]="src" alt="" width="1024" height="1024" loading="lazy" />
+      <img [src]="src" alt="" width="1024" height="1024" loading="lazy" storeEditImage="banner.image" [editValue]="src" />
     }
   </section>
+  }
 
-  <section class="faq wrap" aria-labelledby="faq-title">
+  @case ('faq') {
+  <section class="faq wrap" aria-labelledby="faq-title" storeSection="faq">
     <header class="faq-intro">
-      <p class="eyebrow">COMPRA CON CLARIDAD</p>
-      <h2 id="faq-title">Antes de elegir,<br /><em>todo claro.</em></h2>
+      @if (c.faqEyebrow) {
+        <p class="eyebrow" storeEditText="faq.eyebrow" [editValue]="c.faqEyebrow"></p>
+      }
+      <h2 id="faq-title">@if (c.faqTitle) {<span storeEditText="faq.title" editKind="multiline" [editValue]="c.faqTitle"></span>@if (c.faqEmphasis) {<br />}}@if (c.faqEmphasis) {<em storeEditText="faq.emphasis" [editValue]="c.faqEmphasis"></em>}</h2>
       <p>{{ hasPickup() ? 'Pago, envío y recojo' : 'Pago y envío' }} explicados en un minuto, para que compres con total tranquilidad.</p>
       @if (whatsapp(); as href) {
         <div class="faq-help">
@@ -169,4 +200,53 @@
       }
     </div>
   </section>
+  }
+
+  @case ('imageText') {
+  @let b = block(item.id);
+  <section class="ritual-banner wrap home-block" [class.no-image]="!b.image && !editing()" [class.image-start]="b.layout === 'start'" [storeSection]="item.id">
+    <div>
+      @if (b.eyebrow) {
+        <p class="eyebrow" [storeEditText]="item.id + '.eyebrow'" [editValue]="b.eyebrow"></p>
+      }
+      @if (b.title) {
+        <h2 [storeEditText]="item.id + '.title'" editKind="multiline" [editValue]="b.title"></h2>
+      }
+      @if (b.text) {
+        <p [storeEditText]="item.id + '.text'" editKind="multiline" [editValue]="b.text"></p>
+      }
+      @if (b.cta) {
+        <a class="text-link" href="#coleccion"><span [storeEditText]="item.id + '.cta'" [editValue]="b.cta"></span> <app-icon name="arrow" /></a>
+      }
+    </div>
+    @if (b.image) {
+      <img [src]="b.image" alt="" width="1024" height="1024" loading="lazy" [storeEditImage]="item.id + '.image'" [editValue]="b.image" />
+    } @else if (editing()) {
+      <button type="button" class="store-edit-placeholder" [storeEditImage]="item.id + '.image'" [editValue]="''">Agregar imagen</button>
+    }
+  </section>
+  }
+
+  @case ('text') {
+  @let b = block(item.id);
+  <section class="text-block wrap home-block" [class]="b.tone ? 'tone-' + b.tone : ''" [storeSection]="item.id">
+    @if (b.eyebrow) {
+      <p class="eyebrow" [storeEditText]="item.id + '.eyebrow'" [editValue]="b.eyebrow"></p>
+    }
+    @if (b.title) {
+      <h2 [storeEditText]="item.id + '.title'" editKind="multiline" [editValue]="b.title"></h2>
+    }
+    @if (b.text) {
+      <p [storeEditText]="item.id + '.text'" editKind="multiline" [editValue]="b.text"></p>
+    }
+  </section>
+  }
+
+  @default {
+  @if (sharedType(item.type); as type) {
+  <store-home-block class="wrap home-block" [type]="type" [sectionId]="item.id" [block]="block(item.id)" [whatsappHref]="whatsapp()" [faq]="c.faq" [storeSection]="item.id" />
+  }
+  }
+  }
+  }
 }

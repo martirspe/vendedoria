@@ -43,8 +43,8 @@ export type StorefrontView = {
   checkout: StorefrontCheckout;
   industry: string;
   template: StoreTemplate;
-  /** Template texts chosen by the merchant; missing fields use the template defaults. */
-  templateCopy: StoreTemplateCopy;
+  /** Texts and images edited by the merchant: the published version, or the draft in a preview. */
+  templateContent: StoreTemplateContent;
   /** Null when the plan or the merchant has no analytics on. */
   tracking: StoreTracking | null;
 };
@@ -53,20 +53,116 @@ export type StoreTemplate = 'classic' | 'selecta';
 
 export type StoreTemplateFaq = { question: string; answer: string };
 
-export type StoreTemplateCopy = {
-  heroEyebrow?: string;
-  heroTitle?: string;
-  heroEmphasis?: string;
-  heroText?: string;
-  heroNote?: string;
-  bannerEyebrow?: string;
-  bannerTitle?: string;
-  bannerText?: string;
-  bannerImageUrl?: string;
-  closingPhrase?: string;
-  footerNote?: string;
+/**
+ * Merchant content of a template. A missing field uses the template text; an empty string hides
+ * that text or image. Keys are `sections[sectionId][fieldId]`, declared by `StoreEditorSection`.
+ */
+export type StoreTemplateContent = {
+  version: 1;
+  sections: Record<string, Record<string, string>>;
+  /** Own questions; absent uses the answers built from the store settings. */
   faq?: StoreTemplateFaq[];
+  /** Home section order per template; absent uses the template order with every section visible. */
+  layouts?: Partial<Record<StoreTemplate, StoreLayoutItem[]>>;
+  /** Brand style; a missing key uses the template default. */
+  theme?: StoreTemplateTheme;
 };
+
+/** `modern`: Manrope · `editorial`: serif titles · `simple`: the device font (fastest). */
+export type StoreThemeFont = 'modern' | 'editorial' | 'simple';
+export type StoreThemeCorners = 'square' | 'soft' | 'round';
+
+export type StoreTemplateTheme = {
+  /** `#rrggbb`: buttons, links and highlights. */
+  primary?: string;
+  /** `#rrggbb`: secondary highlights (Classic). */
+  accent?: string;
+  font?: StoreThemeFont;
+  /** Buttons and fields (Classic). */
+  corners?: StoreThemeCorners;
+  /** Logo image URL; '' shows the store name. */
+  logo?: string;
+};
+
+export type StoreThemeOption = keyof StoreTemplateTheme;
+
+/** Style options a template supports and the values it uses when the merchant sets none. */
+export type StoreEditorTheme = {
+  options: StoreThemeOption[];
+  defaults: Required<StoreTemplateTheme>;
+};
+
+/**
+ * One section of the home page. Built-in sections use their type as id; blocks added from the
+ * library use `type-xxxxxx` and keep their texts in `sections[id]`.
+ */
+export type StoreLayoutItem = { id: string; type: string; hidden?: boolean };
+
+/**
+ * `builtin`: part of the template home, once, can be moved (and hidden when `canHide`).
+ * `block`: added from the section library, any number of times, can be removed.
+ * `fixed`: outside the home body (announcement bar, footer, other pages); only its texts are editable.
+ */
+export type StoreEditorSectionRole = 'builtin' | 'block' | 'fixed';
+
+/** Store page the editor preview can show. */
+export type StoreEditorPage = 'home' | 'product';
+
+export type StoreEditorFieldKind = 'text' | 'multiline' | 'image' | 'choice';
+
+export type StoreEditorChoice = { value: string; label: string };
+
+export type StoreEditorField = {
+  /** Field id inside its section; the editable element of the store uses `section.field`. */
+  id: string;
+  label: string;
+  kind: StoreEditorFieldKind;
+  /** Characters; 0 for images and choices. */
+  maxLength: number;
+  /** Design options of a `choice` field; `''` is the template's own look. */
+  options?: StoreEditorChoice[];
+};
+
+/** Editable part of a template page, in default page order. `id` is the section type. */
+export type StoreEditorSection = {
+  id: string;
+  label: string;
+  fields: StoreEditorField[];
+  /** The section shows the store FAQ list. */
+  faq: boolean;
+  role: StoreEditorSectionRole;
+  /** False for sections the store cannot work without (the product list). */
+  canHide: boolean;
+  /** Library description of a block, or what a fixed section is. */
+  description?: string;
+  /** Page of a fixed section shown on a page other than the home; absent when it is on every page. */
+  page?: Exclude<StoreEditorPage, 'home'>;
+  /** Initial texts of a newly added block. */
+  defaults?: Record<string, string>;
+};
+
+/** Effective values the store is showing (merchant content over template defaults). */
+export type StoreEditorSnapshot = {
+  /** `section.field` → text or image URL; '' when hidden or without image. */
+  fields: Record<string, string>;
+  faq: StoreTemplateFaq[];
+  /** Sections present on the page, in order. */
+  sections: string[];
+};
+
+/** Messages from the store page shown inside the console editor. */
+export type StoreEditorFrameMessage =
+  | { source: 'vendedoria-store'; type: 'snapshot'; snapshot: StoreEditorSnapshot }
+  | { source: 'vendedoria-store'; type: 'select'; section: string; field: string | null }
+  | { source: 'vendedoria-store'; type: 'input'; section: string; field: string; value: string }
+  | { source: 'vendedoria-store'; type: 'commit'; section: string; field: string; value: string }
+  | { source: 'vendedoria-store'; type: 'image'; section: string; field: string };
+
+/** Messages from the console editor to the store page. */
+export type StoreEditorHostMessage =
+  | { source: 'vendedoria-editor'; type: 'content'; content: StoreTemplateContent }
+  /** `page` opens that page in the preview first when it is not the one showing. */
+  | { source: 'vendedoria-editor'; type: 'select'; section: string | null; page?: StoreEditorPage };
 
 /** Home delivery is priced by ubigeo: OLVA/SHALOM courier rates by distance from the store origin. */
 export type ShippingMode = 'OLVA' | 'SHALOM' | 'PICKUP';
@@ -137,6 +233,21 @@ export type PublicProductCard = {
   imageUrl: string | null;
   isAvailable: boolean;
   hasVariants: boolean;
+  /** `SERVICE`: booked and paid, never shipped and without stock. */
+  kind: ProductKind;
+  /** Only for services. */
+  service: PublicServiceInfo | null;
+};
+
+export type ProductKind = 'PRODUCT' | 'SERVICE';
+
+/** Where a service takes place: at the business, at the buyer's home or online. */
+export type ServiceMode = 'onsite' | 'home' | 'online';
+
+export type PublicServiceInfo = {
+  /** Approximate length in minutes. */
+  durationMinutes: number | null;
+  mode: ServiceMode | null;
 };
 
 export type PublicVariantOption = {
@@ -236,7 +347,8 @@ export type CheckoutRequest = {
   checkoutKey: string;
   items: CheckoutItemInput[];
   customer: { name: string; email: string; phone: string; document?: string };
-  delivery: {
+  /** Omitted when the cart has only services. */
+  delivery?: {
     mode: ShippingMode;
     /** INEI district code; required for home delivery, it prices the courier rate. */
     ubigeo?: string;
@@ -245,6 +357,8 @@ export type CheckoutRequest = {
     /** Required for OLVA/SHALOM: the buyer accepts the reference rate. */
     acknowledgeRate?: boolean;
   };
+  /** Buyer's preferred date for the services; the business confirms it later. */
+  serviceNote?: string;
   couponCode?: string;
   acceptTerms: true;
 };
@@ -284,7 +398,9 @@ export type PublicOrder = {
   shippingCents: number;
   totalCents: number;
   customer: { name: string; email: string; phone: string };
-  delivery: { mode: ShippingMode; label: string; address: string | null; eta: string | null };
+  /** Null when the order has only services. */
+  delivery: { mode: ShippingMode; label: string; address: string | null; eta: string | null } | null;
+  serviceNote: string | null;
   /** Courier tracking code once the order ships. */
   trackingCode: string | null;
   expiresAt: string | null;

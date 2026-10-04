@@ -69,10 +69,15 @@ type ResolvedLine = {
   quantity: number;
   unitCents: number;
   totalCents: number;
+  isService: boolean;
   coupon: CouponLine;
 };
 
-const sha256 = (value: string) => createHash('sha256').update(value).digest('hex');
+const SERVICES_FREE_SHIPPING =
+  'El envío gratis de este cupón aplica solo a productos con envío.';
+
+const sha256 = (value: string) =>
+  createHash('sha256').update(value).digest('hex');
 const amount = (cents: number) => (cents / 100).toFixed(2);
 
 /** A free shipping coupon must not be spent where shipping is already free. */
@@ -82,10 +87,18 @@ function assertFreeShippingCoupon(
   subtotalCents: number,
 ): void {
   if (mode === 'PICKUP') {
-    throw new BadRequestException('El envío gratis de este cupón aplica solo a entregas a domicilio.');
+    throw new BadRequestException(
+      'El envío gratis de este cupón aplica solo a entregas a domicilio.',
+    );
   }
-  if (freeShippingFromCents !== null && freeShippingFromCents > 0 && subtotalCents >= freeShippingFromCents) {
-    throw new BadRequestException('Tu pedido ya tiene envío gratis. Guarda este cupón para otra compra.');
+  if (
+    freeShippingFromCents !== null &&
+    freeShippingFromCents > 0 &&
+    subtotalCents >= freeShippingFromCents
+  ) {
+    throw new BadRequestException(
+      'Tu pedido ya tiene envío gratis. Guarda este cupón para otra compra.',
+    );
   }
 }
 
@@ -116,14 +129,23 @@ export class CheckoutService implements OnModuleInit, OnModuleDestroy {
     if (this.sweep) clearInterval(this.sweep);
   }
 
-  async previewCoupon(access: StoreAccess, dto: CouponPreviewDto): Promise<CouponPreviewResult> {
-    const lines = await this.resolveLines(this.prisma, access.tenantId, dto.items);
+  async previewCoupon(
+    access: StoreAccess,
+    dto: CouponPreviewDto,
+  ): Promise<CouponPreviewResult> {
+    const lines = await this.resolveLines(
+      this.prisma,
+      access.tenantId,
+      dto.items,
+    );
     const quote = await this.coupons.quote(this.prisma, access.tenantId, {
       code: dto.code,
       lines: lines.map((line) => line.coupon),
       email: dto.email,
     });
     if (quote.freeShipping) {
+      if (lines.every((line) => line.isService))
+        throw new BadRequestException(SERVICES_FREE_SHIPPING);
       const storefront = await this.prisma.storefront.findUniqueOrThrow({
         where: { tenantId: access.tenantId },
       });
@@ -141,15 +163,22 @@ export class CheckoutService implements OnModuleInit, OnModuleDestroy {
     };
   }
 
-  async quoteCarriers(access: StoreAccess, ubigeo: string): Promise<ShippingQuote[]> {
-    if (!findUbigeo(ubigeo)) throw new BadRequestException('Selecciona un distrito válido.');
+  async quoteCarriers(
+    access: StoreAccess,
+    ubigeo: string,
+  ): Promise<ShippingQuote[]> {
+    if (!findUbigeo(ubigeo))
+      throw new BadRequestException('Selecciona un distrito válido.');
     const storefront = await this.prisma.storefront.findUniqueOrThrow({
       where: { tenantId: access.tenantId },
     });
     return carrierQuotes(storefront, ubigeo);
   }
 
-  async create(access: StoreAccess, dto: CreateCheckoutDto): Promise<PublicOrder> {
+  async create(
+    access: StoreAccess,
+    dto: CreateCheckoutDto,
+  ): Promise<PublicOrder> {
     this.assertLive(access);
     const checkout = await this.storefront.checkout(access.tenantId);
     if (checkout.mode !== 'online') {
@@ -158,19 +187,30 @@ export class CheckoutService implements OnModuleInit, OnModuleDestroy {
     const email = dto.customer.email.trim().toLowerCase();
     const requestHash = sha256(
       JSON.stringify({
-        items: dto.items.map((i) => [i.handle, i.variantId ?? null, i.quantity]),
+        items: dto.items.map((i) => [
+          i.handle,
+          i.variantId ?? null,
+          i.quantity,
+        ]),
         customer: { ...dto.customer, email },
-        delivery: dto.delivery,
+        delivery: dto.delivery ?? null,
+        serviceNote: dto.serviceNote?.trim() || null,
         coupon: dto.couponCode?.trim().toUpperCase() || null,
       }),
     );
-    const replay = await this.findReplay(access.tenantId, dto.checkoutKey, requestHash);
-    if (replay) return this.view(replay);
-    const place = this.deliveryPlace(
-      dto.delivery.mode,
-      dto.delivery.ubigeo,
-      dto.delivery.acknowledgeRate,
+    const replay = await this.findReplay(
+      access.tenantId,
+      dto.checkoutKey,
+      requestHash,
     );
+    if (replay) return this.view(replay);
+    const place = dto.delivery
+      ? this.deliveryPlace(
+          dto.delivery.mode,
+          dto.delivery.ubigeo,
+          dto.delivery.acknowledgeRate,
+        )
+      : null;
 
     const storefront = await this.prisma.storefront.findUniqueOrThrow({
       where: { tenantId: access.tenantId },
@@ -180,47 +220,75 @@ export class CheckoutService implements OnModuleInit, OnModuleDestroy {
       try {
         const order = await this.prisma.$transaction(
           async (tx) => {
-            const lines = await this.resolveLines(tx, access.tenantId, dto.items);
-            const subtotalCents = lines.reduce((sum, line) => sum + line.totalCents, 0);
+            const lines = await this.resolveLines(
+              tx,
+              access.tenantId,
+              dto.items,
+            );
+            const subtotalCents = lines.reduce(
+              (sum, line) => sum + line.totalCents,
+              0,
+            );
             const coupon = dto.couponCode?.trim()
               ? await this.coupons.quote(
                   tx,
                   access.tenantId,
-                  { code: dto.couponCode, lines: lines.map((l) => l.coupon), email },
+                  {
+                    code: dto.couponCode,
+                    lines: lines.map((l) => l.coupon),
+                    email,
+                  },
                   { lock: true },
                 )
               : null;
+            const shipsGoods = lines.some((line) => !line.isService);
+            const hasServices = lines.some((line) => line.isService);
             if (coupon?.freeShipping) {
-              assertFreeShippingCoupon(storefront.freeShippingFromCents, dto.delivery.mode, subtotalCents);
+              if (!shipsGoods)
+                throw new BadRequestException(SERVICES_FREE_SHIPPING);
+              assertFreeShippingCoupon(
+                storefront.freeShippingFromCents,
+                dto.delivery?.mode,
+                subtotalCents,
+              );
             }
             const discountCents = coupon?.discountCents ?? 0;
-            const shipping = quoteShipping(
-              storefront,
-              dto.delivery.mode,
-              subtotalCents - discountCents,
-              coupon?.freeShipping ?? false,
-              place?.code,
-            );
-            if (!shipping) {
-              throw new BadRequestException('Elige una forma de entrega disponible.');
+            let delivery: DeliveryRecord | null = null;
+            let shippingCents = 0;
+            if (shipsGoods) {
+              if (!dto.delivery)
+                throw new BadRequestException('Elige una forma de entrega.');
+              const shipping = quoteShipping(
+                storefront,
+                dto.delivery.mode,
+                subtotalCents - discountCents,
+                coupon?.freeShipping ?? false,
+                place?.code,
+              );
+              if (!shipping) {
+                throw new BadRequestException(
+                  'Elige una forma de entrega disponible.',
+                );
+              }
+              const pickup = shipping.mode === 'PICKUP';
+              shippingCents = shipping.cents;
+              delivery = {
+                mode: shipping.mode,
+                label: shipping.label,
+                address: pickup ? null : (dto.delivery.address?.trim() ?? null),
+                ubigeo: place?.code ?? null,
+                district: place?.district ?? null,
+                province: place?.province ?? null,
+                department: place?.department ?? null,
+                reference: dto.delivery.reference?.trim() || null,
+                eta: pickup
+                  ? storefront.pickupAddress
+                  : 'Tarifa referencial: la cobertura se coordina antes del despacho.',
+                free: shipping.free,
+              };
             }
             const stocked = await withAllocations(tx, lines);
             await reserveStock(tx, stocked);
-            const pickup = shipping.mode === 'PICKUP';
-            const delivery: DeliveryRecord = {
-              mode: shipping.mode,
-              label: shipping.label,
-              address: pickup ? null : dto.delivery.address?.trim() ?? null,
-              ubigeo: place?.code ?? null,
-              district: place?.district ?? null,
-              province: place?.province ?? null,
-              department: place?.department ?? null,
-              reference: dto.delivery.reference?.trim() || null,
-              eta: pickup
-                ? storefront.pickupAddress
-                : 'Tarifa referencial: la cobertura se coordina antes del despacho.',
-              free: shipping.free,
-            };
             return tx.order.create({
               data: {
                 tenantId: access.tenantId,
@@ -230,14 +298,17 @@ export class CheckoutService implements OnModuleInit, OnModuleDestroy {
                 currency: 'PEN',
                 subtotalCents,
                 discountCents,
-                shippingCents: shipping.cents,
-                totalCents: subtotalCents - discountCents + shipping.cents,
+                shippingCents,
+                totalCents: subtotalCents - discountCents + shippingCents,
                 couponCode: coupon?.coupon.code ?? null,
                 customerName: dto.customer.name.trim(),
                 customerEmail: email,
                 customerPhone: dto.customer.phone,
                 customerDocument: dto.customer.document ?? null,
-                delivery,
+                delivery: delivery ?? Prisma.DbNull,
+                serviceNote: hasServices
+                  ? dto.serviceNote?.trim() || null
+                  : null,
                 checkoutKey: dto.checkoutKey,
                 requestHash,
                 publicToken: randomBytes(24).toString('base64url'),
@@ -252,7 +323,9 @@ export class CheckoutService implements OnModuleInit, OnModuleDestroy {
                     quantity: line.quantity,
                     unitCents: line.unitCents,
                     totalCents: line.totalCents,
-                    ...(line.allocations ? { allocations: line.allocations } : {}),
+                    ...(line.allocations
+                      ? { allocations: line.allocations }
+                      : {}),
                   })),
                 },
                 ...(coupon
@@ -260,7 +333,8 @@ export class CheckoutService implements OnModuleInit, OnModuleDestroy {
                       redemption: {
                         create: {
                           couponId: coupon.coupon.id,
-                          customerKey: coupon.customerKey ?? couponCustomerKey(email),
+                          customerKey:
+                            coupon.customerKey ?? couponCustomerKey(email),
                           discountCents,
                         },
                       },
@@ -274,10 +348,17 @@ export class CheckoutService implements OnModuleInit, OnModuleDestroy {
         );
         return this.view(order);
       } catch (error) {
-        if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2002') {
+        if (
+          error instanceof Prisma.PrismaClientKnownRequestError &&
+          error.code === 'P2002'
+        ) {
           const target = String(error.meta?.target ?? '');
           if (target.includes('checkoutKey')) {
-            const raced = await this.findReplay(access.tenantId, dto.checkoutKey, requestHash);
+            const raced = await this.findReplay(
+              access.tenantId,
+              dto.checkoutKey,
+              requestHash,
+            );
             if (raced) return this.view(raced);
           }
           if (target.includes('code') && attempt < 3) continue;
@@ -287,18 +368,33 @@ export class CheckoutService implements OnModuleInit, OnModuleDestroy {
     }
   }
 
-  async get(access: StoreAccess, orderId: string, token: string): Promise<PublicOrder> {
+  async get(
+    access: StoreAccess,
+    orderId: string,
+    token: string,
+  ): Promise<PublicOrder> {
     let order = await this.owned(access.tenantId, orderId, token);
-    if (order.status === 'PENDING_PAYMENT' && this.isExpired(order) && !order.paymentKey) {
+    if (
+      order.status === 'PENDING_PAYMENT' &&
+      this.isExpired(order) &&
+      !order.paymentKey
+    ) {
       await this.expire(order.id);
       order = await this.owned(access.tenantId, orderId, token);
-    } else if (order.paymentState === 'processing' || order.paymentState === 'review') {
+    } else if (
+      order.paymentState === 'processing' ||
+      order.paymentState === 'review'
+    ) {
       order = (await this.refreshFromProvider(order)) ?? order;
     }
     return this.view(order);
   }
 
-  async cancel(access: StoreAccess, orderId: string, token: string): Promise<PublicOrder> {
+  async cancel(
+    access: StoreAccess,
+    orderId: string,
+    token: string,
+  ): Promise<PublicOrder> {
     const order = await this.owned(access.tenantId, orderId, token);
     await this.prisma.$transaction(async (tx) => {
       await this.lockOrder(tx, order.id);
@@ -310,14 +406,20 @@ export class CheckoutService implements OnModuleInit, OnModuleDestroy {
         throw new ConflictException('Este pedido ya no se puede cancelar.');
       }
       if (fresh.paymentKey) {
-        throw new ConflictException('El pago ya fue enviado. Espera su resultado.');
+        throw new ConflictException(
+          'El pago ya fue enviado. Espera su resultado.',
+        );
       }
       await releaseOrder(tx, fresh, 'Cancelado por el comprador');
     });
     return this.view(await this.owned(access.tenantId, orderId, token));
   }
 
-  async pay(access: StoreAccess, orderId: string, dto: PayOrderDto): Promise<PublicOrder> {
+  async pay(
+    access: StoreAccess,
+    orderId: string,
+    dto: PayOrderDto,
+  ): Promise<PublicOrder> {
     this.assertLive(access);
     const credentials = await this.accounts.credentials(access.tenantId);
     if (!credentials?.webhookSecret) {
@@ -328,13 +430,23 @@ export class CheckoutService implements OnModuleInit, OnModuleDestroy {
     const claim = await this.prisma.$transaction(async (tx) => {
       await this.lockOrder(tx, orderId);
       const order = await tx.order.findFirst({
-        where: { id: orderId, tenantId: access.tenantId, publicToken: token, channel: 'WEB' },
+        where: {
+          id: orderId,
+          tenantId: access.tenantId,
+          publicToken: token,
+          channel: 'WEB',
+        },
         include: { items: true },
       });
       if (!order) throw new NotFoundException('Pedido no encontrado.');
       if (order.paymentKey) {
-        if (order.paymentKey !== dto.paymentKey || order.paymentHash !== fingerprint) {
-          throw new ConflictException('Ya hay un pago en curso. Espera su resultado.');
+        if (
+          order.paymentKey !== dto.paymentKey ||
+          order.paymentHash !== fingerprint
+        ) {
+          throw new ConflictException(
+            'Ya hay un pago en curso. Espera su resultado.',
+          );
         }
         return { order, send: false };
       }
@@ -342,7 +454,9 @@ export class CheckoutService implements OnModuleInit, OnModuleDestroy {
         throw new ConflictException('Este pedido ya no admite pagos.');
       }
       if (this.isExpired(order)) {
-        throw new ConflictException('La reserva venció. Vuelve a armar tu carrito.');
+        throw new ConflictException(
+          'La reserva venció. Vuelve a armar tu carrito.',
+        );
       }
       const updated = await tx.order.update({
         where: { id: order.id },
@@ -387,9 +501,19 @@ export class CheckoutService implements OnModuleInit, OnModuleDestroy {
       payer: {
         email: order.customerEmail,
         ...(dto.identificationType && dto.identificationNumber
-          ? { identification: { type: dto.identificationType, number: dto.identificationNumber } }
+          ? {
+              identification: {
+                type: dto.identificationType,
+                number: dto.identificationNumber,
+              },
+            }
           : {}),
-        ...(yape ? { entity_type: 'individual', phone: { area_code: '51', number: dto.phone } } : {}),
+        ...(yape
+          ? {
+              entity_type: 'individual',
+              phone: { area_code: '51', number: dto.phone },
+            }
+          : {}),
       },
       transactions: {
         payments: [
@@ -417,10 +541,20 @@ export class CheckoutService implements OnModuleInit, OnModuleDestroy {
       });
       await this.applyProviderOrder(access.tenantId, providerOrder);
     } catch (error) {
-      if (error instanceof MercadoPagoError && error.status >= 400 && error.status < 500) {
-        await this.rejectAttempt(order.id, dto.paymentKey, 'Mercado Pago rechazó el pago. Revisa los datos o usa otro medio.');
+      if (
+        error instanceof MercadoPagoError &&
+        error.status >= 400 &&
+        error.status < 500
+      ) {
+        await this.rejectAttempt(
+          order.id,
+          dto.paymentKey,
+          'Mercado Pago rechazó el pago. Revisa los datos o usa otro medio.',
+        );
       } else if (!(error instanceof ConflictException)) {
-        this.logger.warn(`Payment for order ${order.id} needs review: ${(error as Error).message}`);
+        this.logger.warn(
+          `Payment for order ${order.id} needs review: ${(error as Error).message}`,
+        );
         await this.prisma.order.updateMany({
           where: { id: order.id, paymentState: 'processing' },
           data: { paymentState: 'review' },
@@ -431,10 +565,16 @@ export class CheckoutService implements OnModuleInit, OnModuleDestroy {
   }
 
   /** Development only: pays a web order without credentials. */
-  async simulatePayment(access: StoreAccess, orderId: string, token: string): Promise<PublicOrder> {
+  async simulatePayment(
+    access: StoreAccess,
+    orderId: string,
+    token: string,
+  ): Promise<PublicOrder> {
     const checkout = await this.storefront.checkout(access.tenantId);
     if (!checkout.simulator) {
-      throw new ForbiddenException('El pago simulado solo existe en desarrollo.');
+      throw new ForbiddenException(
+        'El pago simulado solo existe en desarrollo.',
+      );
     }
     const order = await this.owned(access.tenantId, orderId, token);
     if (order.status !== 'PENDING_PAYMENT' || this.isExpired(order)) {
@@ -446,7 +586,10 @@ export class CheckoutService implements OnModuleInit, OnModuleDestroy {
         where: { id: order.id },
         include: { items: true },
       });
-      await tx.order.update({ where: { id: fresh.id }, data: { paymentMethod: 'simulator' } });
+      await tx.order.update({
+        where: { id: fresh.id },
+        data: { paymentMethod: 'simulator' },
+      });
       return settlePaidOrder(tx, fresh, 'simulator');
     });
     if (settled) await this.email.sendConfirmation(order.id);
@@ -457,13 +600,20 @@ export class CheckoutService implements OnModuleInit, OnModuleDestroy {
    * Applies the real state of an Orders API order. Called after creating it, when the
    * buyer polls and from the signed webhook. Idempotent.
    */
-  async applyProviderOrder(tenantId: string, providerOrder: MercadoPagoOrder): Promise<void> {
+  async applyProviderOrder(
+    tenantId: string,
+    providerOrder: MercadoPagoOrder,
+  ): Promise<void> {
     if (!isProviderOrderId(providerOrder.id)) return;
     let paidNow = false;
     await this.prisma.$transaction(async (tx) => {
       await this.lockOrder(tx, providerOrder.external_reference);
       const order = await tx.order.findFirst({
-        where: { id: providerOrder.external_reference, tenantId, channel: 'WEB' },
+        where: {
+          id: providerOrder.external_reference,
+          tenantId,
+          channel: 'WEB',
+        },
         include: { items: true },
       });
       if (!order) return;
@@ -478,42 +628,77 @@ export class CheckoutService implements OnModuleInit, OnModuleDestroy {
       const paid =
         providerOrder.status === 'processed' &&
         providerOrder.status_detail === 'accredited' &&
-        Number(providerOrder.total_paid_amount ?? providerOrder.total_amount) === order.totalCents / 100;
-      const failed = ['failed', 'canceled', 'cancelled', 'expired'].includes(providerOrder.status);
-      const reversed = ['refunded', 'charged_back', 'chargeback'].includes(providerOrder.status);
-      const detail = providerOrder.status_detail?.slice(0, 100) ?? providerOrder.status;
+        Number(
+          providerOrder.total_paid_amount ?? providerOrder.total_amount,
+        ) ===
+          order.totalCents / 100;
+      const failed = ['failed', 'canceled', 'cancelled', 'expired'].includes(
+        providerOrder.status,
+      );
+      const reversed = ['refunded', 'charged_back', 'chargeback'].includes(
+        providerOrder.status,
+      );
+      const detail =
+        providerOrder.status_detail?.slice(0, 100) ?? providerOrder.status;
 
       if (!amountMatches) {
-        this.logger.error(`Amount mismatch for order ${order.id} / ${providerOrder.id}`);
-        await tx.order.update({ where: { id: order.id }, data: { paymentState: 'review' } });
+        this.logger.error(
+          `Amount mismatch for order ${order.id} / ${providerOrder.id}`,
+        );
+        await tx.order.update({
+          where: { id: order.id },
+          data: { paymentState: 'review' },
+        });
         return;
       }
 
       if (paid) {
-        await tx.payment.update({ where: { id: attempt.id }, data: { status: 'SUCCEEDED' } });
+        await tx.payment.update({
+          where: { id: attempt.id },
+          data: { status: 'SUCCEEDED' },
+        });
         if (order.status === 'CANCELLED') {
           await tx.order.update({
             where: { id: order.id },
             data: { paymentState: 'paid_late', paymentDetail: detail },
           });
           await tx.paymentEvent.create({
-            data: { orderId: order.id, status: 'paid_late', detail: `Pago tras cancelar: ${providerOrder.id}` },
+            data: {
+              orderId: order.id,
+              status: 'paid_late',
+              detail: `Pago tras cancelar: ${providerOrder.id}`,
+            },
           });
           return;
         }
-        paidNow = await settlePaidOrder(tx, order, `mercadopago:${providerOrder.id}`);
+        paidNow = await settlePaidOrder(
+          tx,
+          order,
+          `mercadopago:${providerOrder.id}`,
+        );
         return;
       }
 
       if (reversed) {
-        await tx.order.update({ where: { id: order.id }, data: { paymentState: 'refunded', paymentDetail: detail } });
-        await tx.paymentEvent.create({ data: { orderId: order.id, status: 'refunded', detail } });
+        await tx.order.update({
+          where: { id: order.id },
+          data: { paymentState: 'refunded', paymentDetail: detail },
+        });
+        await tx.paymentEvent.create({
+          data: { orderId: order.id, status: 'refunded', detail },
+        });
         return;
       }
 
       if (failed) {
-        await tx.payment.update({ where: { id: attempt.id }, data: { status: 'FAILED' } });
-        if (order.status === 'PENDING_PAYMENT' && order.paymentKey === attempt.idempotencyKey.replace(/^web:/, '')) {
+        await tx.payment.update({
+          where: { id: attempt.id },
+          data: { status: 'FAILED' },
+        });
+        if (
+          order.status === 'PENDING_PAYMENT' &&
+          order.paymentKey === attempt.idempotencyKey.replace(/^web:/, '')
+        ) {
           await tx.order.update({
             where: { id: order.id },
             data: {
@@ -523,7 +708,9 @@ export class CheckoutService implements OnModuleInit, OnModuleDestroy {
               paymentDetail: detail,
             },
           });
-          await tx.paymentEvent.create({ data: { orderId: order.id, status: 'rejected', detail } });
+          await tx.paymentEvent.create({
+            data: { orderId: order.id, status: 'rejected', detail },
+          });
         }
         return;
       }
@@ -535,7 +722,8 @@ export class CheckoutService implements OnModuleInit, OnModuleDestroy {
         });
       }
     });
-    if (paidNow) await this.email.sendConfirmation(providerOrder.external_reference);
+    if (paidNow)
+      await this.email.sendConfirmation(providerOrder.external_reference);
   }
 
   /**
@@ -547,7 +735,10 @@ export class CheckoutService implements OnModuleInit, OnModuleDestroy {
       where: { id: orderId, tenantId, channel: 'WEB' },
       select: { id: true, totalCents: true, currency: true },
     });
-    if (!order) throw new NotFoundException('Solo se concilian pedidos de la tienda web.');
+    if (!order)
+      throw new NotFoundException(
+        'Solo se concilian pedidos de la tienda web.',
+      );
     const reference =
       providerOrderId?.trim() ||
       (
@@ -557,20 +748,36 @@ export class CheckoutService implements OnModuleInit, OnModuleDestroy {
           select: { externalId: true },
         })
       )?.externalId;
-    if (!reference) throw new BadRequestException('Este pedido no tiene intentos de pago. Ingresa la referencia ORD.');
-    if (!isProviderOrderId(reference)) throw new BadRequestException('La referencia debe empezar con ORD.');
+    if (!reference)
+      throw new BadRequestException(
+        'Este pedido no tiene intentos de pago. Ingresa la referencia ORD.',
+      );
+    if (!isProviderOrderId(reference))
+      throw new BadRequestException('La referencia debe empezar con ORD.');
     const credentials = await this.accounts.credentials(tenantId);
-    if (!credentials) throw new ConflictException('Conecta tu cuenta de Mercado Pago para conciliar.');
+    if (!credentials)
+      throw new ConflictException(
+        'Conecta tu cuenta de Mercado Pago para conciliar.',
+      );
     let providerOrder: MercadoPagoOrder;
     try {
-      providerOrder = await mercadoPago.getOrder(credentials.accessToken, reference);
+      providerOrder = await mercadoPago.getOrder(
+        credentials.accessToken,
+        reference,
+      );
     } catch {
-      throw new BadRequestException('Mercado Pago no encontró esa referencia en tu cuenta.');
+      throw new BadRequestException(
+        'Mercado Pago no encontró esa referencia en tu cuenta.',
+      );
     }
     if (providerOrder.external_reference !== order.id) {
-      throw new BadRequestException('Esa referencia de Mercado Pago pertenece a otro pedido.');
+      throw new BadRequestException(
+        'Esa referencia de Mercado Pago pertenece a otro pedido.',
+      );
     }
-    const known = await this.prisma.payment.findFirst({ where: { orderId: order.id, externalId: reference } });
+    const known = await this.prisma.payment.findFirst({
+      where: { orderId: order.id, externalId: reference },
+    });
     if (!known) {
       await this.prisma.payment.create({
         data: {
@@ -586,7 +793,11 @@ export class CheckoutService implements OnModuleInit, OnModuleDestroy {
       });
     }
     await this.applyProviderOrder(tenantId, providerOrder);
-    return { reference, providerStatus: providerOrder.status, detail: providerOrder.status_detail ?? null };
+    return {
+      reference,
+      providerStatus: providerOrder.status,
+      detail: providerOrder.status_detail ?? null,
+    };
   }
 
   /** Releases reservations whose time ran out and no payment is in flight. */
@@ -608,15 +819,27 @@ export class CheckoutService implements OnModuleInit, OnModuleDestroy {
   private async expire(orderId: string): Promise<void> {
     await this.prisma.$transaction(async (tx) => {
       await this.lockOrder(tx, orderId);
-      const order = await tx.order.findUnique({ where: { id: orderId }, include: { items: true } });
-      if (!order || order.status !== 'PENDING_PAYMENT' || order.paymentKey || !this.isExpired(order)) {
+      const order = await tx.order.findUnique({
+        where: { id: orderId },
+        include: { items: true },
+      });
+      if (
+        !order ||
+        order.status !== 'PENDING_PAYMENT' ||
+        order.paymentKey ||
+        !this.isExpired(order)
+      ) {
         return;
       }
       await releaseOrder(tx, order, 'Reserva vencida', 'expired');
     });
   }
 
-  private async rejectAttempt(orderId: string, paymentKey: string, detail: string) {
+  private async rejectAttempt(
+    orderId: string,
+    paymentKey: string,
+    detail: string,
+  ) {
     await this.prisma.$transaction(async (tx) => {
       await tx.payment.updateMany({
         where: { idempotencyKey: `web:${paymentKey}` },
@@ -624,15 +847,28 @@ export class CheckoutService implements OnModuleInit, OnModuleDestroy {
       });
       await tx.order.updateMany({
         where: { id: orderId, paymentKey },
-        data: { paymentKey: null, paymentHash: null, paymentState: 'rejected', paymentDetail: detail },
+        data: {
+          paymentKey: null,
+          paymentHash: null,
+          paymentState: 'rejected',
+          paymentDetail: detail,
+        },
       });
-      await tx.paymentEvent.create({ data: { orderId, status: 'rejected', detail } });
+      await tx.paymentEvent.create({
+        data: { orderId, status: 'rejected', detail },
+      });
     });
   }
 
-  private async refreshFromProvider(order: FullOrder): Promise<FullOrder | null> {
+  private async refreshFromProvider(
+    order: FullOrder,
+  ): Promise<FullOrder | null> {
     const attempt = await this.prisma.payment.findFirst({
-      where: { orderId: order.id, externalId: { not: null }, status: 'PENDING' },
+      where: {
+        orderId: order.id,
+        externalId: { not: null },
+        status: 'PENDING',
+      },
       orderBy: { createdAt: 'desc' },
     });
     if (!attempt?.externalId) return null;
@@ -644,10 +880,15 @@ export class CheckoutService implements OnModuleInit, OnModuleDestroy {
         await mercadoPago.getOrder(credentials.accessToken, attempt.externalId),
       );
     } catch (error) {
-      this.logger.warn(`Could not refresh order ${order.id}: ${(error as Error).message}`);
+      this.logger.warn(
+        `Could not refresh order ${order.id}: ${(error as Error).message}`,
+      );
       return null;
     }
-    return this.prisma.order.findUnique({ where: { id: order.id }, include: { items: true } });
+    return this.prisma.order.findUnique({
+      where: { id: order.id },
+      include: { items: true },
+    });
   }
 
   private async resolveLines(
@@ -659,7 +900,10 @@ export class CheckoutService implements OnModuleInit, OnModuleDestroy {
     for (const item of items) {
       const key = `${item.handle}::${item.variantId ?? ''}`;
       const current = merged.get(key);
-      merged.set(key, { ...item, quantity: (current?.quantity ?? 0) + item.quantity });
+      merged.set(key, {
+        ...item,
+        quantity: (current?.quantity ?? 0) + item.quantity,
+      });
     }
     const handles = [...new Set(items.map((item) => item.handle))];
     const products = await db.product.findMany({
@@ -670,7 +914,9 @@ export class CheckoutService implements OnModuleInit, OnModuleDestroy {
     for (const item of merged.values()) {
       const product = products.find((p) => p.handle === item.handle);
       if (!product || !product.isAvailable) {
-        throw new ConflictException('Un producto de tu carrito ya no está disponible. Actualiza tu carrito.');
+        throw new ConflictException(
+          'Un producto de tu carrito ya no está disponible. Actualiza tu carrito.',
+        );
       }
       if (product.currency !== 'PEN') {
         throw new BadRequestException('Solo se aceptan productos en soles.');
@@ -684,16 +930,24 @@ export class CheckoutService implements OnModuleInit, OnModuleDestroy {
       if (product.variants.length) {
         const variant = product.variants.find((v) => v.id === item.variantId);
         if (!variant || !variant.isAvailable) {
-          throw new ConflictException(`Elige una opción disponible de «${product.name}».`);
+          throw new ConflictException(
+            `Elige una opción disponible de «${product.name}».`,
+          );
         }
-        const label = [variant.option1Value, variant.option2Value, variant.option3Value]
+        const label = [
+          variant.option1Value,
+          variant.option2Value,
+          variant.option3Value,
+        ]
           .filter(Boolean)
           .join(' / ');
         unitCents = variant.priceCents;
         title = label ? `${product.name} · ${label}` : product.name;
         variantId = variant.id;
       } else if (item.variantId) {
-        throw new ConflictException('Un producto de tu carrito cambió. Actualiza tu carrito.');
+        throw new ConflictException(
+          'Un producto de tu carrito cambió. Actualiza tu carrito.',
+        );
       }
       lines.push({
         productId: product.id,
@@ -703,6 +957,7 @@ export class CheckoutService implements OnModuleInit, OnModuleDestroy {
         quantity: item.quantity,
         unitCents,
         totalCents: unitCents * item.quantity,
+        isService: product.kind === 'SERVICE',
         coupon: {
           handle: product.handle,
           categories: product.categories,
@@ -717,19 +972,32 @@ export class CheckoutService implements OnModuleInit, OnModuleDestroy {
     return lines;
   }
 
-  private async findReplay(tenantId: string, checkoutKey: string, requestHash: string) {
+  private async findReplay(
+    tenantId: string,
+    checkoutKey: string,
+    requestHash: string,
+  ) {
     const existing = await this.prisma.order.findUnique({
       where: { checkoutKey },
       include: { items: true },
     });
     if (!existing) return null;
-    if (existing.tenantId !== tenantId || existing.requestHash !== requestHash) {
-      throw new ConflictException('Esta compra ya se registró con otros datos. Recarga la página.');
+    if (
+      existing.tenantId !== tenantId ||
+      existing.requestHash !== requestHash
+    ) {
+      throw new ConflictException(
+        'Esta compra ya se registró con otros datos. Recarga la página.',
+      );
     }
     return existing;
   }
 
-  private async owned(tenantId: string, orderId: string, token: string): Promise<FullOrder> {
+  private async owned(
+    tenantId: string,
+    orderId: string,
+    token: string,
+  ): Promise<FullOrder> {
     const order = await this.prisma.order.findFirst({
       where: { id: orderId, tenantId, publicToken: token, channel: 'WEB' },
       include: { items: true },
@@ -761,32 +1029,47 @@ export class CheckoutService implements OnModuleInit, OnModuleDestroy {
     if (mode === 'PICKUP') return null;
     const place = ubigeo ? findUbigeo(ubigeo) : null;
     if (!place) {
-      throw new BadRequestException('Selecciona el departamento, la provincia y el distrito.');
+      throw new BadRequestException(
+        'Selecciona el departamento, la provincia y el distrito.',
+      );
     }
     if (acknowledgeRate !== true) {
-      throw new BadRequestException('Acepta la tarifa referencial del envío para continuar.');
+      throw new BadRequestException(
+        'Acepta la tarifa referencial del envío para continuar.',
+      );
     }
     return place;
   }
 
   private newCode(): string {
     let code = 'P';
-    for (let i = 0; i < 6; i++) code += CODE_ALPHABET[randomInt(CODE_ALPHABET.length)];
+    for (let i = 0; i < 6; i++)
+      code += CODE_ALPHABET[randomInt(CODE_ALPHABET.length)];
     return code;
   }
 
   private view(order: FullOrder): PublicOrder {
-    const delivery = (order.delivery ?? {}) as Partial<DeliveryRecord>;
-    const address = [delivery.address, delivery.district, delivery.province, delivery.department]
-      .filter(Boolean)
-      .join(', ');
+    const delivery = order.delivery
+      ? (order.delivery as Partial<DeliveryRecord>)
+      : null;
+    const address = delivery
+      ? [
+          delivery.address,
+          delivery.district,
+          delivery.province,
+          delivery.department,
+        ]
+          .filter(Boolean)
+          .join(', ')
+      : '';
     return {
       id: order.id,
       code: order.code ?? order.id.slice(-6).toUpperCase(),
       token: order.publicToken ?? '',
       status: order.status as PublicOrderStatus,
       paymentState: order.paymentState,
-      paymentDetail: order.paymentState === 'rejected' ? order.paymentDetail : null,
+      paymentDetail:
+        order.paymentState === 'rejected' ? order.paymentDetail : null,
       currency: order.currency,
       items: order.items.map((item) => ({
         title: item.title,
@@ -805,12 +1088,15 @@ export class CheckoutService implements OnModuleInit, OnModuleDestroy {
         email: order.customerEmail ?? '',
         phone: order.customerPhone ?? '',
       },
-      delivery: {
-        mode: delivery.mode ?? 'PICKUP',
-        label: delivery.label ?? '',
-        address: address || null,
-        eta: delivery.eta ?? null,
-      },
+      delivery: delivery
+        ? {
+            mode: delivery.mode ?? 'PICKUP',
+            label: delivery.label ?? '',
+            address: address || null,
+            eta: delivery.eta ?? null,
+          }
+        : null,
+      serviceNote: order.serviceNote,
       trackingCode: order.trackingCode,
       expiresAt: order.expiresAt?.toISOString() ?? null,
       cancelReason: order.cancelReason,

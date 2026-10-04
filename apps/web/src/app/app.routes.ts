@@ -32,6 +32,13 @@ export const routes: Routes = [
       ),
   },
   {
+    // Full-screen workspace outside the console shell; declared before `app` so it matches first.
+    path: 'app/store/editor',
+    canActivate: [authGuard],
+    loadComponent: () =>
+      import('./features/store/store-editor.page').then((m) => m.StoreEditorPage),
+  },
+  {
     path: 'app',
     canActivate: [authGuard],
     loadComponent: () =>

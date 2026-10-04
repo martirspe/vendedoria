@@ -1,7 +1,6 @@
 @use '../../../packages/design-tokens/tokens';
 @use '../../../packages/design-tokens/storefront';
 @use 'sass:meta';
-@use './app/templates/selecta/selecta';
 
 @font-face {
   font-family: 'Manrope';
@@ -13,4 +12,81 @@
 
 @layer store-base {
   @include meta.load-css('store-base');
+}
+
+/* Editable texts render their own line breaks (see core/store-editor.ts). */
+.store-edit-multiline {
+  white-space: pre-line;
+}
+
+/* Visual editor of the console: outside of it no element gets these attributes. */
+html.store-editing {
+  store-consent-banner {
+    display: none;
+  }
+
+  [data-store-section] {
+    outline: 2px solid transparent;
+    outline-offset: -2px;
+    transition: outline-color var(--ds-motion-fast) var(--ds-ease-out);
+  }
+
+  [data-store-section]:hover {
+    outline-color: color-mix(in srgb, var(--ds-color-accent) 35%, transparent);
+  }
+
+  .store-section-selected,
+  .store-section-selected:hover {
+    outline-color: var(--ds-color-accent);
+  }
+
+  [data-edit] {
+    cursor: text;
+    border-radius: var(--ds-radius-sm);
+    outline: 1px dashed transparent;
+    outline-offset: 3px;
+    transition: outline-color var(--ds-motion-fast) var(--ds-ease-out);
+  }
+
+  [data-edit]:hover {
+    outline-color: var(--ds-color-accent);
+  }
+
+  [data-edit]:focus {
+    outline: 2px solid var(--ds-color-accent);
+  }
+
+  img[data-edit] {
+    cursor: pointer;
+  }
+
+  [data-placeholder]:empty {
+    display: inline-block;
+    min-width: 12ch;
+  }
+
+  [data-placeholder]:empty::before {
+    content: attr(data-placeholder);
+    opacity: 0.6;
+  }
+
+  /* Block without image: only the editor shows where to add one. */
+  .store-edit-placeholder {
+    display: grid;
+    place-items: center;
+    width: 100%;
+    min-height: 16rem;
+    border: 2px dashed color-mix(in srgb, var(--ds-color-accent) 45%, transparent);
+    border-radius: var(--ds-radius-md);
+    background: color-mix(in srgb, var(--ds-color-accent) 6%, transparent);
+    color: var(--ds-color-accent);
+    font: inherit;
+    font-weight: 700;
+    cursor: pointer;
+  }
+
+  img[data-edit]:hover {
+    outline: 3px solid var(--ds-color-accent);
+    outline-offset: -3px;
+  }
 }

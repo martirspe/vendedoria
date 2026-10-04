@@ -1,3 +1,5 @@
+import type { StoreThemeCorners, StoreThemeFont, StorefrontView } from '@vendedoria/contracts';
+
 /** Black or white text, whichever reads better on the given hex background. */
 export function readableTextOn(hex: string): '#0b0d12' | '#ffffff' {
   const match = /^#([0-9a-f]{6})$/i.exec(hex);
@@ -11,4 +13,31 @@ export function readableTextOn(hex: string): '#0b0d12' | '#ffffff' {
   });
   const luminance = 0.2126 * channels[0] + 0.7152 * channels[1] + 0.0722 * channels[2];
   return luminance > 0.4 ? '#0b0d12' : '#ffffff';
+}
+
+const MANROPE = "'Manrope', system-ui, sans-serif";
+const DEVICE = "system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif";
+
+/** Body and title font stacks; only Manrope downloads a file, and the store already loads it. */
+export const THEME_FONTS: Record<StoreThemeFont, { body: string; display: string }> = {
+  modern: { body: MANROPE, display: MANROPE },
+  editorial: { body: DEVICE, display: "Georgia, 'Times New Roman', serif" },
+  simple: { body: DEVICE, display: DEVICE },
+};
+
+/** Control and card radius per corner style; `soft` keeps the store defaults. */
+export const THEME_CORNERS: Record<StoreThemeCorners, { control: string; card: string } | null> = {
+  square: { control: '2px', card: '4px' },
+  soft: null,
+  round: { control: '999px', card: '1.5rem' },
+};
+
+/** Brand values the store shows: the merchant theme over the store settings. */
+export function storeBrand(store: StorefrontView): { primary: string; accent: string; logo: string | null } {
+  const theme = store.templateContent.theme;
+  return {
+    primary: theme?.primary ?? store.brandColor,
+    accent: theme?.accent ?? store.accentColor,
+    logo: theme?.logo !== undefined ? theme.logo || null : store.logoUrl,
+  };
 }

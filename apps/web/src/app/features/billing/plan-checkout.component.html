@@ -1,0 +1,104 @@
+<section class="checkout" aria-labelledby="plan-checkout-title">
+  <header class="checkout__header">
+    <div>
+      <p class="checkout__eyebrow">Pago seguro con Mercado Pago</p>
+      <h2 id="plan-checkout-title">{{ session().title }}</h2>
+      <strong class="checkout__amount">{{ money(session().amountCents) }}</strong>
+    </div>
+    <button
+      type="button"
+      class="checkout__close"
+      aria-label="Cerrar el pago"
+      [disabled]="busy()"
+      (click)="close()"
+    >
+      <ds-icon name="x" />
+    </button>
+  </header>
+
+  @if (errorMessage(); as error) {
+    <p class="checkout__alert" role="alert">
+      <ds-icon name="alert" />
+      <span>{{ error }}</span>
+    </p>
+  }
+
+  @if (processing()) {
+    <div class="checkout__processing" role="status" aria-busy="true">
+      <span class="spinner" aria-hidden="true"></span>
+      <p>
+        Estamos confirmando tu pago con Mercado Pago. No cierres esta página; tu plan se activa
+        apenas se apruebe.
+      </p>
+    </div>
+  } @else if (sdkLoading()) {
+    <div class="checkout__processing" aria-busy="true">
+      <span class="spinner" aria-hidden="true"></span>
+      <p>Cargando el formulario de pago…</p>
+    </div>
+  } @else if (sdkError()) {
+    <p class="checkout__alert" role="alert">
+      <ds-icon name="alert" />
+      <span>No pudimos cargar el formulario de pago. Revisa tu conexión y vuelve a intentarlo.</span>
+    </p>
+  } @else {
+    <div class="methods" role="tablist" aria-label="Elige cómo pagar">
+      <button
+        type="button"
+        role="tab"
+        [attr.aria-selected]="method() === 'card'"
+        [class.is-active]="method() === 'card'"
+        [disabled]="busy()"
+        (click)="selectMethod('card')"
+      >
+        <ds-icon name="creditCard" /> Tarjeta
+      </button>
+      <button
+        type="button"
+        role="tab"
+        [attr.aria-selected]="method() === 'yape'"
+        [class.is-active]="method() === 'yape'"
+        [disabled]="busy()"
+        (click)="selectMethod('yape')"
+      >
+        <ds-icon name="wallet" /> Yape
+      </button>
+    </div>
+
+    @if (method() === 'card') {
+      <div [id]="brickId" class="checkout__brick"></div>
+    } @else {
+      <form class="yape" [formGroup]="yapeForm" (ngSubmit)="payWithYape()">
+        <p>Abre Yape, entra a <strong>Código de aprobación</strong> y escribe el código de 6 dígitos.</p>
+        <label>
+          Celular de Yape
+          <input
+            formControlName="phone"
+            inputmode="numeric"
+            maxlength="9"
+            autocomplete="tel-national"
+            placeholder="987654321"
+          />
+        </label>
+        <label>
+          Código de aprobación
+          <input
+            formControlName="otp"
+            inputmode="numeric"
+            maxlength="6"
+            autocomplete="one-time-code"
+            placeholder="123456"
+          />
+        </label>
+        <ds-button type="submit" variant="primary" [disabled]="busy()">
+          {{ busy() ? 'Procesando…' : 'Pagar ' + money(session().amountCents) + ' con Yape' }}
+        </ds-button>
+      </form>
+    }
+  }
+
+  <p class="checkout__hint">
+    <ds-icon name="lock" />
+    <span>Los datos de tu tarjeta van directo a Mercado Pago: VendedorIA no los ve ni los guarda.</span>
+  </p>
+</section>

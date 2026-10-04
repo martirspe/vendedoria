@@ -41,6 +41,15 @@
             </div>
           </section>
 
+          @if (hasServices()) {
+            <section class="checkout-section">
+              <h2><span>02</span>Tu reserva</h2>
+              <p>Es una preferencia: después del pago te escribimos para confirmar el día y la hora.</p>
+              <label>¿Cuándo te gustaría? <span class="optional">(opcional)</span><input formControlName="serviceNote" placeholder="Ej.: sábado por la mañana" maxlength="300" /></label>
+            </section>
+          }
+
+          @if (needsDelivery()) {
           <section class="checkout-section">
             <h2><span>02</span>Tu entrega</h2>
             @if (!options().length) {
@@ -108,6 +117,7 @@
               }
             }
           </section>
+          }
 
           <label class="check-label terms-check">
             <input type="checkbox" formControlName="consent" />
@@ -127,7 +137,7 @@
           @if (store()?.checkout?.turnstileSiteKey; as siteKey) {
             <ds-turnstile [siteKey]="siteKey" action="checkout" theme="light" />
           }
-          <button class="button full" type="submit" [disabled]="busy() || !choice()">{{ busy() ? 'Reservando tu selección…' : 'Continuar al pago' }}<app-icon name="arrow" /></button>
+          <button class="button full" type="submit" [disabled]="busy() || !canSubmit()">{{ busy() ? 'Reservando tu selección…' : 'Continuar al pago' }}<app-icon name="arrow" /></button>
           @if (store()?.checkout?.simulator) {
             <p class="notice">Modo de prueba: esta tienda aún no conectó Mercado Pago. El pago será simulado y no se cobra dinero.</p>
           }
@@ -191,6 +201,7 @@
         @if (discount() > 0) {
           <div class="total-line discount-line"><span>Descuento · {{ coupon()?.code }}</span><span>−{{ discount() | money }}</span></div>
         }
+        @if (needsDelivery()) {
         <div class="total-line">
           <span>Entrega {{ choice()?.label }}</span>
           <span>
@@ -210,9 +221,12 @@
         @if (freeFrom() > 0 && missing() > 0 && !pickup() && !couponShip()) {
           <p class="free-nudge"><app-icon name="truck" /><span>Agrega <strong>{{ missing() | money }}</strong> más y tu envío es gratis.</span></p>
         }
+        }
         <div class="total-line grand-total"><strong>Total en soles</strong><strong>{{ total() | money }}</strong></div>
         <p>Sin cargos ocultos. El total se confirma antes de pagar.</p>
-        <div class="summary-trust"><app-icon name="package" /><span>Tu pedido queda reservado durante 15 minutos al continuar al pago.</span></div>
+        @if (needsDelivery()) {
+          <div class="summary-trust"><app-icon name="package" /><span>Tu pedido queda reservado durante 15 minutos al continuar al pago.</span></div>
+        }
       </aside>
     </div>
   } @else {

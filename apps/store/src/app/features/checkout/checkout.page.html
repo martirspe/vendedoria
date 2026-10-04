@@ -38,8 +38,20 @@
           </label>
         </fieldset>
 
+        @if (cart.hasServices()) {
+          <fieldset class="panel">
+            <legend>2. Tu reserva</legend>
+            <label class="field">
+              <span>¿Cuándo te gustaría? <em>Opcional</em></span>
+              <input formControlName="serviceNote" maxlength="300" placeholder="Ej.: sábado por la mañana" />
+            </label>
+            <p class="hint">Es una preferencia: después del pago te escribimos para confirmar el día y la hora.</p>
+          </fieldset>
+        }
+
+        @if (cart.needsDelivery()) {
         <fieldset class="panel">
-          <legend>2. Entrega</legend>
+          <legend>{{ cart.hasServices() ? '3' : '2' }}. Entrega</legend>
           @if (!options().length) {
             <p class="warning" role="alert">Esta tienda aún no configuró sus formas de entrega.</p>
           }
@@ -148,6 +160,7 @@
             <input formControlName="reference" maxlength="180" />
           </label>
         </fieldset>
+        }
       </div>
 
       <aside class="summary" aria-labelledby="summary-title">
@@ -189,10 +202,12 @@
           @if (discountCents() > 0) {
             <div class="summary__discount"><dt>Descuento</dt><dd>−{{ discountCents() | money }}</dd></div>
           }
-          <div>
-            <dt>Envío</dt>
-            <dd>{{ !selectedOption() ? 'Elige una opción' : shippingPending() ? 'Elige tu distrito' : shippingCents() === 0 ? 'Gratis' : (shippingCents() | money) }}</dd>
-          </div>
+          @if (cart.needsDelivery()) {
+            <div>
+              <dt>Envío</dt>
+              <dd>{{ !selectedOption() ? 'Elige una opción' : shippingPending() ? 'Elige tu distrito' : shippingCents() === 0 ? 'Gratis' : (shippingCents() | money) }}</dd>
+            </div>
+          }
           <div class="summary__total"><dt>Total</dt><dd>{{ totalCents() | money }}</dd></div>
         </dl>
 
@@ -216,11 +231,13 @@
           <p class="warning" role="alert">{{ error }}</p>
         }
 
-        <button type="submit" class="store-btn store-btn--primary store-btn--block" [disabled]="submitting() || !options().length">
+        <button type="submit" class="store-btn store-btn--primary store-btn--block" [disabled]="submitting() || !canCheckout()">
           <ds-icon name="lock" [size]="1.05" />
           {{ submitting() ? 'Reservando tu pedido…' : 'Continuar al pago' }}
         </button>
-        <p class="summary__note">Reservamos tus productos por 15 minutos mientras pagas.</p>
+        @if (cart.needsDelivery()) {
+          <p class="summary__note">Reservamos tus productos por 15 minutos mientras pagas.</p>
+        }
       </aside>
     </form>
   }

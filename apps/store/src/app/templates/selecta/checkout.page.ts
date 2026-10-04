@@ -71,6 +71,7 @@ export class SelectaCheckoutPage {
     ubigeo: ['', Validators.required],
     address: ['', [Validators.required, Validators.minLength(8), Validators.maxLength(200)]],
     reference: ['', Validators.maxLength(180)],
+    serviceNote: ['', Validators.maxLength(300)],
     consent: [false, Validators.requiredTrue],
     shippingAcknowledged: [false],
   });
@@ -145,6 +146,10 @@ export class SelectaCheckoutPage {
     ];
   });
   readonly ready = computed(() => (this.direct ? this.catalog.loaded() : this.cart.ready()));
+  /** A line whose product is still loading counts as shipped until the catalog says otherwise. */
+  readonly needsDelivery = computed(() => this.lines().some((l) => l.product?.kind !== 'SERVICE'));
+  readonly hasServices = computed(() => this.lines().some((l) => l.product?.kind === 'SERVICE'));
+  readonly canSubmit = computed(() => !this.needsDelivery() || Boolean(this.choice()));
   readonly subtotal = computed(() => this.lines().reduce((n, l) => n + l.unitCents * l.quantity, 0));
 
   readonly couponsEnabled = computed(() => Boolean(this.store()?.checkout.couponsEnabled));
@@ -204,7 +209,7 @@ export class SelectaCheckoutPage {
   readonly missing = computed(() => this.freeFrom() - this.subtotal() + this.discount());
   readonly shippingCents = computed(() => {
     const choice = this.choice();
-    if (!choice || this.pickup() || this.freeShip() || this.couponShip()) return 0;
+    if (!this.needsDelivery() || !choice || this.pickup() || this.freeShip() || this.couponShip()) return 0;
     return choice.cents;
   });
   readonly total = computed(() => this.subtotal() - this.discount() + this.shippingCents());
@@ -220,6 +225,10 @@ export class SelectaCheckoutPage {
     });
     effect(() => {
       if (!this.homeOptions().length && this.pickupOption()) untracked(() => this.setPickup(true));
+    });
+    effect(() => {
+      const skip = !this.needsDelivery();
+      untracked(() => this.toggleAddress(skip || this.pickup()));
     });
     effect(() => {
       const choices = this.choices();
@@ -265,9 +274,14 @@ export class SelectaCheckoutPage {
 
   setPickup(value: boolean): void {
     this.pickup.set(value);
+    this.toggleAddress(value || !this.needsDelivery());
+  }
+
+  /** Address fields only validate when something travels to the buyer's home. */
+  private toggleAddress(off: boolean): void {
     for (const name of ['department', 'province', 'ubigeo', 'address', 'reference', 'shippingAcknowledged'] as const) {
       const control = this.form.controls[name];
-      if (value) control.disable();
+      if (off) control.disable();
       else control.enable();
     }
   }
@@ -354,11 +368,12 @@ export class SelectaCheckoutPage {
     this.error.set('');
     this.form.markAllAsTouched();
     const choice = this.choice();
-    if (this.form.invalid || !choice) {
+    const needsDelivery = this.needsDelivery();
+    if (this.form.invalid || (needsDelivery && !choice)) {
       this.error.set('Completa los campos marcados y acepta los términos.');
       return;
     }
-    if (this.carrierChosen() && !this.form.controls.shippingAcknowledged.value) {
+    if (needsDelivery && this.carrierChosen() && !this.form.controls.shippingAcknowledged.value) {
       this.error.set('Acepta la tarifa referencial de la agencia para continuar.');
       return;
     }
@@ -376,17 +391,22 @@ export class SelectaCheckoutPage {
         checkoutKey: this.checkoutKey(),
         items: this.items(),
         customer: { name: v.name.trim(), email: v.email.trim(), phone: v.phone },
-        delivery: {
-          mode: choice.mode,
-          ...(this.pickup()
-            ? {}
-            : {
-                ubigeo: v.ubigeo,
-                address: v.address.trim(),
-                ...(v.reference.trim() ? { reference: v.reference.trim() } : {}),
-                ...(isCarrier(choice.mode) ? { acknowledgeRate: true } : {}),
-              }),
-        },
+        ...(needsDelivery && choice
+          ? {
+              delivery: {
+                mode: choice.mode,
+                ...(this.pickup()
+                  ? {}
+                  : {
+                      ubigeo: v.ubigeo,
+                      address: v.address.trim(),
+                      ...(v.reference.trim() ? { reference: v.reference.trim() } : {}),
+                      ...(isCarrier(choice.mode) ? { acknowledgeRate: true } : {}),
+                    }),
+              },
+            }
+          : {}),
+        ...(this.hasServices() && v.serviceNote.trim() ? { serviceNote: v.serviceNote.trim() } : {}),
         ...(this.coupon() ? { couponCode: this.coupon()!.code } : {}),
         acceptTerms: true,
       }, token);

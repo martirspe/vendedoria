@@ -22,6 +22,14 @@ const ALLOWED_HOSTS = (process.env['STORE_ALLOWED_HOSTS'] ?? 'localhost,*.localh
   .filter(Boolean);
 const PREVIEW_COOKIE = 'store_preview';
 const PREVIEW_TOKEN = /^\d{10}\.[A-Za-z0-9_-]{43}$/;
+/** True under `node dist/.../server.mjs` or pm2; false inside the Angular dev server. */
+const PRODUCTION = isMainModule(import.meta.url) || Boolean(process.env['pm_id']);
+/**
+ * Console allowed to frame the store in the visual editor (`?editor=<preview token>`). Editor
+ * requests carry the token in the URL instead of a cookie, since browsers drop cookies in
+ * cross-site iframes.
+ */
+const EDITOR_ORIGIN = editorOrigin(process.env['STORE_EDITOR_ORIGIN'] ?? (PRODUCTION ? '' : 'http://localhost:4201'));
 const LOOPBACK_IP_HOST = /^(?:127\.0\.0\.1|\[::1\])(:\d+)?$/;
 const RESOLVE_TTL_MS = 60_000;
 const UPSTREAM_TIMEOUT_MS = 8_000;
@@ -40,29 +48,35 @@ const TURNSTILE_TOKEN_MAX = 2048;
 const ANALYTICS_SCRIPTS = 'https://www.googletagmanager.com https://connect.facebook.net';
 const ANALYTICS_CONNECT =
   'https://*.google-analytics.com https://*.analytics.google.com https://*.googletagmanager.com https://www.facebook.com https://connect.facebook.net';
-const CONTENT_SECURITY_POLICY = [
-  "default-src 'self'",
-  `script-src 'self' 'unsafe-inline' https://sdk.mercadopago.com ${MP} ${TURNSTILE} ${ANALYTICS_SCRIPTS}`,
-  `style-src 'self' 'unsafe-inline' https://*.mlstatic.com`,
-  "img-src 'self' https: data:",
-  "font-src 'self' https://fonts.gstatic.com https://*.mlstatic.com",
-  `connect-src 'self' https://api.mercadopago.com ${MP} ${ANALYTICS_CONNECT}`,
-  `frame-src https://sdk.mercadopago.com ${MP} ${TURNSTILE}`,
-  "frame-ancestors 'self'",
-  "base-uri 'self'",
-  "form-action 'self' https://*.mercadopago.com",
-  "object-src 'none'",
-].join('; ');
+const contentSecurityPolicy = (frameAncestors: string) =>
+  [
+    "default-src 'self'",
+    `script-src 'self' 'unsafe-inline' https://sdk.mercadopago.com ${MP} ${TURNSTILE} ${ANALYTICS_SCRIPTS}`,
+    `style-src 'self' 'unsafe-inline' https://*.mlstatic.com`,
+    "img-src 'self' https: data:",
+    "font-src 'self' https://fonts.gstatic.com https://*.mlstatic.com",
+    `connect-src 'self' https://api.mercadopago.com ${MP} ${ANALYTICS_CONNECT}`,
+    `frame-src https://sdk.mercadopago.com ${MP} ${TURNSTILE}`,
+    `frame-ancestors ${frameAncestors}`,
+    "base-uri 'self'",
+    "form-action 'self' https://*.mercadopago.com",
+    "object-src 'none'",
+  ].join('; ');
+const CONTENT_SECURITY_POLICY = contentSecurityPolicy("'self'");
 
 type ResolvedStore = {
   slug: string;
   previewToken: string | null;
   /** Served on the tenant's own verified domain instead of a platform subdomain. */
   customDomain: boolean;
+  /** Signed editor request: the page is framed by the console and accepts its edits. */
+  editor: boolean;
 };
 
 type ResolveOutcome = StoreResolveResult | { missing: true } | { failed: true };
 
+/** Build output named with a content hash (`main-ZXGGDJCO.js`); anything else is revalidated. */
+const HASHED_ASSET = /-[A-Za-z0-9_-]{8}\.(js|css)$/;
 const browserDistFolder = join(import.meta.dirname, '../browser');
 const app = express();
 const angularApp = new AngularNodeAppEngine({ allowedHosts: ALLOWED_HOSTS });
@@ -80,14 +94,14 @@ app.use((_req, res, next) => {
   res.setHeader('X-Content-Type-Options', 'nosniff');
   res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
   res.setHeader('Permissions-Policy', 'camera=(), microphone=(), geolocation=()');
-  if (isMainModule(import.meta.url) || process.env['pm_id']) {
+  if (PRODUCTION) {
     res.setHeader('Content-Security-Policy', CONTENT_SECURITY_POLICY);
   }
   next();
 });
 
 /** Dev server only: stores resolve from `{slug}.localhost`, so loopback IP URLs move there. */
-if (!isMainModule(import.meta.url) && !process.env['pm_id']) {
+if (!PRODUCTION) {
   app.use((req, res, next) => {
     const loopback = LOOPBACK_IP_HOST.exec(req.get('host') ?? '');
     if (!loopback) {
@@ -107,6 +121,9 @@ app.use(
     maxAge: '1y',
     index: false,
     redirect: false,
+    setHeaders: (res, path) => {
+      if (!HASHED_ASSET.test(path)) res.setHeader('Cache-Control', 'no-cache');
+    },
   }),
 );
 
@@ -130,6 +147,20 @@ app.use(async (req: Request, res: Response, next: NextFunction) => {
   }
   const hostname = host.toLowerCase().replace(/:\d+$/, '');
   const customDomain = outcome.primaryHost === hostname;
+  const editorQuery = typeof req.query['editor'] === 'string' ? req.query['editor'] : null;
+  const editorToken =
+    EDITOR_ORIGIN && req.method === 'GET' && editorQuery && PREVIEW_TOKEN.test(editorQuery) ? editorQuery : null;
+  if (editorToken) {
+    // The API validates the token for this tenant; an invalid one renders the "not available" page.
+    if (PRODUCTION) {
+      res.setHeader('Content-Security-Policy', contentSecurityPolicy(`'self' ${EDITOR_ORIGIN}`));
+    }
+    res.setHeader('Referrer-Policy', 'no-referrer');
+    const store: ResolvedStore = { slug: outcome.slug, previewToken: editorToken, customDomain, editor: true };
+    res.locals['store'] = store;
+    next();
+    return;
+  }
   if (
     outcome.primaryHost &&
     !customDomain &&
@@ -162,6 +193,7 @@ app.use(async (req: Request, res: Response, next: NextFunction) => {
     slug: outcome.slug,
     previewToken: cookie && PREVIEW_TOKEN.test(cookie) ? cookie : null,
     customDomain,
+    editor: false,
   };
   res.locals['store'] = store;
   next();
@@ -248,6 +280,7 @@ app.use((req: Request, res: Response, next: NextFunction) => {
     apiBase: `${API_URL}/storefront/${store.slug}`,
     previewToken: store.previewToken,
     origin: origin(req),
+    editorOrigin: store.editor ? EDITOR_ORIGIN : null,
   };
   if (store.previewToken) {
     res.setHeader('Cache-Control', 'private, no-store');
@@ -291,6 +324,16 @@ async function resolveHost(host: string): Promise<ResolveOutcome> {
   }
   resolveCache.set(key, { store, expiresAt: Date.now() + RESOLVE_TTL_MS });
   return store ?? { missing: true };
+}
+
+/** Bare `scheme://host[:port]`, or '' when unset or malformed (editor disabled). */
+function editorOrigin(value: string): string {
+  try {
+    const url = new URL(value);
+    return /^https?:$/.test(url.protocol) ? url.origin : '';
+  } catch {
+    return '';
+  }
 }
 
 function previewHeaders(store: ResolvedStore): Record<string, string> {

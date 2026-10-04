@@ -19,7 +19,8 @@ Jump table from domain to paths. API paths are under `apps/api/src/`, console pa
 | Plan integrations (web store add-on, custom domain, pixel/GA4, Instagram, team; dependencies in `INTEGRATION_REQUIRES` pause, never turn off, the dependent) | `integrations/` (state, custom domain + Cloudflare for SaaS), `team/`, `channels/` (Instagram); store gate in `storefront/storefront-public.service.ts` and `storefront.service.ts` | `features/integrations/` (activation + `integration-gate`), `features/{domain,tracking,instagram,team}/`, `features/auth/invite.page`, sidebar from `core/integrations/`; store `core/analytics.service.ts`, `components/consent-banner` | security |
 | Metrics | `metrics/` | `features/metrics/` | implement |
 | Tenant store | `storefront/` | console `features/store/`; app `apps/store/`; types `packages/contracts/` | implement |
-| Store templates by industry | `storefront/` (`industry`, `template`, `templateCopy`) | `apps/store/src/app/templates/<template>/`; picker in console `features/store/` | ui |
+| Store templates by industry | `storefront/` (`industry`, `template`, `templateContent`, editable fields in `store-templates.ts`) | `apps/store/src/app/templates/<template>/`; picker in console `features/store/` | ui |
+| Visual store editor (draft/publish) | `storefront/storefront-editor.service.ts` (`templateDraft`) | console `features/store/store-editor.page.*`; store `core/store-editor.ts` (postMessage bridge + directives) | ui, security |
 | Design system | — | `packages/ui/`, `packages/design-tokens/`, `apps/web/src/styles.scss` | ui |
 | Schema / migrations | `apps/api/prisma/` | — | data |
 | AWS media (S3 + CloudFront) and email (SES) | `catalog/media.service.ts`, `checkout/order-email.service.ts`, `config/env.validation.ts`, `infra/terraform/` (Terraform: bucket + CloudFront + SES + IAM + Cloudflare DNS) | — | aws |

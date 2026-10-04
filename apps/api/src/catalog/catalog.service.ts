@@ -4,7 +4,7 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
-import { Prisma } from '@prisma/client';
+import { Prisma, ProductKind } from '@prisma/client';
 import { PlanLimitsService } from '../billing/plan-limits.service';
 import { PrismaService } from '../prisma/prisma.service';
 import {
@@ -22,7 +22,9 @@ const PRODUCT_INCLUDE = {
   media: { orderBy: { sortOrder: 'asc' } },
   components: {
     orderBy: { id: 'asc' },
-    include: { component: { select: { id: true, name: true, handle: true, sku: true } } },
+    include: {
+      component: { select: { id: true, name: true, handle: true, sku: true } },
+    },
   },
 } satisfies Prisma.ProductInclude;
 
@@ -30,10 +32,15 @@ const MAX_MEDIA = 12;
 
 type Tx = Prisma.TransactionClient;
 
-type PhotoRefs = { media: { url: string }[]; variants: { imageUrl: string | null }[] };
+type PhotoRefs = {
+  media: { url: string }[];
+  variants: { imageUrl: string | null }[];
+};
 const photoUrls = (product: PhotoRefs) => [
   ...product.media.map((item) => item.url),
-  ...product.variants.flatMap((variant) => (variant.imageUrl ? [variant.imageUrl] : [])),
+  ...product.variants.flatMap((variant) =>
+    variant.imageUrl ? [variant.imageUrl] : [],
+  ),
 ];
 
 type InventoryRow = {
@@ -67,6 +74,7 @@ export class CatalogService {
     await this.planLimits.assertCanCreateProduct(tenantId);
     try {
       return await this.prisma.$transaction(async (tx) => {
+        const isService = dto.kind === 'SERVICE';
         const product = await tx.product.create({
           data: {
             tenantId,
@@ -78,8 +86,9 @@ export class CatalogService {
             basePriceCents: dto.basePriceCents,
             currency: dto.currency ?? 'PEN',
             isAvailable: dto.isAvailable ?? true,
-            stockUnlimited: dto.stockUnlimited ?? true,
-            stockQty: dto.stockQty,
+            stockUnlimited: isService ? true : (dto.stockUnlimited ?? true),
+            stockQty: isService ? null : dto.stockQty,
+            ...this.serviceData(dto, isService),
             isPublishedOnStore: dto.isPublishedOnStore ?? false,
             compareAtPriceCents: dto.compareAtPriceCents ?? null,
             brand: dto.brand?.trim() || null,
@@ -88,13 +97,28 @@ export class CatalogService {
             seoDescription: dto.seoDescription?.trim() || null,
             ...this.extrasData(dto),
             variants: dto.variants?.length
-              ? { create: dto.variants.map((variant) => this.toVariantData(variant)) }
+              ? {
+                  create: dto.variants.map((variant) =>
+                    this.toVariantData(variant, isService),
+                  ),
+                }
               : undefined,
           },
         });
         await this.writeMedia(tx, product.id, dto);
-        await this.writeComponents(tx, tenantId, product.id, dto.components, dto.variants?.length ?? 0);
-        return tx.product.findUniqueOrThrow({ where: { id: product.id }, include: PRODUCT_INCLUDE });
+        if (isService)
+          await this.assertServiceShape(tx, product.id, dto.components, 0);
+        await this.writeComponents(
+          tx,
+          tenantId,
+          product.id,
+          dto.components,
+          dto.variants?.length ?? 0,
+        );
+        return tx.product.findUniqueOrThrow({
+          where: { id: product.id },
+          include: PRODUCT_INCLUDE,
+        });
       });
     } catch (error) {
       throw this.mapConflict(error);
@@ -103,6 +127,7 @@ export class CatalogService {
 
   async update(tenantId: string, productId: string, dto: UpdateProductDto) {
     const before = await this.getById(tenantId, productId);
+    const isService = (dto.kind ?? before.kind) === 'SERVICE';
     let updated;
     try {
       updated = await this.prisma.$transaction(async (tx) => {
@@ -112,16 +137,35 @@ export class CatalogService {
             await tx.productVariant.createMany({
               data: dto.variants.map((variant) => ({
                 productId,
-                ...this.toVariantData(variant),
+                ...this.toVariantData(variant, isService),
               })),
             });
           }
+        } else if (isService) {
+          await tx.productVariant.updateMany({
+            where: { productId },
+            data: { stockQty: null },
+          });
         }
         await this.writeMedia(tx, productId, dto, true);
         const variantCount = dto.variants
           ? dto.variants.length
           : await tx.productVariant.count({ where: { productId } });
-        await this.writeComponents(tx, tenantId, productId, dto.components, variantCount);
+        if (isService) {
+          await this.assertServiceShape(
+            tx,
+            productId,
+            dto.components,
+            before.components.length,
+          );
+        }
+        await this.writeComponents(
+          tx,
+          tenantId,
+          productId,
+          dto.components,
+          variantCount,
+        );
 
         return tx.product.update({
           where: { id: productId },
@@ -134,8 +178,13 @@ export class CatalogService {
             basePriceCents: dto.basePriceCents,
             currency: dto.currency,
             isAvailable: dto.isAvailable,
-            stockUnlimited: dto.stockUnlimited,
-            stockQty: dto.stockQty === null ? null : dto.stockQty,
+            ...(isService
+              ? { stockUnlimited: true, stockQty: null }
+              : {
+                  stockUnlimited: dto.stockUnlimited,
+                  stockQty: dto.stockQty === null ? null : dto.stockQty,
+                }),
+            ...this.serviceData(dto, isService),
             isPublishedOnStore: dto.isPublishedOnStore,
             compareAtPriceCents: dto.compareAtPriceCents,
             brand: this.optionalText(dto.brand),
@@ -151,7 +200,10 @@ export class CatalogService {
       throw this.mapConflict(error);
     }
     const kept = new Set(photoUrls(updated));
-    await this.releasePhotos(tenantId, photoUrls(before).filter((url) => !kept.has(url)));
+    await this.releasePhotos(
+      tenantId,
+      photoUrls(before).filter((url) => !kept.has(url)),
+    );
     return updated;
   }
 
@@ -187,7 +239,10 @@ export class CatalogService {
     try {
       await this.prisma.product.delete({ where: { id: product.id } });
     } catch (error) {
-      if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2003') {
+      if (
+        error instanceof Prisma.PrismaClientKnownRequestError &&
+        error.code === 'P2003'
+      ) {
         throw inSet;
       }
       throw error;
@@ -210,7 +265,10 @@ export class CatalogService {
       }),
       this.prisma.storefront.findUnique({ where: { tenantId } }),
     ]);
-    const used = new Set<string | null>([...media.map((m) => m.url), ...variants.map((v) => v.imageUrl)]);
+    const used = new Set<string | null>([
+      ...media.map((m) => m.url),
+      ...variants.map((v) => v.imageUrl),
+    ]);
     const storeSettings = storefront ? JSON.stringify(storefront) : '';
     await this.media.remove(
       tenantId,
@@ -218,10 +276,10 @@ export class CatalogService {
     );
   }
 
-  /** Stock rows by SKU: products without variants and every variant of the others. */
+  /** Stock rows by SKU: products without variants and every variant of the others (services have no stock). */
   async inventory(tenantId: string) {
     const products = await this.prisma.product.findMany({
-      where: { tenantId },
+      where: { tenantId, kind: ProductKind.PRODUCT },
       select: {
         id: true,
         name: true,
@@ -230,7 +288,15 @@ export class CatalogService {
         stockUnlimited: true,
         stockQty: true,
         isAvailable: true,
-        variants: { select: { id: true, sku: true, stockQty: true, option1Value: true, option2Value: true } },
+        variants: {
+          select: {
+            id: true,
+            sku: true,
+            stockQty: true,
+            option1Value: true,
+            option2Value: true,
+          },
+        },
         _count: { select: { components: true, componentOf: true } },
       },
       orderBy: { name: 'asc' },
@@ -242,7 +308,10 @@ export class CatalogService {
           productId: product.id,
           variantId: variant.id,
           name: product.name,
-          option: [variant.option1Value, variant.option2Value].filter(Boolean).join(' / ') || null,
+          option:
+            [variant.option1Value, variant.option2Value]
+              .filter(Boolean)
+              .join(' / ') || null,
           sku: variant.sku,
           stockUnlimited: product.stockUnlimited && variant.stockQty === null,
           stockQty: variant.stockQty,
@@ -269,11 +338,20 @@ export class CatalogService {
       for (const row of dto.items) {
         const product = await tx.product.findFirst({
           where: { id: row.productId, tenantId },
-          select: { id: true, _count: { select: { components: true } } },
+          select: {
+            id: true,
+            kind: true,
+            _count: { select: { components: true } },
+          },
         });
         if (!product) throw new NotFoundException('Producto no encontrado.');
+        if (product.kind === ProductKind.SERVICE) {
+          throw new BadRequestException('Los servicios no llevan stock.');
+        }
         if (product._count.components > 0) {
-          throw new BadRequestException('El stock de un set sale de sus piezas.');
+          throw new BadRequestException(
+            'El stock de un set sale de sus piezas.',
+          );
         }
         if (row.variantId) {
           const { count } = await tx.productVariant.updateMany({
@@ -282,7 +360,10 @@ export class CatalogService {
           });
           if (!count) throw new NotFoundException('Variante no encontrada.');
           if (row.stockQty !== null) {
-            await tx.product.update({ where: { id: product.id }, data: { stockUnlimited: false } });
+            await tx.product.update({
+              where: { id: product.id },
+              data: { stockUnlimited: false },
+            });
           }
         } else {
           await tx.product.update({
@@ -296,6 +377,39 @@ export class CatalogService {
       }
     });
     return this.inventory(tenantId);
+  }
+
+  private serviceData(dto: ProductExtrasDto, isService: boolean) {
+    return isService
+      ? {
+          kind: ProductKind.SERVICE,
+          durationMinutes: dto.durationMinutes,
+          serviceMode: dto.serviceMode,
+        }
+      : { kind: ProductKind.PRODUCT, durationMinutes: null, serviceMode: null };
+  }
+
+  /** A service has no stock of its own, so it can neither be a set nor a set piece. */
+  private async assertServiceShape(
+    tx: Tx,
+    productId: string,
+    components: ProductComponentInputDto[] | undefined,
+    currentComponents: number,
+  ) {
+    if (
+      (components ?? []).length > 0 ||
+      (components === undefined && currentComponents > 0)
+    ) {
+      throw new BadRequestException('Un servicio no puede ser un set.');
+    }
+    const usedAsPiece = await tx.productComponent.count({
+      where: { componentId: productId },
+    });
+    if (usedAsPiece > 0) {
+      throw new BadRequestException(
+        'Este producto es pieza de un set; no puede ser un servicio.',
+      );
+    }
   }
 
   private extrasData(dto: ProductExtrasDto) {
@@ -337,7 +451,11 @@ export class CatalogService {
     if (replace) await tx.productMedia.deleteMany({ where: { productId } });
     if (rows.length) {
       await tx.productMedia.createMany({
-        data: rows.map((row, index) => ({ ...row, productId, sortOrder: index })),
+        data: rows.map((row, index) => ({
+          ...row,
+          productId,
+          sortOrder: index,
+        })),
       });
     }
   }
@@ -353,41 +471,73 @@ export class CatalogService {
     if (components === undefined) return;
     const unique = new Map(components.map((c) => [c.productId, c.quantity]));
     if (unique.size !== components.length) {
-      throw new BadRequestException('Cada pieza del set debe aparecer una sola vez.');
+      throw new BadRequestException(
+        'Cada pieza del set debe aparecer una sola vez.',
+      );
     }
     if (unique.has(productId)) {
       throw new BadRequestException('Un set no puede incluirse a sí mismo.');
     }
     if (unique.size) {
       if (variantCount > 0) {
-        throw new BadRequestException('Un set no puede tener variantes: el stock sale de sus piezas.');
+        throw new BadRequestException(
+          'Un set no puede tener variantes: el stock sale de sus piezas.',
+        );
       }
-      const usedAsPiece = await tx.productComponent.count({ where: { componentId: productId } });
+      const usedAsPiece = await tx.productComponent.count({
+        where: { componentId: productId },
+      });
       if (usedAsPiece > 0) {
-        throw new BadRequestException('Este producto es pieza de otro set; no puede ser un set.');
+        throw new BadRequestException(
+          'Este producto es pieza de otro set; no puede ser un set.',
+        );
       }
       const pieces = await tx.product.findMany({
         where: { tenantId, id: { in: [...unique.keys()] } },
-        select: { id: true, _count: { select: { variants: true, components: true } } },
+        select: {
+          id: true,
+          kind: true,
+          _count: { select: { variants: true, components: true } },
+        },
       });
       if (pieces.length !== unique.size) {
         throw new BadRequestException('Alguna pieza del set no existe.');
       }
-      if (pieces.some((piece) => piece._count.variants > 0 || piece._count.components > 0)) {
-        throw new BadRequestException('Las piezas deben ser productos simples (sin variantes ni sets).');
+      if (pieces.some((piece) => piece.kind === ProductKind.SERVICE)) {
+        throw new BadRequestException(
+          'Un servicio no puede ser pieza de un set.',
+        );
+      }
+      if (
+        pieces.some(
+          (piece) => piece._count.variants > 0 || piece._count.components > 0,
+        )
+      ) {
+        throw new BadRequestException(
+          'Las piezas deben ser productos simples (sin variantes ni sets).',
+        );
       }
     }
     await tx.productComponent.deleteMany({ where: { setId: productId } });
     if (unique.size) {
       await tx.productComponent.createMany({
-        data: [...unique].map(([componentId, quantity]) => ({ setId: productId, componentId, quantity })),
+        data: [...unique].map(([componentId, quantity]) => ({
+          setId: productId,
+          componentId,
+          quantity,
+        })),
       });
     }
   }
 
   private mapConflict(error: unknown) {
-    if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2002') {
-      return new ConflictException('Ya tienes un producto con ese enlace. Usa otro.');
+    if (
+      error instanceof Prisma.PrismaClientKnownRequestError &&
+      error.code === 'P2002'
+    ) {
+      return new ConflictException(
+        'Ya tienes un producto con ese enlace. Usa otro.',
+      );
     }
     return error;
   }
@@ -399,7 +549,7 @@ export class CatalogService {
     return value?.trim() || null;
   }
 
-  private toVariantData(variant: ProductVariantInputDto) {
+  private toVariantData(variant: ProductVariantInputDto, isService = false) {
     return {
       sku: variant.sku,
       option1Name: variant.option1Name,
@@ -408,7 +558,7 @@ export class CatalogService {
       option2Value: variant.option2Value,
       priceCents: variant.priceCents,
       isAvailable: variant.isAvailable ?? true,
-      stockQty: variant.stockQty ?? null,
+      stockQty: isService ? null : (variant.stockQty ?? null),
     };
   }
 }

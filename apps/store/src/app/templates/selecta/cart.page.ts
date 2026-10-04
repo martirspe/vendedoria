@@ -6,7 +6,7 @@ import { SeoService } from '../../core/seo.service';
 import { StoreStateService } from '../../core/store-state.service';
 import { whatsappUrl } from '../../core/whatsapp';
 import { Product, SelectaCatalog, bagLine, complements, maxUnits, scarcity } from './selecta-catalog';
-import { wholeMoney } from './selecta-copy';
+import { wholeMoney } from '../../core/store-faq';
 import { SelectaIcon } from './selecta-icon';
 import { SelectaProductImage } from './selecta-photo';
 

@@ -1,24 +1,43 @@
 @if (store(); as s) {
   <div
     class="shell"
-    [style.--store-brand]="s.brandColor"
+    [style.--store-brand]="brand()?.primary"
     [style.--store-on-brand]="onBrand()"
-    [style.--store-accent]="s.accentColor"
+    [style.--store-accent]="brand()?.accent"
+    [style.font-family]="font()?.body"
+    [style.--ds-font-display]="font()?.display"
+    [style.--store-radius-control]="corners()?.control"
+    [style.--store-radius-card]="corners()?.card"
   >
     <a class="skip-link" href="#contenido">Saltar al contenido</a>
 
-    @if (s.isPreview) {
+    @if (s.isPreview && !editor.active()) {
       <div class="preview-bar" role="status">
         <ds-icon name="eye" [size]="1" />
-        <span>Vista previa: esta tienda aún no está publicada. Solo tú puedes verla con este enlace.</span>
+        @if (s.status === 'PUBLISHED') {
+          <span>Vista previa con tus cambios sin publicar. Tus clientes ven la versión publicada.</span>
+        } @else {
+          <span>Vista previa: esta tienda aún no está publicada. Solo tú puedes verla con este enlace.</span>
+        }
+      </div>
+    }
+
+    @if (announcement() || editor.active()) {
+      <div class="announcement" storeSection="announcement">
+        <p
+          class="store-container"
+          storeEditText="announcement.text"
+          [editValue]="announcement()"
+          editPlaceholder="Escribe un anuncio o déjalo vacío para ocultarlo"
+        ></p>
       </div>
     }
 
     <header class="header">
       <div class="store-container header__inner">
         <a class="brand" routerLink="/" [attr.aria-label]="s.displayName + ', inicio'">
-          @if (s.logoUrl) {
-            <img class="brand__logo" [src]="s.logoUrl" [alt]="s.displayName" height="40" />
+          @if (brand()?.logo; as logo) {
+            <img class="brand__logo" [src]="logo" [alt]="s.displayName" height="40" />
           } @else {
             <span class="brand__name">{{ s.displayName }}</span>
           }

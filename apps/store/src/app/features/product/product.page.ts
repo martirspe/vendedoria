@@ -16,7 +16,10 @@ import { ProductCardComponent } from '../../components/product-card.component';
 import { AnalyticsService } from '../../core/analytics.service';
 import { CartService } from '../../core/cart.service';
 import { MoneyPipe } from '../../core/money.pipe';
+import { productCopy } from '../../core/page-copy';
 import { SeoService } from '../../core/seo.service';
+import { serviceSummary } from '../../core/service-info';
+import { STORE_EDITOR, StoreEditorBridge } from '../../core/store-editor';
 import { StoreStateService } from '../../core/store-state.service';
 import { productReference, whatsappUrl } from '../../core/whatsapp';
 import { NotFoundPage } from '../not-found/not-found.page';
@@ -28,7 +31,7 @@ type OptionGroup = {
 
 @Component({
   selector: 'store-product-page',
-  imports: [RouterLink, DsIconComponent, MoneyPipe, ProductCardComponent, NotFoundPage],
+  imports: [RouterLink, DsIconComponent, MoneyPipe, ProductCardComponent, NotFoundPage, STORE_EDITOR],
   templateUrl: './product.page.html',
   styleUrl: './product.page.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -38,6 +41,8 @@ export class ProductPage {
   private readonly cart = inject(CartService);
   private readonly analytics = inject(AnalyticsService);
   readonly store = inject(StoreStateService).store;
+  readonly editor = inject(StoreEditorBridge);
+  readonly texts = computed(() => productCopy(this.store()?.templateContent));
 
   readonly product = input.required<PublicProductDetail | null>();
 
@@ -97,6 +102,9 @@ export class ProductPage {
     return product.hasVariants ? Boolean(this.selectedVariant()?.isAvailable) : true;
   });
 
+  readonly isService = computed(() => this.product()?.kind === 'SERVICE');
+  readonly serviceSummary = computed(() => serviceSummary(this.product()?.service));
+
   readonly quantity = signal(1);
   readonly added = signal(false);
 
@@ -128,11 +136,13 @@ export class ProductPage {
         type: 'product',
         jsonLd: {
           '@context': 'https://schema.org',
-          '@type': 'Product',
+          '@type': product.kind === 'SERVICE' ? 'Service' : 'Product',
           name: product.name,
           ...(product.descriptionShort ? { description: product.descriptionShort } : {}),
           ...(product.media.length ? { image: product.media } : {}),
-          ...(product.brand ? { brand: { '@type': 'Brand', name: product.brand } } : {}),
+          ...(product.brand && product.kind !== 'SERVICE'
+            ? { brand: { '@type': 'Brand', name: product.brand } }
+            : {}),
           offers: {
             '@type': 'Offer',
             url: this.seo.absolute(path),
@@ -174,6 +184,7 @@ export class ProductPage {
         unitCents: this.priceCents(),
         currency: product.currency,
         imageUrl: variant?.imageUrl ?? product.imageUrl,
+        isService: product.kind === 'SERVICE',
       },
       this.quantity(),
     );

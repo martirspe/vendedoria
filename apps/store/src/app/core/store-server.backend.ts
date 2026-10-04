@@ -4,8 +4,9 @@ import {
   HttpBackend,
   HttpEvent,
   HttpRequest,
+  HttpResponse,
 } from '@angular/common/http';
-import { Observable } from 'rxjs';
+import { Observable, map } from 'rxjs';
 import {
   PREVIEW_HEADER,
   STORE_PROXY_PREFIX,
@@ -29,10 +30,21 @@ export class StoreServerBackend implements HttpBackend {
       return this.fetchBackend.handle(request);
     }
     const url = this.context.apiBase + path.slice(STORE_PROXY_PREFIX.length);
-    const headers = this.context.previewToken
-      ? request.headers.set(PREVIEW_HEADER, this.context.previewToken)
-      : request.headers;
-    return this.fetchBackend.handle(request.clone({ url, headers }));
+    if (!this.context.previewToken) {
+      return this.fetchBackend.handle(request.clone({ url }));
+    }
+    const headers = request.headers.set(PREVIEW_HEADER, this.context.previewToken);
+    // Preview payloads are `no-store`, which the transfer cache skips; the browser would then refetch
+    // without the token (the editor iframe has no cookie). The page itself is sent `private, no-store`.
+    return this.fetchBackend
+      .handle(request.clone({ url, headers }))
+      .pipe(
+        map((event) =>
+          event instanceof HttpResponse
+            ? event.clone({ headers: event.headers.delete('Cache-Control') })
+            : event,
+        ),
+      );
   }
 
   /** platform-server turns relative URLs into absolute ones on the request origin. */

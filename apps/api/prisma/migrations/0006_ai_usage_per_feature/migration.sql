@@ -1,0 +1,3 @@
+-- AlterTable
+ALTER TABLE "AiUsageMonth" ADD COLUMN     "editorImages" INTEGER NOT NULL DEFAULT 0,
+ADD COLUMN     "editorTexts" INTEGER NOT NULL DEFAULT 0;

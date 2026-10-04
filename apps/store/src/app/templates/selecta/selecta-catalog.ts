@@ -78,6 +78,7 @@ export function bagLine(p: Product, variant: PublicVariant | null = null): Omit<
     unitCents: variant?.priceCents ?? p.priceCents,
     currency: p.currency,
     imageUrl: variant?.imageUrl ?? p.imageUrl,
+    isService: p.kind === 'SERVICE',
   };
 }
 

@@ -79,6 +79,10 @@ class EnvironmentVariables {
 
   @IsOptional()
   @IsString()
+  OPENAI_IMAGE_MODEL?: string;
+
+  @IsOptional()
+  @IsString()
   PUBLIC_API_BASE_URL?: string;
 
   @IsOptional()
@@ -94,6 +98,11 @@ class EnvironmentVariables {
   @IsOptional()
   @IsString()
   PLATFORM_MERCADOPAGO_ACCESS_TOKEN?: string;
+
+  /** Same account and environment as the access token; sent to the console for the Card Payment Brick. */
+  @IsOptional()
+  @IsString()
+  PLATFORM_MERCADOPAGO_PUBLIC_KEY?: string;
 
   @IsOptional()
   @IsString()

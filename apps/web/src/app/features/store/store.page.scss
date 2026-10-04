@@ -170,12 +170,6 @@ small {
   font-size: 0.88rem;
 }
 
-.color input {
-  width: 100%;
-  padding: var(--ds-space-1);
-  cursor: pointer;
-}
-
 .row {
   display: grid;
   grid-template-columns: 1fr 1fr;
@@ -218,30 +212,39 @@ small {
   opacity: 0.6;
 }
 
-.copy,
-.faq {
-  display: grid;
-  gap: var(--ds-space-3);
-}
-
-.faq__head {
+.design-link {
   display: flex;
   flex-wrap: wrap;
   gap: var(--ds-space-3);
   align-items: center;
   justify-content: space-between;
-}
-
-.faq__row {
-  display: grid;
-  gap: var(--ds-space-2);
-  padding: var(--ds-space-3);
+  padding: var(--ds-space-4);
   border: 1px dashed var(--ds-color-border);
   border-radius: var(--ds-radius-md);
+
+  div {
+    display: grid;
+    gap: 0.15rem;
+    max-width: 30rem;
+  }
+
+  span {
+    color: var(--ds-color-text-secondary);
+    font-size: 0.88rem;
+  }
 }
 
-.faq__row ds-button {
-  justify-self: end;
+.design-link__cta {
+  display: inline-flex;
+  gap: var(--ds-space-2);
+  align-items: center;
+  min-height: var(--ds-touch-target);
+  padding: 0 var(--ds-space-4);
+  border-radius: var(--ds-radius-md);
+  background: var(--ds-color-ink);
+  color: var(--ds-color-surface);
+  font-weight: 700;
+  text-decoration: none;
 }
 
 .label-text {

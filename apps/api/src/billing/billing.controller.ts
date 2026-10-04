@@ -4,7 +4,7 @@ import { CurrentUser } from '../common/decorators/auth.decorators';
 import type { AuthUserPayload } from '../common/types/auth-user';
 import { PlanLimitsService } from './plan-limits.service';
 import { BillingService } from './billing.service';
-import { ConfirmPlanPaymentDto, CreatePlanCheckoutDto } from './dto/plan-checkout.dto';
+import { CreatePlanCheckoutDto, PayPlanDto } from './dto/plan-checkout.dto';
 @ApiTags('billing')
 @ApiBearerAuth()
 @Controller('billing')
@@ -33,13 +33,22 @@ export class BillingController {
     return this.billingService.createCheckout(user, dto);
   }
 
-  @Post('checkout/confirm')
+  @Post('payments/:paymentId/pay')
   @HttpCode(200)
-  confirm(
+  pay(
     @CurrentUser() user: AuthUserPayload,
-    @Body() dto: ConfirmPlanPaymentDto,
+    @Param('paymentId') paymentId: string,
+    @Body() dto: PayPlanDto,
   ) {
-    return this.billingService.confirmReturn(user, dto.providerPaymentId);
+    return this.billingService.pay(user, paymentId, dto);
+  }
+
+  @Get('payments/:paymentId')
+  status(
+    @CurrentUser() user: AuthUserPayload,
+    @Param('paymentId') paymentId: string,
+  ) {
+    return this.billingService.paymentStatus(user, paymentId);
   }
 
   @Post('payments/:paymentId/simulate')

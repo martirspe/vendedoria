@@ -13,4 +13,6 @@ export type StoreRequestContext = {
   previewToken: string | null;
   /** Public origin of the request, e.g. `https://acme.tiendas.example.pe`. */
   origin: string;
+  /** Console origin allowed to drive the visual editor; set only for signed editor requests. */
+  editorOrigin: string | null;
 };

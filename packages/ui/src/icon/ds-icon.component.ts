@@ -5,138 +5,10 @@ import {
   computed,
   input,
 } from '@angular/core';
-import {
-  LucideArrowLeft,
-  LucideArrowRight,
-  LucideArrowUp,
-  LucideBookOpen,
-  LucideBot,
-  LucideChartColumn,
-  LucideChartLine,
-  LucideCheck,
-  LucideChevronDown,
-  LucideChevronLeft,
-  LucideChevronRight,
-  LucideChevronUp,
-  LucideCircleAlert,
-  LucideCircleCheck,
-  LucideCircleQuestionMark,
-  LucideCommand,
-  LucideCopy,
-  LucideCreditCard,
-  LucideDynamicIcon,
-  LucideExternalLink,
-  LucideEye,
-  LucideEyeOff,
-  LucideFileText,
-  LucideGlobe,
-  LucideIcon,
-  LucideImage,
-  LucideInfo,
-  LucideList,
-  LucideLock,
-  LucideLockKeyhole,
-  LucideLogOut,
-  LucideMail,
-  LucideMenu,
-  LucideMessageCircle,
-  LucideMinus,
-  LucideNotebookText,
-  LucidePackage,
-  LucidePause,
-  LucidePlay,
-  LucidePlug,
-  LucidePlus,
-  LucidePrinter,
-  LucideRadio,
-  LucideRocket,
-  LucideSearch,
-  LucideSend,
-  LucideSettings,
-  LucideShieldCheck,
-  LucideShoppingBag,
-  LucideSlidersHorizontal,
-  LucideSparkles,
-  LucideSquareKanban,
-  LucideStore,
-  LucideTarget,
-  LucideTicket,
-  LucideTicketPercent,
-  LucideTrash,
-  LucideTriangleAlert,
-  LucideTruck,
-  LucideUpload,
-  LucideUserRound,
-  LucideUsers,
-  LucideWallet,
-  LucideX,
-} from '@lucide/angular';
+import { DS_ICONS, DsIconNode } from './ds-icons';
 
-/** Design System icon names mapped to Lucide icons (the only UI icon source). */
-export const DS_ICONS = {
-  sparkles: LucideSparkles,
-  message: LucideMessageCircle,
-  arrowRight: LucideArrowRight,
-  radio: LucideRadio,
-  bot: LucideBot,
-  search: LucideSearch,
-  alert: LucideTriangleAlert,
-  check: LucideCheck,
-  send: LucideSend,
-  pause: LucidePause,
-  play: LucidePlay,
-  list: LucideList,
-  kanban: LucideSquareKanban,
-  package: LucidePackage,
-  upload: LucideUpload,
-  image: LucideImage,
-  x: LucideX,
-  plus: LucidePlus,
-  book: LucideNotebookText,
-  rocket: LucideRocket,
-  shoppingBag: LucideShoppingBag,
-  chartColumn: LucideChartColumn,
-  plug: LucidePlug,
-  creditCard: LucideCreditCard,
-  settings: LucideSettings,
-  logOut: LucideLogOut,
-  circleHelp: LucideCircleQuestionMark,
-  command: LucideCommand,
-  minus: LucideMinus,
-  trash: LucideTrash,
-  arrowLeft: LucideArrowLeft,
-  chevronLeft: LucideChevronLeft,
-  chevronRight: LucideChevronRight,
-  menu: LucideMenu,
-  store: LucideStore,
-  externalLink: LucideExternalLink,
-  eye: LucideEye,
-  eyeOff: LucideEyeOff,
-  mail: LucideMail,
-  wallet: LucideWallet,
-  ticket: LucideTicket,
-  truck: LucideTruck,
-  fileText: LucideFileText,
-  lock: LucideLock,
-  lockKeyhole: LucideLockKeyhole,
-  chevronUp: LucideChevronUp,
-  chevronDown: LucideChevronDown,
-  arrowUp: LucideArrowUp,
-  shieldCheck: LucideShieldCheck,
-  circleCheck: LucideCircleCheck,
-  circleAlert: LucideCircleAlert,
-  ticketPercent: LucideTicketPercent,
-  bookOpen: LucideBookOpen,
-  printer: LucidePrinter,
-  user: LucideUserRound,
-  target: LucideTarget,
-  slidersHorizontal: LucideSlidersHorizontal,
-  copy: LucideCopy,
-  info: LucideInfo,
-  globe: LucideGlobe,
-  users: LucideUsers,
-  chartLine: LucideChartLine,
-} as const satisfies Record<string, LucideIcon>;
+/** Design System icon names mapped to Lucide icon nodes (the only UI icon source). */
+export { DS_ICONS };
 
 /**
  * Official brand glyphs (single filled path on a 24×24 viewBox). Lucide ships no
@@ -160,7 +32,6 @@ function isBrandIcon(name: DsIconName): name is DsBrandIconName {
 @Component({
   selector: 'ds-icon',
   standalone: true,
-  imports: [LucideDynamicIcon],
   template: `
     @if (brandPath(); as path) {
       <svg
@@ -174,13 +45,64 @@ function isBrandIcon(name: DsIconName): name is DsBrandIconName {
       >
         <path [attr.d]="path" />
       </svg>
-    } @else if (icon(); as icon) {
+    } @else if (nodes(); as nodes) {
       <svg
         class="ds-icon"
-        [lucideIcon]="icon"
-        [size]="pixels()"
-        [strokeWidth]="strokeWidth()"
-      ></svg>
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        stroke-linecap="round"
+        stroke-linejoin="round"
+        [attr.width]="pixels()"
+        [attr.height]="pixels()"
+        [attr.stroke-width]="strokeWidth()"
+        aria-hidden="true"
+        focusable="false"
+      >
+        @for (node of nodes; track $index) {
+          @let a = node[1];
+          @switch (node[0]) {
+            @case ('path') {
+              <svg:path [attr.d]="a['d']" />
+            }
+            @case ('circle') {
+              <svg:circle [attr.cx]="a['cx']" [attr.cy]="a['cy']" [attr.r]="a['r']" />
+            }
+            @case ('ellipse') {
+              <svg:ellipse
+                [attr.cx]="a['cx']"
+                [attr.cy]="a['cy']"
+                [attr.rx]="a['rx']"
+                [attr.ry]="a['ry']"
+              />
+            }
+            @case ('line') {
+              <svg:line
+                [attr.x1]="a['x1']"
+                [attr.x2]="a['x2']"
+                [attr.y1]="a['y1']"
+                [attr.y2]="a['y2']"
+              />
+            }
+            @case ('rect') {
+              <svg:rect
+                [attr.x]="a['x']"
+                [attr.y]="a['y']"
+                [attr.width]="a['width']"
+                [attr.height]="a['height']"
+                [attr.rx]="a['rx']"
+                [attr.ry]="a['ry']"
+              />
+            }
+            @case ('polyline') {
+              <svg:polyline [attr.points]="a['points']" />
+            }
+            @case ('polygon') {
+              <svg:polygon [attr.points]="a['points']" />
+            }
+          }
+        }
+      </svg>
     }
   `,
   styles: `
@@ -203,7 +125,7 @@ export class DsIconComponent {
     const name = this.name();
     return isBrandIcon(name) ? DS_BRAND_ICONS[name] : null;
   });
-  protected readonly icon = computed(() => {
+  protected readonly nodes = computed<DsIconNode | null>(() => {
     const name = this.name();
     return isBrandIcon(name) ? null : DS_ICONS[name];
   });

@@ -4,6 +4,7 @@ import { ConfigService } from '@nestjs/config';
 import type { ConversationsService } from '../conversations/conversations.service';
 import type { PrismaService } from '../prisma/prisma.service';
 import { ChannelsService } from './channels.service';
+import type { MetaInstagramClient } from './meta-instagram.client';
 import type { MetaWhatsAppClient } from './meta-whatsapp.client';
 
 function service(env: Record<string, string>) {
@@ -14,6 +15,7 @@ function service(env: Record<string, string>) {
     config,
     {} as ConversationsService,
     {} as MetaWhatsAppClient,
+    {} as MetaInstagramClient,
   );
 }
 

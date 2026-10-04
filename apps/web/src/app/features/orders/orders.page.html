@@ -220,6 +220,16 @@
           </div>
         </dl>
 
+        @if (order.serviceNote || isServicesOnly(order)) {
+          <section>
+            <h3>Servicio</h3>
+            <p class="delivery">
+              <span>Fecha preferida: <strong>{{ order.serviceNote || 'Sin indicar' }}</strong></span>
+              <span>Coordina con el cliente el día y la hora; la preferencia no es una cita confirmada.</span>
+            </p>
+          </section>
+        }
+
         @if (order.delivery; as delivery) {
           <section>
             <h3>Entrega</h3>

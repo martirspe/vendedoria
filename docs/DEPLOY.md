@@ -61,13 +61,43 @@ docker compose exec api npm run create-admin -- --revoke --email=ops@marrso.com
 docker compose exec api npm run create-admin -- --help
 ```
 
-Crea un SUPERADMIN después del primer deploy. No se puede quitar el rol al último SUPERADMIN, y cada cambio queda registrado en `PlatformAuditLog`.
+Crea un SUPERADMIN después del primer deploy. No se puede quitar el rol al último SUPERADMIN, y cada cambio queda registrado en `PlatformAuditLog`. Alta de negocios, equipos y operadores, permisos y recuperación de acceso: [`USUARIOS.md`](./USUARIOS.md).
 
 Webhooks a configurar fuera del VPS:
 
 - Meta (WhatsApp): `https://app.marrso.com/api/v1/webhooks/meta/whatsapp` con `META_VERIFY_TOKEN`.
-- Mercado Pago (cobro de planes): `https://app.marrso.com/api/v1/webhooks/billing/mercadopago`, evento Pagos.
+- Mercado Pago (cobro de planes): `https://app.marrso.com/api/v1/webhooks/billing/mercadopago`, evento Order (Mercado Pago). Detalle en [Mercado Pago](#mercado-pago).
 - Meta (Instagram): en la app de Meta, producto Instagram → Webhooks, URL `https://app.marrso.com/api/v1/webhooks/meta/instagram` con `META_VERIFY_TOKEN`, campo `messages`. Firma con `INSTAGRAM_APP_SECRET` (si falta, usa `META_APP_SECRET`).
+
+### Mercado Pago
+
+Hay dos configuraciones separadas que nunca se mezclan: el cobro de los planes de VendedorIA (lo que cada negocio te paga a ti) y el cobro de cada tienda (lo que el comprador le paga al negocio).
+
+| | Planes de VendedorIA | Tienda de cada negocio |
+|---|---|---|
+| Cuenta de Mercado Pago | La tuya | La del negocio |
+| Credenciales | `.env` (`PLATFORM_MERCADOPAGO_*`) | Consola del negocio → Cobros (cifradas en la base) |
+| Webhook | `https://app.marrso.com/api/v1/webhooks/billing/mercadopago` | `https://app.marrso.com/api/v1/webhooks/mercadopago/{tenantId}` |
+| Eventos | Order (Mercado Pago) | Order (Mercado Pago) y Pagos |
+| Dónde se paga | En la consola, en Planes (tarjeta o Yape) | En la tienda, en la página del pedido (tarjeta o Yape); los links que envía el agente por chat abren Mercado Pago |
+
+**Planes de VendedorIA.** El negocio paga sin salir de la consola: el formulario de tarjeta (Card Payment Brick) y Yape de Mercado Pago se muestran en Planes, y la API cobra con la Orders API en tu cuenta. En tu aplicación de Mercado Pago:
+
+1. Tus integraciones → Credenciales: copia el Access Token a `PLATFORM_MERCADOPAGO_ACCESS_TOKEN` y la Public Key a `PLATFORM_MERCADOPAGO_PUBLIC_KEY`. Las credenciales de prueba también empiezan por `APP_USR-`: usa las de prueba o las de producción, pero las dos del mismo ambiente que el webhook.
+2. Webhooks → Configurar notificaciones: URL `https://app.marrso.com/api/v1/webhooks/billing/mercadopago`, evento **Order (Mercado Pago)**. Guarda y copia la clave secreta a `PLATFORM_MERCADOPAGO_WEBHOOK_SECRET`.
+3. `bash scripts/deploy.sh`.
+
+Sin las tres variables, comprar un plan pagado no está disponible en producción; el deploy falla si hay Access Token y clave secreta pero falta la Public Key. Para probar con credenciales de prueba, paga con las tarjetas de prueba de Mercado Pago (titular `APRO` aprobado, `OTHE` rechazado) o con Yape usando el celular `111111111`.
+
+**Tiendas.** En el servidor solo hace falta `PAYMENT_CREDENTIALS_KEY`, que el primer deploy genera y que cifra las credenciales de cada negocio. No la cambies después: las cuentas ya conectadas dejarían de poder descifrarse. Cada negocio hace el resto desde su consola, en Cobros:
+
+1. Crea una aplicación en su propia cuenta de Mercado Pago (debe ser de Perú).
+2. Pega su Access Token y su Public Key.
+3. En Webhooks de su aplicación pega la URL que muestra la consola (`…/webhooks/mercadopago/{tenantId}`), marca **Order (Mercado Pago)** y **Pagos**, guarda y pega la clave secreta en la consola.
+
+Sin la clave secreta del webhook, la tienda no ofrece pago con tarjeta o Yape aunque el token sea válido.
+
+En los dos casos el backend verifica la firma `x-signature`, ignora notificaciones repetidas y vuelve a consultar el estado real en Mercado Pago antes de marcar algo como pagado.
 
 ### Dominios propios de las tiendas (opcional)
 

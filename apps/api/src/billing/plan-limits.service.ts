@@ -26,6 +26,10 @@ export type PlanUsageSnapshot = {
   extraChats: number;
   aiRepliesUsed: number;
   aiReplyQuota: number | null;
+  aiTextsUsed: number;
+  aiTextQuota: number | null;
+  aiImagesUsed: number;
+  aiImageQuota: number | null;
   productsUsed: number;
   productQuota: number | null;
   couponsActive: number;
@@ -35,12 +39,16 @@ export type PlanUsageSnapshot = {
   seatQuota: number | null;
   conversationAtLimit: boolean;
   aiAtLimit: boolean;
+  aiTextAtLimit: boolean;
+  aiImageAtLimit: boolean;
   productAtLimit: boolean;
   couponAtLimit: boolean;
   seatAtLimit: boolean;
   integrations: IntegrationKey[];
   periodStart: string;
 };
+
+export type EditorAiKind = 'text' | 'image';
 
 const atLimit = (used: number, quota: number | null) => quota !== null && used >= quota;
 const plus = (quota: number | null, extra: number) => (quota === null ? null : quota + extra);
@@ -83,7 +91,7 @@ export class PlanLimitsService {
         }),
         this.prisma.aiUsageMonth.findUnique({
           where: { tenantId_periodStart: { tenantId, periodStart } },
-          select: { replies: true },
+          select: { replies: true, editorTexts: true, editorImages: true },
         }),
         this.prisma.membership.count({ where: { tenantId } }),
         this.prisma.memberInvite.count({
@@ -97,6 +105,8 @@ export class PlanLimitsService {
     const conversationQuota = plus(state.conversationQuota, extraChats);
     const aiReplyQuota = plus(state.aiReplyQuota, extraChats * AI_REPLIES_PER_CHAT);
     const aiRepliesUsed = aiUsage?.replies ?? 0;
+    const aiTextsUsed = aiUsage?.editorTexts ?? 0;
+    const aiImagesUsed = aiUsage?.editorImages ?? 0;
     const seatsUsed = members + invites;
     return {
       planTier: state.plan.id,
@@ -107,6 +117,10 @@ export class PlanLimitsService {
       extraChats,
       aiRepliesUsed,
       aiReplyQuota,
+      aiTextsUsed,
+      aiTextQuota: state.aiTextQuota,
+      aiImagesUsed,
+      aiImageQuota: state.aiImageQuota,
       productsUsed,
       productQuota: state.productQuota,
       couponsActive,
@@ -115,6 +129,8 @@ export class PlanLimitsService {
       seatQuota: state.seatQuota,
       conversationAtLimit: atLimit(conversationsUsed, conversationQuota),
       aiAtLimit: atLimit(aiRepliesUsed, aiReplyQuota),
+      aiTextAtLimit: atLimit(aiTextsUsed, state.aiTextQuota),
+      aiImageAtLimit: atLimit(aiImagesUsed, state.aiImageQuota),
       productAtLimit: atLimit(productsUsed, state.productQuota),
       couponAtLimit: atLimit(couponsActive, state.couponQuota),
       seatAtLimit: atLimit(seatsUsed, state.seatQuota),
@@ -194,6 +210,35 @@ export class PlanLimitsService {
       where: { tenantId_periodStart: { tenantId, periodStart } },
       create: { tenantId, periodStart, replies: 1 },
       update: { replies: { increment: 1 } },
+    });
+  }
+
+  /** Store editor AI, capped apart from the agent replies. */
+  async assertCanUseEditorAi(tenantId: string, kind: EditorAiKind): Promise<void> {
+    const usage = await this.getUsage(tenantId);
+    if (usage.planStatus === 'EXPIRED') {
+      throw new ForbiddenException('Tu plan venció. Renueva tu plan en Planes para usar la IA en tu tienda.');
+    }
+    const [atCap, quota, noun] =
+      kind === 'text'
+        ? [usage.aiTextAtLimit, usage.aiTextQuota, 'textos']
+        : [usage.aiImageAtLimit, usage.aiImageQuota, 'imágenes'];
+    if (atCap) {
+      throw new ForbiddenException(
+        quota
+          ? `Usaste los ${quota} ${noun} con IA de este mes, el máximo ${this.planLabel(usage)}. Se renuevan el 1 de cada mes, o cambia de plan en Planes.`
+          : `Tu plan no incluye ${noun} con IA para tu tienda. Cambia de plan en Planes para usarlos.`,
+      );
+    }
+  }
+
+  async recordEditorAi(tenantId: string, kind: EditorAiKind): Promise<void> {
+    const periodStart = currentPeriodStart();
+    await this.prisma.aiUsageMonth.upsert({
+      where: { tenantId_periodStart: { tenantId, periodStart } },
+      create:
+        kind === 'text' ? { tenantId, periodStart, editorTexts: 1 } : { tenantId, periodStart, editorImages: 1 },
+      update: kind === 'text' ? { editorTexts: { increment: 1 } } : { editorImages: { increment: 1 } },
     });
   }
 

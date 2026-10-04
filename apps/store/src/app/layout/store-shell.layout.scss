@@ -33,6 +33,19 @@
   text-align: center;
 }
 
+.announcement {
+  padding: var(--ds-space-2) 0;
+  background: var(--store-brand);
+  color: var(--store-on-brand);
+  font-size: 0.875rem;
+  font-weight: 600;
+  text-align: center;
+
+  p {
+    margin: 0;
+  }
+}
+
 .header {
   position: sticky;
   top: 0;

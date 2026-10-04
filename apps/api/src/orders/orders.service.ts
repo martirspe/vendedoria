@@ -3,7 +3,7 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
-import { OrderChannel, OrderStatus, Prisma } from '@prisma/client';
+import { OrderChannel, OrderStatus, Prisma, ProductKind } from '@prisma/client';
 import { CheckoutService } from '../checkout/checkout.service';
 import { OrderEmailService } from '../checkout/order-email.service';
 import { InboxEventsService } from '../conversations/inbox-events.service';
@@ -19,7 +19,7 @@ import {
 } from './dto/orders.dto';
 
 const ORDER_INCLUDE = {
-  items: true,
+  items: { include: { product: { select: { kind: true } } } },
   payments: {
     orderBy: { createdAt: 'desc' as const },
   },
@@ -32,6 +32,12 @@ const ORDER_INCLUDE = {
     },
   },
 } satisfies Prisma.OrderInclude;
+
+/** True when every line is a service, so nothing is shipped. */
+export const isServicesOnly = (
+  items: Array<{ product: { kind: ProductKind } | null }>,
+) =>
+  items.length > 0 && items.every((item) => item.product?.kind === 'SERVICE');
 
 /** Delivery already priced on the server from the tenant's shipping settings (never from client input). */
 export type OrderShipping = { cents: number; delivery: Prisma.InputJsonObject };
@@ -90,7 +96,11 @@ export class OrdersService {
     return order;
   }
 
-  async create(tenantId: string, dto: CreateOrderDto, shipping?: OrderShipping) {
+  async create(
+    tenantId: string,
+    dto: CreateOrderDto,
+    shipping?: OrderShipping,
+  ) {
     if (dto.conversationId) {
       const conversation = await this.prisma.conversation.findFirst({
         where: { id: dto.conversationId, tenantId },
@@ -106,7 +116,9 @@ export class OrdersService {
           where: { id: item.productId, tenantId },
         });
         if (!product) {
-          throw new BadRequestException('Algún producto del pedido ya no existe.');
+          throw new BadRequestException(
+            'Algún producto del pedido ya no existe.',
+          );
         }
       }
     }
@@ -218,15 +230,35 @@ export class OrdersService {
     this.assertTransition(order.status, dto.status);
     const trackingCode = dto.trackingCode?.trim() || null;
     if (order.status === dto.status) {
-      if (dto.status === 'SHIPPED' && trackingCode && trackingCode !== order.trackingCode) {
-        await this.prisma.order.update({ where: { id: order.id }, data: { trackingCode } });
+      if (
+        dto.status === 'SHIPPED' &&
+        trackingCode &&
+        trackingCode !== order.trackingCode
+      ) {
+        await this.prisma.order.update({
+          where: { id: order.id },
+          data: { trackingCode },
+        });
         return this.getById(tenantId, orderId);
       }
       return order;
     }
-    const pickup = (order.delivery as { mode?: string } | null)?.mode === 'PICKUP';
-    if (dto.status === 'SHIPPED' && !pickup && order.channel === 'WEB' && !trackingCode) {
-      throw new BadRequestException('Ingresa el código de seguimiento del envío.');
+    if (dto.status === 'SHIPPED' && isServicesOnly(order.items)) {
+      throw new BadRequestException(
+        'Un pedido de servicios no se envía: márcalo como realizado.',
+      );
+    }
+    const pickup =
+      (order.delivery as { mode?: string } | null)?.mode === 'PICKUP';
+    if (
+      dto.status === 'SHIPPED' &&
+      !pickup &&
+      order.channel === 'WEB' &&
+      !trackingCode
+    ) {
+      throw new BadRequestException(
+        'Ingresa el código de seguimiento del envío.',
+      );
     }
 
     const paidNow = await this.prisma.$transaction(async (tx) => {
@@ -237,14 +269,20 @@ export class OrdersService {
       } else {
         await tx.order.update({
           where: { id: order.id },
-          data: { status: dto.status, ...(dto.status === 'SHIPPED' && trackingCode ? { trackingCode } : {}) },
+          data: {
+            status: dto.status,
+            ...(dto.status === 'SHIPPED' && trackingCode
+              ? { trackingCode }
+              : {}),
+          },
         });
       }
       return false;
     });
     if (order.conversationId) {
       this.inboxEvents.publish(tenantId, order.conversationId, 'conversation');
-      if (paidNow) await this.notifications.paymentConfirmed(tenantId, order.id);
+      if (paidNow)
+        await this.notifications.paymentConfirmed(tenantId, order.id);
     }
     if (dto.status === 'SHIPPED' || dto.status === 'COMPLETED') {
       await this.email.sendLogistics(order.id);

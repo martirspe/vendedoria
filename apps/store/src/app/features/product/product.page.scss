@@ -237,6 +237,22 @@
   text-decoration: underline;
 }
 
+.service-note {
+  margin: 0;
+  color: var(--store-muted);
+  font-size: 0.9rem;
+}
+
+.purchase-note {
+  margin: 0;
+  padding: var(--ds-space-3) var(--ds-space-4);
+  border-left: 3px solid var(--store-brand);
+  border-radius: var(--store-radius-control);
+  background: var(--store-surface);
+  color: var(--store-text);
+  font-size: 0.925rem;
+}
+
 .description {
   display: grid;
   gap: var(--ds-space-2);

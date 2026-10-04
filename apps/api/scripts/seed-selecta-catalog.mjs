@@ -179,7 +179,11 @@ try {
         update: { enabled: true },
       });
       const storefront = await tx.storefront.findUniqueOrThrow({ where: { tenantId: tenant.id } });
-      const copy = storefront.templateCopy && typeof storefront.templateCopy === 'object' ? storefront.templateCopy : {};
+      const content =
+        storefront.templateContent && typeof storefront.templateContent === 'object'
+          ? storefront.templateContent
+          : { version: 1, sections: {} };
+      const sections = content.sections ?? {};
       await tx.storefront.update({
         where: { tenantId: tenant.id },
         data: {
@@ -190,7 +194,11 @@ try {
           freeShippingFromCents: FREE_SHIPPING_FROM_CENTS,
           shippingOriginUbigeo: storefront.shippingOriginUbigeo ?? SHIPPING_ORIGIN_UBIGEO,
           carrierRates: storefront.carrierRates ?? CARRIER_RATES,
-          templateCopy: { ...copy, bannerImageUrl: copy.bannerImageUrl ?? banner },
+          templateContent: {
+            ...content,
+            version: 1,
+            sections: { ...sections, banner: { ...sections.banner, image: sections.banner?.image ?? banner } },
+          },
         },
       });
       return { created, updated: products.length - created, hidden: hidden.count, newlyPriced };

@@ -148,7 +148,11 @@ pair() {
   [[ -n "$a" ]]
 }
 pair TURNSTILE_SITE_KEY TURNSTILE_SECRET_KEY || warn "Turnstile not configured: login, sign-up and checkout rely on IP rate limits only."
-pair PLATFORM_MERCADOPAGO_ACCESS_TOKEN PLATFORM_MERCADOPAGO_WEBHOOK_SECRET || warn "Plan checkout disabled (no PLATFORM_MERCADOPAGO_*)."
+if pair PLATFORM_MERCADOPAGO_ACCESS_TOKEN PLATFORM_MERCADOPAGO_WEBHOOK_SECRET; then
+  [[ -n "$(read_env PLATFORM_MERCADOPAGO_PUBLIC_KEY)" ]] || fail "PLATFORM_MERCADOPAGO_PUBLIC_KEY is required to pay plans in the console"
+else
+  warn "Plan checkout disabled (no PLATFORM_MERCADOPAGO_*)."
+fi
 
 if [[ "$(read_env EMAIL_MODE)" == "live" ]]; then
   [[ -n "$(read_env EMAIL_FROM)" ]] || fail "EMAIL_MODE=live requires EMAIL_FROM"

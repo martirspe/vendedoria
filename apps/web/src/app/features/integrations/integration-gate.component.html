@@ -1,3 +1,5 @@
-<ds-empty-state [title]="title()" [body]="description()">
-  <ds-button type="button" (click)="go()">{{ locked() ? 'Ver planes' : 'Ir a Integraciones' }}</ds-button>
-</ds-empty-state>
+@if (known()) {
+  <ds-empty-state [title]="title()" [body]="description()">
+    <ds-button type="button" (click)="go()">{{ locked() ? 'Ver planes' : 'Ir a Integraciones' }}</ds-button>
+  </ds-empty-state>
+}

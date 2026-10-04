@@ -2,8 +2,10 @@ import { Injectable, inject } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { firstValueFrom } from 'rxjs';
 import type {
+  StoreEditorSection,
+  StoreEditorTheme,
   StoreTemplate,
-  StoreTemplateCopy,
+  StoreTemplateContent,
   StorefrontStatus,
 } from '@vendedoria/contracts';
 import { environment } from '../../../environments/environment';
@@ -30,7 +32,46 @@ export type StorefrontDto = {
   exchangeDays: number;
   industry: StoreIndustry;
   template: StoreTemplate;
-  templateCopy: StoreTemplateCopy | null;
+};
+
+export type StoreEditorState = {
+  /** Draft being edited, or the published content when there are no pending changes. */
+  content: StoreTemplateContent;
+  hasUnpublishedChanges: boolean;
+  /** The draft is published automatically at this time. */
+  scheduledAt: string | null;
+  savedAt: string;
+};
+
+/** Design that was published until `replacedAt`. */
+export type StoreEditorVersion = { id: string; replacedAt: string };
+
+export type StoreEditorView = StoreEditorState & {
+  template: StoreTemplate;
+  sections: StoreEditorSection[];
+  theme: StoreEditorTheme;
+  storeStatus: StorefrontStatus;
+  /** Store home in edit mode; valid until `frameExpiresAt`. */
+  frameUrl: string;
+  frameExpiresAt: string;
+  /** Texts can be drafted with AI. */
+  aiText: boolean;
+};
+
+export type StoreTextAiAction = 'write' | 'shorter' | 'persuasive' | 'friendly' | 'fix';
+
+/** A home page written by AI: texts per built-in section and library blocks in order. */
+export type StorePageAi = {
+  sections: Record<string, Record<string, string>>;
+  blocks: { type: string; texts: Record<string, string> }[];
+};
+
+export type StoreTextAiRequest = {
+  section: string;
+  field: string;
+  action: StoreTextAiAction;
+  current?: string;
+  instruction?: string;
 };
 
 export type StoreIndustry =
@@ -90,7 +131,6 @@ export type UpdateStorePayload = Partial<{
   exchangeDays: number;
   industry: StoreIndustry;
   template: StoreTemplate;
-  templateCopy: StoreTemplateCopy | null;
 }>;
 
 @Injectable({ providedIn: 'root' })
@@ -129,5 +169,60 @@ export class StoreApiService {
     return firstValueFrom(
       this.http.post<{ url: string; expiresAt: string }>(`${this.base}/preview-link`, {}),
     );
+  }
+
+  editor(): Promise<StoreEditorView> {
+    return firstValueFrom(this.http.get<StoreEditorView>(`${this.base}/editor`));
+  }
+
+  saveDraft(content: StoreTemplateContent): Promise<StoreEditorState> {
+    return firstValueFrom(this.http.put<StoreEditorState>(`${this.base}/editor/draft`, { content }));
+  }
+
+  publishDraft(): Promise<StoreEditorState> {
+    return firstValueFrom(this.http.post<StoreEditorState>(`${this.base}/editor/publish`, {}));
+  }
+
+  discardDraft(): Promise<StoreEditorState> {
+    return firstValueFrom(this.http.post<StoreEditorState>(`${this.base}/editor/discard`, {}));
+  }
+
+  scheduleDraft(publishAt: string): Promise<StoreEditorState> {
+    return firstValueFrom(this.http.put<StoreEditorState>(`${this.base}/editor/schedule`, { publishAt }));
+  }
+
+  cancelSchedule(): Promise<StoreEditorState> {
+    return firstValueFrom(this.http.delete<StoreEditorState>(`${this.base}/editor/schedule`));
+  }
+
+  editorVersions(): Promise<StoreEditorVersion[]> {
+    return firstValueFrom(this.http.get<StoreEditorVersion[]>(`${this.base}/editor/versions`));
+  }
+
+  restoreVersion(id: string): Promise<StoreEditorState> {
+    return firstValueFrom(
+      this.http.post<StoreEditorState>(`${this.base}/editor/versions/${encodeURIComponent(id)}/restore`, {}),
+    );
+  }
+
+  suggestText(request: StoreTextAiRequest): Promise<{ suggestions: string[] }> {
+    return firstValueFrom(this.http.post<{ suggestions: string[] }>(`${this.base}/editor/ai/text`, request));
+  }
+
+  /** A library block type and its texts written from the merchant's request. */
+  suggestSection(prompt: string): Promise<{ type: string; texts: Record<string, string> }> {
+    return firstValueFrom(
+      this.http.post<{ type: string; texts: Record<string, string> }>(`${this.base}/editor/ai/section`, { prompt }),
+    );
+  }
+
+  /** Texts of the built-in home sections and a few blocks, written from the merchant's request. */
+  suggestPage(prompt: string): Promise<StorePageAi> {
+    return firstValueFrom(this.http.post<StorePageAi>(`${this.base}/editor/ai/page`, { prompt }));
+  }
+
+  /** An ambiance photo for an image field, already saved as an upload of the business. */
+  suggestImage(request: { section: string; field: string; instruction?: string }): Promise<{ url: string }> {
+    return firstValueFrom(this.http.post<{ url: string }>(`${this.base}/editor/ai/image`, request));
   }
 }

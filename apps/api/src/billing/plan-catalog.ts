@@ -12,6 +12,10 @@ export type PlanLimits = {
   conversationQuota: number | null;
   /** Agent replies written with OpenAI per calendar month; past it the agent answers without AI. */
   aiReplyQuota: number | null;
+  /** Texts and sections written with AI in the store editor per calendar month. */
+  aiTextQuota: number | null;
+  /** Images generated with AI in the store editor per calendar month. */
+  aiImageQuota: number | null;
   productQuota: number | null;
   /** Coupons active at the same time in the store. */
   couponQuota: number | null;
@@ -70,6 +74,13 @@ export const TRIAL_PLAN: PlanTier = 'GROW';
  */
 export const AI_REPLIES_PER_CHAT = 15;
 
+/*
+ * Store editor AI has its own caps so writing the store never uses the agent's replies. Cost
+ * reference: a text request (~1 500 tokens with gpt-4o-mini) is under S/ 0.003; a 1536×1024
+ * image with gpt-image-1-mini at medium quality is about S/ 0.06, so at full use the image cap
+ * stays under ~4 % of each plan price. Review the caps if `OPENAI_IMAGE_MODEL` changes.
+ */
+
 /**
  * Paying several months in advance (one payment, no automatic renewal). Discounts keep at least
  * ~30 % margin at full use of every plan after IGV, the Mercado Pago fee and the AI cost.
@@ -95,6 +106,8 @@ export const CHAT_PACKS: ChatPackDefinition[] = [
 export const TRIAL_LIMITS: PlanLimits = {
   conversationQuota: 100,
   aiReplyQuota: 100 * AI_REPLIES_PER_CHAT,
+  aiTextQuota: 100,
+  aiImageQuota: 10,
   productQuota: 20,
   couponQuota: 3,
   seatQuota: 2,
@@ -118,6 +131,7 @@ export const INCLUDED_IN_ALL_PLANS = [
 export const PLAN_NOTES = [
   'Un chat nuevo es una persona que te escribe por primera vez. Si esa persona vuelve a escribirte, no cuenta otra vez.',
   'Las respuestas con IA son las que tu vendedor escribe con inteligencia artificial. Si llegas al máximo del mes, sigue respondiendo con respuestas básicas de tu catálogo hasta el mes siguiente o hasta que sumes chats extra.',
+  'Los textos e imágenes con IA del editor de tu tienda tienen su propio límite mensual y no usan las respuestas de tu vendedor.',
   'Meta cobra los mensajes de WhatsApp aparte, en tu cuenta de WhatsApp Business: cada número tiene 1 000 respuestas gratis al mes y luego paga unos S/ 0,10 por respuesta. Un chat de venta usa entre 6 y 10 respuestas.',
   'El dinero de tus ventas llega a tu cuenta de Mercado Pago. VendedorIA no cobra comisión por venta.',
   'Los precios incluyen IGV.',
@@ -131,6 +145,8 @@ export const PLAN_CATALOG: PlanDefinition[] = [
     priceCents: 2_900,
     conversationQuota: 50,
     aiReplyQuota: 50 * AI_REPLIES_PER_CHAT,
+    aiTextQuota: 0,
+    aiImageQuota: 0,
     productQuota: 25,
     couponQuota: 0,
     seatQuota: 1,
@@ -153,6 +169,8 @@ export const PLAN_CATALOG: PlanDefinition[] = [
     priceCents: 7_900,
     conversationQuota: 400,
     aiReplyQuota: 400 * AI_REPLIES_PER_CHAT,
+    aiTextQuota: 300,
+    aiImageQuota: 30,
     productQuota: 100,
     couponQuota: 5,
     seatQuota: 2,
@@ -164,6 +182,7 @@ export const PLAN_CATALOG: PlanDefinition[] = [
       '400 chats nuevos al mes',
       'Hasta 6 000 respuestas con IA al mes',
       'Tienda web con cobros con tarjeta y Yape',
+      'Diseña tu tienda con IA: 300 textos y 30 imágenes al mes',
       'Hasta 100 productos',
       '5 cupones activos a la vez',
       '2 usuarios',
@@ -178,6 +197,8 @@ export const PLAN_CATALOG: PlanDefinition[] = [
     priceCents: 19_900,
     conversationQuota: 1200,
     aiReplyQuota: 1200 * AI_REPLIES_PER_CHAT,
+    aiTextQuota: 1000,
+    aiImageQuota: 100,
     productQuota: 300,
     couponQuota: 20,
     seatQuota: 5,
@@ -188,6 +209,7 @@ export const PLAN_CATALOG: PlanDefinition[] = [
     highlights: [
       '1 200 chats nuevos al mes',
       'Hasta 18 000 respuestas con IA al mes',
+      'Diseña tu tienda con IA: 1 000 textos y 100 imágenes al mes',
       'Hasta 300 productos',
       '20 cupones activos a la vez',
       '5 usuarios',
@@ -202,6 +224,8 @@ export const PLAN_CATALOG: PlanDefinition[] = [
     priceCents: 54_900,
     conversationQuota: 4000,
     aiReplyQuota: 4000 * AI_REPLIES_PER_CHAT,
+    aiTextQuota: 3000,
+    aiImageQuota: 300,
     productQuota: 1000,
     couponQuota: null,
     seatQuota: 15,
@@ -212,6 +236,7 @@ export const PLAN_CATALOG: PlanDefinition[] = [
     highlights: [
       '4 000 chats nuevos al mes',
       'Hasta 60 000 respuestas con IA al mes',
+      'Diseña tu tienda con IA: 3 000 textos y 300 imágenes al mes',
       'Hasta 1 000 productos',
       'Cupones sin límite',
       '15 usuarios',
@@ -226,6 +251,8 @@ export const PLAN_CATALOG: PlanDefinition[] = [
     priceCents: null,
     conversationQuota: null,
     aiReplyQuota: null,
+    aiTextQuota: null,
+    aiImageQuota: null,
     productQuota: null,
     couponQuota: null,
     seatQuota: null,
@@ -277,6 +304,8 @@ function limitsOf(source: PlanLimits): PlanLimits {
   return {
     conversationQuota: source.conversationQuota,
     aiReplyQuota: source.aiReplyQuota,
+    aiTextQuota: source.aiTextQuota,
+    aiImageQuota: source.aiImageQuota,
     productQuota: source.productQuota,
     couponQuota: source.couponQuota,
     seatQuota: source.seatQuota,
@@ -303,6 +332,8 @@ export function resolvePlanState(
       ...limitsOf(base),
       conversationQuota: 0,
       aiReplyQuota: 0,
+      aiTextQuota: 0,
+      aiImageQuota: 0,
       productQuota: 0,
       platformBadge: true,
       integrations: [],

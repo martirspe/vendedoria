@@ -29,7 +29,15 @@ describe('plan catalog', () => {
     for (let i = 1; i < paid.length; i++) {
       const [lower, higher] = [paid[i - 1], paid[i]];
       expect(higher.priceCents).toBeGreaterThan(lower.priceCents);
-      for (const key of ['conversationQuota', 'aiReplyQuota', 'productQuota', 'couponQuota', 'seatQuota'] as const) {
+      for (const key of [
+        'conversationQuota',
+        'aiReplyQuota',
+        'aiTextQuota',
+        'aiImageQuota',
+        'productQuota',
+        'couponQuota',
+        'seatQuota',
+      ] as const) {
         const value = higher[key];
         expect(value === null || value > (lower[key] ?? Infinity)).toBe(true);
       }
@@ -43,12 +51,22 @@ describe('plan catalog', () => {
     }
   });
 
+  it('gives store editor AI only to plans with the web store', () => {
+    for (const plan of PLAN_CATALOG) {
+      const hasStore = plan.integrations.includes('store');
+      expect(plan.aiTextQuota !== 0).toBe(hasStore);
+      expect(plan.aiImageQuota !== 0).toBe(hasStore);
+    }
+  });
+
   it('applies the trial limits during the Crece trial', () => {
     const state = resolvePlanState({ planTier: 'GROW', planTrial: true, planExpiresAt: future }, now);
     expect(state).toMatchObject({
       status: 'TRIAL',
       conversationQuota: 100,
       aiReplyQuota: 100 * AI_REPLIES_PER_CHAT,
+      aiTextQuota: 100,
+      aiImageQuota: 10,
       productQuota: 20,
       couponQuota: 3,
       seatQuota: 2,
@@ -70,6 +88,8 @@ describe('plan catalog', () => {
       status: 'EXPIRED',
       conversationQuota: 0,
       aiReplyQuota: 0,
+      aiTextQuota: 0,
+      aiImageQuota: 0,
       productQuota: 0,
       couponQuota: 20,
       platformBadge: true,

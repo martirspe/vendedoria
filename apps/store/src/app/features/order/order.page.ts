@@ -89,14 +89,15 @@ export class OrderPage {
   readonly logistics = computed(() => {
     const order = this.order();
     if (!order) return null;
-    const pickup = order.delivery.mode === 'PICKUP';
+    const pickup = order.delivery?.mode === 'PICKUP';
+    const servicesOnly = !order.delivery;
     switch (order.status) {
       case 'FULFILLING':
-        return 'Estamos preparando tu pedido.';
+        return servicesOnly ? 'Estamos coordinando tu servicio.' : 'Estamos preparando tu pedido.';
       case 'SHIPPED':
         return pickup ? 'Tu pedido está listo para recoger.' : 'Tu pedido está en camino.';
       case 'COMPLETED':
-        return 'Pedido entregado.';
+        return servicesOnly ? 'Servicio realizado.' : 'Pedido entregado.';
       default:
         return null;
     }

@@ -33,6 +33,7 @@
     "build:web": "npm run build -w @vendedoria/web",
     "build:store": "npm run build -w @vendedoria/store",
     "lint": "npm run lint -w @vendedoria/api --if-present && npm run lint -w @vendedoria/web --if-present",
+    "icons:sync": "node scripts/sync-icons.mjs",
     "prisma:generate": "npm run prisma:generate -w @vendedoria/api",
     "prisma:migrate": "npm run prisma:migrate -w @vendedoria/api"
   },

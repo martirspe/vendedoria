@@ -1,39 +1,35 @@
 import {
   ChangeDetectionStrategy,
   Component,
-  DOCUMENT,
   inject,
   signal,
 } from '@angular/core';
 import { HttpErrorResponse } from '@angular/common/http';
-import { ActivatedRoute, Router, RouterLink } from '@angular/router';
+import { RouterLink } from '@angular/router';
 import { DsButtonComponent } from '@vendedoria/ui';
 import { DsIconComponent } from '@vendedoria/ui';
 import {
   BillingApiService,
   BillingOverview,
   ChatPack,
+  PlanCheckout,
   PlanDefinition,
   PlanPaymentResult,
   PlanPurchase,
   PrepayPrice,
 } from '../../core/api/billing-api.service';
-
-const PROVIDER_PAYMENT_ID = /^\d{1,20}$/;
+import { PlanCheckoutComponent } from './plan-checkout.component';
 
 @Component({
   selector: 'app-plans-page',
   standalone: true,
-  imports: [DsButtonComponent, DsIconComponent, RouterLink],
+  imports: [DsButtonComponent, DsIconComponent, RouterLink, PlanCheckoutComponent],
   templateUrl: './plans.page.html',
   styleUrl: './plans.page.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class PlansPage {
   private readonly api = inject(BillingApiService);
-  private readonly route = inject(ActivatedRoute);
-  private readonly router = inject(Router);
-  private readonly document = inject(DOCUMENT);
 
   readonly loading = signal(true);
   readonly saving = signal(false);
@@ -43,11 +39,13 @@ export class PlansPage {
   readonly overview = signal<BillingOverview | null>(null);
   /** Simulated checkout (development without platform credentials) waiting for confirmation. */
   readonly pendingSimulation = signal<string | null>(null);
+  /** Plan or chat pack being paid in place with Mercado Pago. */
+  readonly activeCheckout = signal<{ checkout: PlanCheckout; purchase: PlanPurchase } | null>(null);
   /** Months paid at once: 1, 3, 6 or 12. */
   readonly months = signal(1);
 
   constructor() {
-    void this.init();
+    void this.load();
   }
 
   async load(): Promise<void> {
@@ -114,6 +112,7 @@ export class PlansPage {
   private async startCheckout(purchase: PlanPurchase, simulatedMessage: string, fallback: string): Promise<void> {
     this.saving.set(true);
     this.clearMessages();
+    this.activeCheckout.set(null);
     try {
       const checkout = await this.api.createCheckout(purchase);
       if (checkout.simulated) {
@@ -121,12 +120,24 @@ export class PlansPage {
         this.infoMessage.set(simulatedMessage);
         return;
       }
-      this.document.defaultView?.location.assign(checkout.checkoutUrl);
+      this.pendingSimulation.set(null);
+      this.activeCheckout.set({ checkout, purchase });
     } catch (error) {
       this.errorMessage.set(this.messageFrom(error, fallback));
     } finally {
       this.saving.set(false);
     }
+  }
+
+  async onCheckoutCompleted(result: PlanPaymentResult): Promise<void> {
+    this.activeCheckout.set(null);
+    this.clearMessages();
+    this.showResult(result);
+    await this.load();
+  }
+
+  closeCheckout(): void {
+    this.activeCheckout.set(null);
   }
 
   async confirmSimulation(): Promise<void> {
@@ -186,46 +197,6 @@ export class PlansPage {
     if (quota == null) return `${used} · sin límite`;
     if (data.planStatus === 'EXPIRED' && quota === 0) return `${used}`;
     return `${used} de ${quota}`;
-  }
-
-  private async init(): Promise<void> {
-    const params = this.route.snapshot.queryParamMap;
-    const payment = params.get('payment');
-    if (payment) {
-      void this.router.navigate([], { relativeTo: this.route, queryParams: {}, replaceUrl: true });
-      await this.handleReturn(payment, params.get('payment_id'), params.get('ref'));
-    }
-    await this.load();
-  }
-
-  private async handleReturn(
-    payment: string,
-    providerPaymentId: string | null,
-    ref: string | null,
-  ): Promise<void> {
-    if (payment === 'simulated') {
-      if (ref) {
-        this.pendingSimulation.set(ref);
-        this.infoMessage.set('Pago de prueba listo. Confírmalo para activar el plan.');
-      }
-      return;
-    }
-    if (!providerPaymentId || !PROVIDER_PAYMENT_ID.test(providerPaymentId)) {
-      if (payment === 'failure') {
-        this.errorMessage.set('El pago no se completó. Puedes intentarlo de nuevo.');
-      }
-      return;
-    }
-    try {
-      this.showResult(await this.api.confirmPayment(providerPaymentId));
-    } catch (error) {
-      this.errorMessage.set(
-        this.messageFrom(
-          error,
-          'No pudimos confirmar tu pago. Si ya se descontó de tu cuenta, escríbenos desde Ayuda y lo revisamos.',
-        ),
-      );
-    }
   }
 
   private showResult(result: PlanPaymentResult): void {

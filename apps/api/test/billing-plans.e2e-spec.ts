@@ -45,6 +45,7 @@ describe('Plan billing (e2e)', () => {
 
   beforeAll(async () => {
     delete process.env.PLATFORM_MERCADOPAGO_ACCESS_TOKEN;
+    delete process.env.PLATFORM_MERCADOPAGO_PUBLIC_KEY;
     delete process.env.PLATFORM_MERCADOPAGO_WEBHOOK_SECRET;
     const moduleRef = await Test.createTestingModule({
       imports: [AppModule],
@@ -106,7 +107,18 @@ describe('Plan billing (e2e)', () => {
 
   it('activates the plan once, only for the paying tenant', async () => {
     const checkout = await billing.createCheckout(owner, { planTier: 'GROW' });
-    expect(checkout.simulated).toBe(true);
+    expect(checkout).toMatchObject({
+      simulated: true,
+      publicKey: null,
+      amountCents: 7_900,
+      currency: 'PEN',
+      payerEmail: owner.email,
+    });
+    await expect(
+      billing.pay(owner, checkout.paymentId, { method: 'yape', cardToken: 'token-de-prueba', phone: '111111111' }),
+    ).rejects.toThrow(BadRequestException);
+    await expect(billing.paymentStatus(otherOwner, checkout.paymentId)).rejects.toThrow(NotFoundException);
+    await expect(billing.paymentStatus(owner, checkout.paymentId)).resolves.toEqual({ status: 'pending' });
     const payment = await prisma.payment.findUniqueOrThrow({ where: { id: checkout.paymentId } });
     expect(payment).toMatchObject({
       flow: 'BILLING_SUBSCRIPTION',
@@ -137,6 +149,8 @@ describe('Plan billing (e2e)', () => {
     });
 
     await expect(billing.simulatePayment(owner, checkout.paymentId)).resolves.toEqual({ status: 'active' });
+    await expect(billing.paymentStatus(owner, checkout.paymentId)).resolves.toEqual({ status: 'active' });
+    expect((await billing.createCheckout(owner, { planTier: 'GROW' })).paymentId).not.toBe(checkout.paymentId);
     const again = await prisma.tenant.findUniqueOrThrow({ where: { id: owner.tenantId } });
     expect(again.planExpiresAt).toEqual(first.planExpiresAt);
 
@@ -224,5 +238,12 @@ describe('Plan billing (e2e)', () => {
       payload: { type: 'payment', data: { id: '123' } },
     });
     expect(response.statusCode).toBe(401);
+    const order = await app.inject({
+      method: 'POST',
+      url: '/webhooks/billing/mercadopago?type=order&data.id=ORD01TEST',
+      headers: { 'x-signature': `ts=1,v1=${'0'.repeat(64)}`, 'x-request-id': 'req-1' },
+      payload: { type: 'order', data: { id: 'ORD01TEST' } },
+    });
+    expect(order.statusCode).toBe(401);
   });
 });

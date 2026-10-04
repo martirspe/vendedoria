@@ -50,4 +50,5 @@ Multi-tenant SaaS: AI sales agents on WhatsApp/Instagram ("del hola al pago") pl
 ## Documentation
 - Product/UX authority: `PROJECT CONSTITUTION.md` (read by section)
 - Store integration plan (proposal; code wins): `docs/plan-tienda-web.md`
-- Ports, setup: `README.md` · Production deploy (automatic and manual): `docs/DEPLOY.md` · AWS infrastructure with Terraform: `docs/TERRAFORM.md`
+- Ports, setup: `README.md` · Production deploy (automatic and manual): `docs/DEPLOY.md`
+- User onboarding and access (business signup, team invites, platform operators, permissions): `docs/USUARIOS.md` · AWS infrastructure with Terraform: `docs/TERRAFORM.md`

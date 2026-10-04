@@ -23,7 +23,7 @@ Goal: a buyer or merchant never reads text written for developers. Fix the copy 
 1. User-visible text in Spanish (Perú, tú). Code, identifiers and logs stay English.
 2. Honest copy: never promise a channel, integration, human support or payment method that is not live. Remove or reword unfinished features instead of describing their internals.
 3. Keep flow A ("tu plan") and flow B ("pago del cliente") distinct in wording.
-4. Merchant-editable content (store texts, `templateCopy`, Selecta defaults in `selecta-copy.ts`, product data) is tenant data: fix only shipped defaults, never tenant rows, unless the user asks.
+4. Merchant-editable content (store texts, `templateContent`/`templateDraft`, template defaults in `selecta-copy.ts` and classic `home.page.ts`, product data) is tenant data: fix only shipped defaults, never tenant rows, unless the user asks.
 5. Dev-only states may stay technical only when the code proves they never render in production (e.g. gated by `NODE_ENV`, mock provider only when credentials are empty and production refuses it). Otherwise they need production copy.
 6. Do not rename routes, i18n keys, CSS classes or API fields to "fix" copy. No layout redesign.
 7. Legal pages (`apps/store/src/app/features/legal`) change only through the `legal-digital-peru` skill.

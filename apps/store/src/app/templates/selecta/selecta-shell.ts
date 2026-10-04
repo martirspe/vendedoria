@@ -13,25 +13,38 @@ import { NavigationEnd, Router, RouterLink, RouterOutlet } from '@angular/router
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { filter } from 'rxjs';
 import { CartService } from '../../core/cart.service';
+import { announcementText } from '../../core/page-copy';
+import { STORE_EDITOR, StoreEditorBridge } from '../../core/store-editor';
 import { StoreStateService } from '../../core/store-state.service';
+import { THEME_FONTS } from '../../core/theme';
 import { productReference, whatsappUrl } from '../../core/whatsapp';
 import { SelectaCatalog } from './selecta-catalog';
-import { selectaCopy, wholeMoney } from './selecta-copy';
+import { wholeMoney } from '../../core/store-faq';
+import { selectaCopy } from './selecta-copy';
 import { SelectaIcon } from './selecta-icon';
 
 const BODY_CLASS = 'tpl-selecta';
+/** Non-injected `styles` bundle in angular.json: only Selecta stores download it. */
+const STYLESHEET = '/selecta.css';
 
 @Component({
   selector: 'selecta-shell',
-  imports: [RouterOutlet, RouterLink, SelectaIcon],
+  imports: [RouterOutlet, RouterLink, SelectaIcon, STORE_EDITOR],
   templateUrl: './selecta-shell.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
+  host: {
+    '[style.--wine]': 'theme()?.primary',
+    '[style.font-family]': 'font()?.body',
+    '[style.--sel-body]': 'font()?.body',
+    '[style.--sel-display]': 'font()?.display',
+  },
 })
 export class SelectaShell {
   private readonly router = inject(Router);
   private readonly state = inject(StoreStateService);
   private readonly catalog = inject(SelectaCatalog);
   readonly cart = inject(CartService);
+  readonly editor = inject(StoreEditorBridge);
 
   readonly store = this.state.store;
   readonly copy = computed(() => {
@@ -43,6 +56,28 @@ export class SelectaShell {
     const store = this.store();
     return store && this.freeFrom() ? wholeMoney(store, this.freeFrom()) : '';
   });
+  readonly customAnnouncement = computed(() => {
+    const store = this.store();
+    return store ? announcementText(store.templateContent) : undefined;
+  });
+  /** Merchant text, else the template line: free shipping or the tagline. */
+  readonly announcement = computed(() => {
+    const custom = this.customAnnouncement();
+    if (custom !== undefined) return custom;
+    const store = this.store();
+    if (this.freeFrom() > 0) {
+      const pay = store?.checkout.mode === 'online' ? ' · Paga con Yape o tarjeta' : '';
+      return `Envío gratis en pedidos desde ${this.freeLabel()}${pay}`;
+    }
+    return store?.tagline || 'Una selección para regalar. Un ritual para ti.';
+  });
+  readonly theme = computed(() => this.store()?.templateContent.theme);
+  readonly font = computed(() => {
+    const font = this.theme()?.font;
+    return font ? THEME_FONTS[font] : null;
+  });
+  /** Only a logo chosen in the editor: Selecta shows its monogram by default. */
+  readonly logo = computed(() => this.theme()?.logo || null);
   readonly symbol = computed(() => (this.store()?.displayName.trim().charAt(0).toUpperCase() ?? '') + '.');
   readonly currentUrl = signal(this.router.url);
   readonly onProduct = computed(() => this.currentUrl().startsWith('/producto/'));
@@ -66,6 +101,12 @@ export class SelectaShell {
     const document = inject(DOCUMENT);
     const renderer = inject(Renderer2);
     renderer.addClass(document.body, BODY_CLASS);
+    if (!document.head.querySelector(`link[href="${STYLESHEET}"]`)) {
+      const link = renderer.createElement('link') as HTMLLinkElement;
+      renderer.setAttribute(link, 'rel', 'stylesheet');
+      renderer.setAttribute(link, 'href', STYLESHEET);
+      renderer.appendChild(document.head, link);
+    }
     inject(DestroyRef).onDestroy(() => renderer.removeClass(document.body, BODY_CLASS));
 
     this.router.events

@@ -25,7 +25,11 @@ import {
   placeLabel,
   SalesAgentToolsService,
 } from './sales-agent-tools.service';
-import { AgentPersonality, buildAgentPrompt, toPersonality } from './sales-playbook';
+import {
+  AgentPersonality,
+  buildAgentPrompt,
+  toPersonality,
+} from './sales-playbook';
 
 /** How a catalog browse is presented in the reply. */
 type BrowseView = {
@@ -100,6 +104,11 @@ type DeliveryText = {
 const SHIPPING_RULE =
   'Nunca inventes costos ni tiempos de envío: el costo se calcula con el distrito del cliente cuando confirma la compra.';
 
+const SERVICE_RULE =
+  'Los servicios no se envían ni llevan stock. Puedes preguntar qué día u horario prefiere el cliente, pero nunca confirmes una fecha ni una hora: el negocio la confirma después del pago.';
+const SERVICE_SCHEDULE_NOTE =
+  'Después del pago te escribimos para coordinar el día y la hora del servicio.';
+
 const MAX_IMAGES = 3;
 /** A WhatsApp reply needs ~150 tokens; the cap bounds the cost of a runaway answer. */
 const MAX_OUTPUT_TOKENS = 600;
@@ -134,7 +143,10 @@ export class SalesAgentRuntimeService {
     const firstTurn = !history.some((turn) => turn.role === 'agent');
     const pendingLines = awaitingDelivery(history);
     const contextIds = [
-      ...new Set([...lastRecommendedProductIds(history), ...pendingLines.map((line) => line.productId)]),
+      ...new Set([
+        ...lastRecommendedProductIds(history),
+        ...pendingLines.map((line) => line.productId),
+      ]),
     ];
     const refs = this.tools.extractProductRefs(params.inboundText);
     const [agentRow, products, runtimeKnowledge, overview] = await Promise.all([
@@ -163,9 +175,14 @@ export class SalesAgentRuntimeService {
     }
 
     const openAiKey =
-      params.allowAi === false ? undefined : this.config.get<string>('OPENAI_API_KEY');
+      params.allowAi === false
+        ? undefined
+        : this.config.get<string>('OPENAI_API_KEY');
     const intent = conversationalIntent(params.inboundText);
-    if (intent === 'closing' || (intent === 'acknowledgement' && !firstTurn && !openAiKey)) {
+    if (
+      intent === 'closing' ||
+      (intent === 'acknowledgement' && !firstTurn && !openAiKey)
+    ) {
       return {
         replyText: this.applyTone(
           agent,
@@ -191,19 +208,29 @@ export class SalesAgentRuntimeService {
     const browse =
       refs.length || this.tools.wantsPurchase(params.inboundText)
         ? null
-        : await this.resolveBrowse(params.tenantId, params.inboundText, overview, history);
+        : await this.resolveBrowse(
+            params.tenantId,
+            params.inboundText,
+            overview,
+            history,
+          );
     if (browse) {
       matches = browse.view.products;
       searchTrace = browse.trace;
     }
-    const fromContext = !browse && !matches.length && contextProducts.length > 0;
+    const fromContext =
+      !browse && !matches.length && contextProducts.length > 0;
     if (fromContext) {
       matches = contextProducts.slice(0, 3);
       searchTrace = {
         name: 'search_catalog',
         status: 'ok',
         summary: `Producto de la conversación: ${matches.map((item) => item.name).join(', ')}`,
-        data: { matchIds: matches.map((item) => item.id), count: matches.length, fromConversation: true },
+        data: {
+          matchIds: matches.map((item) => item.id),
+          count: matches.length,
+          fromConversation: true,
+        },
       };
     }
 
@@ -212,13 +239,18 @@ export class SalesAgentRuntimeService {
     let pending: PendingChoice = null;
     const cartLines = this.tools.orderLinesFromRefs(refs, products);
     let lines: OrderLine[] = [];
-    if (this.tools.wantsPurchase(params.inboundText) && !this.tools.wantsHuman(params.inboundText)) {
+    if (
+      this.tools.wantsPurchase(params.inboundText) &&
+      !this.tools.wantsHuman(params.inboundText)
+    ) {
       lines = cartLines;
       if (!lines.length) {
         const target =
           this.tools.identifyProduct(params.inboundText, products, refs) ??
           (search.matches.length === 1 ? search.matches[0] : null) ??
-          (fromContext && contextProducts.length === 1 ? contextProducts[0] : null);
+          (fromContext && contextProducts.length === 1
+            ? contextProducts[0]
+            : null);
         if (!target) {
           pending = matches.length ? { kind: 'product' } : null;
         } else {
@@ -227,7 +259,9 @@ export class SalesAgentRuntimeService {
           const variant =
             target.variants.length === 1
               ? target.variants[0]
-              : target.variants.find((item) => text.includes(normalizeText(item.label)));
+              : target.variants.find((item) =>
+                  text.includes(normalizeText(item.label)),
+                );
           if (target.variants.length > 1 && !variant) {
             pending = { kind: 'variant', product: target };
           } else {
@@ -236,13 +270,22 @@ export class SalesAgentRuntimeService {
         }
         searchTrace = {
           ...searchTrace,
-          data: { ...searchTrace.data, matchIds: matches.map((item) => item.id), count: matches.length },
+          data: {
+            ...searchTrace.data,
+            matchIds: matches.map((item) => item.id),
+            count: matches.length,
+          },
         };
       }
     }
 
     let delivery: DeliveryPlan | null = null;
-    if (!lines.length && !pending && pendingLines.length && !this.tools.wantsHuman(params.inboundText)) {
+    if (
+      !lines.length &&
+      !pending &&
+      pendingLines.length &&
+      !this.tools.wantsHuman(params.inboundText)
+    ) {
       const resumed = this.tools.orderLinesFromPending(pendingLines, products);
       if (resumed.length) {
         const plan = planDelivery({
@@ -256,17 +299,27 @@ export class SalesAgentRuntimeService {
           matches = resumed.map((line) => line.product);
           searchTrace = {
             ...searchTrace,
-            data: { ...searchTrace.data, matchIds: matches.map((item) => item.id), count: matches.length },
+            data: {
+              ...searchTrace.data,
+              matchIds: matches.map((item) => item.id),
+              count: matches.length,
+            },
           };
         }
       }
-    } else if (lines.length && !cartLines.length) {
+    } else if (
+      lines.length &&
+      !cartLines.length &&
+      lines.some((line) => !line.product.isService)
+    ) {
       delivery = planDelivery({
         rules: await this.tools.shippingRules(params.tenantId),
         text: params.inboundText,
         subtotalCents: this.tools.subtotalCents(lines),
         ignore: lines.flatMap((line) =>
-          [line.product.name, line.variant?.label ?? ''].flatMap((name) => name.split(/\s+/)).filter((word) => word.length > 3),
+          [line.product.name, line.variant?.label ?? '']
+            .flatMap((name) => name.split(/\s+/))
+            .filter((word) => word.length > 3),
         ),
       });
     }
@@ -325,6 +378,14 @@ export class SalesAgentRuntimeService {
       checkoutUrl = commerce.checkoutUrl;
       if (checkoutUrl && delivery) {
         deliveryText = this.deliveryText(delivery, lines);
+      }
+      if (checkoutUrl && lines.some((line) => line.product.isService)) {
+        deliveryText = {
+          ...deliveryText,
+          note: [deliveryText.note, SERVICE_SCHEDULE_NOTE]
+            .filter(Boolean)
+            .join('\n'),
+        };
       }
     }
     const cartOrder = cartLines.length > 0 && Boolean(orderId);
@@ -413,9 +474,19 @@ export class SalesAgentRuntimeService {
     const request = this.tools.browseRequest(text, overview);
     if (!request) return null;
 
-    if (request.kind === 'catalog' && overview.categories.length >= 2 && overview.total > BROWSE_PAGE) {
+    if (
+      request.kind === 'catalog' &&
+      overview.categories.length >= 2 &&
+      overview.total > BROWSE_PAGE
+    ) {
       return {
-        view: { mode: 'overview', products: [], category: null, remaining: overview.total, overview },
+        view: {
+          mode: 'overview',
+          products: [],
+          category: null,
+          remaining: overview.total,
+          overview,
+        },
         trace: {
           name: 'search_catalog',
           status: 'ok',
@@ -432,7 +503,9 @@ export class SalesAgentRuntimeService {
     } else if (request.kind === 'more') {
       const previous = lastBrowse(history)?.category;
       category = previous
-        ? overview.categories.find((item) => normalizeText(item.label) === normalizeText(previous))
+        ? overview.categories.find(
+            (item) => normalizeText(item.label) === normalizeText(previous),
+          )
         : undefined;
       excludeIds = allRecommendedProductIds(history);
     }
@@ -442,7 +515,13 @@ export class SalesAgentRuntimeService {
     });
     const label = category?.label ?? null;
     return {
-      view: { mode: 'page', products: page.products, category: label, remaining: page.remaining, overview },
+      view: {
+        mode: 'page',
+        products: page.products,
+        category: label,
+        remaining: page.remaining,
+        overview,
+      },
       trace: {
         name: 'search_catalog',
         status: page.products.length ? 'ok' : 'skipped',
@@ -468,7 +547,9 @@ export class SalesAgentRuntimeService {
   ): AgentProductImage[] {
     const shown = new Set(shownProductIds);
     return products
-      .filter((product) => product.imageUrl && (force || !shown.has(product.id)))
+      .filter(
+        (product) => product.imageUrl && (force || !shown.has(product.id)),
+      )
       .slice(0, MAX_IMAGES)
       .map((product) => ({
         productId: product.id,
@@ -477,12 +558,20 @@ export class SalesAgentRuntimeService {
       }));
   }
 
-  private closingText(customerName: string | null | undefined, history: ConversationTurn[]): string {
+  private closingText(
+    customerName: string | null | undefined,
+    history: ConversationTurn[],
+  ): string {
     const firstName = customerName?.trim().split(/\s+/)[0];
     const thanks = `¡Gracias a ti${firstName ? `, ${firstName}` : ''}!`;
     const awaitingPayment = history
       .slice(-4)
-      .some((turn) => turn.role === 'agent' && /https?:\/\//.test(turn.text) && /pago/i.test(turn.text));
+      .some(
+        (turn) =>
+          turn.role === 'agent' &&
+          /https?:\/\//.test(turn.text) &&
+          /pago/i.test(turn.text),
+      );
     return awaitingPayment
       ? `${thanks} Cuando completes el pago te confirmamos por aquí.`
       : `${thanks} Aquí estaré si necesitas algo más.`;
@@ -494,7 +583,9 @@ export class SalesAgentRuntimeService {
     channelId?: string | null,
   ) {
     if (agentId) {
-      const agent = await this.prisma.salesAgent.findFirst({ where: { id: agentId, tenantId } });
+      const agent = await this.prisma.salesAgent.findFirst({
+        where: { id: agentId, tenantId },
+      });
       if (agent) return agent;
     }
     if (channelId) {
@@ -511,11 +602,18 @@ export class SalesAgentRuntimeService {
   }
 
   /** Asks where to deliver, offering pickup when the business has it. */
-  private deliveryQuestion(plan: Extract<DeliveryPlan, { kind: 'ask' }>): string {
-    const pickup = plan.pickupAddress ? `\nSi prefieres, puedes recogerlo gratis en ${plan.pickupAddress}.` : '';
+  private deliveryQuestion(
+    plan: Extract<DeliveryPlan, { kind: 'ask' }>,
+  ): string {
+    const pickup = plan.pickupAddress
+      ? `\nSi prefieres, puedes recogerlo gratis en ${plan.pickupAddress}.`
+      : '';
     if (plan.candidates.length) {
       const options = plan.candidates
-        .map((place) => `• ${place.district} (${place.province}, ${place.department})`)
+        .map(
+          (place) =>
+            `• ${place.district} (${place.province}, ${place.department})`,
+        )
         .join('\n');
       return `Hay varios distritos con ese nombre:\n${options}\n¿Cuál es el tuyo? Escríbeme el distrito y la provincia.${pickup}`;
     }
@@ -525,7 +623,10 @@ export class SalesAgentRuntimeService {
   /** Price breakdown and delivery note from the plan used to create the order. */
   private deliveryText(plan: DeliveryPlan, lines: OrderLine[]): DeliveryText {
     if (plan.kind === 'none') {
-      return { summary: null, note: 'La entrega la coordinamos contigo por este chat.' };
+      return {
+        summary: null,
+        note: 'La entrega la coordinamos contigo por este chat.',
+      };
     }
     if (plan.kind !== 'quote') return { summary: null, note: null };
     const currency = lines[0].product.currency;
@@ -603,7 +704,11 @@ export class SalesAgentRuntimeService {
         escalate: false,
         usedCatalog: true,
         pauseOnHandoff: agent.pauseOnHandoff,
-        replyText: this.applyTone(agent, `¡Buena elección! ${params.pending.question}`, { keepLines: true }),
+        replyText: this.applyTone(
+          agent,
+          `¡Buena elección! ${params.pending.question}`,
+          { keepLines: true },
+        ),
       };
     }
 
@@ -691,7 +796,8 @@ export class SalesAgentRuntimeService {
       const closeHint =
         params.pending?.kind === 'product'
           ? '¿Cuál de estas opciones te gustaría? Te preparo el link de pago.'
-          : (params.journeys.find((item) => item.stage === 'CLOSE')?.scriptText ??
+          : (params.journeys.find((item) => item.stage === 'CLOSE')
+              ?.scriptText ??
             (second && agent.salesTechniques.includes('alternative_close')
               ? `¿Cuál te gusta más, ${first.name} o ${second.name}? Te lo separo y te envío el link de pago.`
               : 'Si te gusta, dime “lo quiero” y te envío el link de pago.'));
@@ -720,8 +826,9 @@ export class SalesAgentRuntimeService {
 
     const text = normalizeText(params.inboundText);
     if (/hola|buenas|buen\s*dia|hey/.test(text)) {
-      const discover =
-        params.journeys.find((item) => item.stage === 'DISCOVER')?.scriptText;
+      const discover = params.journeys.find(
+        (item) => item.stage === 'DISCOVER',
+      )?.scriptText;
       return {
         escalate: false,
         usedCatalog: false,
@@ -751,7 +858,11 @@ export class SalesAgentRuntimeService {
   }
 
   /** `keepLines`: the text carries amounts or a link that must never be cut by the concise length. */
-  private applyTone(agent: AgentPersonality, text: string, options: { keepLines?: boolean } = {}): string {
+  private applyTone(
+    agent: AgentPersonality,
+    text: string,
+    options: { keepLines?: boolean } = {},
+  ): string {
     let result = text;
     if (!agent.useEmojis) {
       result = result
@@ -795,10 +906,12 @@ export class SalesAgentRuntimeService {
   > | null> {
     const catalogJson = params.catalogMatches.map((product) => ({
       name: product.name,
+      ...(product.isService ? { type: 'servicio' } : {}),
       description: product.descriptionShort,
       price: product.priceLabel,
       stock: product.stockLabel,
       lowStock:
+        !product.isService &&
         !product.stockUnlimited &&
         product.stockQty !== null &&
         product.stockQty > 0 &&
@@ -835,6 +948,9 @@ export class SalesAgentRuntimeService {
         ? `El cliente quiere comprar, pero antes del link de pago necesitas saber dónde entregar. Pregúntale esto, con tus palabras pero sin cambiar los datos: "${params.pending.question}". No generes ni prometas link de pago todavía.`
         : '',
       SHIPPING_RULE,
+      params.catalogMatches.some((product) => product.isService)
+        ? SERVICE_RULE
+        : '',
       params.cartOrder
         ? 'El cliente envió su carrito de la tienda web y ya quedó registrado como pedido. Agradécele, resume los productos y dile que un asesor confirmará stock, envío y forma de pago. No envíes link de pago.'
         : '',
@@ -893,7 +1009,10 @@ export class SalesAgentRuntimeService {
                       totalProducts: params.browse.overview.total,
                       categories: params.browse.overview.categories
                         .slice(0, 12)
-                        .map((item) => ({ category: item.label, products: item.count })),
+                        .map((item) => ({
+                          category: item.label,
+                          products: item.count,
+                        })),
                     },
                     storeUrl: params.browse.overview.storeUrl,
                   }

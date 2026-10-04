@@ -21,6 +21,7 @@ sharp.cache(false);
 const INPUT_TYPES = ['image/jpeg', 'image/png', 'image/webp'] as const;
 const CONTENT_TYPES: Record<string, string> = { jpg: 'image/jpeg', png: 'image/png', webp: 'image/webp' };
 const MAX_BYTES = 750_000;
+const GENERATED_MAX_BYTES = 8_000_000;
 export const MEDIA_MAX_EDGE_PX = 1600;
 export const MEDIA_WEBP_QUALITY = 82;
 const MESSAGING_MAX_EDGE_PX = 1200;
@@ -80,7 +81,18 @@ export class MediaService {
     if (!type || type !== dto.contentType || bytes.length > MAX_BYTES) {
       throw new BadRequestException('Sube una imagen JPG, PNG o WebP de hasta 750 KB.');
     }
-    const webp = await this.toWebp(bytes);
+    return this.save(tenantId, await this.toWebp(bytes));
+  }
+
+  /** Stores an image made on the server (not a client upload), such as a generated store photo. */
+  async storeGenerated(tenantId: string, bytes: Buffer): Promise<{ url: string }> {
+    if (!sniff(bytes) || bytes.length > GENERATED_MAX_BYTES) {
+      throw new ServiceUnavailableException('No pudimos guardar la imagen. Intenta de nuevo en unos segundos.');
+    }
+    return this.save(tenantId, await this.toWebp(bytes));
+  }
+
+  private async save(tenantId: string, webp: Buffer): Promise<{ url: string }> {
     const file = `${randomBytes(16).toString('hex')}.webp`;
     if (this.s3) return { url: await this.putObject(this.s3, `media/${tenantId}/${file}`, webp) };
 

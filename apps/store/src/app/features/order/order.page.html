@@ -97,13 +97,21 @@
         }
 
         <section class="panel" aria-labelledby="delivery-title">
-          <h2 id="delivery-title">Entrega</h2>
+          <h2 id="delivery-title">{{ o.delivery ? 'Entrega' : 'Tu reserva' }}</h2>
           @if (logistics(); as step) {
             <p class="notice">{{ step }}</p>
           }
-          <p><strong>{{ o.delivery.label }}</strong></p>
-          @if (o.delivery.address) { <p>{{ o.delivery.address }}</p> }
-          @if (o.delivery.eta) { <p class="muted">{{ o.delivery.eta }}</p> }
+          @if (o.delivery; as delivery) {
+            <p><strong>{{ delivery.label }}</strong></p>
+            @if (delivery.address) { <p>{{ delivery.address }}</p> }
+            @if (delivery.eta) { <p class="muted">{{ delivery.eta }}</p> }
+          }
+          @if (o.serviceNote) {
+            <p>Fecha preferida: <strong>{{ o.serviceNote }}</strong></p>
+          }
+          @if (o.serviceNote || !o.delivery) {
+            <p class="muted">Te escribiremos para confirmar el día y la hora del servicio.</p>
+          }
           @if (o.trackingCode) {
             <p>Código de seguimiento: <strong>{{ o.trackingCode }}</strong></p>
           }
@@ -123,7 +131,9 @@
           @if (o.discountCents > 0) {
             <div class="summary__discount"><dt>Descuento{{ o.couponCode ? ' (' + o.couponCode + ')' : '' }}</dt><dd>−{{ o.discountCents | money }}</dd></div>
           }
-          <div><dt>Envío</dt><dd>{{ o.shippingCents === 0 ? 'Gratis' : (o.shippingCents | money) }}</dd></div>
+          @if (o.delivery) {
+            <div><dt>Envío</dt><dd>{{ o.shippingCents === 0 ? 'Gratis' : (o.shippingCents | money) }}</dd></div>
+          }
           <div class="summary__total"><dt>Total</dt><dd>{{ o.totalCents | money }}</dd></div>
         </dl>
         @if (paid() || o.status === 'CANCELLED') {

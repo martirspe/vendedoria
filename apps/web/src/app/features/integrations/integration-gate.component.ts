@@ -19,6 +19,8 @@ export class IntegrationGateComponent {
   private readonly integrations = inject(IntegrationsStateService);
   private readonly router = inject(Router);
   readonly key = input.required<IntegrationKey>();
+  /** Without a loaded state (request failed) the gate says nothing; the page shows its load error. */
+  readonly known = this.integrations.loaded;
 
   readonly info = computed(() => integrationInfo(this.key()));
   readonly state = computed(

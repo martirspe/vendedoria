@@ -1,6 +1,7 @@
 import { randomUUID } from 'node:crypto';
 import {
   BadRequestException,
+  ConflictException,
   ForbiddenException,
   Injectable,
   Logger,
@@ -8,10 +9,17 @@ import {
   ServiceUnavailableException,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { PlanTier, Prisma } from '@prisma/client';
+import { Payment, PlanTier, Prisma } from '@prisma/client';
 import type { AuthUserPayload } from '../common/types/auth-user';
 import type { MerchantCredentials } from '../payments/merchant-accounts.service';
+import {
+  type MercadoPagoOrder,
+  MercadoPagoError,
+  isProviderOrderId,
+  mercadoPago,
+} from '../payments/mercadopago.client';
 import { MercadoPagoPaymentProvider } from '../payments/mercadopago.provider';
+import type { PayPlanDto } from './dto/plan-checkout.dto';
 import type { NormalizedWebhookEvent } from '../payments/payment-provider.port';
 import { PrismaService } from '../prisma/prisma.service';
 import {
@@ -41,6 +49,20 @@ const CHECKOUT_REUSE_MS = 6 * 60 * 60 * 1000;
 
 export type PlanPaymentResult = {
   status: 'active' | 'pending' | 'failed' | 'review';
+  /** Mercado Pago `status_detail` of a declined payment, e.g. `insufficient_amount`. */
+  detail?: string | null;
+};
+
+/** Pending plan payment that the console pays in place with the Card Payment Brick or Yape. */
+export type PlanCheckout = {
+  paymentId: string;
+  title: string;
+  amountCents: number;
+  currency: string;
+  simulated: boolean;
+  /** Platform public key; null when the payment is simulated. */
+  publicKey: string | null;
+  payerEmail: string;
 };
 
 export type PlanPurchase = {
@@ -116,17 +138,31 @@ export class BillingService {
     };
   }
 
-  async createCheckout(user: AuthUserPayload, purchase: PlanPurchase) {
+  /**
+   * Opens (or reuses) a pending plan payment. Nothing is charged here: the console tokenizes
+   * the card or Yape with the platform public key and calls `pay`.
+   */
+  async createCheckout(user: AuthUserPayload, purchase: PlanPurchase): Promise<PlanCheckout> {
     this.assertManager(user);
     const resolved = await this.resolvePurchase(user.tenantId, purchase);
-    const mode = this.checkoutMode();
-    if (mode === 'unavailable') {
+    if (this.checkoutMode() === 'unavailable') {
       throw new ServiceUnavailableException(
         'El pago de planes no está disponible en este momento. Escríbenos desde Ayuda.',
       );
     }
-    const provider = mode === 'live' ? this.mercadoPago.name : 'mock';
+    const credentials = this.liveCredentials();
+    const provider = credentials ? this.mercadoPago.name : 'mock';
+    const session = (paymentId: string): PlanCheckout => ({
+      paymentId,
+      title: resolved.title,
+      amountCents: resolved.amountCents,
+      currency: PLAN_CURRENCY,
+      simulated: !credentials,
+      publicKey: credentials?.publicKey ?? null,
+      payerEmail: user.email,
+    });
 
+    // Only payments never sent to Mercado Pago are reused: each one is a single charge attempt.
     const reusable = await this.prisma.payment.findFirst({
       where: {
         tenantId: user.tenantId,
@@ -137,15 +173,14 @@ export class BillingService {
         provider,
         status: 'PENDING',
         amountCents: resolved.amountCents,
-        checkoutUrl: { not: null },
+        externalId: null,
         createdAt: { gte: new Date(Date.now() - CHECKOUT_REUSE_MS) },
       },
       orderBy: { createdAt: 'desc' },
     });
-    if (reusable?.checkoutUrl) {
-      return { paymentId: reusable.id, checkoutUrl: reusable.checkoutUrl, simulated: mode === 'simulated' };
-    }
+    if (reusable) return session(reusable.id);
 
+    const id = randomUUID();
     const payment = await this.prisma.payment.create({
       data: {
         tenantId: user.tenantId,
@@ -157,62 +192,129 @@ export class BillingService {
         planTier: resolved.planTier,
         planMonths: resolved.planMonths,
         chatPackSize: resolved.chatPackSize,
-        idempotencyKey: `billing:${user.tenantId}:${randomUUID()}`,
+        idempotencyKey: `plan-${id}`,
       },
     });
-
-    const back = (state: string) => `${this.webOrigin()}/app/plans?payment=${state}`;
-    let checkoutUrl: string;
-    let externalId: string | null = null;
-    let raw: unknown = { mode: 'mock' };
-    if (mode === 'live') {
-      const checkout = await this.mercadoPago.createCheckout(
-        {
-          idempotencyKey: payment.idempotencyKey,
-          paymentId: payment.id,
-          title: resolved.title,
-          amountCents: resolved.amountCents,
-          currency: PLAN_CURRENCY,
-          notificationUrl: `${this.publicApiBase()}/webhooks/billing/mercadopago`,
-          successUrl: back('success'),
-          pendingUrl: back('pending'),
-          failureUrl: back('failure'),
-        },
-        this.platformCredentials(),
-      );
-      checkoutUrl = checkout.checkoutUrl;
-      externalId = checkout.externalId;
-      raw = checkout.raw;
-    } else {
-      checkoutUrl = `${back('simulated')}&ref=${payment.id}`;
-    }
-
-    await this.prisma.payment.update({
-      where: { id: payment.id },
-      data: { checkoutUrl, externalId, rawPayload: raw as Prisma.InputJsonValue },
-    });
-    return { paymentId: payment.id, checkoutUrl, simulated: mode === 'simulated' };
+    return session(payment.id);
   }
 
-  /** Back from Mercado Pago: confirms right away instead of waiting for the webhook. */
-  async confirmReturn(user: AuthUserPayload, providerPaymentId: string): Promise<PlanPaymentResult> {
-    const credentials = this.platformCredentials();
+  /**
+   * Charges a pending plan payment with a token created in the console (Orders API, platform
+   * account). The payment's own idempotency key goes to Mercado Pago, so retries and double
+   * submits never charge twice; a declined attempt closes the payment and the console opens
+   * a new one.
+   */
+  async pay(user: AuthUserPayload, paymentId: string, dto: PayPlanDto): Promise<PlanPaymentResult> {
+    this.assertManager(user);
+    const credentials = this.liveCredentials();
     if (!credentials) {
-      throw new NotFoundException('Pago no encontrado.');
+      throw new BadRequestException('El pago con tarjeta o Yape no está disponible en este momento.');
     }
-    const event = await this.mercadoPago.fetchPaymentEvent(providerPaymentId, credentials);
-    const payment = event.externalReference
-      ? await this.prisma.payment.findFirst({
-          where: { id: event.externalReference, tenantId: user.tenantId, flow: 'BILLING_SUBSCRIPTION' },
-        })
-      : null;
+    const payment = await this.prisma.payment.findFirst({
+      where: {
+        id: paymentId,
+        tenantId: user.tenantId,
+        flow: 'BILLING_SUBSCRIPTION',
+        provider: this.mercadoPago.name,
+      },
+    });
     if (!payment) {
       throw new NotFoundException('Pago no encontrado.');
     }
-    return this.apply(payment.id, event, true);
+    if (payment.status === 'SUCCEEDED') return { status: 'active' };
+    if (payment.status !== 'PENDING') {
+      throw new ConflictException('Este pago ya terminó. Vuelve a elegir tu plan para intentarlo de nuevo.');
+    }
+    if (payment.externalId) {
+      return this.refresh(payment, credentials);
+    }
+
+    const yape = dto.method === 'yape';
+    const total = (payment.amountCents / 100).toFixed(2);
+    const body = {
+      type: 'online',
+      processing_mode: 'automatic',
+      external_reference: payment.id,
+      total_amount: total,
+      description: this.paymentTitle(payment),
+      payer: {
+        email: dto.payerEmail?.trim().toLowerCase() || user.email,
+        ...(dto.identificationType && dto.identificationNumber
+          ? { identification: { type: dto.identificationType, number: dto.identificationNumber } }
+          : {}),
+        ...(yape ? { entity_type: 'individual', phone: { area_code: '51', number: dto.phone } } : {}),
+      },
+      transactions: {
+        payments: [
+          {
+            amount: total,
+            payment_method: {
+              id: yape ? 'yape' : dto.paymentMethodId,
+              type: yape ? 'debit_card' : dto.paymentType,
+              token: dto.cardToken,
+              installments: 1,
+            },
+          },
+        ],
+      },
+    };
+
+    let providerOrder: MercadoPagoOrder;
+    try {
+      providerOrder = await mercadoPago.createOrder(credentials.accessToken, body, payment.idempotencyKey);
+    } catch (error) {
+      if (error instanceof MercadoPagoError && error.status >= 400 && error.status < 500) {
+        await this.prisma.payment.updateMany({
+          where: { id: payment.id, status: 'PENDING', externalId: null },
+          data: { status: 'FAILED' },
+        });
+        return { status: 'failed', detail: null };
+      }
+      // Unknown outcome: the same idempotency key replays it, and the webhook settles it.
+      this.logger.warn(`Plan payment ${payment.id} pending confirmation: ${(error as Error).message}`);
+      return { status: 'pending' };
+    }
+    await this.prisma.payment.updateMany({
+      where: { id: payment.id, externalId: null },
+      data: { externalId: providerOrder.id },
+    });
+    return this.applyOrder(payment.id, providerOrder);
   }
 
-  /** Signed platform webhook (`type=payment`). The state is always read back from Mercado Pago. */
+  /** Console polling while a payment is processing; re-reads Mercado Pago when it can. */
+  async paymentStatus(user: AuthUserPayload, paymentId: string): Promise<PlanPaymentResult> {
+    const payment = await this.prisma.payment.findFirst({
+      where: { id: paymentId, tenantId: user.tenantId, flow: 'BILLING_SUBSCRIPTION' },
+    });
+    if (!payment) {
+      throw new NotFoundException('Pago no encontrado.');
+    }
+    if (payment.status === 'SUCCEEDED') return { status: 'active' };
+    if (payment.status !== 'PENDING') return { status: 'failed', detail: null };
+    const credentials = this.liveCredentials();
+    return credentials && payment.externalId ? this.refresh(payment, credentials) : { status: 'pending' };
+  }
+
+  /** Signed platform webhook (`type=order`). The state is always read back from Mercado Pago. */
+  async applyProviderOrder(providerOrderId: string): Promise<PlanPaymentResult | null> {
+    const credentials = this.platformCredentials();
+    if (!credentials) return null;
+    const providerOrder = await mercadoPago.getOrder(credentials.accessToken, providerOrderId);
+    const payment = await this.prisma.payment.findFirst({
+      where: { id: providerOrder.external_reference, flow: 'BILLING_SUBSCRIPTION' },
+      select: { id: true, externalId: true },
+    });
+    if (!payment || (payment.externalId && payment.externalId !== providerOrder.id)) {
+      this.logger.warn('Plan order notification for an unknown payment');
+      return null;
+    }
+    return this.applyOrder(payment.id, providerOrder);
+  }
+
+  /**
+   * Signed platform webhook (`type=payment`) for Checkout Pro payments opened before plans
+   * were paid in the console.
+   */
   async applyProviderPayment(providerPaymentId: string): Promise<PlanPaymentResult | null> {
     const credentials = this.platformCredentials();
     if (!credentials) return null;
@@ -377,9 +479,55 @@ export class BillingService {
     };
   }
 
+  private async applyOrder(paymentId: string, providerOrder: MercadoPagoOrder): Promise<PlanPaymentResult> {
+    const paid = providerOrder.status === 'processed' && providerOrder.status_detail === 'accredited';
+    const failed = ['failed', 'canceled', 'cancelled', 'expired'].includes(providerOrder.status);
+    const result = await this.apply(
+      paymentId,
+      {
+        provider: this.mercadoPago.name,
+        externalId: providerOrder.id,
+        externalReference: providerOrder.external_reference,
+        status: paid ? 'SUCCEEDED' : failed ? 'FAILED' : 'PENDING',
+        amountCents: Math.round(Number(providerOrder.total_paid_amount ?? providerOrder.total_amount) * 100),
+        currency: providerOrder.currency ?? PLAN_CURRENCY,
+        raw: providerOrder,
+      },
+      true,
+    );
+    return result.status === 'failed'
+      ? { ...result, detail: providerOrder.status_detail?.slice(0, 100) ?? null }
+      : result;
+  }
+
+  private async refresh(payment: Payment, credentials: MerchantCredentials): Promise<PlanPaymentResult> {
+    if (!payment.externalId || !isProviderOrderId(payment.externalId)) return { status: 'pending' };
+    try {
+      return await this.applyOrder(
+        payment.id,
+        await mercadoPago.getOrder(credentials.accessToken, payment.externalId),
+      );
+    } catch (error) {
+      this.logger.warn(`Could not refresh plan payment ${payment.id}: ${(error as Error).message}`);
+      return { status: 'pending' };
+    }
+  }
+
+  private paymentTitle(payment: Pick<Payment, 'planTier' | 'chatPackSize'>): string {
+    return payment.planTier
+      ? `Plan ${getPlanDefinition(payment.planTier).name} VendedorIA`
+      : `${payment.chatPackSize ?? 0} chats extra VendedorIA`;
+  }
+
   private checkoutMode(): 'live' | 'simulated' | 'unavailable' {
-    if (this.platformCredentials()) return 'live';
+    if (this.liveCredentials()) return 'live';
     return this.config.get<string>('NODE_ENV') === 'production' ? 'unavailable' : 'simulated';
+  }
+
+  /** Paying in the console needs the public key, and pending payments need the signed webhook. */
+  private liveCredentials(): MerchantCredentials | null {
+    const credentials = this.platformCredentials();
+    return credentials?.publicKey && credentials.webhookSecret ? credentials : null;
   }
 
   private platformCredentials(): MerchantCredentials | null {
@@ -388,17 +536,9 @@ export class BillingService {
     return {
       accessToken,
       webhookSecret: this.config.get<string>('PLATFORM_MERCADOPAGO_WEBHOOK_SECRET')?.trim() || null,
-      publicKey: '',
+      publicKey: this.config.get<string>('PLATFORM_MERCADOPAGO_PUBLIC_KEY')?.trim() ?? '',
       liveMode: !accessToken.startsWith('TEST-'),
     };
-  }
-
-  private webOrigin(): string {
-    return this.config.get<string>('CORS_ORIGIN')?.split(',')[0]?.trim() ?? 'http://localhost:4200';
-  }
-
-  private publicApiBase(): string {
-    return (this.config.get<string>('PUBLIC_API_BASE_URL') ?? 'http://localhost:3000/api/v1').replace(/\/$/, '');
   }
 
   private assertManager(user: AuthUserPayload): void {

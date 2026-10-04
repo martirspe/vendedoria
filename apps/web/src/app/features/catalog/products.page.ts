@@ -20,6 +20,8 @@ import {
   MediaInput,
   ProductDetails,
   ProductDto,
+  ProductKind,
+  ServiceMode,
 } from '../../core/api/catalog-api.service';
 import { IntegrationsStateService } from '../../core/integrations/integrations-state.service';
 import { resizeImage } from '../../core/media/resize-image';
@@ -96,6 +98,7 @@ export class ProductsPage {
     this.products().filter(
       (product) =>
         product.id !== this.editingId() &&
+        product.kind !== 'SERVICE' &&
         !(product.variants?.length ?? 0) &&
         !(product.components?.length ?? 0),
     ),
@@ -113,6 +116,9 @@ export class ProductsPage {
     descriptionShort: ['', [Validators.maxLength(1000)]],
     descriptionFull: ['', [Validators.maxLength(2000)]],
     categoriesText: [''],
+    kind: ['PRODUCT' as ProductKind],
+    durationMinutes: [null as number | null, [Validators.min(5), Validators.max(1440)]],
+    serviceMode: ['' as ServiceMode | ''],
     price: [0, [Validators.required, Validators.min(0)]],
     currency: ['PEN', Validators.required],
     isAvailable: [true],
@@ -142,6 +148,8 @@ export class ProductsPage {
     { initialValue: this.productForm.getRawValue() },
   );
 
+  readonly isService = computed(() => this.formValues().kind === 'SERVICE');
+
   readonly readiness = computed(() => {
     const values = this.formValues();
     const hasName = values.name.trim().length >= 2;
@@ -149,7 +157,12 @@ export class ProductsPage {
     const hasPrice = Number(values.price) > 0;
     const hasPhoto = this.media().some((item) => item.kind === 'image');
     return [
-      { id: 'name', label: 'Nombre del producto', done: hasName, required: true },
+      {
+        id: 'name',
+        label: values.kind === 'SERVICE' ? 'Nombre del servicio' : 'Nombre del producto',
+        done: hasName,
+        required: true,
+      },
       {
         id: 'description',
         label: 'Descripción',
@@ -235,6 +248,9 @@ export class ProductsPage {
       descriptionShort: '',
       descriptionFull: '',
       categoriesText: '',
+      kind: 'PRODUCT',
+      durationMinutes: null,
+      serviceMode: '',
       price: 0,
       currency: 'PEN',
       isAvailable: true,
@@ -301,6 +317,9 @@ export class ProductsPage {
       descriptionShort: product.descriptionShort ?? '',
       descriptionFull: product.descriptionFull ?? '',
       categoriesText: (product.categories ?? []).join(', '),
+      kind: product.kind,
+      durationMinutes: product.durationMinutes,
+      serviceMode: product.serviceMode ?? '',
       price: product.basePriceCents / 100,
       currency: product.currency,
       isAvailable: product.isAvailable,
@@ -336,6 +355,12 @@ export class ProductsPage {
 
   toggleDetails(enabled: boolean): void {
     this.detailsEnabled.set(enabled);
+  }
+
+  /** A service has no stock of its own, so it cannot be sold as a set. */
+  setKind(kind: ProductKind): void {
+    this.productForm.controls.kind.setValue(kind);
+    if (kind === 'SERVICE') this.setEnabled.set(false);
   }
 
   toggleSet(enabled: boolean): void {
@@ -529,14 +554,20 @@ export class ProductsPage {
       return;
     }
 
-    const components = this.setEnabled()
+    const service = values.kind === 'SERVICE';
+    const asSet = this.setEnabled() && !service;
+    const components = asSet
       ? this.components().filter((row) => row.productId && row.quantity >= 1)
       : [];
-    if (this.setEnabled() && !components.length) {
+    if (asSet && !components.length) {
       this.errorMessage.set('Agrega al menos una pieza al set o desactiva "Se vende como set".');
       return;
     }
+    const duration = Number(values.durationMinutes);
     const extras = {
+      kind: values.kind,
+      durationMinutes: service && duration > 0 ? Math.round(duration) : null,
+      serviceMode: service && values.serviceMode ? values.serviceMode : null,
       sku: values.sku.trim() || null,
       line: values.line.trim() || null,
       details: this.detailsEnabled() ? this.detailsPayload(values) : null,
@@ -551,7 +582,7 @@ export class ProductsPage {
       components,
     };
 
-    const variants = this.variantsEnabled() && !this.setEnabled()
+    const variants = this.variantsEnabled() && !asSet
       ? this.variantDrafts()
           .filter(
             (item) => item.option1Value.trim() || item.option2Value.trim(),
@@ -563,7 +594,7 @@ export class ProductsPage {
             option2Value: item.option2Value.trim() || undefined,
             priceCents: toCents(item.price),
             isAvailable: true,
-            stockQty: item.stockQty,
+            stockQty: service ? null : item.stockQty,
           }))
       : [];
 
@@ -583,8 +614,8 @@ export class ProductsPage {
             basePriceCents: toCents(values.price),
             currency: values.currency,
             isAvailable: values.isAvailable,
-            stockUnlimited: values.stockUnlimited,
-            stockQty: values.stockUnlimited ? null : Number(values.stockQty),
+            stockUnlimited: service || values.stockUnlimited,
+            stockQty: service || values.stockUnlimited ? null : Number(values.stockQty),
             variants,
             ...extras,
             ...this.storeFields(values),
@@ -600,8 +631,8 @@ export class ProductsPage {
             basePriceCents: toCents(values.price),
             currency: values.currency,
             isAvailable: values.isAvailable,
-            stockUnlimited: values.stockUnlimited,
-            stockQty: values.stockUnlimited
+            stockUnlimited: service || values.stockUnlimited,
+            stockQty: service || values.stockUnlimited
               ? undefined
               : Number(values.stockQty),
             variants,
@@ -661,6 +692,9 @@ export class ProductsPage {
   }
 
   stockLabel(product: ProductDto): string {
+    if (product.kind === 'SERVICE') {
+      return product.durationMinutes ? `Servicio · ${product.durationMinutes} min` : 'Servicio';
+    }
     const pieces = product.components?.length ?? 0;
     if (pieces) return `Set · ${pieces} ${pieces === 1 ? 'pieza' : 'piezas'}`;
     if (product.stockUnlimited) return 'Stock ilimitado';
@@ -728,7 +762,9 @@ export class ProductsPage {
         return 'Ese identificador (handle) ya existe. Elige otro.';
       }
       if (error.status === 400) {
-        return 'Revisa los campos: nombre, descripción y precio son obligatorios.';
+        return typeof error.error?.message === 'string'
+          ? error.error.message
+          : 'Revisa los campos: nombre, descripción y precio son obligatorios.';
       }
     }
     return 'No se pudo guardar el producto. Inténtalo de nuevo.';

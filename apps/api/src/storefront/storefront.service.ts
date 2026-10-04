@@ -5,7 +5,7 @@ import { PrismaService } from '../prisma/prisma.service';
 import { RUC, UpdateStorefrontDto } from './dto/update-storefront.dto';
 import { shippingOptions } from './shipping';
 import { ensureStorefront } from './storefront-row';
-import { readTemplateCopy, templateAllowed } from './store-templates';
+import { readTemplateContent, templateAllowed } from './store-templates';
 import {
   customDomainUrl,
   DEFAULT_STOREFRONT_URL_TEMPLATE,
@@ -77,13 +77,6 @@ export class StorefrontService {
       data: {
         industry,
         template,
-        ...(dto.templateCopy !== undefined
-          ? {
-              templateCopy: dto.templateCopy
-                ? (readTemplateCopy(dto.templateCopy as Prisma.JsonObject) as Prisma.JsonObject)
-                : Prisma.DbNull,
-            }
-          : {}),
         displayName: dto.displayName?.trim(),
         tagline: this.optionalText(dto.tagline),
         logoUrl: this.optionalText(dto.logoUrl),
@@ -293,9 +286,9 @@ export class StorefrontService {
       {
         id: 'logo',
         label: 'Logo',
-        done: Boolean(storefront.logoUrl),
+        done: Boolean(readTemplateContent(storefront.templateContent).theme?.logo ?? storefront.logoUrl),
         required: false,
-        impact: 'Aumenta la confianza y hace reconocible la marca.',
+        impact: 'Súbelo en Editar diseño, pestaña Estilo. Aumenta la confianza y hace reconocible la marca.',
       },
       {
         id: 'seo',

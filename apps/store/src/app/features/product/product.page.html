@@ -39,7 +39,7 @@
         }
       </section>
 
-      <section class="info">
+      <section class="info" storeSection="product">
         @if (p.brand) {
           <p class="info__brand">{{ p.brand }}</p>
         }
@@ -82,10 +82,14 @@
         }
 
         <p class="info__stock" [class.is-out]="!canAdd()" role="status">
-          @if (canAdd()) {
+          @if (isService() && canAdd()) {
+            <ds-icon name="clock" [size]="1" /> {{ serviceSummary() || 'Servicio disponible' }}
+          } @else if (canAdd()) {
             <ds-icon name="check" [size]="1" /> Disponible
           } @else if (p.hasVariants && p.isAvailable) {
             Esta combinación no está disponible
+          } @else if (isService()) {
+            No disponible por ahora
           } @else {
             Agotado por ahora
           }
@@ -102,21 +106,41 @@
             </button>
           </div>
           <button type="button" class="store-btn store-btn--primary buy__add" [disabled]="!canAdd()" (click)="addToCart()">
-            <ds-icon name="shoppingBag" [size]="1.1" /> Agregar al carrito
+            @if (isService()) {
+              <ds-icon name="calendar" [size]="1.1" /> Reservar
+            } @else {
+              <ds-icon name="shoppingBag" [size]="1.1" /> Agregar al carrito
+            }
           </button>
         </div>
 
         @if (added()) {
           <p class="added" role="status">
             <ds-icon name="check" [size]="1" /> Agregado al carrito.
-            <a routerLink="/carrito">Ver carrito y pedir</a>
+            <a routerLink="/carrito">{{ isService() ? 'Ver carrito y reservar' : 'Ver carrito y pedir' }}</a>
           </p>
+        }
+        @if (isService()) {
+          <p class="service-note">Después de tu pedido te escribimos para coordinar el día y la hora.</p>
+        }
+
+        @if (texts().note || editor.active()) {
+          <p
+            class="purchase-note"
+            storeEditText="product.note"
+            editKind="multiline"
+            [editValue]="texts().note"
+            editPlaceholder="Agrega un mensaje para tus compradores, por ejemplo los tiempos de entrega"
+          ></p>
         }
 
         @if (whatsappHref(); as href) {
-          <a class="store-btn store-btn--whatsapp store-btn--block" [href]="href" target="_blank" rel="noopener">
-            <ds-icon name="message" [size]="1.1" /> Consultar por WhatsApp
-          </a>
+          @if (texts().whatsapp || editor.active()) {
+            <a class="store-btn store-btn--whatsapp store-btn--block" [href]="href" target="_blank" rel="noopener">
+              <ds-icon name="message" [size]="1.1" />
+              <span storeEditText="product.whatsapp" [editValue]="texts().whatsapp" editPlaceholder="Texto del botón"></span>
+            </a>
+          }
         }
 
         @if (p.descriptionFull) {

@@ -61,7 +61,10 @@ export class CouponPreviewDto {
   @MaxLength(160)
   email?: string;
 
-  @ApiPropertyOptional({ enum: SHIPPING_MODES, description: 'Chosen delivery, to validate free shipping coupons' })
+  @ApiPropertyOptional({
+    enum: SHIPPING_MODES,
+    description: 'Chosen delivery, to validate free shipping coupons',
+  })
   @IsOptional()
   @IsIn(SHIPPING_MODES)
   mode?: (typeof SHIPPING_MODES)[number];
@@ -79,13 +82,20 @@ export class CheckoutCustomerDto {
   @MaxLength(160)
   email!: string;
 
-  @ApiProperty({ example: '987654321', description: 'Peruvian mobile, 9 digits' })
-  @Matches(/^9\d{8}$/, { message: 'Ingresa un celular de 9 dígitos que empiece con 9.' })
+  @ApiProperty({
+    example: '987654321',
+    description: 'Peruvian mobile, 9 digits',
+  })
+  @Matches(/^9\d{8}$/, {
+    message: 'Ingresa un celular de 9 dígitos que empiece con 9.',
+  })
   phone!: string;
 
   @ApiPropertyOptional({ description: 'DNI (8) or CE (9-12)' })
   @IsOptional()
-  @Matches(/^\d{8,12}$/, { message: 'El documento debe tener entre 8 y 12 dígitos.' })
+  @Matches(/^\d{8,12}$/, {
+    message: 'El documento debe tener entre 8 y 12 dígitos.',
+  })
   document?: string;
 }
 
@@ -101,9 +111,14 @@ export class CheckoutDeliveryDto {
   @MaxLength(200)
   address?: string;
 
-  @ApiPropertyOptional({ example: '150122', description: 'INEI district code (ubigeo) for home delivery' })
+  @ApiPropertyOptional({
+    example: '150122',
+    description: 'INEI district code (ubigeo) for home delivery',
+  })
   @ValidateIf((o: CheckoutDeliveryDto) => o.mode !== 'PICKUP')
-  @Matches(/^\d{6}$/, { message: 'Selecciona el departamento, la provincia y el distrito.' })
+  @Matches(/^\d{6}$/, {
+    message: 'Selecciona el departamento, la provincia y el distrito.',
+  })
   ubigeo?: string;
 
   @ApiPropertyOptional()
@@ -112,7 +127,9 @@ export class CheckoutDeliveryDto {
   @MaxLength(180)
   reference?: string;
 
-  @ApiPropertyOptional({ description: 'Required for OLVA/SHALOM: accepts the reference rate' })
+  @ApiPropertyOptional({
+    description: 'Required for OLVA/SHALOM: accepts the reference rate',
+  })
   @IsOptional()
   @IsBoolean()
   acknowledgeRate?: boolean;
@@ -125,7 +142,10 @@ export class ShippingQuoteQueryDto {
 }
 
 export class CreateCheckoutDto {
-  @ApiProperty({ description: 'Client generated UUID; retries with the same key return the same order' })
+  @ApiProperty({
+    description:
+      'Client generated UUID; retries with the same key return the same order',
+  })
   @IsUUID()
   checkoutKey!: string;
 
@@ -141,10 +161,23 @@ export class CreateCheckoutDto {
   @Type(() => CheckoutCustomerDto)
   customer!: CheckoutCustomerDto;
 
-  @ApiProperty({ type: CheckoutDeliveryDto })
+  @ApiPropertyOptional({
+    type: CheckoutDeliveryDto,
+    description: 'Required unless the cart has only services',
+  })
+  @IsOptional()
   @ValidateNested()
   @Type(() => CheckoutDeliveryDto)
-  delivery!: CheckoutDeliveryDto;
+  delivery?: CheckoutDeliveryDto;
+
+  @ApiPropertyOptional({
+    description:
+      'Preferred date or notes for the services; never a confirmed booking',
+  })
+  @IsOptional()
+  @IsString()
+  @MaxLength(300)
+  serviceNote?: string;
 
   @ApiPropertyOptional()
   @IsOptional()
@@ -153,7 +186,9 @@ export class CreateCheckoutDto {
   couponCode?: string;
 
   @ApiProperty({ description: 'Accepted terms and privacy policy' })
-  @Equals(true, { message: 'Debes aceptar los términos y la política de privacidad.' })
+  @Equals(true, {
+    message: 'Debes aceptar los términos y la política de privacidad.',
+  })
   acceptTerms!: boolean;
 }
 
@@ -165,7 +200,9 @@ export class OrderAccessDto {
 }
 
 export class PayOrderDto extends OrderAccessDto {
-  @ApiProperty({ description: 'Client generated UUID for this payment attempt' })
+  @ApiProperty({
+    description: 'Client generated UUID for this payment attempt',
+  })
   @IsUUID()
   paymentKey!: string;
 
@@ -189,7 +226,9 @@ export class PayOrderDto extends OrderAccessDto {
   @IsIn(['credit_card', 'debit_card', 'prepaid_card'])
   paymentType?: string;
 
-  @ApiPropertyOptional({ description: 'Yape phone, 9 digits (test number 111111111)' })
+  @ApiPropertyOptional({
+    description: 'Yape phone, 9 digits (test number 111111111)',
+  })
   @ValidateIf((o: PayOrderDto) => o.method === 'yape')
   @Matches(/^\d{9}$/)
   phone?: string;

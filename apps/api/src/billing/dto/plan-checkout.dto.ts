@@ -1,6 +1,16 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { PlanTier } from '@prisma/client';
-import { IsIn, IsInt, IsOptional, Matches } from 'class-validator';
+import {
+  IsEmail,
+  IsIn,
+  IsInt,
+  IsOptional,
+  IsString,
+  Matches,
+  MaxLength,
+  MinLength,
+  ValidateIf,
+} from 'class-validator';
 
 export class CreatePlanCheckoutDto {
   @ApiPropertyOptional({
@@ -24,9 +34,46 @@ export class CreatePlanCheckoutDto {
   chatPackSize?: number;
 }
 
-export class ConfirmPlanPaymentDto {
-  /** `payment_id` that Mercado Pago appends to the return URL. */
-  @ApiProperty({ example: '1234567890' })
-  @Matches(/^\d{1,20}$/)
-  providerPaymentId!: string;
+/** Card or Yape token created in the console with the platform public key. */
+export class PayPlanDto {
+  @ApiProperty({ enum: ['card', 'yape'] })
+  @IsIn(['card', 'yape'])
+  method!: 'card' | 'yape';
+
+  @ApiProperty({ description: 'Card or Yape token from Mercado Pago SDK' })
+  @IsString()
+  @MinLength(10)
+  @MaxLength(500)
+  cardToken!: string;
+
+  @ApiPropertyOptional({ example: 'visa' })
+  @ValidateIf((o: PayPlanDto) => o.method === 'card')
+  @Matches(/^[a-z_]{2,40}$/)
+  paymentMethodId?: string;
+
+  @ApiPropertyOptional({ enum: ['credit_card', 'debit_card', 'prepaid_card'] })
+  @ValidateIf((o: PayPlanDto) => o.method === 'card')
+  @IsIn(['credit_card', 'debit_card', 'prepaid_card'])
+  paymentType?: string;
+
+  @ApiPropertyOptional({ description: 'Yape phone, 9 digits (test number 111111111)' })
+  @ValidateIf((o: PayPlanDto) => o.method === 'yape')
+  @Matches(/^\d{9}$/)
+  phone?: string;
+
+  @ApiPropertyOptional({ description: 'Payer email typed in the card form; defaults to the user email' })
+  @IsOptional()
+  @IsEmail()
+  @MaxLength(160)
+  payerEmail?: string;
+
+  @ApiPropertyOptional({ enum: ['DNI', 'CE', 'RUC'] })
+  @IsOptional()
+  @IsIn(['DNI', 'CE', 'RUC'])
+  identificationType?: 'DNI' | 'CE' | 'RUC';
+
+  @ApiPropertyOptional()
+  @ValidateIf((o: PayPlanDto) => o.identificationType !== undefined)
+  @Matches(/^\d{8,12}$/)
+  identificationNumber?: string;
 }

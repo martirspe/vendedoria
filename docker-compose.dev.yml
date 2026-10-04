@@ -22,6 +22,7 @@ x-node: &node
     - store_angular_cache_dev:/app/apps/store/.angular
   environment: &node-env
     NG_CLI_ANALYTICS: 'false'
+    NPM_CONFIG_UPDATE_NOTIFIER: 'false'
     CHOKIDAR_USEPOLLING: 'true'
     CHOKIDAR_INTERVAL: '1000'
   init: true

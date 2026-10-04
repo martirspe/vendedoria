@@ -30,7 +30,14 @@
                 "input": "public"
               }
             ],
-            "styles": ["src/styles.scss"],
+            "styles": [
+              "src/styles.scss",
+              {
+                "input": "src/app/templates/selecta/selecta.scss",
+                "bundleName": "selecta",
+                "inject": false
+              }
+            ],
             "server": "src/main.server.ts",
             "outputMode": "server",
             "security": {

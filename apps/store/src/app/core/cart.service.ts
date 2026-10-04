@@ -11,6 +11,8 @@ export type CartLine = {
   currency: string;
   imageUrl: string | null;
   quantity: number;
+  /** Services are not shipped; carts saved before this flag count as products. */
+  isService?: boolean;
 };
 
 const MAX_QUANTITY = 99;
@@ -27,6 +29,9 @@ export class CartService {
   readonly count = computed(() =>
     this.lines().reduce((total, line) => total + line.quantity, 0),
   );
+  /** Delivery is asked only when something in the bag is shipped. */
+  readonly needsDelivery = computed(() => this.lines().some((line) => !line.isService));
+  readonly hasServices = computed(() => this.lines().some((line) => line.isService));
   readonly subtotalCents = computed(() =>
     this.lines().reduce((total, line) => total + line.unitCents * line.quantity, 0),
   );

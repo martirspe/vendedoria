@@ -46,7 +46,13 @@ export type ProductComponentDto = {
 export type MediaInput = { url: string; kind?: 'image' | 'related'; alt?: string; caption?: string };
 export type ComponentInput = { productId: string; quantity: number };
 
+export type ProductKind = 'PRODUCT' | 'SERVICE';
+export type ServiceMode = 'onsite' | 'home' | 'online';
+
 type ProductExtrasPayload = {
+  kind?: ProductKind;
+  durationMinutes?: number | null;
+  serviceMode?: ServiceMode | null;
   sku?: string | null;
   line?: string | null;
   details?: ProductDetails | null;
@@ -76,6 +82,9 @@ export type ProductDto = {
   categories: string[];
   basePriceCents: number;
   currency: string;
+  kind: ProductKind;
+  durationMinutes: number | null;
+  serviceMode: ServiceMode | null;
   isAvailable: boolean;
   stockUnlimited: boolean;
   stockQty: number | null;

@@ -16,7 +16,10 @@ import { AnalyticsService } from '../../core/analytics.service';
 import { CartService } from '../../core/cart.service';
 import { MoneyPipe } from '../../core/money.pipe';
 import { markNotFound } from '../../core/not-found-status';
+import { productCopy } from '../../core/page-copy';
 import { SeoService } from '../../core/seo.service';
+import { serviceSummary } from '../../core/service-info';
+import { STORE_EDITOR, StoreEditorBridge } from '../../core/store-editor';
 import { StoreStateService } from '../../core/store-state.service';
 import { productReference, whatsappUrl } from '../../core/whatsapp';
 import {
@@ -33,13 +36,13 @@ import {
   setsWith,
   stockOf,
 } from './selecta-catalog';
-import { wholeMoney } from './selecta-copy';
+import { wholeMoney } from '../../core/store-faq';
 import { SelectaIcon } from './selecta-icon';
 import { SelectaPhoto, SelectaProductImage } from './selecta-photo';
 
 @Component({
   selector: 'selecta-product',
-  imports: [RouterLink, MoneyPipe, SelectaIcon, SelectaPhoto, SelectaProductImage],
+  imports: [RouterLink, MoneyPipe, SelectaIcon, SelectaPhoto, SelectaProductImage, STORE_EDITOR],
   templateUrl: './product.page.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
@@ -50,7 +53,9 @@ export class SelectaProductPage {
   private readonly catalog = inject(SelectaCatalog);
   private readonly analytics = inject(AnalyticsService);
   readonly cart = inject(CartService);
+  readonly editor = inject(StoreEditorBridge);
   readonly store = this.state.store;
+  readonly texts = computed(() => productCopy(this.store()?.templateContent));
 
   readonly handle = signal(this.route.snapshot.paramMap.get('handle'));
   readonly product = computed(() => this.catalog.find(this.handle()));
@@ -87,6 +92,8 @@ export class SelectaProductPage {
     () => this.product()?.variants.find((v) => v.id === this.variantId()) ?? null,
   );
   readonly price = computed(() => this.variant()?.priceCents ?? this.product()?.priceCents ?? 0);
+  readonly isService = computed(() => this.product()?.kind === 'SERVICE');
+  readonly serviceSummary = computed(() => serviceSummary(this.product()?.service));
   /** Ready to buy: in stock and, when it has variants, with an available one chosen. */
   readonly canBuy = computed(() => {
     const p = this.product();

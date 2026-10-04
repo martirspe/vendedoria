@@ -38,6 +38,14 @@
       }
     </div>
   }
+  @if (activeCheckout(); as active) {
+    <app-plan-checkout
+      [checkout]="active.checkout"
+      [purchase]="active.purchase"
+      (completed)="onCheckoutCompleted($event)"
+      (closed)="closeCheckout()"
+    />
+  }
 
   @if (loading()) {
     <div class="skeleton" aria-busy="true">Cargando planes…</div>
@@ -93,6 +101,18 @@
           }}
         </small>
       </div>
+      @if (data.usage.aiTextQuota !== 0) {
+        <div [class.is-warning]="data.usage.aiTextAtLimit || data.usage.aiImageAtLimit">
+          <span>Textos con IA en tu tienda</span>
+          <strong>
+            {{ usageLabel(data, data.usage.aiTextsUsed, data.usage.aiTextQuota) }}
+          </strong>
+          <small>
+            Imágenes con IA: {{ usageLabel(data, data.usage.aiImagesUsed, data.usage.aiImageQuota) }} · No usan las
+            respuestas de tu vendedor
+          </small>
+        </div>
+      }
       <div>
         <span>Productos publicados</span>
         <strong>

@@ -64,6 +64,7 @@ export class CheckoutPage {
     address: ['', [Validators.maxLength(200)]],
     reference: ['', [Validators.maxLength(180)]],
     couponCode: ['', [Validators.maxLength(40)]],
+    serviceNote: ['', [Validators.maxLength(300)]],
     acknowledgeRate: [false],
     acceptTerms: [false, [Validators.requiredTrue]],
   });
@@ -150,12 +151,24 @@ export class CheckoutPage {
       }
     });
     effect(() => {
+      const needsDelivery = this.cart.needsDelivery();
+      untracked(() => {
+        const { mode } = this.form.controls;
+        mode.setValidators(needsDelivery ? [Validators.required] : []);
+        if (!needsDelivery && mode.value) mode.setValue('');
+        mode.updateValueAndValidity({ emitEvent: false });
+      });
+    });
+    effect(() => {
       const options = this.options();
-      if (options.length === 1 && !this.form.controls.mode.value) {
+      if (this.cart.needsDelivery() && options.length === 1 && !this.form.controls.mode.value) {
         this.form.controls.mode.setValue(options[0].mode);
       }
     });
   }
+
+  /** Services only: nothing to ship, so the order needs no delivery and costs no shipping. */
+  readonly canCheckout = computed(() => !this.cart.needsDelivery() || this.options().length > 0);
 
   async loadUbigeos(): Promise<void> {
     if (this.ubigeoState() === 'loading' || this.ubigeoState() === 'ready') return;
@@ -255,17 +268,22 @@ export class CheckoutPage {
           phone: v.phone,
           ...(v.document ? { document: v.document } : {}),
         },
-        delivery: {
-          mode,
-          ...(mode !== 'PICKUP'
-            ? {
-                ubigeo: v.ubigeo,
-                address: v.address.trim(),
-              }
-            : {}),
-          ...(isCarrier(mode) ? { acknowledgeRate: v.acknowledgeRate } : {}),
-          ...(v.reference.trim() ? { reference: v.reference.trim() } : {}),
-        },
+        ...(this.cart.needsDelivery()
+          ? {
+              delivery: {
+                mode,
+                ...(mode !== 'PICKUP'
+                  ? {
+                      ubigeo: v.ubigeo,
+                      address: v.address.trim(),
+                    }
+                  : {}),
+                ...(isCarrier(mode) ? { acknowledgeRate: v.acknowledgeRate } : {}),
+                ...(v.reference.trim() ? { reference: v.reference.trim() } : {}),
+              },
+            }
+          : {}),
+        ...(this.cart.hasServices() && v.serviceNote.trim() ? { serviceNote: v.serviceNote.trim() } : {}),
         ...(this.coupon() ? { couponCode: this.coupon()!.code } : {}),
         acceptTerms: true,
       }, token);
