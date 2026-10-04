@@ -51,6 +51,7 @@ export function legalUpdatedLabel(store: StorefrontView): string {
 export function legalDocs(store: StorefrontView): LegalDoc[] {
   const brand = store.displayName;
   const legal = store.legal;
+  const individual = legal.sellerType === 'INDIVIDUAL';
   const owner: Inline = legal.legalName ?? MISSING;
   const ruc: Inline = legal.ruc ?? MISSING;
   const address: Inline = legal.legalAddress ?? MISSING;
@@ -78,8 +79,8 @@ export function legalDocs(store: StorefrontView): LegalDoc[] {
     [
       ['Titular', owner],
       ['Nombre comercial', brand],
-      ['RUC', ruc],
-      ['Domicilio', address],
+      individual ? ['Tipo de vendedor', 'Persona natural sin RUC'] : ['RUC', ruc],
+      [individual ? 'Ubicación' : 'Domicilio', address],
       ['Correo', email],
       ['WhatsApp', whatsapp ?? 'No disponible'],
     ],
@@ -90,7 +91,9 @@ export function legalDocs(store: StorefrontView): LegalDoc[] {
     title: 'Términos y Condiciones',
     description: `Condiciones de compra en la tienda online de ${brand}.`,
     summary: [
-      ['Compras a ', owner, ` (${brand}), con RUC `, ruc, '.'],
+      individual
+        ? ['Compras a ', owner, ` (${brand}), persona natural que vende sin RUC.`]
+        : ['Compras a ', owner, ` (${brand}), con RUC `, ruc, '.'],
       ['Los precios están en soles e incluyen impuestos. El costo de envío se muestra antes de pagar.'],
       online
         ? ['Pagas con tarjeta o Yape a través de Mercado Pago. No guardamos los datos de tu tarjeta.']
@@ -170,7 +173,9 @@ export function legalDocs(store: StorefrontView): LegalDoc[] {
         id: 'comprobantes',
         title: 'Comprobantes de pago',
         blocks: [
-          p('Emitimos el comprobante de pago electrónico que corresponda según las normas de SUNAT. Si necesitas factura, pídela con tu RUC al hacer el pedido escribiéndonos ', ...channels, '.'),
+          individual
+            ? p('Somos una persona natural que aún no cuenta con RUC, por lo que no emitimos comprobantes de pago electrónicos. Si necesitas un comprobante, consúltanos antes de comprar escribiéndonos ', ...channels, '.')
+            : p('Emitimos el comprobante de pago electrónico que corresponda según las normas de SUNAT. Si necesitas factura, pídela con tu RUC al hacer el pedido escribiéndonos ', ...channels, '.'),
         ],
       },
       {
@@ -236,7 +241,9 @@ export function legalDocs(store: StorefrontView): LegalDoc[] {
       : []),
     ...(delivery.length ? [['Empresas de reparto', 'Entregar tu pedido', 'Nombre, celular y dirección'] as Inline[]] : []),
     ...(whatsapp ? [['WhatsApp (Meta)', 'Atender tus mensajes si nos escribes', 'Número y contenido de la conversación'] as Inline[]] : []),
-    ['SUNAT y autoridades', 'Cumplir obligaciones tributarias y legales', 'Datos del comprobante o lo que la ley exija'],
+    individual
+      ? ['Autoridades', 'Cumplir obligaciones legales', 'Lo que la ley exija']
+      : ['SUNAT y autoridades', 'Cumplir obligaciones tributarias y legales', 'Datos del comprobante o lo que la ley exija'],
   ];
 
   const privacy: LegalDoc = {
@@ -244,7 +251,9 @@ export function legalDocs(store: StorefrontView): LegalDoc[] {
     title: 'Política de Privacidad',
     description: `Cómo ${brand} trata tus datos personales.`,
     summary: [
-      ['Usamos tus datos solo para atender tu pedido, emitir tu comprobante y responder tus consultas.'],
+      [individual
+        ? 'Usamos tus datos solo para atender tu pedido y responder tus consultas.'
+        : 'Usamos tus datos solo para atender tu pedido, emitir tu comprobante y responder tus consultas.'],
       ['No vendemos ni alquilamos tus datos. No guardamos los datos de tu tarjeta.'],
       ['No te enviamos publicidad sin tu consentimiento.'],
       ['Puedes ejercer tus derechos escribiendo a ', email, '.'],
@@ -288,7 +297,7 @@ export function legalDocs(store: StorefrontView): LegalDoc[] {
           ul(
             'Registrar, cobrar, preparar y entregar tu pedido.',
             'Enviarte la confirmación y avisos sobre el estado de tu pedido.',
-            'Emitir el comprobante de pago y cumplir obligaciones legales.',
+            individual ? 'Cumplir obligaciones legales.' : 'Emitir el comprobante de pago y cumplir obligaciones legales.',
             'Atender consultas, cambios, devoluciones, reclamos y quejas.',
             'Prevenir fraudes y proteger la seguridad de la tienda.',
           ),

@@ -2,7 +2,8 @@ import { BadRequestException, ConflictException, ForbiddenException, Injectable 
 import { ConfigService } from '@nestjs/config';
 import { Prisma, Storefront } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
-import { RUC, UpdateStorefrontDto } from './dto/update-storefront.dto';
+import { UpdateStorefrontDto } from './dto/update-storefront.dto';
+import { sellerIdentityComplete } from './seller-identity';
 import { shippingOptions } from './shipping';
 import { ensureStorefront } from './storefront-row';
 import { readTemplateContent, templateAllowed } from './store-templates';
@@ -87,9 +88,12 @@ export class StorefrontService {
         contactEmail: this.optionalText(dto.contactEmail)?.toLowerCase(),
         seoTitle: this.optionalText(dto.seoTitle),
         seoDescription: this.optionalText(dto.seoDescription),
+        sellerType: dto.sellerType,
         legalName: this.optionalText(dto.legalName),
         ruc: this.optionalText(dto.ruc),
         legalAddress: this.optionalText(dto.legalAddress),
+        dni: this.optionalText(dto.dni),
+        legalDistrict: this.optionalText(dto.legalDistrict),
         complaintsBookUrl: this.optionalText(dto.complaintsBookUrl),
         dataBankCode: this.optionalText(dto.dataBankCode),
         exchangeDays: dto.exchangeDays,
@@ -252,15 +256,16 @@ export class StorefrontService {
       },
       {
         id: 'legal',
-        label: 'Razón social, RUC y dirección',
-        done: Boolean(
-          storefront.legalName &&
-            storefront.ruc &&
-            RUC.test(storefront.ruc) &&
-            storefront.legalAddress,
-        ),
+        label:
+          storefront.sellerType === 'INDIVIDUAL'
+            ? 'Nombre completo, DNI y dirección'
+            : 'Razón social, RUC y dirección',
+        done: sellerIdentityComplete(storefront),
         required: true,
-        impact: 'La ley de protección al consumidor exige identificar al proveedor en la tienda.',
+        impact:
+          storefront.sellerType === 'INDIVIDUAL'
+            ? 'La ley de protección al consumidor exige identificar al vendedor. En tu tienda solo se muestran tu nombre y tu distrito.'
+            : 'La ley de protección al consumidor exige identificar al proveedor en la tienda.',
       },
       {
         id: 'complaints',

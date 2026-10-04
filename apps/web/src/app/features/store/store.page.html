@@ -162,24 +162,62 @@
             Se muestran en el pie de página y en los términos de tu tienda. Son obligatorios para
             vender online en Perú.
           </p>
-          <div class="row">
+          <fieldset class="mode">
+            <legend>¿Cómo vendes?</legend>
+            <label class="mode__option">
+              <input type="radio" formControlName="sellerType" value="BUSINESS" />
+              <span><strong>Tengo RUC</strong> Empresa o persona natural con negocio.</span>
+            </label>
+            <label class="mode__option">
+              <input type="radio" formControlName="sellerType" value="INDIVIDUAL" />
+              <span><strong>Aún no tengo RUC</strong> Vendes como persona natural con tu DNI.</span>
+            </label>
+          </fieldset>
+          @if (individualSeller()) {
+            <div class="row">
+              <label>
+                Nombre completo
+                <input formControlName="legalName" maxlength="160" autocomplete="name" />
+              </label>
+              <label>
+                DNI
+                <input formControlName="dni" inputmode="numeric" maxlength="8" placeholder="45678912" />
+              </label>
+            </div>
             <label>
-              Razón social o nombre completo
-              <input formControlName="legalName" maxlength="160" autocomplete="organization" />
+              Distrito y provincia
+              <input formControlName="legalDistrict" maxlength="120" placeholder="Miraflores, Lima" />
+              <small>Es lo único de tu ubicación que verán tus clientes.</small>
             </label>
             <label>
-              RUC
-              <input formControlName="ruc" inputmode="numeric" maxlength="11" placeholder="20123456789" />
+              Dirección para notificaciones
+              <input formControlName="legalAddress" maxlength="240" autocomplete="street-address" />
+              <small>No se muestra en tu tienda. Tu DNI tampoco: solo los usamos si una autoridad lo requiere.</small>
             </label>
-          </div>
-          <label>
-            Dirección fiscal
-            <input formControlName="legalAddress" maxlength="240" autocomplete="street-address" />
-          </label>
+            <p class="hint">
+              Sin RUC no puedes emitir boletas ni facturas, y tus términos lo indicarán. Puedes sacar tu RUC
+              gratis en SUNAT (Nuevo RUS) y cambiar esta opción cuando quieras.
+            </p>
+          } @else {
+            <div class="row">
+              <label>
+                Razón social o nombre completo
+                <input formControlName="legalName" maxlength="160" autocomplete="organization" />
+              </label>
+              <label>
+                RUC
+                <input formControlName="ruc" inputmode="numeric" maxlength="11" placeholder="20123456789" />
+              </label>
+            </div>
+            <label>
+              Dirección fiscal
+              <input formControlName="legalAddress" maxlength="240" autocomplete="street-address" />
+            </label>
+          }
           <label>
             Libro de Reclamaciones virtual (URL)
             <input formControlName="complaintsBookUrl" type="url" placeholder="https://" />
-            <small>El enlace de tu libro (por ejemplo, de ReclamoFácil). Debe empezar con https://</small>
+            <small>El enlace de tu libro (por ejemplo, de Reclamo Fácil). Debe empezar con https://</small>
           </label>
           <div class="row">
             <label>

@@ -194,6 +194,8 @@ export type StorefrontShipping = {
 };
 
 export type StorefrontLegal = {
+  /** INDIVIDUAL sells without RUC: `ruc` is null and `legalAddress` is only "district, province". */
+  sellerType: 'BUSINESS' | 'INDIVIDUAL';
   legalName: string | null;
   ruc: string | null;
   legalAddress: string | null;

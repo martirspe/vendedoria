@@ -10,6 +10,9 @@ import type {
 } from '@vendedoria/contracts';
 import { environment } from '../../../environments/environment';
 
+/** BUSINESS has RUC; INDIVIDUAL sells without RUC and its DNI is never shown in the store. */
+export type SellerType = 'BUSINESS' | 'INDIVIDUAL';
+
 export type StorefrontDto = {
   id: string;
   status: StorefrontStatus;
@@ -24,9 +27,12 @@ export type StorefrontDto = {
   seoTitle: string | null;
   seoDescription: string | null;
   publishedAt: string | null;
+  sellerType: SellerType;
   legalName: string | null;
   ruc: string | null;
   legalAddress: string | null;
+  dni: string | null;
+  legalDistrict: string | null;
   complaintsBookUrl: string | null;
   dataBankCode: string | null;
   exchangeDays: number;
@@ -123,9 +129,12 @@ export type UpdateStorePayload = Partial<{
   contactEmail: string | null;
   seoTitle: string | null;
   seoDescription: string | null;
+  sellerType: SellerType;
   legalName: string | null;
   ruc: string | null;
   legalAddress: string | null;
+  dni: string | null;
+  legalDistrict: string | null;
   complaintsBookUrl: string | null;
   dataBankCode: string | null;
   exchangeDays: number;

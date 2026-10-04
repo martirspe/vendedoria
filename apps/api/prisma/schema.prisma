@@ -105,6 +105,12 @@ enum StorefrontStatus {
   SUSPENDED
 }
 
+/// BUSINESS = has RUC (company or individual with business); INDIVIDUAL = sells without RUC, identified by DNI.
+enum SellerType {
+  BUSINESS
+  INDIVIDUAL
+}
+
 enum ProductKind {
   PRODUCT
   SERVICE
@@ -362,9 +368,15 @@ model Storefront {
   updatedAt      DateTime         @updatedAt
 
   // Legal identity (Peru): required to publish.
+  sellerType        SellerType @default(BUSINESS)
   legalName         String?
   ruc               String?
+  /// Full address. Public for BUSINESS; for INDIVIDUAL it is a private notification address.
   legalAddress      String?
+  /// INDIVIDUAL only, never public.
+  dni               String?
+  /// INDIVIDUAL only: "district, province" shown in the store instead of the address.
+  legalDistrict     String?
   complaintsBookUrl String?
   dataBankCode      String?
   /// Voluntary exchange window in days (0 = only the legal warranty).

@@ -1,4 +1,5 @@
 import { ApiPropertyOptional } from '@nestjs/swagger';
+import { SellerType } from '@prisma/client';
 import {
   IsEmail,
   IsIn,
@@ -17,6 +18,8 @@ import { INDUSTRIES, TEMPLATES } from '../store-templates';
 
 const HEX_COLOR = /^#[0-9a-fA-F]{6}$/;
 export const RUC = /^(10|15|16|17|20)\d{9}$/;
+export const DNI = /^\d{8}$/;
+const SELLER_TYPES = Object.values(SellerType);
 /** Same rule as product photos: uploads served by the API itself live on hosts without a TLD (localhost) in dev. */
 const URL_OPTIONS = { protocols: ['https', 'http'], require_protocol: true, require_tld: false };
 const IMAGE_URL_MESSAGE = { message: 'Usa un enlace de imagen válido que empiece con https://.' };
@@ -87,6 +90,11 @@ export class UpdateStorefrontDto {
   @MaxLength(160)
   seoDescription?: string | null;
 
+  @ApiPropertyOptional({ enum: SELLER_TYPES, description: 'BUSINESS has RUC; INDIVIDUAL sells without RUC (DNI, kept private)' })
+  @IsOptional()
+  @IsIn(SELLER_TYPES)
+  sellerType?: SellerType;
+
   @ApiPropertyOptional({ example: 'Casa Andina S.A.C.' })
   @IsOptional()
   @ValidateIf((_, value) => value !== null)
@@ -106,6 +114,19 @@ export class UpdateStorefrontDto {
   @IsString()
   @MaxLength(240)
   legalAddress?: string | null;
+
+  @ApiPropertyOptional({ example: '45678912', description: 'Only for INDIVIDUAL sellers; never shown in the store' })
+  @IsOptional()
+  @ValidateIf((_, value) => value !== null)
+  @Matches(DNI, { message: 'El DNI debe tener 8 dígitos.' })
+  dni?: string | null;
+
+  @ApiPropertyOptional({ example: 'Miraflores, Lima', description: 'Shown in the store instead of the address for INDIVIDUAL sellers' })
+  @IsOptional()
+  @ValidateIf((_, value) => value !== null)
+  @IsString()
+  @MaxLength(120)
+  legalDistrict?: string | null;
 
   @ApiPropertyOptional({ description: 'Virtual complaints book (Libro de Reclamaciones) URL' })
   @IsOptional()

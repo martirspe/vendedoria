@@ -17,6 +17,7 @@ import { activeCustomDomain, isIntegrationActive } from '../integrations/integra
 import { MerchantAccountsService } from '../payments/merchant-accounts.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { TurnstileService } from '../turnstile/turnstile.service';
+import { publicSellerIdentity } from './seller-identity';
 import { shippingOptions } from './shipping';
 import {
   DEFAULT_STOREFRONT_URL_TEMPLATE,
@@ -204,9 +205,8 @@ export class StorefrontPublicService {
         origin: shippingOrigin(storefront.shippingOriginUbigeo),
       },
       legal: {
-        legalName: storefront.legalName,
-        ruc: storefront.ruc,
-        legalAddress: storefront.legalAddress,
+        sellerType: storefront.sellerType,
+        ...publicSellerIdentity(storefront),
         complaintsBookUrl: storefront.complaintsBookUrl,
         dataBankCode: storefront.dataBankCode,
         exchangeDays: storefront.exchangeDays,

@@ -15,6 +15,7 @@ import { RouterLink } from '@angular/router';
 import type { StoreTemplate } from '@vendedoria/contracts';
 import { DsButtonComponent, DsIconComponent } from '@vendedoria/ui';
 import {
+  SellerType,
   StoreApiService,
   StoreIndustry,
   StoreSettingsView,
@@ -114,9 +115,12 @@ export class StorePage {
     contactEmail: ['', [Validators.email, Validators.maxLength(160)]],
     seoTitle: ['', [Validators.maxLength(70)]],
     seoDescription: ['', [Validators.maxLength(160)]],
+    sellerType: ['BUSINESS' as SellerType],
     legalName: ['', [Validators.maxLength(160)]],
     ruc: ['', [Validators.pattern(/^(10|15|16|17|20)\d{9}$/)]],
     legalAddress: ['', [Validators.maxLength(240)]],
+    dni: ['', [Validators.pattern(/^\d{8}$/)]],
+    legalDistrict: ['', [Validators.maxLength(120)]],
     complaintsBookUrl: ['', [Validators.pattern(/^https:\/\/\S+$/), Validators.maxLength(500)]],
     exchangeDays: [0, [Validators.min(0), Validators.max(60)]],
     dataBankCode: ['', [Validators.maxLength(60)]],
@@ -126,6 +130,8 @@ export class StorePage {
 
   readonly industries = INDUSTRY_OPTIONS;
   private readonly industry = signal<StoreIndustry>('general');
+  private readonly sellerType = signal<SellerType>('BUSINESS');
+  readonly individualSeller = computed(() => this.sellerType() === 'INDIVIDUAL');
   readonly templates = computed(() =>
     TEMPLATE_OPTIONS.map((option) => ({
       ...option,
@@ -139,6 +145,7 @@ export class StorePage {
       const allowed = this.templates().find((t) => t.value === this.form.controls.template.value)?.available;
       if (!allowed) this.form.controls.template.setValue('classic');
     });
+    this.form.controls.sellerType.valueChanges.subscribe((type) => this.sellerType.set(type));
   }
 
   pickTemplate(template: StoreTemplate): void {
@@ -175,9 +182,12 @@ export class StorePage {
       contactEmail: values.contactEmail.trim() || null,
       seoTitle: values.seoTitle.trim() || null,
       seoDescription: values.seoDescription.trim() || null,
+      sellerType: values.sellerType,
       legalName: values.legalName.trim() || null,
       ruc: values.ruc.trim() || null,
       legalAddress: values.legalAddress.trim() || null,
+      dni: values.dni.trim() || null,
+      legalDistrict: values.legalDistrict.trim() || null,
       complaintsBookUrl: values.complaintsBookUrl.trim() || null,
       exchangeDays: values.exchangeDays ?? 0,
       dataBankCode: values.dataBankCode.trim() || null,
@@ -309,7 +319,9 @@ export class StorePage {
     const store = view.storefront;
     this.view.set(view);
     this.industry.set(store.industry);
+    this.sellerType.set(store.sellerType);
     this.form.reset({
+      sellerType: store.sellerType,
       industry: store.industry,
       template: store.template,
       displayName: store.displayName,
@@ -321,6 +333,8 @@ export class StorePage {
       legalName: store.legalName ?? '',
       ruc: store.ruc ?? '',
       legalAddress: store.legalAddress ?? '',
+      dni: store.dni ?? '',
+      legalDistrict: store.legalDistrict ?? '',
       complaintsBookUrl: store.complaintsBookUrl ?? '',
       exchangeDays: store.exchangeDays,
       dataBankCode: store.dataBankCode ?? '',
