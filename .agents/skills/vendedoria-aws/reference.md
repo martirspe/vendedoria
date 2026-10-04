@@ -15,18 +15,20 @@ $env:CLOUDFLARE_API_TOKEN = "<token>"   # only in the shell, never in a file
 # Once per AWS account: state bucket (local state)
 cd infra/terraform/bootstrap
 terraform init
-terraform apply -var aws_region=us-east-1
+terraform apply "-var=aws_region=us-east-1"
 terraform output -raw backend_config | Out-File -Encoding ascii ../backend.hcl   # `>` writes UTF-16 in Windows PowerShell
 
-# Once per machine, then once per environment
+# Once per machine, then once per environment (quote flags: PowerShell splits -flag=file.ext at the dot)
 cd ..
-terraform init -backend-config=backend.hcl
+terraform init "-backend-config=.\backend.hcl"
 terraform workspace new staging          # later: terraform workspace select staging
 copy envs/staging.tfvars.example envs/staging.tfvars   # fill zone id, domains, alerts email
-terraform plan -var-file=envs/staging.tfvars -out=staging.tfplan
-terraform apply staging.tfplan
+terraform plan "-var-file=envs/staging.tfvars" "-out=staging.tfplan"
+terraform apply "staging.tfplan"
 terraform output -raw server_env
 ```
+
+- If the zone publishes CAA records, one must authorize Amazon (`0 issue "amazon.com"`) or ACM fails with `CAA_ERROR`; a FAILED certificate is never retried, re-plan with `"-replace=aws_acm_certificate.media[0]"`. The CAA record is manual (not in Terraform).
 
 - The workspace must match `environment` in the tfvars (a precondition stops the plan otherwise). Each workspace has its own state, locked with `use_lockfile`.
 - Before the first apply, check `_dmarc.DOMAIN`: if a DMARC record already exists keep `manage_dmarc = false` (two records invalidate DMARC). Also check that `bounce.DOMAIN` and the media host have no records yet.

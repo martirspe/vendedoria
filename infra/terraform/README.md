@@ -14,14 +14,14 @@ envs/               <entorno>.tfvars (git-ignored) a partir de los .example
 backend.hcl         configuración del backend (git-ignored) a partir de bootstrap
 ```
 
-Uso habitual (Terraform de 64 bits, `$env:AWS_PROFILE` y `$env:CLOUDFLARE_API_TOKEN` definidos):
+Uso habitual (Terraform de 64 bits, `aws sso login --profile ops`, `$env:AWS_PROFILE = "ops"` y `$env:CLOUDFLARE_API_TOKEN` definidos). En PowerShell los flags van entre comillas para que no se partan en el punto:
 
 ```powershell
-terraform init -backend-config=backend.hcl
-terraform workspace select prod
-terraform plan -var-file=envs/prod.tfvars -out=prod.tfplan
-terraform apply prod.tfplan
+terraform init "-backend-config=.\backend.hcl"
+terraform workspace select staging
+terraform plan "-var-file=envs/staging.tfvars" "-out=staging.tfplan"
+terraform apply "staging.tfplan"
 terraform output -raw server_env
 ```
 
-Antes de un commit: `terraform fmt -recursive` y `terraform validate`. Nunca edites a mano en AWS o Cloudflare lo que gestiona esta carpeta.
+Antes de un commit: `terraform fmt -recursive` y `terraform validate`. Nunca edites a mano en AWS o Cloudflare lo que gestiona esta carpeta. El registro CAA `issue "amazon.com"` del dominio raíz es un requisito manual (no está en Terraform).
