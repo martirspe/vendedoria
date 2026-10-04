@@ -79,6 +79,7 @@
 - Dependencies: Angular 22.2.1 (store pins aligned with the console), `find-my-way`, `qs`, `fast-uri` and `brace-expansion` patched; `@fastify/static` 10 (required by the updated Nest Fastify adapter; with 9 the API failed to start); `npm audit --omit=dev` down from 13 high to 4 high, all requiring major upgrades (Nest 12 for Fastify, Prisma)
 
 ### Fixed
+- Impulso development stylesheet delivery: restarted the store dev server to load the new non-injected `stride.css` entry and verified HTTP 200 with `text/css`. Documented the required restart after adding global stylesheet entries to `angular.json`; an already-running Angular dev server otherwise falls back to HTML for the missing asset.
 - Sales agent QA pass on WhatsApp and the playground:
   - Prices read "S/ 98.90" instead of "PEN 98.90", and products with no stock read "Agotado".
   - The agent searches the whole catalog. It used to see only 40 products. Words of the product name now rank above loose description hits, and "¿eres un bot?" no longer matches products containing "botella".

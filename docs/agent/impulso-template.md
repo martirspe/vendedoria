@@ -35,6 +35,14 @@ El editor conserva la posición y visibilidad de las secciones. Un texto o una i
 
 No requiere migraciones ni nuevos endpoints. Mantiene las URLs de catálogo, producto, carrito, compra, recibo y políticas, así como la resolución de tenant por host.
 
+### Servidor de desarrollo
+
+Al incorporar esta plantilla a un servidor que ya estaba ejecutándose, reinicia únicamente la tienda con `docker compose -f docker-compose.dev.yml restart store` (o reinicia `ng serve` si lo ejecutas directamente). Angular lee las entradas de estilos de `angular.json` al iniciar; la recarga de código no incorpora una entrada nueva de estilos globales.
+
+Si `/stride.css` devuelve HTML, el navegador rechaza la hoja por su tipo MIME. Tras el reinicio debe responder con estado `200` y `Content-Type: text/css`. No es necesario modificar los tipos MIME ni cargar los estilos de todas las plantillas en la página.
+
+Comprobación en el stack de desarrollo: antes del reinicio `/stride.css` devolvía HTML mientras `/selecta.css` respondía como CSS; después, ambos archivos respondieron con `200` y `text/css` desde el host `selecta.localhost:4300`.
+
 ## Evidencia de verificación — 4 de octubre de 2026
 
 - `npm run build:api`, `npm run build:web` y `npm run build:store`: aprobados. Angular necesitó ejecución fuera del sandbox por restricciones de lectura de directorios padre. Web conserva advertencias previas de tamaño de estilos en consola, vendedor y catálogo.
