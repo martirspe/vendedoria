@@ -17,9 +17,10 @@ export type MercadoPagoInstance = {
         initialization: { amount: number; payer?: { email?: string } };
         customization?: Record<string, unknown>;
         callbacks: {
-          onReady?: () => void;
+          /** Mercado Pago rejects `create` with live keys unless both callbacks are present. */
+          onReady: () => void;
           onSubmit: (data: CardFormData, extra?: { paymentTypeId?: string }) => Promise<void>;
-          onError?: (error: unknown) => void;
+          onError: (error: unknown) => void;
         };
       },
     ) => Promise<CardBrickController>;

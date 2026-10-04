@@ -65,6 +65,7 @@
 - Dependencies: Angular 22.2.1 (store pins aligned with the console), `find-my-way`, `qs`, `fast-uri` and `brace-expansion` patched; `@fastify/static` 10 (required by the updated Nest Fastify adapter; with 9 the API failed to start); `npm audit --omit=dev` down from 13 high to 4 high, all requiring major upgrades (Nest 12 for Fastify, Prisma)
 
 ### Fixed
+- Card payments with live Mercado Pago credentials: the plan payment in the console and the order payment in the web store showed "No pudimos cargar el formulario de pago" because the Card Payment Brick rejects `create` without an `onReady` callback. Both now pass `onReady` and `onError`, which the SDK typings make required
 - Envíos: the dispatch province and district selects stay disabled (and look disabled) until the previous level is chosen
 - Envíos: the dispatch department and province no longer show "Elige…" after saving or reopening the page
 - Saving the store settings failed with "heroImageUrl must be a URL address" when the logo, cover or banner was an image uploaded to local storage (`http://localhost…/media/…`): store image URLs now follow the same rule as product photos, and the error is in Spanish

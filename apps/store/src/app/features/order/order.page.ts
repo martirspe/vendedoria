@@ -305,6 +305,7 @@ export class OrderPage {
           visual: { style: { theme: 'default' } },
         },
         callbacks: {
+          onReady: () => undefined,
           onSubmit: (data, extra) => this.onCardSubmit(data, extra),
           onError: () => undefined,
         },
