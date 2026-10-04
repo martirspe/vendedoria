@@ -91,7 +91,7 @@ describe('Plan billing (e2e)', () => {
       planStatus: 'TRIAL',
       conversationQuota: 100,
       aiReplyQuota: 1_500,
-      productQuota: 20,
+      productQuota: 100,
       seatQuota: 2,
     });
   });

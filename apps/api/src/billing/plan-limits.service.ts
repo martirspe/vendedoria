@@ -143,12 +143,12 @@ export class PlanLimitsService {
     const usage = await this.getUsage(tenantId);
     if (usage.planStatus === 'EXPIRED') {
       throw new ForbiddenException(
-        'Tu plan venció. Renueva tu plan en Planes para publicar productos.',
+        'Tu plan venció. Renueva tu plan en Planes para agregar productos.',
       );
     }
     if (usage.productAtLimit) {
       throw new ForbiddenException(
-        `Llegaste a ${usage.productQuota} productos, el máximo ${this.planLabel(usage)}. Cambia de plan en Planes para publicar más.`,
+        `Llegaste a ${usage.productQuota} productos en tu catálogo, el máximo ${this.planLabel(usage)}. Cambia de plan en Planes para agregar más.`,
       );
     }
   }

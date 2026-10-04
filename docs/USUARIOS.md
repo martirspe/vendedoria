@@ -22,7 +22,7 @@ El `ADMIN` de un negocio y el `ADMIN` de plataforma son roles distintos: el prim
 La persona entra a `/auth/register` en la consola y completa nombre, correo, contraseña (mínimo 8 caracteres) y nombre del negocio.
 
 - En una sola operación se crean la cuenta, el negocio, su membresía como `OWNER` y un vendedor IA inicial; luego queda con la sesión iniciada.
-- El negocio empieza con 30 días de prueba del plan Crece.
+- El negocio empieza con 14 días de prueba del plan Crece.
 - Protecciones: Cloudflare Turnstile (acción `register`) y límite de 5 intentos por minuto por IP. Un correo solo puede tener una cuenta.
 - API: `POST /api/v1/auth/register`. Inicio de sesión: `/auth/login` (`POST /api/v1/auth/login`).
 

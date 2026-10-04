@@ -54,9 +54,10 @@
       <div class="banner banner--danger" role="alert">
         <ds-icon name="alert" />
         <span>
-          Tu plan venció. Tu vendedor IA no atiende chats nuevos y no puedes
-          publicar productos. Tus clientes actuales, tus cupones y tu tienda siguen
-          funcionando. Renueva o elige un plan para volver a la normalidad.
+          Tu plan venció. Tu vendedor IA no atiende chats nuevos, no puedes
+          agregar productos y tu tienda web está fuera de línea. Tus productos,
+          pedidos y la configuración de tu tienda se guardan: renueva o elige un
+          plan y todo vuelve como estaba.
         </span>
       </div>
     }
@@ -114,7 +115,7 @@
         </div>
       }
       <div>
-        <span>Productos publicados</span>
+        <span>Productos en tu catálogo</span>
         <strong>
           {{ usageLabel(data, data.usage.productsUsed, data.usage.productQuota) }}
         </strong>
@@ -167,7 +168,7 @@
             <div class="plan-grid__title">
               <h3>{{ plan.name }}</h3>
               @if (plan.id === data.currentPlan.id) {
-                <span class="plan-grid__pill">Tu plan</span>
+                <span class="plan-grid__pill">{{ data.planStatus === 'TRIAL' ? 'En prueba' : 'Tu plan' }}</span>
               }
             </div>
             <p class="plan-grid__description">{{ plan.description }}</p>

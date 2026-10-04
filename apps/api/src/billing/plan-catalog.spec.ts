@@ -67,10 +67,10 @@ describe('plan catalog', () => {
       aiReplyQuota: 100 * AI_REPLIES_PER_CHAT,
       aiTextQuota: 100,
       aiImageQuota: 10,
-      productQuota: 20,
-      couponQuota: 3,
+      productQuota: 100,
+      couponQuota: 5,
       seatQuota: 2,
-      platformBadge: true,
+      platformBadge: false,
     });
     expect(planAllows(state, 'custom_domain')).toBe(true);
     expect(planAllows(state, 'tracking')).toBe(false);

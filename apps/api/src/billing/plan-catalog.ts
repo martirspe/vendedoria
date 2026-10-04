@@ -100,18 +100,19 @@ export const CHAT_PACKS: ChatPackDefinition[] = [
 ];
 
 /**
- * Trial limits. 100 chats of about 8 agent replies stay inside the 1 000 service messages Meta
- * gives each WhatsApp number per month, so the trial costs the business nothing.
+ * Trial limits: Crece as it is, with lower caps only where each use has a cost (chats and AI).
+ * 100 chats of about 8 agent replies stay inside the 1 000 service messages Meta gives each
+ * WhatsApp number per month, so the trial costs the business nothing.
  */
 export const TRIAL_LIMITS: PlanLimits = {
   conversationQuota: 100,
   aiReplyQuota: 100 * AI_REPLIES_PER_CHAT,
   aiTextQuota: 100,
   aiImageQuota: 10,
-  productQuota: 20,
-  couponQuota: 3,
+  productQuota: 100,
+  couponQuota: 5,
   seatQuota: 2,
-  platformBadge: true,
+  platformBadge: false,
   integrations: ['store', 'instagram', 'custom_domain', 'team'],
 };
 
@@ -177,13 +178,13 @@ export const PLAN_CATALOG: PlanDefinition[] = [
     platformBadge: false,
     integrations: ['store', 'instagram', 'custom_domain', 'team'],
     description: 'Para vender todos los días con tu tienda web, diseñada con IA en minutos.',
-    note: `Empieza con ${PLAN_TRIAL_DAYS} días gratis, sin tarjeta: 100 chats nuevos, 20 productos y 3 cupones.`,
+    note: `Pruébalo ${PLAN_TRIAL_DAYS} días gratis, sin tarjeta. En la prueba tienes hasta 100 chats nuevos, 100 textos y 10 imágenes con IA; todo lo demás es igual.`,
     highlights: [
       'Tienda web con cobros con tarjeta y Yape',
       'Diseña tu tienda con IA: 300 textos y 30 imágenes al mes',
       '400 chats nuevos al mes',
       'Hasta 6 000 respuestas con IA al mes',
-      'Hasta 100 productos',
+      'Hasta 100 productos en tu catálogo',
       '5 cupones activos a la vez',
       '2 usuarios',
       'Tu dominio propio (www.tumarca.pe)',
@@ -210,7 +211,7 @@ export const PLAN_CATALOG: PlanDefinition[] = [
       'Diseña tu tienda con IA: 1 000 textos y 100 imágenes al mes',
       '1 200 chats nuevos al mes',
       'Hasta 18 000 respuestas con IA al mes',
-      'Hasta 300 productos',
+      'Hasta 300 productos en tu catálogo',
       '20 cupones activos a la vez',
       '5 usuarios',
       'Tu dominio propio (www.tumarca.pe)',
@@ -237,7 +238,7 @@ export const PLAN_CATALOG: PlanDefinition[] = [
       'Diseña tu tienda con IA: 3 000 textos y 150 imágenes al mes',
       '4 000 chats nuevos al mes',
       'Hasta 60 000 respuestas con IA al mes',
-      'Hasta 1 000 productos',
+      'Hasta 1 000 productos en tu catálogo',
       'Cupones sin límite',
       '15 usuarios',
       'Tu dominio propio, píxel de Meta y Google Analytics',
