@@ -1,0 +1,55 @@
+<section id="como-funciona" class="mk-section ds-page-shell" aria-labelledby="steps-title">
+  <header class="mk-heading">
+    <p class="mk-kicker">Cómo funciona</p>
+    <h2 id="steps-title">De la primera pregunta al pedido pagado</h2>
+    <p>Configúralo una vez y tu vendedor trabaja en cada conversación.</p>
+  </header>
+
+  <ol class="steps">
+    @for (step of steps; track step.title; let index = $index) {
+      <li class="steps__item">
+        <span class="steps__number">{{ index + 1 }}</span>
+        <ds-icon class="steps__icon" [name]="step.icon" />
+        <h3>{{ step.title }}</h3>
+        <p>{{ step.text }}</p>
+      </li>
+    }
+  </ol>
+</section>
+
+<section id="funcionalidades" class="mk-section ds-page-shell" aria-labelledby="features-title">
+  <header class="mk-heading">
+    <p class="mk-kicker">Funcionalidades</p>
+    <h2 id="features-title">Todo lo que necesitas para vender por chat y en tu web</h2>
+  </header>
+
+  <ul class="features">
+    @for (feature of features; track feature.title) {
+      <li class="features__card">
+        <span class="features__icon"><ds-icon [name]="feature.icon" /></span>
+        <h3>{{ feature.title }}</h3>
+        <p>{{ feature.text }}</p>
+      </li>
+    }
+  </ul>
+</section>
+
+<section class="mk-section ds-page-shell" aria-labelledby="channels-title">
+  <div class="channels">
+    <div class="channels__copy">
+      <p class="mk-kicker">Integraciones</p>
+      <h2 id="channels-title">Vende donde ya están tus clientes</h2>
+      <p>
+        Un mismo catálogo y una misma bandeja para tus chats y tu tienda web. El dinero
+        de tus ventas llega directo a tu cuenta de Mercado Pago, sin comisión por venta
+        de VendedorIA.
+      </p>
+    </div>
+    <ul class="channels__list">
+      <li><ds-icon name="whatsapp" /> <span><strong>WhatsApp</strong> Tu número de WhatsApp Business</span></li>
+      <li><ds-icon name="instagram" /> <span><strong>Instagram</strong> Mensajes directos de tu cuenta</span></li>
+      <li><ds-icon name="wallet" /> <span><strong>Mercado Pago</strong> Tarjeta y Yape en el chat y la tienda</span></li>
+      <li><ds-icon name="globe" /> <span><strong>Tu dominio</strong> www.tumarca.pe para tu tienda</span></li>
+    </ul>
+  </div>
+</section>

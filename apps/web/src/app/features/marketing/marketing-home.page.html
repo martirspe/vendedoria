@@ -1,45 +1,110 @@
 <div class="hero">
   <header class="hero__nav ds-page-shell">
-    <a class="hero__brand" routerLink="/">VendedorIA</a>
+    <a class="hero__brand" routerLink="/">Vendedor<span>IA</span></a>
     <nav class="hero__links" aria-label="Principal">
-      <a href="/auth/login">Entrar</a>
+      <a class="hero__anchor" href="#como-funciona">Cómo funciona</a>
+      <a class="hero__anchor" href="#funcionalidades">Funcionalidades</a>
+      <a class="hero__anchor" href="#planes">Planes</a>
+      <a class="hero__anchor" href="#preguntas">Preguntas</a>
+      <a class="hero__login" href="/auth/login">Entrar</a>
       <a href="/auth/register">
         <ds-button variant="primary">Prueba gratis 14 días</ds-button>
       </a>
     </nav>
   </header>
 
-  <section class="hero__content ds-page-shell">
-    <p class="hero__eyebrow">
-      <ds-icon name="sparkles" />
-      Ventas por chat con inteligencia artificial
-    </p>
-    <h1>Tu vendedor IA, del hola al pago</h1>
-    <p class="hero__support">
-      Agentes que atienden WhatsApp e Instagram, recomiendan de tu catálogo y
-      cierran la venta con Mercado Pago. Y tu tienda web, diseñada con IA en
-      minutos.
-    </p>
-    <div class="hero__cta">
-      <a href="/auth/register">
-        <ds-button variant="primary">Crear mi agente</ds-button>
-      </a>
-      <a href="/auth/login">
-        <ds-button variant="secondary">Ya tengo cuenta</ds-button>
-      </a>
+  <section class="hero__main ds-page-shell" aria-labelledby="hero-title">
+    <div class="hero__content">
+      <p class="hero__eyebrow">
+        <ds-icon name="sparkles" />
+        Ventas por chat con inteligencia artificial
+      </p>
+      <h1 id="hero-title">
+        Tu vendedor IA,
+        <span class="hero__highlight">del hola al pago</span>
+      </h1>
+      <p class="hero__support">
+        Responde en WhatsApp e Instagram con tu catálogo real, arma el pedido y
+        envía el link de pago de Mercado Pago. Mientras, tu tienda web vende
+        con la misma información.
+      </p>
+      <div class="hero__cta">
+        <a href="/auth/register">
+          <ds-button variant="primary">Crear mi agente</ds-button>
+        </a>
+        <a href="/auth/login">
+          <ds-button variant="secondary">Ya tengo cuenta</ds-button>
+        </a>
+      </div>
+      <ul class="hero__proof">
+        <li><ds-icon name="check" /> Precios y stock de tu catálogo, sin inventar</li>
+        <li><ds-icon name="check" /> Si respondes tú, el agente se pausa en ese chat</li>
+        <li><ds-icon name="check" /> 14 días de prueba para configurarlo</li>
+      </ul>
+      <div class="hero__channels" aria-label="Canales">
+        <span class="hero__channel"><ds-icon name="whatsapp" /> WhatsApp</span>
+        <span class="hero__channel"><ds-icon name="instagram" /> Instagram</span>
+        <span class="hero__channel"><ds-icon name="store" /> Tienda web</span>
+      </div>
+    </div>
+
+    <div class="hero__visual" aria-hidden="true">
+      <div class="hero__glow"></div>
+
+      <div class="hero__phone">
+        <div class="hero__phone-head">
+          <span class="hero__avatar"><ds-icon name="bot" /></span>
+          <div>
+            <strong>Tu tienda</strong>
+            <small>Agente IA · en línea</small>
+          </div>
+        </div>
+
+        <div class="hero__thread">
+          <div class="hero__bubble hero__bubble--buyer">
+            Hola, ¿tienen zapatillas blancas talla 40?
+          </div>
+          <div class="hero__bubble hero__bubble--agent">
+            ¡Hola! Sí, tengo estas opciones disponibles en talla 40:
+          </div>
+          <div class="hero__product">
+            <span class="hero__product-thumb"><ds-icon name="package" /></span>
+            <div>
+              <strong>Urbana Blanca</strong>
+              <small>S/ 189.00 · 3 en stock</small>
+            </div>
+          </div>
+          <div class="hero__bubble hero__bubble--buyer">Esa, ¿cómo pago?</div>
+          <div class="hero__bubble hero__bubble--agent">
+            Listo, aquí tienes tu link de pago:
+            <span class="hero__pay"><ds-icon name="wallet" /> Pagar S/ 189.00</span>
+          </div>
+          <div class="hero__bubble hero__bubble--success">
+            <ds-icon name="check" />
+            Pago confirmado · Pedido creado
+          </div>
+        </div>
+      </div>
+
+      <div class="hero__badge hero__badge--top">
+        <ds-icon name="clock" />
+        <div>
+          <strong>Responde 24/7</strong>
+          <small>También de madrugada</small>
+        </div>
+      </div>
+      <div class="hero__badge hero__badge--bottom">
+        <ds-icon name="kanban" />
+        <div>
+          <strong>Pedido en tu consola</strong>
+          <small>Listo para despachar</small>
+        </div>
+      </div>
     </div>
   </section>
-
-  <div class="hero__visual" aria-hidden="true">
-    <div class="hero__chat">
-      <div class="hero__bubble hero__bubble--agent">
-        Separé estas opciones de tu catálogo
-      </div>
-      <div class="hero__bubble hero__bubble--buyer">¿Cómo pago?</div>
-      <div class="hero__bubble hero__bubble--success">
-        <ds-icon name="message" />
-        Pago confirmado · Pedido creado
-      </div>
-    </div>
-  </div>
 </div>
+
+<main>
+  <app-marketing-features />
+  <app-marketing-pricing />
+</main>

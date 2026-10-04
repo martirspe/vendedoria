@@ -1,0 +1,92 @@
+<section id="planes" class="mk-section ds-page-shell" aria-labelledby="plans-title">
+  <header class="mk-heading">
+    <p class="mk-kicker">Planes</p>
+    <h2 id="plans-title">Un plan para cada etapa de tu negocio</h2>
+    <p>Precios mensuales con IGV incluido. Sin contratos y sin comisión por venta.</p>
+  </header>
+
+  <ul class="plans">
+    @for (plan of plans; track plan.name) {
+      <li class="plans__card" [class.plans__card--featured]="plan.featured">
+        @if (plan.featured) {
+          <span class="plans__tag">14 días gratis, sin tarjeta</span>
+        }
+        <h3>{{ plan.name }}</h3>
+        <p class="plans__price">{{ plan.price }} <small>/ mes</small></p>
+        <p class="plans__description">{{ plan.description }}</p>
+        <ul class="plans__list">
+          @for (item of plan.highlights; track item) {
+            <li><ds-icon name="check" /> {{ item }}</li>
+          }
+        </ul>
+        <a class="plans__cta" href="/auth/register">
+          <ds-button [variant]="plan.featured ? 'primary' : 'secondary'">
+            {{ plan.featured ? 'Empezar prueba gratis' : 'Elegir ' + plan.name }}
+          </ds-button>
+        </a>
+      </li>
+    }
+  </ul>
+
+  <p class="plans__footnote">
+    ¿Más de 4 000 chats al mes? Tenemos un plan a medida. Todos los planes incluyen
+    vendedor IA en WhatsApp e Instagram, links de pago con tarjeta y Yape, y pedidos y
+    métricas en tu consola.
+  </p>
+</section>
+
+<section id="preguntas" class="mk-section ds-page-shell" aria-labelledby="faq-title">
+  <div class="faq">
+    <header class="mk-heading">
+      <p class="mk-kicker">Preguntas frecuentes</p>
+      <h2 id="faq-title">Lo que suelen preguntarnos</h2>
+    </header>
+    <div class="faq__list">
+      @for (item of questions; track item.question) {
+        <details class="faq__item">
+          <summary>
+            {{ item.question }}
+            <ds-icon class="faq__chevron" name="plus" />
+          </summary>
+          <p>{{ item.answer }}</p>
+        </details>
+      }
+    </div>
+  </div>
+</section>
+
+<section class="mk-section ds-page-shell" aria-labelledby="final-title">
+  <div class="final">
+    <h2 id="final-title">Pon a vender tu negocio mientras tú te ocupas de lo demás</h2>
+    <p>Crea tu vendedor IA y tu tienda web hoy. Pruébalo 14 días gratis, sin tarjeta.</p>
+    <div class="final__cta">
+      <a href="/auth/register">
+        <ds-button variant="primary">Crear mi agente</ds-button>
+      </a>
+      <a href="/auth/login">
+        <ds-button variant="secondary">Ya tengo cuenta</ds-button>
+      </a>
+    </div>
+  </div>
+</section>
+
+<footer class="footer ds-page-shell">
+  <a class="footer__brand" routerLink="/">Vendedor<span>IA</span></a>
+  <nav class="footer__links" aria-label="Pie de página">
+    <a href="#como-funciona">Cómo funciona</a>
+    <a href="#funcionalidades">Funcionalidades</a>
+    <a href="#planes">Planes</a>
+    <a href="#preguntas">Preguntas</a>
+    <a href="/auth/login">Entrar</a>
+  </nav>
+  <nav class="footer__legal" aria-label="Legal">
+    <a [routerLink]="links.terms">Términos</a>
+    <a [routerLink]="links.privacy">Privacidad</a>
+    <a [routerLink]="links.cookies">Cookies</a>
+    <a [routerLink]="links.center">Centro legal</a>
+    <a class="footer__book" [href]="legal.complaintsBookUrl" target="_blank" rel="noopener">
+      <ds-icon name="book" /> Libro de Reclamaciones
+    </a>
+  </nav>
+  <p class="footer__copy">© {{ year }} {{ legal.brand }} · Hecho en Perú</p>
+</footer>

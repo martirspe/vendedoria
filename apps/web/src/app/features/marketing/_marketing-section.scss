@@ -1,0 +1,58 @@
+:host {
+  --mk-line: color-mix(in srgb, var(--ds-color-marketing-text) 10%, transparent);
+  --mk-soft: color-mix(in srgb, var(--ds-color-marketing-text) 5%, transparent);
+
+  display: block;
+}
+
+.mk-section {
+  display: grid;
+  gap: var(--ds-space-10);
+  padding-block: clamp(var(--ds-space-12), 8vw, calc(var(--ds-space-12) + var(--ds-space-8)));
+  scroll-margin-top: var(--ds-space-8);
+}
+
+.mk-heading {
+  display: grid;
+  gap: var(--ds-space-3);
+  max-width: 40rem;
+
+  p {
+    margin: 0;
+    color: var(--ds-color-marketing-muted);
+    font-size: 1.05rem;
+    line-height: 1.6;
+  }
+}
+
+.mk-kicker,
+.mk-heading .mk-kicker {
+  margin: 0;
+  color: var(--ds-color-primary);
+  font-size: 0.8rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+h2 {
+  margin: 0;
+  font-family: var(--ds-font-display);
+  font-size: clamp(1.9rem, 4.5vw, 3rem);
+  line-height: 1.08;
+  letter-spacing: -0.035em;
+}
+
+h3 {
+  margin: 0;
+  font-family: var(--ds-font-display);
+  font-size: 1.15rem;
+  letter-spacing: -0.02em;
+}
+
+ul,
+ol {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
