@@ -63,19 +63,19 @@
             <div class="row row--3">
               <label>
                 Departamento de despacho
-                <select [value]="originDepartment()" (change)="setOriginDepartment($any($event.target).value)">
-                  <option value="">Elige…</option>
+                <select (change)="setOriginDepartment($any($event.target).value)">
+                  <option value="" [selected]="!originDepartment()">Elige…</option>
                   @for (department of departments(); track department) {
-                    <option [value]="department">{{ department }}</option>
+                    <option [value]="department" [selected]="department === originDepartment()">{{ department }}</option>
                   }
                 </select>
               </label>
               <label>
                 Provincia
-                <select [value]="originProvince()" [disabled]="!originDepartment()" (change)="setOriginProvince($any($event.target).value)">
-                  <option value="">Elige…</option>
+                <select [disabled]="!originDepartment()" (change)="setOriginProvince($any($event.target).value)">
+                  <option value="" [selected]="!originProvince()">Elige…</option>
                   @for (province of provinces(); track province) {
-                    <option [value]="province">{{ province }}</option>
+                    <option [value]="province" [selected]="province === originProvince()">{{ province }}</option>
                   }
                 </select>
               </label>

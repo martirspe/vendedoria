@@ -67,6 +67,12 @@
   background: #fff;
 }
 
+.card select:disabled {
+  background: var(--ds-color-bg);
+  color: var(--ds-color-disabled);
+  cursor: not-allowed;
+}
+
 .card input.ng-invalid.ng-touched {
   border-color: var(--ds-color-danger);
 }

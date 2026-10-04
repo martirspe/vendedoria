@@ -86,12 +86,21 @@ export class ShippingPage {
     this.originProvince.set('');
     this.form.controls.shippingOriginUbigeo.setValue('');
     this.form.controls.shippingOriginUbigeo.markAsDirty();
+    this.syncDistrictControl();
   }
 
   setOriginProvince(province: string): void {
     this.originProvince.set(province);
     this.form.controls.shippingOriginUbigeo.setValue('');
     this.form.controls.shippingOriginUbigeo.markAsDirty();
+    this.syncDistrictControl();
+  }
+
+  /** The district list depends on the province, so it stays disabled until one is chosen. */
+  private syncDistrictControl(): void {
+    const control = this.form.controls.shippingOriginUbigeo;
+    if (this.originProvince()) control.enable({ emitEvent: false });
+    else control.disable({ emitEvent: false });
   }
 
   async save(): Promise<void> {
@@ -160,5 +169,6 @@ export class ShippingPage {
       shalomEnabled: Boolean(shalom),
       shalom: shalom?.map((c) => c / 100) ?? [...CARRIERS[1].defaults],
     });
+    this.syncDistrictControl();
   }
 }
