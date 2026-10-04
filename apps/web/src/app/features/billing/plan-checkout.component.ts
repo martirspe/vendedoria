@@ -14,6 +14,7 @@ import {
 import { HttpErrorResponse } from '@angular/common/http';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { DsButtonComponent, DsIconComponent } from '@vendedoria/ui';
+import { LEGAL_LINKS } from '../legal/legal-identity';
 import {
   BillingApiService,
   PayPlanRequest,
@@ -67,6 +68,7 @@ export class PlanCheckoutComponent {
   readonly closed = output<void>();
 
   readonly brickId = BRICK_ID;
+  readonly billingPolicy = LEGAL_LINKS.billing;
   /** Starts with the checkout input and is replaced after a declined attempt. */
   readonly session = linkedSignal(() => this.checkout());
   readonly method = signal<PayMethod>('card');
@@ -268,6 +270,7 @@ export class PlanCheckoutComponent {
           visual: { hideFormTitle: true, style: { theme: 'default' } },
         },
         callbacks: {
+          onReady: () => undefined,
           onSubmit: (data, extra) => this.onCardSubmit(data, extra),
           onError: () => undefined,
         },

@@ -40,6 +40,7 @@ const STYLESHEET = '/selecta.css';
   },
 })
 export class SelectaShell {
+  readonly year = new Date().getFullYear();
   private readonly router = inject(Router);
   private readonly state = inject(StoreStateService);
   private readonly catalog = inject(SelectaCatalog);

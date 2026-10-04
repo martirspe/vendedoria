@@ -1,0 +1,116 @@
+<ng-template #inline let-parts>@for (part of parts; track $index) {@if (asObject(part); as o) {@if (o.route) {<a [routerLink]="o.route">{{ o.text }}</a>} @else if (o.href) {<a [href]="o.href" target="_blank" rel="noopener">{{ o.text }}</a>} @else if (o.missing) {<mark class="missing">{{ o.text }}</mark>} @else {<strong>{{ o.text }}</strong>}} @else {<ng-container>{{ part }}</ng-container>}}</ng-template>
+
+<header class="topbar print-hide">
+  <div class="topbar__inner ds-page-shell">
+    <a class="topbar__brand" routerLink="/">Vendedor<span>IA</span></a>
+    <a class="topbar__login" href="/auth/login">Entrar</a>
+  </div>
+</header>
+
+<main class="legal ds-page-shell">
+  @if (doc; as d) {
+    <nav class="crumbs print-hide" aria-label="Ruta">
+      <a routerLink="/legal">Centro legal</a> <span aria-hidden="true">/</span> <span>{{ d.title }}</span>
+    </nav>
+    <div class="legal__layout">
+      <aside class="toc" aria-label="Contenido">
+        <p class="toc__title">Contenido</p>
+        <ol>
+          @for (section of d.sections; track section.id; let i = $index) {
+            <li><a [href]="'#' + section.id">{{ i + 1 }}. {{ section.title }}</a></li>
+          }
+        </ol>
+      </aside>
+
+      <article class="doc">
+        <header class="doc__head">
+          <h1>{{ d.title }}</h1>
+          <p class="doc__meta">Última actualización: {{ updated }}</p>
+          <button type="button" class="doc__print print-hide" (click)="print()">
+            <ds-icon name="printer" [size]="1" /> Imprimir o guardar en PDF
+          </button>
+        </header>
+
+        <div class="doc__summary">
+          <h2>En resumen</h2>
+          <ul>
+            @for (item of d.summary; track $index) {
+              <li><ng-container *ngTemplateOutlet="inline; context: { $implicit: item }" /></li>
+            }
+          </ul>
+          <p class="doc__note">Este resumen es informativo; el texto completo prevalece.</p>
+        </div>
+
+        @for (section of d.sections; track section.id; let i = $index) {
+          <section class="doc__section" [id]="section.id">
+            <h2>{{ i + 1 }}. {{ section.title }}</h2>
+            @for (block of section.blocks; track $index) {
+              @switch (block.kind) {
+                @case ('p') {
+                  <p><ng-container *ngTemplateOutlet="inline; context: { $implicit: $any(block).parts }" /></p>
+                }
+                @case ('ul') {
+                  <ul>
+                    @for (item of $any(block).items; track $index) {
+                      <li><ng-container *ngTemplateOutlet="inline; context: { $implicit: item }" /></li>
+                    }
+                  </ul>
+                }
+                @case ('table') {
+                  <div class="table-wrap" tabindex="0" role="region" [attr.aria-label]="section.title">
+                    <table>
+                      <thead>
+                        <tr>
+                          @for (cell of $any(block).head; track $index) { <th scope="col">{{ cell }}</th> }
+                        </tr>
+                      </thead>
+                      <tbody>
+                        @for (row of $any(block).rows; track $index) {
+                          <tr>
+                            @for (cell of row; track $index) {
+                              <td><ng-container *ngTemplateOutlet="inline; context: { $implicit: [cell] }" /></td>
+                            }
+                          </tr>
+                        }
+                      </tbody>
+                    </table>
+                  </div>
+                }
+              }
+            }
+          </section>
+        }
+      </article>
+    </div>
+  } @else {
+    <header class="center__head">
+      <h1>Centro legal</h1>
+      <p>Las condiciones y políticas que se aplican cuando usas VendedorIA. Última actualización: {{ updated }}.</p>
+    </header>
+    <ul class="center__grid">
+      @for (d of docs; track d.slug) {
+        <li>
+          <a class="center__card" [routerLink]="'/' + d.slug">
+            <ds-icon name="fileText" [size]="1.3" />
+            <strong>{{ d.title }}</strong>
+            <span>{{ d.description }}</span>
+          </a>
+        </li>
+      }
+      <li>
+        <a class="center__card center__card--book" [href]="legal.complaintsBookUrl" target="_blank" rel="noopener">
+          <ds-icon name="book" [size]="1.3" />
+          <strong>Libro de Reclamaciones</strong>
+          <span>Registra un reclamo o una queja. Se abre en una pestaña nueva.</span>
+        </a>
+      </li>
+    </ul>
+  }
+</main>
+
+<footer class="legal-footer ds-page-shell print-hide">
+  <p>© {{ year }} {{ legal.brand }} · Hecho en Perú</p>
+  <a [href]="legal.complaintsBookUrl" target="_blank" rel="noopener">
+    <ds-icon name="book" [size]="1" /> Libro de Reclamaciones
+  </a>
+</footer>

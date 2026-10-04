@@ -10,6 +10,7 @@ import { MembershipRole } from '@prisma/client';
 import * as bcrypt from 'bcryptjs';
 import { createHash, randomBytes } from 'crypto';
 import { AuthService } from '../auth/auth.service';
+import { LEGAL_TERMS_VERSION } from '../auth/legal-terms';
 import { PlanLimitsService } from '../billing/plan-limits.service';
 import { assertManager } from '../common/roles';
 import type { AuthUserPayload } from '../common/types/auth-user';
@@ -188,7 +189,13 @@ export class TeamService {
         throw new NotFoundException(INVALID_INVITE);
       }
       const created = await tx.user.create({
-        data: { email: invite.email, passwordHash, fullName: dto.fullName.trim() },
+        data: {
+          email: invite.email,
+          passwordHash,
+          fullName: dto.fullName.trim(),
+          termsVersion: LEGAL_TERMS_VERSION,
+          termsAcceptedAt: new Date(),
+        },
       });
       await tx.membership.create({
         data: { userId: created.id, tenantId: invite.tenantId, role: invite.role },

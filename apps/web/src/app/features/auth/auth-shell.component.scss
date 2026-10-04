@@ -134,12 +134,34 @@
 .auth-shell__footer {
   display: grid;
   place-items: center;
+  gap: var(--ds-space-1);
   padding-top: var(--ds-space-3);
 
   p {
     margin: 0;
     color: var(--ds-color-text-secondary);
     font-size: 0.8rem;
+  }
+}
+
+.auth-shell__legal {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 0 var(--ds-space-4);
+
+  a {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--ds-space-1);
+    min-height: var(--ds-touch-target);
+    color: var(--ds-color-text-secondary);
+    font-size: 0.82rem;
+    font-weight: 600;
+
+    &:hover {
+      color: var(--ds-color-text-primary);
+    }
   }
 }
 

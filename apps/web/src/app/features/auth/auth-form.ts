@@ -3,6 +3,8 @@ import type { AbstractControl } from '@angular/forms';
 
 export type FieldMessages = Partial<Record<'required' | 'email' | 'minlength', string>>;
 
+export const TERMS_REQUIRED = 'Debes aceptar los Términos y Condiciones para continuar.';
+
 /** First message for the control's current error, shown only once the visitor left the field or submitted. */
 export function fieldError(control: AbstractControl, messages: FieldMessages): string | null {
   if (!control.touched || !control.errors) return null;

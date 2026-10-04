@@ -1,5 +1,6 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { IsEmail, IsIn, IsString, Matches, MaxLength, MinLength } from 'class-validator';
+import { Equals, IsEmail, IsIn, IsString, Matches, MaxLength, MinLength } from 'class-validator';
+import { TERMS_REQUIRED } from '../../auth/dto/auth.dto';
 
 export const ASSIGNABLE_ROLES = ['ADMIN', 'AGENT'] as const;
 export type AssignableRole = (typeof ASSIGNABLE_ROLES)[number];
@@ -39,4 +40,8 @@ export class AcceptInviteDto {
   @MinLength(8, { message: 'La contraseña debe tener al menos 8 caracteres.' })
   @MaxLength(128)
   password!: string;
+
+  @ApiProperty({ description: 'Acceptance of the platform terms; must be true.', example: true })
+  @Equals(true, { message: TERMS_REQUIRED })
+  acceptTerms!: boolean;
 }

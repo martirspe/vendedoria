@@ -1,7 +1,25 @@
-import { Routes } from '@angular/router';
+import { Route, Routes } from '@angular/router';
 import { authGuard } from './core/auth/auth.guard';
+import type { LegalSlug } from './features/legal/legal-content';
+
+const LEGAL_SLUGS: LegalSlug[] = [
+  'terminos-y-condiciones',
+  'planes-pagos-y-reembolsos',
+  'politica-de-privacidad',
+  'politica-de-cookies',
+  'tratamiento-de-datos',
+  'uso-aceptable',
+];
+
+const legalRoute = (path: string, slug?: LegalSlug): Route => ({
+  path,
+  data: { slug },
+  loadComponent: () => import('./features/legal/legal.page').then((m) => m.LegalPage),
+});
 
 export const routes: Routes = [
+  legalRoute('legal'),
+  ...LEGAL_SLUGS.map((slug) => legalRoute(slug, slug)),
   {
     path: '',
     loadComponent: () =>

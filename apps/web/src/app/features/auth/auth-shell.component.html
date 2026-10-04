@@ -26,6 +26,13 @@
   </div>
 
   <footer class="auth-shell__footer">
-    <p>© {{ year }} VendedorIA</p>
+    <nav class="auth-shell__legal" aria-label="Legal">
+      <a [href]="links.terms" target="_blank" rel="noopener">Términos</a>
+      <a [href]="links.privacy" target="_blank" rel="noopener">Privacidad</a>
+      <a [href]="legal.complaintsBookUrl" target="_blank" rel="noopener">
+        <ds-icon name="book" [size]="0.9" /> Libro de Reclamaciones
+      </a>
+    </nav>
+    <p>© {{ year }} {{ legal.brand }}</p>
   </footer>
 </main>

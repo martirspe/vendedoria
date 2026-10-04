@@ -1,5 +1,7 @@
-import { IsEmail, IsString, MinLength } from 'class-validator';
+import { Equals, IsEmail, IsString, MinLength } from 'class-validator';
 import { ApiProperty } from '@nestjs/swagger';
+
+export const TERMS_REQUIRED = 'Debes aceptar los Términos y Condiciones para crear tu cuenta.';
 
 export class RegisterDto {
   @ApiProperty({ example: 'ops@marca.com' })
@@ -20,6 +22,10 @@ export class RegisterDto {
   @IsString()
   @MinLength(2)
   businessName!: string;
+
+  @ApiProperty({ description: 'Acceptance of the platform terms; must be true.', example: true })
+  @Equals(true, { message: TERMS_REQUIRED })
+  acceptTerms!: boolean;
 }
 
 export class LoginDto {

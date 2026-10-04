@@ -103,6 +103,37 @@
   }
 }
 
+.auth-consent {
+  display: flex;
+  gap: var(--ds-space-3);
+  align-items: flex-start;
+  color: var(--ds-color-text-secondary);
+  font-size: 0.85rem;
+  font-weight: 500;
+  line-height: 1.5;
+  cursor: pointer;
+
+  input {
+    flex: none;
+    width: 1.15rem;
+    height: 1.15rem;
+    margin-top: 0.1rem;
+    accent-color: var(--ds-color-accent);
+    cursor: pointer;
+  }
+
+  input[aria-invalid='true'] {
+    outline: 2px solid var(--ds-color-danger);
+    outline-offset: 2px;
+  }
+
+  a {
+    color: var(--ds-color-accent);
+    font-weight: 700;
+    text-decoration: underline;
+  }
+}
+
 .auth-alert {
   display: flex;
   gap: var(--ds-space-2);

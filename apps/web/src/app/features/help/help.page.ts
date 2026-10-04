@@ -49,5 +49,11 @@ export class HelpPage {
       link: '/app/plans',
       cta: 'Ver planes',
     },
+    {
+      title: 'Términos, privacidad y reclamos',
+      body: 'Condiciones del servicio, reembolsos, tratamiento de los datos de tus compradores y Libro de Reclamaciones.',
+      link: '/legal',
+      cta: 'Ir al Centro legal',
+    },
   ];
 }

@@ -99,6 +99,27 @@
       }
     </div>
 
+    <div class="auth-field">
+      <label class="auth-consent">
+        <input
+          type="checkbox"
+          formControlName="acceptTerms"
+          [attr.aria-invalid]="error('acceptTerms') ? true : null"
+          [attr.aria-describedby]="error('acceptTerms') ? 'register-acceptTerms-error' : null"
+        />
+        <span>
+          Soy mayor de edad y acepto los
+          <a [href]="links.terms" target="_blank" rel="noopener">Términos y Condiciones</a>,
+          la <a [href]="links.billing" target="_blank" rel="noopener">política de planes y reembolsos</a>
+          y el <a [href]="links.dataProcessing" target="_blank" rel="noopener">Acuerdo de Tratamiento de Datos</a>.
+          He leído la <a [href]="links.privacy" target="_blank" rel="noopener">Política de Privacidad</a>.
+        </span>
+      </label>
+      @if (error('acceptTerms'); as message) {
+        <p id="register-acceptTerms-error" class="auth-field__error">{{ message }}</p>
+      }
+    </div>
+
     @if (turnstileSiteKey(); as siteKey) {
       <ds-turnstile [siteKey]="siteKey" action="register" theme="light" />
     }

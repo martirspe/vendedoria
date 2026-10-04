@@ -103,11 +103,7 @@
           </a>
         }
         <div class="footer__legal">
-          <span>
-            © {{ year }} {{ s.legal.legalName ?? s.displayName }}
-            @if (s.legal.ruc) { · RUC {{ s.legal.ruc }} }
-            @if (s.legal.legalAddress) { · {{ s.legal.legalAddress }} }
-          </span>
+          <span>© {{ year }} {{ s.displayName }}</span>
           @if (s.showPlatformBadge) {
             <span class="footer__badge">Tienda creada con VendedorIA</span>
           }

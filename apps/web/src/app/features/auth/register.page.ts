@@ -13,10 +13,11 @@ import { Router, RouterLink } from '@angular/router';
 import { DsButtonComponent, DsIconComponent, DsTurnstileComponent } from '@vendedoria/ui';
 import { AuthApiService } from '../../core/auth/auth-api.service';
 import { authErrorMessage, CHALLENGE_PENDING } from './auth-errors';
-import { type FieldMessages, fieldError, focusFirstInvalid } from './auth-form';
+import { LEGAL_LINKS } from '../legal/legal-identity';
+import { type FieldMessages, TERMS_REQUIRED, fieldError, focusFirstInvalid } from './auth-form';
 import { AuthShellComponent } from './auth-shell.component';
 
-type RegisterField = 'fullName' | 'businessName' | 'email' | 'password';
+type RegisterField = 'fullName' | 'businessName' | 'email' | 'password' | 'acceptTerms';
 
 const FIELD_MESSAGES: Record<RegisterField, FieldMessages> = {
   fullName: { required: 'Ingresa tu nombre completo.', minlength: 'Ingresa tu nombre completo.' },
@@ -26,6 +27,7 @@ const FIELD_MESSAGES: Record<RegisterField, FieldMessages> = {
   },
   email: { required: 'Ingresa tu email.', email: 'Revisa el formato del email (ej. tu@negocio.com).' },
   password: { required: 'Crea una contraseña.', minlength: 'Usa al menos 8 caracteres.' },
+  acceptTerms: { required: TERMS_REQUIRED },
 };
 
 @Component({
@@ -61,7 +63,9 @@ export class RegisterPage {
     businessName: ['', [Validators.required, Validators.minLength(2)]],
     email: ['', [Validators.required, Validators.email]],
     password: ['', [Validators.required, Validators.minLength(8)]],
+    acceptTerms: [false, Validators.requiredTrue],
   });
+  readonly links = LEGAL_LINKS;
 
   constructor() {
     afterNextRender(async () => this.turnstileSiteKey.set(await this.authApi.turnstileSiteKey()));

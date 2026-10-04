@@ -71,6 +71,7 @@ export class AuthApiService {
       password: string;
       fullName: string;
       businessName: string;
+      acceptTerms: boolean;
     },
     turnstileToken?: string,
   ): Promise<AuthTokensResponse> {
@@ -145,7 +146,7 @@ export class AuthApiService {
 
   async acceptInvite(
     token: string,
-    payload: { fullName: string; password: string },
+    payload: { fullName: string; password: string; acceptTerms: boolean },
     turnstileToken?: string,
   ): Promise<AuthTokensResponse> {
     const response = await firstValueFrom(

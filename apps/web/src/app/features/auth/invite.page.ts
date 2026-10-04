@@ -13,14 +13,16 @@ import { DsButtonComponent, DsIconComponent, DsTurnstileComponent } from '@vende
 import { messageFrom } from '../../core/api/api-error';
 import { AuthApiService, InvitePreview } from '../../core/auth/auth-api.service';
 import { authErrorMessage, CHALLENGE_PENDING } from './auth-errors';
-import { type FieldMessages, fieldError, focusFirstInvalid } from './auth-form';
+import { LEGAL_LINKS } from '../legal/legal-identity';
+import { type FieldMessages, TERMS_REQUIRED, fieldError, focusFirstInvalid } from './auth-form';
 import { AuthShellComponent } from './auth-shell.component';
 
-type InviteField = 'fullName' | 'password';
+type InviteField = 'fullName' | 'password' | 'acceptTerms';
 
 const FIELD_MESSAGES: Record<InviteField, FieldMessages> = {
   fullName: { required: 'Ingresa tu nombre completo.', minlength: 'Ingresa tu nombre completo.' },
   password: { required: 'Crea una contraseña.', minlength: 'Usa al menos 8 caracteres.' },
+  acceptTerms: { required: TERMS_REQUIRED },
 };
 
 const ROLE_LABELS: Record<InvitePreview['role'], string> = {
@@ -65,7 +67,9 @@ export class InvitePage {
   readonly form = this.fb.nonNullable.group({
     fullName: ['', [Validators.required, Validators.minLength(2)]],
     password: ['', [Validators.required, Validators.minLength(8)]],
+    acceptTerms: [false, Validators.requiredTrue],
   });
+  readonly links = LEGAL_LINKS;
 
   constructor() {
     afterNextRender(async () => {
@@ -113,8 +117,12 @@ export class InvitePage {
         this.errorMessage.set(CHALLENGE_PENDING);
         return;
       }
-      const { fullName, password } = this.form.getRawValue();
-      await this.authApi.acceptInvite(this.token, { fullName: fullName.trim(), password }, turnstileToken);
+      const { fullName, password, acceptTerms } = this.form.getRawValue();
+      await this.authApi.acceptInvite(
+        this.token,
+        { fullName: fullName.trim(), password, acceptTerms },
+        turnstileToken,
+      );
       await this.router.navigateByUrl('/app/messages');
     } catch (error) {
       this.errorMessage.set(

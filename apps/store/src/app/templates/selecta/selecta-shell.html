@@ -68,9 +68,7 @@
     } @else {
       <a class="complaints-book" routerLink="/legal"><app-icon name="book" /><span>Libro de Reclamaciones</span></a>
     }
-    @if (s.legal.legalName) {
-      <small class="footer-identity">{{ s.legal.legalName }}@if (s.legal.ruc) { · RUC {{ s.legal.ruc }}}@if (s.legal.legalAddress) { · {{ s.legal.legalAddress }}}</small>
-    }
+    <small>© {{ year }} {{ s.displayName }}</small>
     @if (copy()?.footerNote; as note) {
       <small storeEditText="footer.note" editKind="multiline" [editValue]="note"></small>
     }

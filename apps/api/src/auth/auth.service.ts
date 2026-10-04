@@ -9,6 +9,7 @@ import * as bcrypt from 'bcryptjs';
 import { createHash, randomBytes } from 'crypto';
 import { PrismaService } from '../prisma/prisma.service';
 import { LoginDto, RegisterDto } from './dto/auth.dto';
+import { LEGAL_TERMS_VERSION } from './legal-terms';
 
 @Injectable()
 export class AuthService {
@@ -35,6 +36,8 @@ export class AuthService {
           email: dto.email.toLowerCase(),
           passwordHash,
           fullName: dto.fullName,
+          termsVersion: LEGAL_TERMS_VERSION,
+          termsAcceptedAt: new Date(),
         },
       });
 

@@ -158,6 +158,9 @@ model User {
   fullName      String?
   /// Null for business users. Checked against the database on every platform request.
   platformRole  PlatformRole?
+  /// Version of the platform terms (`LEGAL_TERMS_VERSION`) the user accepted, and when.
+  termsVersion    String?
+  termsAcceptedAt DateTime?
   createdAt     DateTime       @default(now())
   updatedAt     DateTime       @updatedAt
   memberships   Membership[]
