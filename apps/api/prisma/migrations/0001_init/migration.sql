@@ -48,6 +48,9 @@ CREATE TYPE "KnowledgeSource" AS ENUM ('MANUAL', 'PASTE_IMPORT');
 CREATE TYPE "StorefrontStatus" AS ENUM ('DRAFT', 'PUBLISHED', 'SUSPENDED');
 
 -- CreateEnum
+CREATE TYPE "ProductKind" AS ENUM ('PRODUCT', 'SERVICE');
+
+-- CreateEnum
 CREATE TYPE "OrderChannel" AS ENUM ('WEB', 'WHATSAPP', 'INSTAGRAM', 'MANUAL');
 
 -- CreateEnum
@@ -108,6 +111,8 @@ CREATE TABLE "AiUsageMonth" (
     "tenantId" TEXT NOT NULL,
     "periodStart" TIMESTAMP(3) NOT NULL,
     "replies" INTEGER NOT NULL DEFAULT 0,
+    "editorTexts" INTEGER NOT NULL DEFAULT 0,
+    "editorImages" INTEGER NOT NULL DEFAULT 0,
     "updatedAt" TIMESTAMP(3) NOT NULL,
 
     CONSTRAINT "AiUsageMonth_pkey" PRIMARY KEY ("tenantId","periodStart")
@@ -242,6 +247,9 @@ CREATE TABLE "Storefront" (
     "industry" TEXT NOT NULL DEFAULT 'general',
     "template" TEXT NOT NULL DEFAULT 'classic',
     "templateCopy" JSONB,
+    "templateContent" JSONB,
+    "templateDraft" JSONB,
+    "templatePublishAt" TIMESTAMP(3),
     "customDomain" TEXT,
     "customDomainStatus" TEXT,
     "customDomainProviderId" TEXT,
@@ -250,6 +258,16 @@ CREATE TABLE "Storefront" (
     "ga4MeasurementId" TEXT,
 
     CONSTRAINT "Storefront_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "StorefrontVersion" (
+    "id" TEXT NOT NULL,
+    "tenantId" TEXT NOT NULL,
+    "content" JSONB NOT NULL,
+    "replacedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+    CONSTRAINT "StorefrontVersion_pkey" PRIMARY KEY ("id")
 );
 
 -- CreateTable
@@ -384,6 +402,9 @@ CREATE TABLE "Product" (
     "categories" TEXT[] DEFAULT ARRAY[]::TEXT[],
     "basePriceCents" INTEGER NOT NULL,
     "currency" TEXT NOT NULL DEFAULT 'PEN',
+    "kind" "ProductKind" NOT NULL DEFAULT 'PRODUCT',
+    "durationMinutes" INTEGER,
+    "serviceMode" TEXT,
     "isAvailable" BOOLEAN NOT NULL DEFAULT true,
     "stockUnlimited" BOOLEAN NOT NULL DEFAULT true,
     "stockQty" INTEGER,
@@ -430,6 +451,7 @@ CREATE TABLE "ProductMedia" (
     "alt" TEXT,
     "caption" TEXT,
     "sortOrder" INTEGER NOT NULL DEFAULT 0,
+    "sourceHash" TEXT,
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
 
     CONSTRAINT "ProductMedia_pkey" PRIMARY KEY ("id")
@@ -521,6 +543,7 @@ CREATE TABLE "Order" (
     "customerEmail" TEXT,
     "customerDocument" TEXT,
     "delivery" JSONB,
+    "serviceNote" TEXT,
     "checkoutKey" TEXT,
     "requestHash" TEXT,
     "publicToken" TEXT,
@@ -657,6 +680,12 @@ CREATE UNIQUE INDEX "Storefront_tenantId_key" ON "Storefront"("tenantId");
 CREATE UNIQUE INDEX "Storefront_customDomain_key" ON "Storefront"("customDomain");
 
 -- CreateIndex
+CREATE INDEX "Storefront_templatePublishAt_idx" ON "Storefront"("templatePublishAt");
+
+-- CreateIndex
+CREATE INDEX "StorefrontVersion_tenantId_replacedAt_idx" ON "StorefrontVersion"("tenantId", "replacedAt");
+
+-- CreateIndex
 CREATE INDEX "Membership_userId_idx" ON "Membership"("userId");
 
 -- CreateIndex
@@ -709,6 +738,9 @@ CREATE INDEX "ProductVariant_productId_idx" ON "ProductVariant"("productId");
 
 -- CreateIndex
 CREATE INDEX "ProductMedia_productId_idx" ON "ProductMedia"("productId");
+
+-- CreateIndex
+CREATE INDEX "ProductMedia_sourceHash_idx" ON "ProductMedia"("sourceHash");
 
 -- CreateIndex
 CREATE INDEX "ProductComponent_componentId_idx" ON "ProductComponent"("componentId");
@@ -804,6 +836,9 @@ ALTER TABLE "CouponRedemption" ADD CONSTRAINT "CouponRedemption_orderId_fkey" FO
 ALTER TABLE "Storefront" ADD CONSTRAINT "Storefront_tenantId_fkey" FOREIGN KEY ("tenantId") REFERENCES "Tenant"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
+ALTER TABLE "StorefrontVersion" ADD CONSTRAINT "StorefrontVersion_tenantId_fkey" FOREIGN KEY ("tenantId") REFERENCES "Tenant"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
 ALTER TABLE "Membership" ADD CONSTRAINT "Membership_tenantId_fkey" FOREIGN KEY ("tenantId") REFERENCES "Tenant"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
@@ -880,3 +915,4 @@ ALTER TABLE "Payment" ADD CONSTRAINT "Payment_tenantId_fkey" FOREIGN KEY ("tenan
 
 -- AddForeignKey
 ALTER TABLE "Payment" ADD CONSTRAINT "Payment_orderId_fkey" FOREIGN KEY ("orderId") REFERENCES "Order"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+

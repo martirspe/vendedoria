@@ -78,7 +78,7 @@ export const AI_REPLIES_PER_CHAT = 15;
  * Store editor AI has its own caps so writing the store never uses the agent's replies. Cost
  * reference: a text request (~1 500 tokens with gpt-4o-mini) is under S/ 0.003; a 1536×1024
  * image with gpt-image-1-mini at medium quality is about S/ 0.06, so at full use the image cap
- * stays under ~4 % of each plan price. Review the caps if `OPENAI_IMAGE_MODEL` changes.
+ * stays under ~3 % of each plan price. Review the caps if `OPENAI_IMAGE_MODEL` changes.
  */
 
 /**
@@ -176,13 +176,13 @@ export const PLAN_CATALOG: PlanDefinition[] = [
     seatQuota: 2,
     platformBadge: false,
     integrations: ['store', 'instagram', 'custom_domain', 'team'],
-    description: 'Para vender todos los días con tu propia tienda web y tu marca.',
+    description: 'Para vender todos los días con tu tienda web, diseñada con IA en minutos.',
     note: `Empieza con ${PLAN_TRIAL_DAYS} días gratis, sin tarjeta: 100 chats nuevos, 20 productos y 3 cupones.`,
     highlights: [
-      '400 chats nuevos al mes',
-      'Hasta 6 000 respuestas con IA al mes',
       'Tienda web con cobros con tarjeta y Yape',
       'Diseña tu tienda con IA: 300 textos y 30 imágenes al mes',
+      '400 chats nuevos al mes',
+      'Hasta 6 000 respuestas con IA al mes',
       'Hasta 100 productos',
       '5 cupones activos a la vez',
       '2 usuarios',
@@ -207,9 +207,9 @@ export const PLAN_CATALOG: PlanDefinition[] = [
     description: 'Para negocios que invierten en anuncios y atienden en equipo.',
     note: null,
     highlights: [
+      'Diseña tu tienda con IA: 1 000 textos y 100 imágenes al mes',
       '1 200 chats nuevos al mes',
       'Hasta 18 000 respuestas con IA al mes',
-      'Diseña tu tienda con IA: 1 000 textos y 100 imágenes al mes',
       'Hasta 300 productos',
       '20 cupones activos a la vez',
       '5 usuarios',
@@ -225,7 +225,7 @@ export const PLAN_CATALOG: PlanDefinition[] = [
     conversationQuota: 4000,
     aiReplyQuota: 4000 * AI_REPLIES_PER_CHAT,
     aiTextQuota: 3000,
-    aiImageQuota: 300,
+    aiImageQuota: 150,
     productQuota: 1000,
     couponQuota: null,
     seatQuota: 15,
@@ -234,9 +234,9 @@ export const PLAN_CATALOG: PlanDefinition[] = [
     description: 'Para negocios con mucho volumen de chats y un catálogo grande.',
     note: null,
     highlights: [
+      'Diseña tu tienda con IA: 3 000 textos y 150 imágenes al mes',
       '4 000 chats nuevos al mes',
       'Hasta 60 000 respuestas con IA al mes',
-      'Diseña tu tienda con IA: 3 000 textos y 300 imágenes al mes',
       'Hasta 1 000 productos',
       'Cupones sin límite',
       '15 usuarios',
