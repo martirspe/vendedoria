@@ -157,6 +157,11 @@ export const routes: Routes = [
           ),
       },
       {
+        path: 'profile',
+        loadComponent: () =>
+          import('./features/profile/profile.page').then((m) => m.ProfilePage),
+      },
+      {
         path: 'help',
         loadComponent: () =>
           import('./features/help/help.page').then((m) => m.HelpPage),

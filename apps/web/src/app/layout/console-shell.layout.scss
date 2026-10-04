@@ -288,8 +288,83 @@
   border-top: 1px solid var(--ds-color-divider);
 }
 
+.console__account {
+  display: flex;
+  align-items: center;
+  gap: 0.2rem;
+  margin-top: var(--ds-space-2);
+  padding-top: var(--ds-space-3);
+  border-top: 1px solid var(--ds-color-divider);
+}
+
+.console__user {
+  display: flex;
+  flex: 1 1 auto;
+  align-items: center;
+  gap: var(--ds-space-3);
+  min-width: 0;
+  min-height: 3rem;
+  padding: var(--ds-space-1) var(--ds-space-2);
+  border-radius: var(--ds-radius-md);
+  color: var(--ds-color-text-primary);
+  text-decoration: none;
+  transition: background-color var(--ds-motion-fast) var(--ds-ease-out);
+}
+
+.console__user:hover {
+  background: color-mix(in srgb, var(--ds-color-ink) 4%, white);
+}
+
+.console__user.is-active {
+  background: color-mix(in srgb, var(--ds-color-primary) 28%, white);
+}
+
+.console__user:focus-visible {
+  outline: 2px solid var(--ds-color-focus-ring);
+  outline-offset: 2px;
+}
+
+.console__avatar {
+  display: grid;
+  place-items: center;
+  flex: 0 0 auto;
+  width: 2.1rem;
+  height: 2.1rem;
+  border-radius: 50%;
+  background: var(--ds-color-ink);
+  color: var(--ds-color-primary);
+  font-family: var(--ds-font-display);
+  font-size: 0.8rem;
+  font-weight: 800;
+}
+
+.console__user-text {
+  display: grid;
+  min-width: 0;
+  line-height: 1.25;
+}
+
+.console__user-text strong,
+.console__user-text small {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.console__user-text strong {
+  font-size: 0.88rem;
+}
+
+.console__user-text small {
+  color: var(--ds-color-text-secondary);
+  font-size: 0.76rem;
+}
+
 .console__logout {
-  width: 100%;
+  flex: 0 0 auto;
+  justify-content: center;
+  width: 2.5rem;
+  padding: 0;
 }
 
 .console__main {
@@ -478,6 +553,10 @@
     flex-wrap: wrap;
   }
 
+  .console__account {
+    margin-top: var(--ds-space-1);
+  }
+
   .console__main {
     padding-top: var(--ds-space-5);
   }
@@ -487,6 +566,7 @@
   .console__main-inner,
   .console__list a,
   .console__logout,
+  .console__user,
   .console__sublist,
   .console__toggle ds-icon {
     animation: none;

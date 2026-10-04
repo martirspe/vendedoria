@@ -1,6 +1,6 @@
 import { Injectable, inject, signal } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
-import { firstValueFrom } from 'rxjs';
+import { firstValueFrom, timeout } from 'rxjs';
 import { environment } from '../../../environments/environment';
 
 export type AuthTokensResponse = {
@@ -179,12 +179,23 @@ export class AuthApiService {
     return role === 'OWNER' || role === 'ADMIN';
   }
 
-  logout(): void {
+  /**
+   * Clears this device at once; the returned promise settles when the API has revoked the
+   * refresh token (or after a short timeout), so callers can await it before a hard navigation.
+   */
+  logout(): Promise<void> {
+    const refreshToken = this.getRefreshToken();
     if (typeof localStorage !== 'undefined') {
       localStorage.removeItem(ACCESS_KEY);
       localStorage.removeItem(REFRESH_KEY);
     }
     this.isAuthenticated.set(false);
+    if (!refreshToken) return Promise.resolve();
+    return firstValueFrom(
+      this.http
+        .post<void>(`${environment.apiBaseUrl}/auth/logout`, { refreshToken })
+        .pipe(timeout(3000)),
+    ).catch(() => undefined);
   }
 
   private challenge(token?: string): { headers?: Record<string, string> } {

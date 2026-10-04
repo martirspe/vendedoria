@@ -46,6 +46,17 @@ Reglas:
 
 API: `GET /api/v1/team`, `POST /api/v1/team/invites`, `DELETE /api/v1/team/invites/:id`, `PATCH|DELETE /api/v1/team/members/:id`. Aceptación pública (con límite por IP y Turnstile): `GET|POST /api/v1/team/invites/accept/:token`.
 
+### Mi perfil
+
+Cualquier usuario del negocio (dueño, administrador o asesor) gestiona su propia cuenta en **Mi perfil** (`/app/profile`, desde su nombre al pie del menú):
+
+- Edita su nombre. El correo es de solo lectura.
+- Cambia su contraseña con la actual (mínimo 8 caracteres, 5 intentos por minuto). Ese dispositivo sigue conectado y se cierran las demás sesiones del negocio; los tokens de acceso ya emitidos vencen en 15 minutos.
+- Ve cuántas sesiones tiene abiertas y puede cerrar las de los demás dispositivos.
+- Al cerrar sesión se revoca el refresh token de ese dispositivo en la API.
+
+API: `GET|PATCH /api/v1/account/me`, `POST /api/v1/account/password`, `POST /api/v1/account/sessions/revoke-others`, `POST /api/v1/auth/logout`.
+
 ## 3. Operadores de la plataforma: CLI
 
 El rol de plataforma solo se da con el script `create-admin`, ejecutado en el servidor. El registro público, las invitaciones de equipo y la API no pueden asignarlo.

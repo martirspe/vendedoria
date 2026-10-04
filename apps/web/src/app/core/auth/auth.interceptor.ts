@@ -17,7 +17,8 @@ function isAuthUrl(url: string): boolean {
   return (
     url.includes('/auth/login') ||
     url.includes('/auth/register') ||
-    url.includes('/auth/refresh')
+    url.includes('/auth/refresh') ||
+    url.includes('/auth/logout')
   );
 }
 
@@ -46,7 +47,7 @@ export const authInterceptor: HttpInterceptorFn = (
 
       // Already retried once after refresh — real auth failure.
       if (req.context.get(AUTH_RETRIED)) {
-        auth.logout();
+        void auth.logout();
         void router.navigateByUrl('/auth/login');
         return throwError(() => error);
       }
@@ -55,7 +56,7 @@ export const authInterceptor: HttpInterceptorFn = (
         // Only logout when refresh itself fails — not when the retried
         // business request fails (e.g. playground 500).
         catchError((refreshError) => {
-          auth.logout();
+          void auth.logout();
           void router.navigateByUrl('/auth/login');
           return throwError(() => refreshError);
         }),

@@ -193,6 +193,28 @@ export class AuthService {
     };
   }
 
+  /** Ends one business session; possession of the refresh token is the proof. */
+  async revokeRefreshToken(refreshToken: string): Promise<void> {
+    await this.prisma.refreshToken.updateMany({
+      where: { tokenHash: this.hashToken(refreshToken), platform: false, revokedAt: null },
+      data: { revokedAt: new Date() },
+    });
+  }
+
+  /** Ends every business session of the user except the one holding `keepRefreshToken`. */
+  async revokeOtherSessions(userId: string, keepRefreshToken?: string): Promise<number> {
+    const { count } = await this.prisma.refreshToken.updateMany({
+      where: {
+        userId,
+        platform: false,
+        revokedAt: null,
+        ...(keepRefreshToken ? { tokenHash: { not: this.hashToken(keepRefreshToken) } } : {}),
+      },
+      data: { revokedAt: new Date() },
+    });
+    return count;
+  }
+
   private hashToken(token: string): string {
     return createHash('sha256').update(token).digest('hex');
   }

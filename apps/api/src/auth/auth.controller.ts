@@ -1,4 +1,4 @@
-import { Body, Controller, Post } from '@nestjs/common';
+import { Body, Controller, HttpCode, Post } from '@nestjs/common';
 import { ApiTags } from '@nestjs/swagger';
 import { Public } from '../common/decorators/auth.decorators';
 import { RateLimit } from '../rate-limit/rate-limit.decorator';
@@ -31,5 +31,13 @@ export class AuthController {
   @Post('refresh')
   refresh(@Body() dto: RefreshTokenDto) {
     return this.authService.refresh(dto.refreshToken);
+  }
+
+  @Public()
+  @RateLimit('auth-logout', 30)
+  @Post('logout')
+  @HttpCode(204)
+  logout(@Body() dto: RefreshTokenDto) {
+    return this.authService.revokeRefreshToken(dto.refreshToken);
   }
 }

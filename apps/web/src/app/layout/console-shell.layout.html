@@ -83,10 +83,29 @@
           </li>
         }
       </ul>
-      <button type="button" class="console__logout" (click)="logout()">
-        <ds-icon name="logOut" [size]="1.1" />
-        <span>Cerrar sesión</span>
-      </button>
+      <div class="console__account">
+        <a
+          class="console__user"
+          routerLink="/app/profile"
+          routerLinkActive="is-active"
+          [attr.aria-label]="'Mi perfil: ' + (userName() || 'tu cuenta')"
+        >
+          <span class="console__avatar" aria-hidden="true">{{ userInitials() || '·' }}</span>
+          <span class="console__user-text">
+            <strong>{{ userName() || 'Mi perfil' }}</strong>
+            <small>{{ userDetail() }}</small>
+          </span>
+        </a>
+        <button
+          type="button"
+          class="console__logout"
+          aria-label="Cerrar sesión"
+          title="Cerrar sesión"
+          (click)="logout()"
+        >
+          <ds-icon name="logOut" [size]="1.1" />
+        </button>
+      </div>
     </div>
   </aside>
 

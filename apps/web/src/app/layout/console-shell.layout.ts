@@ -16,6 +16,7 @@ import {
 import { toSignal } from '@angular/core/rxjs-interop';
 import { filter, map } from 'rxjs';
 import { AuthApiService } from '../core/auth/auth-api.service';
+import { AccountApiService } from '../core/api/account-api.service';
 import { BillingApiService, IntegrationKey } from '../core/api/billing-api.service';
 import { INTEGRATIONS, IntegrationsStateService } from '../core/integrations/integrations-state.service';
 import {
@@ -23,6 +24,7 @@ import {
   DsIconName,
 } from '@vendedoria/ui';
 import { SELLER_SECTIONS } from '../features/seller/seller-config';
+import { initialsOf } from '../features/profile/profile-utils';
 import { environment } from '../../environments/environment';
 
 type ConsoleNavChild = {
@@ -64,6 +66,7 @@ type PaletteAction = {
 })
 export class ConsoleShellLayout {
   private readonly auth = inject(AuthApiService);
+  private readonly account = inject(AccountApiService);
   private readonly billing = inject(BillingApiService);
   private readonly integrations = inject(IntegrationsStateService);
   private readonly router = inject(Router);
@@ -74,6 +77,16 @@ export class ConsoleShellLayout {
   /** Early in the trial the banner offers the setup session instead of the plans. */
   readonly quotaAction = signal<'plans' | 'onboarding'>('plans');
   readonly onboardingUrl = environment.onboardingUrl;
+
+  readonly userName = computed(() => {
+    const profile = this.account.profile();
+    return profile?.fullName || profile?.email || '';
+  });
+  readonly userDetail = computed(() => this.account.profile()?.email ?? 'Tu cuenta');
+  readonly userInitials = computed(() => {
+    const profile = this.account.profile();
+    return profile ? initialsOf(profile.fullName, profile.email) : '';
+  });
 
   private readonly baseNavGroups: ConsoleNavGroup[] = [
     {
@@ -269,6 +282,13 @@ export class ConsoleShellLayout {
       icon: 'creditCard',
     },
     {
+      id: 'profile',
+      label: 'Mi perfil',
+      hint: 'Nombre, contraseña y sesiones',
+      path: '/app/profile',
+      icon: 'user',
+    },
+    {
       id: 'help',
       label: 'Ayuda',
       hint: 'Guías in-app',
@@ -309,6 +329,7 @@ export class ConsoleShellLayout {
   constructor() {
     void this.loadQuotaWarning();
     void this.integrations.refresh().catch(() => undefined);
+    void this.account.load().catch(() => undefined);
   }
 
   @HostListener('document:keydown', ['$event'])
@@ -399,8 +420,8 @@ export class ConsoleShellLayout {
     void this.router.navigateByUrl(action.path);
   }
 
-  logout(): void {
-    this.auth.logout();
+  async logout(): Promise<void> {
+    await this.auth.logout();
     location.href = '/auth/login';
   }
 }
