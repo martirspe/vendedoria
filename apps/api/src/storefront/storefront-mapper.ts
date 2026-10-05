@@ -1,4 +1,5 @@
 import type { Prisma } from '@prisma/client';
+import { variantOptions } from '../catalog/variant-options';
 import type {
   PublicMedia,
   PublicProductCard,
@@ -13,6 +14,7 @@ import type {
 } from '@vendedoria/contracts';
 
 type VariantRecord = {
+  options?: Prisma.JsonValue | null;
   id: string;
   option1Name: string | null;
   option1Value: string | null;
@@ -118,13 +120,7 @@ function toVariant(
   product: StoreProductRecord,
   variant: VariantRecord,
 ): PublicVariant {
-  const options = [
-    [variant.option1Name, variant.option1Value],
-    [variant.option2Name, variant.option2Value],
-    [variant.option3Name, variant.option3Value],
-  ]
-    .filter((pair): pair is [string | null, string] => Boolean(pair[1]))
-    .map(([name, value]) => ({ name: name?.trim() || 'Opción', value }));
+  const options = variantOptions(variant);
   return {
     id: variant.id,
     label: options.map((option) => option.value).join(' / ') || 'Única',
@@ -132,6 +128,7 @@ function toVariant(
     priceCents: variant.priceCents,
     isAvailable: variantIsAvailable(product, variant),
     imageUrl: variant.imageUrl,
+    stockLeft: variant.stockQty ?? (product.stockUnlimited ? null : product.stockQty),
   };
 }
 
@@ -210,6 +207,7 @@ export function toProductDetail(
 ): PublicProductDetail {
   return {
     ...toProductCard(product),
+    stockLeft: product.variants.length || !Number.isFinite(unitsLeft(product)) ? null : Math.max(0, unitsLeft(product)),
     descriptionFull: product.descriptionFull,
     media: sortedMedia(product),
     variants: product.variants.map((variant) => toVariant(product, variant)),

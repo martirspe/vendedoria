@@ -30,6 +30,11 @@ export class CatalogController {
     return this.catalogService.list(user.tenantId);
   }
 
+  @Get('categories')
+  categories() {
+    return this.catalogService.categories();
+  }
+
   @Post('products')
   create(@CurrentUser() user: AuthUserPayload, @Body() dto: CreateProductDto) {
     return this.catalogService.create(user.tenantId, dto);

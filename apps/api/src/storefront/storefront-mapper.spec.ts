@@ -49,6 +49,11 @@ function variant(
 }
 
 describe('storefront product mapping', () => {
+  it('exposes all variant attributes and explicit stock independently of product stock', () => {
+    const options = ['Color', 'Talla', 'Material', 'Capacidad', 'Modelo'].map((name) => ({ name, value: 'A' }));
+    const detail = toProductDetail(product({ stockUnlimited: true, variants: [variant({ options, stockQty: 1 })] }), []);
+    expect(detail.variants[0]).toMatchObject({ options, label: 'A / A / A / A / A', stockLeft: 1, isAvailable: true });
+  });
   it('exposes secondary gallery images, real benefits and bounded stock for quick purchase', () => {
     const card = toCatalogCard(product({
       stockQty: 3, details: { benefits: ['Protección diaria'] },

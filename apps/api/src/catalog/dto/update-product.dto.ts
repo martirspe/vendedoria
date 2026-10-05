@@ -1,10 +1,12 @@
 import { Type } from 'class-transformer';
 import {
+  ArrayMaxSize,
   IsArray,
   IsBoolean,
   IsInt,
   IsOptional,
   IsString,
+  IsDateString,
   Max,
   MaxLength,
   Min,
@@ -16,6 +18,10 @@ import { ApiPropertyOptional } from '@nestjs/swagger';
 import { ProductExtrasDto, ProductVariantInputDto } from './create-product.dto';
 
 export class UpdateProductDto extends ProductExtrasDto {
+  @ApiPropertyOptional({ description: 'Optimistic edit version returned as updatedAt' })
+  @IsOptional()
+  @IsDateString()
+  expectedUpdatedAt?: string;
   @ApiPropertyOptional({ example: 'polo-basico' })
   @IsOptional()
   @IsString()
@@ -76,6 +82,7 @@ export class UpdateProductDto extends ProductExtrasDto {
   @ApiPropertyOptional({ type: [ProductVariantInputDto] })
   @IsOptional()
   @IsArray()
+  @ArrayMaxSize(500)
   @ValidateNested({ each: true })
   @Type(() => ProductVariantInputDto)
   variants?: ProductVariantInputDto[];

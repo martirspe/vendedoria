@@ -1,6 +1,14 @@
 <section class="store-container checkout">
   <a class="back" routerLink="/carrito"><ds-icon name="arrowLeft" [size]="1" /> Volver al carrito</a>
   <header class="checkout__heading"><p class="store-eyebrow">Ya casi es tuyo</p><h1>Finaliza tu compra</h1><p>Datos, entrega y pago en una sola página. Sin crear una cuenta.</p></header>
+  @if (directHandle) {
+    <p role="status">Comprarás únicamente esta selección. Tu carrito se conserva para otra compra.</p>
+    @if (!directLoading() && errorMessage()) {
+      <p role="alert">{{ errorMessage() }}</p>
+      <button type="button" class="store-btn store-btn--secondary" (click)="loadDirect()">Reintentar</button>
+      <a [routerLink]="['/producto', directHandle]">Volver al producto</a>
+    }
+  }
 
   @if (liveToken) {
     @if (liveLoading()) { <p aria-busy="true">Abriendo tu reserva LIVE…</p> }
@@ -200,7 +208,7 @@
         }
 
 </fieldset>
-<store-checkout-payment [reserve]="reserveOrder" (reservationReleased)="releaseReservation()" [amountCents]="displayedTotal()" [payerEmail]="form.controls.email.value" />
+<store-checkout-payment [reserve]="reserveOrder" [checkoutStorageKey]="reservationStorageKey()" (reservationReleased)="releaseReservation()" [amountCents]="displayedTotal()" [payerEmail]="form.controls.email.value" />
       </div>
 
       <aside class="summary" aria-labelledby="summary-title">

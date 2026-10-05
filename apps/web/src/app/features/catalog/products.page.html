@@ -141,8 +141,10 @@
         </p>
       }
 
+      <nav class="kind-filter" aria-label="Etapas de publicación">@for (step of editorSteps; track step.id) { <button type="button" [attr.aria-current]="editorStep() === step.id ? 'step' : null" [class.is-active]="editorStep() === step.id" (click)="editorStep.set(step.id)">{{ step.label }}</button> }</nav>
       <div class="publish__layout">
         <div class="publish__main">
+          @if (editorStep() === 'basics') {
           <section class="pub-card">
             <header class="pub-card__head">
               <h2>Información del producto</h2>
@@ -172,6 +174,8 @@
                 <ds-icon name="fileText" [size]="1" /> Producto digital
               </button>
             </div>
+            @if (classificationError()) { <p role="alert">No pudimos cargar la clasificación. <button type="button" class="link-btn" (click)="loadCategories()">Reintentar</button></p> }
+            <label class="field"><span>Categoría del producto</span><ds-select><select [ngModel]="categoryId()" [ngModelOptions]="{ standalone: true }" (ngModelChange)="setCategory($event)"><option value="">Sin clasificación específica</option>@for (category of kindCategories(); track category.id) { <option [value]="category.id">{{ categoryPath(category) }}</option> }</select></ds-select><span class="field__hint">La clasificación define las características. Tus colecciones de tienda se mantienen aparte.</span></label>
             @if (isDigital()) {
               <p class="field__hint">Sin stock ni envío. El enlace se entrega al confirmarse el pago.</p>
               <label class="field">
@@ -244,6 +248,21 @@
             </label>
           </section>
 
+          }
+          @if (editorStep() === 'configuration') {
+          @if (selectedCategory(); as category) {
+            <section class="pub-card"><header class="pub-card__head"><h2>Características de {{ category.name }}</h2><p>Completa los datos que corresponden a esta categoría.</p></header>
+            <div class="field-grid field-grid--two">
+              @for (attribute of category.attributes; track attribute.key) {
+                <label class="field"><span>{{ attribute.name }}{{ attribute.required ? ' *' : '' }}</span>
+                  @if (attribute.values?.length) {
+                    <ds-select><select [ngModel]="attributeValues()[attribute.key] ?? ''" [ngModelOptions]="{ standalone: true }" (ngModelChange)="setAttribute(attribute.key, $event)"><option value="">Sin indicar</option>@for (value of attribute.values; track value) { <option [value]="value">{{ value }}</option> }</select></ds-select>
+                  } @else { <input [value]="attributeValues()[attribute.key] ?? ''" [maxLength]="attribute.maxLength ?? 200" (input)="setAttribute(attribute.key, $any($event.target).value)" /> }
+                  @if (attribute.variant) { <span class="field__hint">Puedes definirlo por combinación en Variantes.</span> }
+                </label>
+              }
+            </div></section>
+          }
           <section class="pub-card pub-card--row">
             <div>
               <h2>Descripción detallada</h2>
@@ -411,10 +430,10 @@
             </ul>
           </section>
 
-          @if (isPhysical()) {
+          @if (isPhysical() && (!categoryId() || categoryId() === 'fragrances') && (detailsEnabled() || categoryId() === 'fragrances')) {
           <section class="pub-card pub-card--row">
             <div>
-              <h2>Detalles de belleza y fragancia</h2>
+              <h2>Detalles de fragancia</h2>
               <p>Familia, intensidad, notas y pirámide olfativa para perfumes y cosmética.</p>
             </div>
             <label class="switch">
@@ -505,10 +524,12 @@
                     <label class="field">
                       <span>Producto</span>
                       <ds-select><select
-                        [value]="row.productId"
-                        (change)="updateComponent(i, { productId: $any($event.target).value })"
+                        [ngModel]="row.productId"
+                        [ngModelOptions]="{ standalone: true }"
+                        (ngModelChange)="updateComponent(i, { productId: $event })"
                       >
                         <option value="">Elige una pieza…</option>
+                        @if (row.productId && !pieceSelectable(row.productId)) { <option [value]="row.productId">{{ pieceName(row.productId) || 'Pieza guardada' }} · revisa su configuración</option> }
                         @for (option of pieceOptions(); track option.id) {
                           <option [value]="option.id">{{ option.name }}{{ option.sku ? ' · ' + option.sku : '' }}</option>
                         }
@@ -555,106 +576,52 @@
 
           @if (variantsEnabled()) {
             <section class="pub-card">
-              <header class="pub-card__head pub-card__head--inline">
-                <div>
-                  <h2>Variantes</h2>
-                  <p>Define opciones que el comprador puede elegir en el chat.</p>
+              <header class="pub-card__head"><h2>Atributos de variantes</h2><p>Agrega valores separados por comas. Genera las combinaciones después de editar los atributos.</p></header>
+              @for (axis of axes(); track $index; let i = $index) {
+                <div class="field-grid field-grid--two">
+                  <label class="field"><span>Atributo {{ i + 1 }}</span><input [value]="axis.name" maxlength="60" (input)="updateAxis(i, { name: $any($event.target).value })" placeholder="Color" /></label>
+                  <label class="field"><span>Valores</span><input [value]="axis.values" (input)="updateAxis(i, { values: $any($event.target).value })" placeholder="Negro, Blanco" /></label>
                 </div>
-                <ds-button type="button" variant="secondary" (click)="addVariant()">
-                  Añadir variante
-                </ds-button>
-              </header>
-
-              <div class="field-grid field-grid--two">
-                <label class="field">
-                  <span>Nombre de la opción 1</span>
-                  <input
-                    [value]="optionNames().first"
-                    maxlength="40"
-                    placeholder="Ej. Color"
-                    (input)="setOptionName('first', $any($event.target).value)"
-                  />
-                </label>
-                <label class="field">
-                  <span>Nombre de la opción 2</span>
-                  <input
-                    [value]="optionNames().second"
-                    maxlength="40"
-                    placeholder="Ej. Talla"
-                    (input)="setOptionName('second', $any($event.target).value)"
-                  />
-                </label>
+                <button type="button" class="link-btn" (click)="removeAxis(i)">Quitar atributo {{ axis.name }}</button>
+              }
+              <div class="catalog__actions">
+                <ds-button type="button" variant="secondary" [disabled]="axes().length >= 5" (click)="addAxis()">Agregar atributo</ds-button>
+                <ds-button type="button" (click)="generateVariants()">Generar combinaciones</ds-button>
               </div>
-
+              <p class="field__hint">Máximo 500 combinaciones. Se conservan las ediciones de las combinaciones existentes; los valores retirados se eliminan al guardar. Las variantes nuevas empiezan con stock cero.</p>
+              @if (axesPending()) { <p role="status">Genera las combinaciones para aplicar los cambios de atributos.</p> }
+              <p role="status">{{ variantDrafts().length }} combinaciones</p>
               <ul class="variant-list">
-                @for (variant of variantDrafts(); track $index; let i = $index) {
-                  <li class="variant-row">
-                    <label class="field">
-                      <span>{{ optionNames().first || 'Opción 1' }}</span>
-                      <input
-                        [value]="variant.option1Value"
-                        (input)="
-                          updateVariant(i, {
-                            option1Value: $any($event.target).value,
-                          })
-                        "
-                        placeholder="Negro"
-                      />
-                    </label>
-                    <label class="field">
-                      <span>{{ optionNames().second || 'Opción 2' }}</span>
-                      <input
-                        [value]="variant.option2Value"
-                        (input)="
-                          updateVariant(i, {
-                            option2Value: $any($event.target).value,
-                          })
-                        "
-                        placeholder="M"
-                      />
-                    </label>
-                    <label class="field">
-                      <span>Precio</span>
-                      <input
-                        type="number"
-                        min="0"
-                        step="0.01"
-                        [value]="variant.price"
-                        (input)="onVariantPriceInput(i, $any($event.target).value)"
-                      />
-                    </label>
-                    <label class="field">
-                      <span>SKU</span>
-                      <input
-                        [value]="variant.sku"
-                        maxlength="60"
-                        autocomplete="off"
-                        (input)="updateVariant(i, { sku: $any($event.target).value })"
-                      />
-                    </label>
-                    <label class="check-row variant-row__available">
-                      <input
-                        type="checkbox"
-                        [checked]="variant.isAvailable"
-                        (change)="updateVariant(i, { isAvailable: $any($event.target).checked })"
-                      />
-                      <span>Disponible</span>
-                    </label>
-                    <button
-                      type="button"
-                      class="icon-btn"
-                      (click)="removeVariant(i)"
-                      aria-label="Quitar variante"
-                    >
-                      <ds-icon name="x" />
-                    </button>
+                @for (variant of variantRows(); track variant.id || variantPage() * 25 + $index; let row = $index) {
+                  @let i = variantPage() * 25 + row;
+                  <li class="combination-row">
+                    <div class="field-grid field-grid--two">
+                      @for (option of variant.options; track $index; let j = $index) {
+                        <label class="field"><span>{{ option.name }}</span><input [value]="option.value" maxlength="200" (input)="updateVariantOption(i, j, $any($event.target).value)" /></label>
+                      }
+                      <label class="field"><span>SKU</span><input [value]="variant.sku" maxlength="60" (input)="updateVariant(i, { sku: $any($event.target).value })" /></label>
+                      <label class="field"><span>Precio</span><input type="number" min="0" step="0.01" [disabled]="variant.priceInherited" [value]="variant.priceInherited ? productForm.controls.price.value : variant.price" (input)="onVariantPriceInput(i, $any($event.target).value)" /></label>
+                      @if (isPhysical()) {
+                        <label class="field"><span>Stock de esta variante</span><input type="number" min="0" step="1" [value]="variant.stockQty ?? ''" (input)="updateVariantStock(i, $any($event.target).value)" /><span class="field__hint">Vacío usa el stock del producto; cero significa agotado.</span></label>
+                      }
+                      <label class="field"><span>Imagen de esta combinación</span><ds-select><select [ngModel]="variant.imageUrl ?? ''" [ngModelOptions]="{ standalone: true }" (ngModelChange)="updateVariant(i, { imageUrl: $event || null })"><option value="">Usar imagen del producto</option>@if (variant.imageUrl && !hasMedia(variant.imageUrl)) { <option [value]="variant.imageUrl">Imagen guardada</option> }@for (photo of media(); track photo.url; let photoIndex = $index) { <option [value]="photo.url">Foto {{ photoIndex + 1 }}{{ photo.alt ? ' · ' + photo.alt : '' }}</option> }</select></ds-select></label>
+                    </div>
+                    <label class="check-row"><input type="checkbox" [checked]="variant.priceInherited" (change)="updateVariant(i, { priceInherited: $any($event.target).checked })" /><span>Usar el precio del producto</span></label>
+                    <label class="check-row"><input type="checkbox" [checked]="variant.isAvailable" (change)="updateVariant(i, { isAvailable: $any($event.target).checked })" /><span>Ofrecer esta combinación</span></label>
+                    <button type="button" class="link-btn" (click)="removeVariant(i)">Eliminar combinación</button>
                   </li>
                 }
               </ul>
+              <div class="catalog__actions" aria-label="Páginas de combinaciones">
+                <ds-button type="button" variant="secondary" [disabled]="variantPage() === 0" (click)="variantPage.set(variantPage() - 1)">Anterior</ds-button>
+                <span>Página {{ variantPage() + 1 }}</span>
+                <ds-button type="button" variant="secondary" [disabled]="(variantPage() + 1) * 25 >= variantDrafts().length" (click)="variantPage.set(variantPage() + 1)">Siguiente</ds-button>
+              </div>
             </section>
           }
           }
-
+          }
+          @if (editorStep() === 'media') {
           <section class="pub-card">
             <header class="pub-card__head">
               <h2>Fotos</h2>
@@ -739,6 +706,8 @@
 
             <p class="field__hint">Máximo 12 fotos (JPG, PNG o WebP).</p>
           </section>
+          }
+          @if (editorStep() !== 'publication') { <ds-button type="button" (click)="nextStep()">Continuar</ds-button> }
         </div>
 
         <aside class="publish__rail">
@@ -775,6 +744,7 @@
             </ul>
           </section>
 
+          @if (editorStep() === 'publication') {
           <section class="pub-card">
             <header class="pub-card__head pub-card__head--inline">
               <div>
@@ -921,7 +891,7 @@
           </section>
 
           <section class="pub-card">
-            <h2>Categorías</h2>
+            <h2>Colecciones de la tienda</h2>
             <div class="chips">
               @for (cat of categoryChips(); track cat) {
                 <button
@@ -956,6 +926,7 @@
             </span>
             <input type="hidden" formControlName="categoriesText" />
           </section>
+          }
         </aside>
       </div>
     </form>

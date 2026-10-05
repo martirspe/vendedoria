@@ -6,6 +6,7 @@ import {
   IsIn,
   IsInt,
   IsOptional,
+  IsObject,
   IsString,
   IsUrl,
   Max,
@@ -17,7 +18,39 @@ import {
 } from 'class-validator';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 
+export class VariantOptionDto {
+  @ApiProperty()
+  @IsString()
+  @MinLength(1)
+  @MaxLength(60)
+  name!: string;
+
+  @ApiProperty()
+  @IsString()
+  @MinLength(1)
+  @MaxLength(200)
+  value!: string;
+}
+
 export class ProductVariantInputDto {
+  @ApiPropertyOptional({ description: 'Stock count when editing began; detects concurrent reservations' })
+  @IsOptional()
+  @IsInt()
+  @Min(0)
+  @Max(2147483647)
+  expectedStockQty?: number | null;
+  @ApiPropertyOptional({ type: [VariantOptionDto] })
+  @IsOptional()
+  @IsArray()
+  @ArrayMaxSize(5)
+  @ValidateNested({ each: true })
+  @Type(() => VariantOptionDto)
+  options?: VariantOptionDto[];
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsBoolean()
+  priceInherited?: boolean;
   @ApiPropertyOptional()
   @IsOptional()
   @IsString()
@@ -362,6 +395,16 @@ export type ServiceMode = (typeof SERVICE_MODES)[number];
 
 /** Fields shared by create and update for templates, sets, inventory and services. */
 export class ProductExtrasDto {
+  @ApiPropertyOptional({ description: 'Classification category; null keeps only merchant collection labels' })
+  @IsOptional()
+  @IsString()
+  @MaxLength(100)
+  categoryId?: string | null;
+
+  @ApiPropertyOptional({ description: 'Values indexed by category attribute key' })
+  @IsOptional()
+  @IsObject()
+  attributeValues?: Record<string, string> | null;
   @ApiPropertyOptional({
     enum: PRODUCT_KINDS,
     description:
@@ -515,6 +558,7 @@ export class CreateProductDto extends ProductExtrasDto {
   @ApiPropertyOptional({ type: [ProductVariantInputDto] })
   @IsOptional()
   @IsArray()
+  @ArrayMaxSize(500)
   @ValidateNested({ each: true })
   @Type(() => ProductVariantInputDto)
   variants?: ProductVariantInputDto[];

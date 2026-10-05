@@ -183,7 +183,6 @@ export class StorePage {
     this.errorMessage.set(null);
     try {
       await this.integrations.refresh();
-      if (!this.active()) return;
       this.apply(await this.api.get());
     } catch {
       this.errorMessage.set('No pudimos cargar tu tienda web. Revisa tu conexión e inténtalo de nuevo.');

@@ -1,4 +1,5 @@
 import { createHash, randomBytes, randomInt } from 'node:crypto';
+import { variantOptions } from '../catalog/variant-options';
 import {
   BadRequestException,
   ConflictException,
@@ -999,12 +1000,7 @@ export class CheckoutService implements OnModuleInit, OnModuleDestroy {
             `Elige una opción disponible de «${product.name}».`,
           );
         }
-        const label = [
-          variant.option1Value,
-          variant.option2Value,
-          variant.option3Value,
-        ]
-          .filter(Boolean)
+        const label = variantOptions(variant).map((option) => option.value)
           .join(' / ');
         unitCents = variant.priceCents;
         title = label ? `${product.name} · ${label}` : product.name;

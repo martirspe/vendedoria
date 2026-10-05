@@ -1,3 +1,4 @@
+import { variantOptions } from '../catalog/variant-options';
 import {
   Injectable,
   Logger,
@@ -272,11 +273,7 @@ export class SalesSearchService implements OnModuleInit, OnModuleDestroy {
           description: product.descriptionShort,
           full: product.descriptionFull,
           details: product.details,
-          variants: product.variants.map((v) => [
-            v.option1Value,
-            v.option2Value,
-            v.option3Value,
-          ]),
+          variants: product.variants.map((variant) => variantOptions(variant).map((option) => option.value)),
         })
       : `${faq!.question}\n${faq!.answer}\n${faq!.tags.join(' ')}`;
     const chunks = text.match(/[\s\S]{1,4000}/g) ?? [];

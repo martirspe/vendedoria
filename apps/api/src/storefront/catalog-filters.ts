@@ -12,6 +12,12 @@ const DETAIL_LABELS: Record<string, string> = {
   digitalFormat: 'Formato',
 };
 
+/** Same new-options/legacy fallback as the public mapper, including fourth and fifth axes. */
+const variantOptionsSql = Prisma.sql`CASE WHEN jsonb_typeof(v.options) = 'array' THEN v.options ELSE jsonb_build_array(
+  jsonb_build_object('name', v."option1Name", 'value', v."option1Value"),
+  jsonb_build_object('name', v."option2Name", 'value', v."option2Value"),
+  jsonb_build_object('name', v."option3Name", 'value', v."option3Value")) END`;
+
 export function parseCatalogFilters(raw?: string): PublicCatalogSelection[] {
   if (!raw) return [];
   let parsed: unknown;
@@ -81,10 +87,8 @@ export function catalogFilterSql(
       conditions.push(Prisma.sql`trim(p.brand) IN (${choices})`);
     else if (key.startsWith('variant:')) {
       const name = key.slice(8);
-      variants.push(Prisma.sql`EXISTS (SELECT 1 FROM (VALUES
-        (v."option1Name", v."option1Value"), (v."option2Name", v."option2Value"),
-        (v."option3Name", v."option3Value")) o(name, value)
-        WHERE trim(o.name) = ${name} AND trim(o.value) IN (${choices}))`);
+      variants.push(Prisma.sql`EXISTS (SELECT 1 FROM jsonb_array_elements(${variantOptionsSql}) o
+        WHERE trim(o->>'name') = ${name} AND trim(o->>'value') IN (${choices}))`);
     } else if (key.startsWith('attribute:')) {
       conditions.push(Prisma.sql`EXISTS (SELECT 1 FROM jsonb_array_elements(
         CASE WHEN jsonb_typeof(p.details->'attributes') = 'array' THEN p.details->'attributes' ELSE '[]'::jsonb END) a
@@ -131,11 +135,10 @@ export async function loadCatalogFacets(
           CROSS JOIN LATERAL (SELECT regexp_split_to_array(trim(c), '[[:space:]]*[>/][[:space:]]*') AS path) parts
           CROSS JOIN LATERAL generate_subscripts(parts.path, 1) depth(n)
         UNION ALL SELECT id, 'brand', trim(brand) FROM base
-        UNION ALL SELECT b.id, 'variant:' || trim(o.name), trim(o.value)
+        UNION ALL SELECT b.id, 'variant:' || trim(o->>'name'), trim(o->>'value')
           FROM base b JOIN "ProductVariant" v ON v."productId" = b.id
-          CROSS JOIN LATERAL (VALUES (v."option1Name", v."option1Value"),
-            (v."option2Name", v."option2Value"), (v."option3Name", v."option3Value")) o(name, value)
-          WHERE trim(o.name) <> ''
+          CROSS JOIN LATERAL jsonb_array_elements(${variantOptionsSql}) o
+          WHERE trim(o->>'name') <> ''
         UNION ALL SELECT b.id, 'attribute:' || trim(a->>'name'), trim(a->>'value') FROM base b
           CROSS JOIN LATERAL jsonb_array_elements(CASE WHEN jsonb_typeof(b.details->'attributes') = 'array'
             THEN b.details->'attributes' ELSE '[]'::jsonb END) a

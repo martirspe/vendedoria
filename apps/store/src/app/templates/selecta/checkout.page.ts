@@ -29,6 +29,7 @@ import { AnalyticsService } from '../../core/analytics.service';
 import { CheckoutPaymentComponent } from '../../components/checkout-payment.component';
 import { campaignCoupon, forgetCampaignCoupon, keepCoupon } from '../../core/campaign-coupon';
 import { CartService } from '../../core/cart.service';
+import { checkoutStorageKey } from '../../core/checkout-context';
 import { MoneyPipe } from '../../core/money.pipe';
 import { SeoService } from '../../core/seo.service';
 import { isCarrier } from '../../core/shipping';
@@ -39,7 +40,6 @@ import { MAX_UNITS, Product, SelectaCatalog, maxUnits } from './selecta-catalog'
 import { SelectaIcon } from './selecta-icon';
 import { SelectaProductImage } from './selecta-photo';
 
-const CHECKOUT_KEY = 'vendedoria-checkout-key';
 const CHALLENGE_PENDING = 'Completa la verificación de seguridad para continuar.';
 
 type Line = {
@@ -94,12 +94,17 @@ export class SelectaCheckoutPage {
   readonly displayedSubtotal = computed(() => this.reservedOrder()?.subtotalCents ?? this.subtotal());
   readonly displayedDiscount = computed(() => this.reservedOrder()?.discountCents ?? this.discount());
   readonly displayedShipping = computed(() => this.reservedOrder()?.shippingCents ?? this.shippingCents());
-  releaseReservation(): void { this.reservedOrder.set(null); }
+  readonly reservationStorageKey = signal<string | null>(null);
+  releaseReservation(): void {
+    const key = this.reservationStorageKey();
+    if (key) sessionStorage.removeItem(key);
+    this.reservedOrder.set(null);
+  }
   readonly error = signal('');
   readonly online = computed(() => this.store()?.checkout.mode === 'online');
 
   /** `?producto=&cantidad=` buys one product directly, without touching the bag. */
-  private readonly direct = (() => {
+  readonly direct = (() => {
     const params = this.route.snapshot.queryParamMap;
     const handle = params.get('producto');
     if (!handle) return null;
@@ -124,7 +129,7 @@ export class SelectaCheckoutPage {
           name: product.name,
           variantLabel: variant?.label ?? null,
           unitCents: variant?.priceCents ?? product.priceCents,
-          quantity: Math.min(this.direct.quantity, maxUnits(product)),
+          quantity: Math.min(this.direct.quantity, variant?.stockLeft ?? maxUnits(product), MAX_UNITS),
           product,
         },
       ];
@@ -247,9 +252,9 @@ export class SelectaCheckoutPage {
     const analytics = inject(AnalyticsService);
     let checkoutTracked = false;
     effect(() => {
-      if (checkoutTracked || !this.cart.ready() || !this.cart.lines().length) return;
+      if (checkoutTracked || !this.ready() || !this.lines().length) return;
       checkoutTracked = true;
-      untracked(() => analytics.beginCheckoutFromCart(this.cart.lines(), this.cart.lines()[0].currency));
+      untracked(() => analytics.beginCheckoutFromCart(this.lines().map((line) => ({ ...line, key: `${line.handle}::${line.variantId ?? ''}`, currency: line.product?.currency ?? 'PEN', imageUrl: line.product?.imageUrl ?? null })), this.store()?.currency ?? 'PEN'));
     });
     effect(() => {
       if (!this.homeOptions().length && this.pickupOption()) untracked(() => this.setPickup(true));
@@ -424,6 +429,8 @@ export class SelectaCheckoutPage {
       return null;
     }
     try {
+      const purchased = this.cart.lines().map((line) => ({ ...line }));
+      this.reservationStorageKey.set(this.checkoutStorageKey());
       const order = await this.api.checkout({
         checkoutKey: this.checkoutKey(),
         recoveryToken: this.conversion.checkoutToken(),
@@ -450,11 +457,12 @@ export class SelectaCheckoutPage {
       }, token);
       if (this.coupon()) forgetCampaignCoupon();
       this.conversion.remember(undefined);
+      if (!this.direct) this.cart.rememberOrder(order.id, purchased);
       this.reservedOrder.set(order);
       return order;
     } catch (error) {
       this.error.set(this.messageFrom(error, 'No pudimos reservar tu pedido. Inténtalo de nuevo.'));
-      if (error instanceof HttpErrorResponse && error.status === 409) sessionStorage.removeItem(CHECKOUT_KEY);
+      if (error instanceof HttpErrorResponse && error.status === 409) sessionStorage.removeItem(this.checkoutStorageKey());
       widget?.reset();
       return null;
     } finally {
@@ -472,12 +480,17 @@ export class SelectaCheckoutPage {
 
   /** Same key while the buyer retries, so a double click never creates two orders. */
   private checkoutKey(): string {
-    let key = sessionStorage.getItem(CHECKOUT_KEY);
+    const storageKey = this.checkoutStorageKey();
+    let key = sessionStorage.getItem(storageKey);
     if (!key) {
       key = crypto.randomUUID();
-      sessionStorage.setItem(CHECKOUT_KEY, key);
+      sessionStorage.setItem(storageKey, key);
     }
     return key;
+  }
+
+  private checkoutStorageKey(): string {
+    return checkoutStorageKey(this.store()?.slug ?? '', this.direct ? 'direct' : 'cart', this.items());
   }
 
   private messageFrom(error: unknown, fallback: string): string {

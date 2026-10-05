@@ -10,7 +10,7 @@
     </div>
     @if (view(); as v) {
       <div class="store__actions">
-        <ds-button variant="secondary" [disabled]="busyAction() !== null" (click)="openPreview()">
+        <ds-button variant="secondary" [disabled]="busyAction() !== null || !v.availability.previewAllowed" (click)="openPreview()">
           <ds-icon name="eye" />
           {{ busyAction() === 'preview' ? 'Abriendo…' : 'Vista previa de mi tienda' }}
         </ds-button>
@@ -19,7 +19,7 @@
             {{ busyAction() === 'unpublish' ? 'Despublicando…' : 'Despublicar' }}
           </ds-button>
         } @else {
-          <ds-button [disabled]="busyAction() !== null || !v.canPublish" (click)="publish()">
+          <ds-button [disabled]="busyAction() !== null || !v.canPublish || !active()" (click)="publish()">
             <ds-icon name="rocket" />
             {{ busyAction() === 'publish' ? 'Publicando…' : 'Publicar tienda' }}
           </ds-button>
@@ -44,16 +44,21 @@
   @if (loading()) {
     <div class="skeleton" aria-busy="true">Cargando tu tienda…</div>
   } @else if (!active()) {
+    @if (view()?.storefront?.status === 'PUBLISHED') {
+      <p role="status">Tu tienda conserva su publicación y configuración. Está pausada mientras la integración no esté activa. Revisa la vigencia de tu plan y activa Tienda web en Integraciones.</p>
+    }
     <app-integration-gate key="store" />
   } @else if (view(); as v) {
-    <div class="status-card" [class.status-card--live]="isPublished()">
+    <div class="status-card" [class.status-card--live]="v.availability.public">
       <span class="pill" [class.pill--ok]="isPublished()">
         {{ isPublished() ? 'Publicada' : 'Borrador' }}
       </span>
       <div class="status-card__body">
         <strong>{{ v.url }}</strong>
         <span>
-          @if (isPublished()) {
+          @if (v.availability.reason === 'suspended') {
+            La tienda está suspendida. Contacta con Ayuda para revisar el motivo.
+          } @else if (v.availability.public) {
             Visible para todos. Comparte este enlace en tu bio, estados y anuncios.
           } @else if (requiredPending().length) {
             Para publicar falta: {{ requiredPending().length }}

@@ -15,6 +15,9 @@
       <a class="button" routerLink="/carrito">Ver mi carrito</a>
     </div>
   } @else if (lines().length) {
+    @if (direct) {
+      <p role="status">Comprarás únicamente esta selección. Tu carrito se conserva para otra compra. <a routerLink="/carrito">Ver mi carrito</a></p>
+    }
     <div class="checkout-layout">
       <div class="checkout-form">
         <form [attr.inert]="demo.active ? '' : null" [formGroup]="form" (ngSubmit)="$event.preventDefault()" novalidate>
@@ -145,7 +148,7 @@
         </fieldset>
         </form>
 
-<store-checkout-payment [sectionNumber]="hasServices() ? (needsDelivery() ? '04' : '03') : (needsDelivery() ? '03' : '02')" [reserve]="reserveOrder" (reservationReleased)="releaseReservation()" [amountCents]="displayedTotal()" [payerEmail]="form.controls.email.value" />
+<store-checkout-payment [sectionNumber]="hasServices() ? (needsDelivery() ? '04' : '03') : (needsDelivery() ? '03' : '02')" [reserve]="reserveOrder" [checkoutStorageKey]="reservationStorageKey()" (reservationReleased)="releaseReservation()" [amountCents]="displayedTotal()" [payerEmail]="form.controls.email.value" />
         @if (error()) {
           <div class="error-box" role="alert">{{ error() }}</div>
         }

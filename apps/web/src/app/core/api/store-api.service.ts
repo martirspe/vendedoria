@@ -109,6 +109,7 @@ export type StoreChecklistItem = {
 };
 
 export type StoreSettingsView = {
+  availability: { public: boolean; previewAllowed: boolean; reason: 'published' | 'draft' | 'suspended' | 'integration_inactive' };
   storefront: StorefrontDto;
   url: string;
   templateDemoBaseUrl: string;

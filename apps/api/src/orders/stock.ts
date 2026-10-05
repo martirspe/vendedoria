@@ -73,7 +73,7 @@ async function target(tx: Prisma.TransactionClient, line: StockLine) {
     where: { id: line.productId },
     select: { id: true, stockUnlimited: true, stockQty: true },
   });
-  if (!product || product.stockUnlimited) return null;
+  if (!product) return null;
   if (line.variantId) {
     const variant = await tx.productVariant.findFirst({
       where: { id: line.variantId, productId: product.id },
@@ -81,6 +81,7 @@ async function target(tx: Prisma.TransactionClient, line: StockLine) {
     });
     if (variant?.stockQty != null) return { kind: 'variant' as const, id: variant.id };
   }
+  if (product.stockUnlimited) return null;
   return product.stockQty != null ? { kind: 'product' as const, id: product.id } : null;
 }
 

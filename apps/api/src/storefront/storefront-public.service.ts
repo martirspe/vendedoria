@@ -32,6 +32,7 @@ import { catalogFilterSql, catalogPriceSql, loadCatalogFacets, parseCatalogFilte
 import { verifyPreviewToken } from './storefront-preview';
 import { effectiveTemplate, readTemplateContent } from './store-templates';
 import { findUbigeo } from '../ubigeo/ubigeo';
+import { storeAvailability } from './storefront-availability';
 
 /** "San Juan de Lurigancho, Lima": where orders ship from, for buyer-facing copy. */
 function shippingOrigin(ubigeo: string | null): string | null {
@@ -108,7 +109,7 @@ export class StorefrontPublicService {
       storefront: { select: { status: true } },
     });
     const status = tenant?.storefront?.status;
-    if (!tenant || !status || status === 'SUSPENDED' || !(await this.storeEnabled(tenant.id))) {
+    if (!tenant || !status || !(await storeAvailability(this.prisma, tenant.id, status)).previewAllowed) {
       throw new NotFoundException('Store not found');
     }
     return {
@@ -129,9 +130,8 @@ export class StorefrontPublicService {
       : null;
     if (
       !storefront ||
-      storefront.status === 'SUSPENDED' ||
+      !(await storeAvailability(this.prisma, storefront.tenantId, storefront.status)).previewAllowed ||
       storefront.customDomainStatus !== 'active' ||
-      !(await this.storeEnabled(storefront.tenantId)) ||
       !(await isIntegrationActive(this.prisma, storefront.tenantId, 'custom_domain'))
     ) {
       throw new NotFoundException('Store not found');
@@ -150,11 +150,6 @@ export class StorefrontPublicService {
     return redirect?.tenant ?? null;
   }
 
-  /** The business turned the store on in Integraciones; otherwise it does not exist publicly. */
-  private storeEnabled(tenantId: string): Promise<boolean> {
-    return isIntegrationActive(this.prisma, tenantId, 'store');
-  }
-
   /**
    * Every public read goes through here: the tenant is derived from the slug
    * on the server and unpublished stores are only visible with a valid preview token.
@@ -165,7 +160,8 @@ export class StorefrontPublicService {
     }
     const tenant = await this.tenantBySlug(slug, { id: true, storefront: { select: { status: true } } });
     const status = tenant?.storefront?.status;
-    if (!tenant || !status || status === 'SUSPENDED' || !(await this.storeEnabled(tenant.id))) {
+    const availability = tenant && status ? await storeAvailability(this.prisma, tenant.id, status) : null;
+    if (!tenant || !availability?.previewAllowed) {
       throw new NotFoundException('Store not found');
     }
     // A valid token also previews a published store: the merchant sees the unpublished template draft.
@@ -173,7 +169,7 @@ export class StorefrontPublicService {
     if (previewToken && verifyPreviewToken(secret, tenant.id, previewToken)) {
       return { tenantId: tenant.id, isPreview: true };
     }
-    if (status === 'PUBLISHED') {
+    if (availability.public) {
       return { tenantId: tenant.id, isPreview: false };
     }
     throw new NotFoundException('Store not found');

@@ -8,7 +8,7 @@ import {
   signal,
 } from '@angular/core';
 import { takeUntilDestroyed, toSignal } from '@angular/core/rxjs-interop';
-import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
+import { FormBuilder, FormsModule, ReactiveFormsModule, Validators } from '@angular/forms';
 import { HttpErrorResponse } from '@angular/common/http';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { map, startWith } from 'rxjs';
@@ -28,19 +28,9 @@ import { IntegrationsStateService } from '../../core/integrations/integrations-s
 import { resizeImage } from '../../core/media/resize-image';
 import { productCompleteness, specificationHint } from './product-completeness';
 
-/** Fields without an input (id, third option, photo) travel untouched so saving never drops them. */
-type VariantDraft = {
-  id?: string;
-  sku: string;
-  option1Value: string;
-  option2Value: string;
-  option3Name: string | null;
-  option3Value: string | null;
-  imageUrl: string | null;
-  price: number;
-  isAvailable: boolean;
-  stockQty: number | null;
-};
+import { CombinationDraft, VariantAxis, generateCombinations, readOptions, keyOf } from './variant-combinations';
+import { CatalogCategory } from '../../core/api/catalog-api.service';
+type VariantDraft = CombinationDraft;
 
 type FaqDraft = { question: string; answer: string };
 
@@ -77,6 +67,7 @@ function toCents(amount: number): number {
   standalone: true,
   imports: [DsSelectComponent,
     ReactiveFormsModule,
+    FormsModule,
     RouterLink,
     DsButtonComponent,
     DsEmptyStateComponent,
@@ -130,6 +121,7 @@ export class ProductsPage {
   readonly deleting = signal(false);
   readonly editorOpen = signal(false);
   readonly editingId = signal<string | null>(null);
+  readonly editingVersion = signal<string | null>(null);
   readonly handleLocked = signal(false);
   readonly variantsEnabled = signal(false);
   readonly sellerHelpEnabled = signal(false);
@@ -152,7 +144,18 @@ export class ProductsPage {
   readonly errorMessage = signal<string | null>(null);
   readonly successMessage = signal<string | null>(null);
   readonly variantDrafts = signal<VariantDraft[]>([]);
-  readonly optionNames = signal({ first: '', second: '' });
+  readonly axes = signal<VariantAxis[]>([]);
+  readonly axesPending = signal(false);
+  readonly variantPage = signal(0);
+  readonly variantRows = computed(() => this.variantDrafts().slice(this.variantPage() * 25, (this.variantPage() + 1) * 25));
+  readonly categories = signal<CatalogCategory[]>([]);
+  readonly classificationError = signal(false);
+  readonly categoryId = signal('');
+  readonly attributeValues = signal<Record<string, string>>({});
+  readonly kindCategories = computed(() => this.categories().filter((category) => category.kind === this.formValues().kind));
+  readonly selectedCategory = computed(() => this.categories().find((category) => category.id === this.categoryId()));
+  readonly editorStep = signal('basics');
+  readonly editorSteps = [{ id: 'basics', label: '1. Tipo e información' }, { id: 'configuration', label: '2. Características y variantes' }, { id: 'media', label: '3. Fotos' }, { id: 'publication', label: '4. Precio y revisión' }];
   readonly faqs = signal<FaqDraft[]>([]);
   readonly maxFaqs = MAX_FAQS;
 
@@ -289,6 +292,7 @@ export class ProductsPage {
       });
 
     void this.load();
+    void this.loadCategories();
   }
 
   async load(): Promise<void> {
@@ -314,7 +318,12 @@ export class ProductsPage {
     this.mediaDraft.set('');
     this.categoryDraft.set('');
     this.variantDrafts.set([]);
-    this.optionNames.set({ first: '', second: '' });
+    this.axes.set([]);
+    this.axesPending.set(false);
+    this.categoryId.set('');
+    this.attributeValues.set({});
+    this.variantPage.set(0);
+    this.editorStep.set('basics');
     this.faqs.set([]);
     this.detailsEnabled.set(false);
     this.setEnabled.set(false);
@@ -366,6 +375,7 @@ export class ProductsPage {
 
   openEdit(product: ProductDto): void {
     this.editingId.set(product.id);
+    this.editingVersion.set(product.updatedAt);
     this.handleLocked.set(true);
     this.errorMessage.set(null);
     this.successMessage.set(null);
@@ -454,28 +464,23 @@ export class ProductsPage {
       this.productForm.controls.stockQty.enable({ emitEvent: false });
     }
     const variants = product.variants ?? [];
-    const firstNamed = (key: 'option1Name' | 'option2Name', fallback: string) => {
-      const name = variants.find((variant) => variant[key]?.trim())?.[key]?.trim() ?? '';
-      return name === fallback ? '' : name;
-    };
-    this.optionNames.set({
-      first: firstNamed('option1Name', 'Opción'),
-      second: firstNamed('option2Name', 'Opción 2'),
-    });
-    this.variantDrafts.set(
-      variants.map((variant) => ({
-        id: variant.id,
-        sku: variant.sku ?? '',
-        option1Value: variant.option1Value ?? '',
-        option2Value: variant.option2Value ?? '',
-        option3Name: variant.option3Name ?? null,
-        option3Value: variant.option3Value ?? null,
-        imageUrl: variant.imageUrl ?? null,
-        price: variant.priceCents / 100,
-        isAvailable: variant.isAvailable,
-        stockQty: variant.stockQty,
-      })),
-    );
+    this.variantDrafts.set(variants.map((variant) => ({
+      id: variant.id, sku: variant.sku ?? '', options: readOptions(variant),
+      imageUrl: variant.imageUrl ?? null, price: variant.priceCents / 100,
+      priceInherited: variant.priceInherited ?? false, isAvailable: variant.isAvailable, stockQty: variant.stockQty,
+      expectedStockQty: variant.stockQty,
+    })));
+    const optionValues = new Map<string, Set<string>>();
+    for (const variant of this.variantDrafts()) for (const option of variant.options) {
+      const values = optionValues.get(option.name) ?? new Set<string>();
+      values.add(option.value); optionValues.set(option.name, values);
+    }
+    this.axes.set([...optionValues].map(([name, values]) => ({ name, values: [...values].join(', ') })));
+    this.axesPending.set(false);
+    this.categoryId.set(product.categoryId ?? '');
+    this.attributeValues.set({ ...(product.attributeValues ?? {}) });
+    this.variantPage.set(0);
+    this.editorStep.set('basics');
     this.editorOpen.set(true);
   }
 
@@ -494,6 +499,7 @@ export class ProductsPage {
   setKind(kind: ProductKind): void {
     this.productForm.controls.kind.setValue(kind);
     if (kind !== 'PRODUCT') this.setEnabled.set(false);
+    this.setCategory('');
   }
 
   toggleSet(enabled: boolean): void {
@@ -564,6 +570,19 @@ export class ProductsPage {
     return this.products().find((product) => product.id === productId)?.name ?? '';
   }
 
+  pieceSelectable(id: string): boolean { return this.pieceOptions().some((piece) => piece.id === id); }
+  hasMedia(url: string): boolean { return this.media().some((photo) => photo.url === url); }
+  categoryPath(category: CatalogCategory): string { return category.path.map((item) => item.name).join(' → '); }
+  nextStep(): void {
+    const index = this.editorSteps.findIndex((step) => step.id === this.editorStep());
+    this.editorStep.set(this.editorSteps[Math.min(index + 1, this.editorSteps.length - 1)].id);
+  }
+  updateVariantOption(index: number, optionIndex: number, value: string): void {
+    const variant = this.variantDrafts()[index];
+    this.updateVariant(index, { options: variant.options.map((option, i) => i === optionIndex ? { ...option, value } : option) });
+  }
+  updateVariantStock(index: number, value: string): void { this.updateVariant(index, { stockQty: value.trim() ? Number(value) : null }); }
+
   onHandleInput(): void {
     this.handleLocked.set(true);
   }
@@ -579,26 +598,52 @@ export class ProductsPage {
     this.sellerHelpEnabled.set(enabled);
   }
 
-  addVariant(): void {
-    const price = this.productForm.controls.price.value || 0;
-    this.variantDrafts.update((list) => [
-      ...list,
-      {
-        sku: '',
-        option1Value: '',
-        option2Value: '',
-        option3Name: null,
-        option3Value: null,
-        imageUrl: null,
-        price,
-        isAvailable: true,
-        stockQty: null,
-      },
-    ]);
+  async loadCategories(): Promise<void> {
+    this.classificationError.set(false);
+    try { this.categories.set(await this.api.categories()); }
+    catch { this.classificationError.set(true); }
   }
 
-  setOptionName(key: 'first' | 'second', value: string): void {
-    this.optionNames.update((names) => ({ ...names, [key]: value }));
+  setCategory(id: string): void {
+    this.categoryId.set(id); this.attributeValues.set({});
+    this.detailsEnabled.set(id === 'fragrances');
+    if (!this.variantDrafts().length) {
+      const suggested = this.selectedCategory()?.attributes.filter((attribute) => attribute.variant && attribute.required) ?? [];
+      this.axes.set(suggested.slice(0, 5).map((attribute) => ({ name: attribute.name, values: '' })));
+    }
+  }
+
+  setAttribute(key: string, value: string): void {
+    this.attributeValues.update((values) => ({ ...values, [key]: value }));
+  }
+
+  addAxis(): void {
+    if (this.axes().length < 5) {
+      this.axes.update((axes) => [...axes, { name: '', values: '' }]);
+      this.axesPending.set(true);
+    }
+  }
+
+  updateAxis(index: number, patch: Partial<VariantAxis>): void {
+    this.axes.update((axes) => axes.map((axis, i) => i === index ? { ...axis, ...patch } : axis));
+    this.axesPending.set(true);
+  }
+
+  removeAxis(index: number): void {
+    this.axes.update((axes) => axes.filter((_, i) => i !== index));
+    this.axesPending.set(true);
+  }
+
+  generateVariants(): void {
+    try {
+      this.variantDrafts.set(generateCombinations(this.axes(), this.variantDrafts(), Number(this.productForm.controls.price.value), this.productForm.controls.sku.value.trim()));
+      this.axesPending.set(false);
+      this.variantPage.set(0); this.errorMessage.set(null);
+    } catch (error) { this.errorMessage.set(error instanceof Error ? error.message : 'Revisa los atributos.'); }
+  }
+
+  addVariant(): void {
+    if (!this.axes().length) this.addAxis();
   }
 
   addFaq(): void {
@@ -637,6 +682,7 @@ export class ProductsPage {
 
   removeVariant(index: number): void {
     this.variantDrafts.update((list) => list.filter((_, i) => i !== index));
+    this.variantPage.set(Math.min(this.variantPage(), Math.max(0, Math.ceil(this.variantDrafts().length / 25) - 1)));
   }
 
   updateVariant(index: number, patch: Partial<VariantDraft>): void {
@@ -646,7 +692,7 @@ export class ProductsPage {
   }
 
   onVariantPriceInput(index: number, value: string): void {
-    this.updateVariant(index, { price: Number(value || 0) });
+    this.updateVariant(index, { price: Number(value || 0), priceInherited: false });
   }
 
   onMediaDraftInput(value: string): void {
@@ -720,6 +766,11 @@ export class ProductsPage {
   }
 
   async saveProduct(): Promise<void> {
+    if (this.variantsEnabled() && !this.setEnabled() && this.axesPending()) {
+      this.editorStep.set('configuration');
+      this.errorMessage.set('Genera las combinaciones para aplicar los cambios de atributos antes de guardar.');
+      return;
+    }
     if (this.productForm.invalid || !this.readinessReady()) {
       this.productForm.markAllAsTouched();
       this.errorMessage.set(
@@ -738,9 +789,10 @@ export class ProductsPage {
     const service = values.kind === 'SERVICE';
     const stockless = values.kind !== 'PRODUCT';
     const asSet = this.setEnabled() && !stockless;
-    const components = asSet
-      ? this.components().filter((row) => row.productId && row.quantity >= 1)
-      : [];
+    const components = asSet ? this.components() : [];
+    if (components.some((row) => !row.productId || !Number.isInteger(row.quantity) || row.quantity < 1 || row.quantity > 20) || new Set(components.map((row) => row.productId)).size !== components.length) {
+      this.errorMessage.set('Elige todas las piezas y cantidades válidas, sin repetir productos.'); return;
+    }
     if (asSet && !components.length) {
       this.errorMessage.set('Agrega al menos una pieza al set o desactiva "Se vende como set".');
       return;
@@ -748,6 +800,8 @@ export class ProductsPage {
     const duration = Number(values.durationMinutes);
     const extras = {
       kind: values.kind,
+      categoryId: this.categoryId() || null,
+      attributeValues: this.categoryId() ? this.attributeValues() : null,
       digitalAccessUrl: values.kind === 'DIGITAL' ? values.digitalAccessUrl.trim() || null : null,
       digitalInstructions: values.kind === 'DIGITAL' ? values.digitalInstructions.trim() || null : null,
       durationMinutes: service && duration > 0 ? Math.round(duration) : null,
@@ -766,29 +820,21 @@ export class ProductsPage {
       components,
     };
 
-    const names = this.optionNames();
-    const firstName = names.first.trim() || 'Opción';
-    const secondName = names.second.trim() || 'Opción 2';
-    const variants = this.variantsEnabled() && !asSet
-      ? this.variantDrafts()
-          .filter(
-            (item) => item.option1Value.trim() || item.option2Value.trim(),
-          )
-          .map((item) => ({
-            ...(item.id ? { id: item.id } : {}),
-            sku: item.sku.trim() || undefined,
-            option1Name: item.option1Value.trim() ? firstName : undefined,
-            option1Value: item.option1Value.trim() || undefined,
-            option2Name: item.option2Value.trim() ? secondName : undefined,
-            option2Value: item.option2Value.trim() || undefined,
-            option3Name: item.option3Value ? item.option3Name ?? undefined : undefined,
-            option3Value: item.option3Value ?? undefined,
-            imageUrl: item.imageUrl,
-            priceCents: toCents(item.price),
-            isAvailable: item.isAvailable,
-            stockQty: stockless ? null : item.stockQty,
-          }))
-      : [];
+    const variants = this.variantsEnabled() && !asSet ? this.variantDrafts().map((item) => ({
+      ...(item.id ? { id: item.id } : {}), sku: item.sku.trim() || undefined,
+      expectedStockQty: item.expectedStockQty,
+      options: item.options, imageUrl: item.imageUrl, priceInherited: item.priceInherited,
+      priceCents: toCents(item.priceInherited ? Number(values.price) : item.price),
+      isAvailable: item.isAvailable, stockQty: stockless ? null : item.stockQty,
+    })) : [];
+    if (this.variantsEnabled() && !asSet && (!variants.length || new Set(variants.map((item) => keyOf(item.options))).size !== variants.length)) {
+      this.editorStep.set('configuration'); this.errorMessage.set('Genera combinaciones válidas y distintas antes de guardar.'); return;
+    }
+    if (this.categoryId() && !this.selectedCategory()) {
+      this.editorStep.set('basics'); this.errorMessage.set('Carga la clasificación antes de guardar este producto.'); return;
+    }
+    const missing = this.selectedCategory()?.attributes.find((attribute) => attribute.required && !this.attributeValues()[attribute.key]?.trim() && !(attribute.variant && variants.length && variants.every((variant) => variant.options.some((option) => option.name.trim().toLocaleLowerCase('es') === attribute.name.trim().toLocaleLowerCase('es') && option.value.trim()))));
+    if (missing) { this.editorStep.set('configuration'); this.errorMessage.set('Completa ' + missing.name + '.'); return; }
 
     this.saving.set(true);
     this.errorMessage.set(null);
@@ -796,6 +842,7 @@ export class ProductsPage {
       const editingId = this.editingId();
       const saved = editingId
         ? await this.api.update(editingId, {
+            expectedUpdatedAt: this.editingVersion() ?? undefined,
             name: values.name.trim(),
             handle,
             descriptionShort: values.descriptionShort.trim() || undefined,
@@ -949,7 +996,11 @@ export class ProductsPage {
     const attributes = pairs(values.attributesText, 20)
       .filter((row) => row.rest)
       .map((row) => ({ name: row.name.slice(0, 60), value: row.rest.slice(0, 200) }));
-    if (attributes.length) details.attributes = attributes;
+    for (const definition of this.selectedCategory()?.attributes ?? []) {
+      const value = this.attributeValues()[definition.key]?.trim();
+      if (value) attributes.push({ name: definition.name, value });
+    }
+    if (attributes.length) details.attributes = [...new Map(attributes.map((attribute) => [attribute.name.trim().toLocaleLowerCase('es'), attribute])).values()];
     const keywords = values.keywordsText
       .split(',')
       .map((word) => word.trim().slice(0, 40))

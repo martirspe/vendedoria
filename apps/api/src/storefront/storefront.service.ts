@@ -15,6 +15,7 @@ import {
 } from './storefront-host';
 import { createPreviewToken } from './storefront-preview';
 import { activeCustomDomain, isIntegrationActive } from '../integrations/integration-state';
+import { storeAvailability, type StoreAvailability } from './storefront-availability';
 
 const SUBDOMAIN_CHANGES_PER_WINDOW = 3;
 const SUBDOMAIN_WINDOW_MS = 30 * 24 * 60 * 60 * 1000;
@@ -38,6 +39,7 @@ export type StorefrontChecklistItem = {
 };
 
 export type StorefrontSettingsView = {
+  availability: StoreAvailability;
   storefront: Storefront;
   url: string;
   /** Platform-hosted original demos work even when the store uses a custom domain. */
@@ -308,6 +310,7 @@ export class StorefrontService {
     const domain = await activeCustomDomain(this.prisma, tenantId);
     return {
       storefront,
+      availability: await storeAvailability(this.prisma, tenantId, storefront.status),
       url: domain ? customDomainUrl(this.urlTemplate(), domain) : storefrontUrl(this.urlTemplate(), tenant.slug),
       templateDemoBaseUrl: new URL('/_templates/', storefrontUrl(this.urlTemplate(), tenant.slug)).toString(),
       totalProducts,

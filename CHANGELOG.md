@@ -2,6 +2,8 @@
 
 ## [Unreleased]
 
+- Catalog and checkout: hierarchical category schemas with inherited attributes, up to five variant axes and 500 generated combinations, preserved variant IDs, independent stock/SKU/image/price overrides and inherited prices. Product editing now progresses through four stages and correctly restores set selectors. Buy now keeps the saved cart intact; paid cart orders consume only their captured quantities once. Store availability distinguishes publication from plan/integration pauses. Additive migration `20261005050000_catalog_classification_variants`; PostgreSQL acceptance checks and production incident diagnosis remain pending. See `docs/CATALOG-COMMERCE-AUDIT.md`.
+
 - AI Sales Engine: durable WhatsApp/Instagram inbox, tenant-scoped idempotency, debounce, Redis leases fenced by PostgreSQL, structured sales state and summaries, explicit customer memory, bounded read-only function calling, semantic catalog/FAQ retrieval hydrated from PostgreSQL, transactional search outbox, response validation and privacy-safe turn traces. Interrupted commerce and uncertain sends pause for operator review; playground remains isolated and legacy mode stays available.
 
 - TikTok LIVE · AI Seller: tenant activation, official Login Kit OAuth with encrypted refresh credentials, signed/idempotent deauthorization webhook, explicit capability restrictions, manual LIVE campaigns and liquidation offers, deterministic purchase intent, existing seller clarification, current product, atomic stock reservations, shared checkout/payment settlement and authenticated SSE operations/analytics panel. Additive migration `20261005020000_tiktok_live`; official LIVE comments/replies remain unsupported. See `docs/TIKTOK-LIVE.md`.

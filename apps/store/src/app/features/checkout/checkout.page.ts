@@ -30,6 +30,7 @@ import { AnalyticsService } from '../../core/analytics.service';
 import { CheckoutPaymentComponent } from '../../components/checkout-payment.component';
 import { campaignCoupon, forgetCampaignCoupon } from '../../core/campaign-coupon';
 import { CartService } from '../../core/cart.service';
+import { checkoutStorageKey } from '../../core/checkout-context';
 import { MoneyPipe } from '../../core/money.pipe';
 import { SeoService } from '../../core/seo.service';
 import { isCarrier } from '../../core/shipping';
@@ -37,11 +38,11 @@ import { StoreApiService } from '../../core/store-api.service';
 import { StoreStateService } from '../../core/store-state.service';
 import { TemplateDemo } from '../../core/template-demo';
 
-const CHECKOUT_KEY = 'vendedoria-checkout-key';
 const CHALLENGE_PENDING = 'Completa la verificación de seguridad para continuar.';
 
 @Component({
   selector: 'store-checkout-page',
+  providers: [CartService],
   imports: [DatePipe, RecommendationsComponent, CartRecoveryComponent, DsSelectComponent, ReactiveFormsModule, RouterLink, DsIconComponent, DsTurnstileComponent, MoneyPipe, CheckoutPaymentComponent],
   templateUrl: './checkout.page.html',
   styleUrl: './checkout.page.scss',
@@ -50,6 +51,9 @@ const CHALLENGE_PENDING = 'Completa la verificación de seguridad para continuar
 export class CheckoutPage {
   readonly demo = inject(TemplateDemo);
   readonly liveToken = inject(ActivatedRoute).snapshot.queryParamMap.get('live') ?? undefined;
+  private readonly directParams = inject(ActivatedRoute).snapshot.queryParamMap;
+  readonly directHandle = this.directParams.get('producto');
+  readonly directLoading = signal(Boolean(this.directHandle));
   readonly liveLoading = signal(Boolean(this.liveToken));
   readonly liveExpiresAt = signal<string | null>(null);
   private readonly host = inject<ElementRef<HTMLElement>>(ElementRef);
@@ -69,7 +73,12 @@ export class CheckoutPage {
   readonly displayedSubtotal = computed(() => this.reservedOrder()?.subtotalCents ?? this.cart.subtotalCents());
   readonly displayedDiscount = computed(() => this.reservedOrder()?.discountCents ?? this.discountCents());
   readonly displayedShipping = computed(() => this.reservedOrder()?.shippingCents ?? this.shippingCents());
-  releaseReservation(): void { this.reservedOrder.set(null); }
+  readonly reservationStorageKey = signal<string | null>(null);
+  releaseReservation(): void {
+    const key = this.reservationStorageKey();
+    if (key) sessionStorage.removeItem(key);
+    this.reservedOrder.set(null);
+  }
   readonly applyingCoupon = signal(false);
   readonly errorMessage = signal<string | null>(null);
   readonly couponError = signal<string | null>(null);
@@ -144,9 +153,11 @@ export class CheckoutPage {
 
   constructor() {
     inject(SeoService).set({ title: 'Finalizar compra', path: '/checkout', noindex: true });
-    if (this.liveToken) {
-      afterNextRender(() => void this.loadLiveReservation());
-    }
+    afterNextRender(() => {
+      if (this.liveToken) void this.loadLiveReservation();
+      else if (this.directHandle) void this.loadDirect();
+      else if (this.store()) this.cart.load(this.store()!.slug);
+    });
     const analytics = inject(AnalyticsService);
     let checkoutTracked = false;
     effect(() => {
@@ -173,7 +184,7 @@ export class CheckoutPage {
     this.form.controls.department.valueChanges.subscribe((value) => this.selectDepartment(value, false));
     this.form.controls.province.valueChanges.subscribe((value) => this.selectProvince(value, false));
     effect(() => {
-      if (!this.liveToken && this.cart.ready() && !this.cart.lines().length && !this.submitting() && !this.reservedOrder()) {
+      if (!this.liveToken && !this.directHandle && this.cart.ready() && !this.cart.lines().length && !this.submitting() && !this.reservedOrder()) {
         void this.router.navigate(['/carrito']);
       }
     });
@@ -290,6 +301,8 @@ export class CheckoutPage {
       return null;
     }
     try {
+      const purchased = this.cart.lines().map((line) => ({ ...line }));
+      this.reservationStorageKey.set(this.checkoutStorageKey());
       const order = await this.api.checkout({
         checkoutKey: this.checkoutKey(),
         recoveryToken: this.liveToken ? undefined : this.conversion.checkoutToken(),
@@ -322,6 +335,7 @@ export class CheckoutPage {
       }, token);
       if (this.coupon()) forgetCampaignCoupon();
       if (!this.liveToken) this.conversion.remember(undefined);
+      if (!this.liveToken && !this.directHandle) this.cart.rememberOrder(order.id, purchased);
       this.reservedOrder.set(order);
       return order;
     } catch (error) {
@@ -342,6 +356,32 @@ export class CheckoutPage {
       ...(line.variantId ? { variantId: line.variantId } : {}),
       quantity: line.quantity,
     }));
+  }
+
+  async loadDirect(): Promise<void> {
+    if (!this.directHandle) return;
+    this.directLoading.set(true);
+    this.errorMessage.set(null);
+    try {
+      const product = await this.api.catalogProduct(this.directHandle);
+      if (!product) throw new Error('unavailable');
+      const variantId = this.directParams.get('variante');
+      const variant = product.variants.find((item) => item.id === variantId);
+      if (!product.isAvailable || (product.hasVariants && !variant?.isAvailable) || (!product.hasVariants && variantId))
+        throw new Error('unavailable');
+      const rawQty = Number(this.directParams.get('cantidad') ?? 1);
+      const stock = variant?.stockLeft ?? product.stockLeft ?? 20;
+      const quantity = Math.min(Number.isInteger(rawQty) && rawQty > 0 ? rawQty : 1, 20, stock);
+      if (quantity < 1) throw new Error('unavailable');
+      this.cart.restoreTransient([{
+        handle: product.handle, name: product.name, variantId: variant?.id ?? null,
+        variantLabel: variant?.label ?? null, unitCents: variant?.priceCents ?? product.priceCents,
+        currency: product.currency, imageUrl: variant?.imageUrl ?? product.imageUrl,
+        isService: product.kind === 'SERVICE', isDigital: product.kind === 'DIGITAL', quantity,
+      }]);
+    } catch {
+      this.errorMessage.set('Esta selección no está disponible. Reintenta o vuelve al producto para elegir otra opción.');
+    } finally { this.directLoading.set(false); }
   }
 
   async loadLiveReservation(): Promise<void> {
@@ -374,7 +414,7 @@ export class CheckoutPage {
   }
 
   private checkoutStorageKey(): string {
-    return this.liveToken ? `${CHECKOUT_KEY}:live:${this.liveToken.split('.')[0]}` : CHECKOUT_KEY;
+    return checkoutStorageKey(this.store()?.slug ?? '', this.liveToken ? `live:${this.liveToken.split('.')[0]}` : this.directHandle ? 'direct' : 'cart', this.items());
   }
 
   private syncAddressValidators(mode: ShippingMode | null): void {

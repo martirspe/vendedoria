@@ -86,7 +86,12 @@ export class SelectaProductPage {
   });
   readonly photos = computed(() => {
     const p = this.product();
-    return p ? photos(p) : [];
+    if (!p) return [];
+    const gallery = photos(p);
+    const image = this.variant()?.imageUrl;
+    return image && !gallery.some((photo) => photo.url === image)
+      ? [{ url: image, kind: 'image', alt: p.name, caption: this.variant()?.label ?? null }, ...gallery]
+      : gallery;
   });
   readonly relatedPhotos = computed(() => this.product()?.media.filter((m) => m.kind === 'related') ?? []);
   readonly montage = computed(() => Boolean(this.product()?.details.montage) && this.photos().length > 1);
@@ -120,7 +125,7 @@ export class SelectaProductPage {
   readonly buyParams = computed(() => {
     const p = this.product();
     return p
-      ? { producto: p.handle, cantidad: this.qty(), ...(this.variant() ? { variante: this.variant()!.id } : {}) }
+      ? { producto: p.handle, cantidad: Math.min(this.qty(), this.variant()?.stockLeft ?? maxUnits(p), 10), ...(this.variant() ? { variante: this.variant()!.id } : {}) }
       : {};
   });
   readonly whatsapp = computed(() => {
@@ -166,7 +171,7 @@ export class SelectaProductPage {
 
   add(p: Product): void {
     if (!this.canBuy()) return;
-    this.cart.add(bagLine(p, this.variant()), this.qty(), maxUnits(p));
+    this.cart.add(bagLine(p, this.variant()), this.qty(), Math.min(this.variant()?.stockLeft ?? maxUnits(p), 10));
     this.added.set('Añadido a tu bolsa.');
   }
 
@@ -179,6 +184,8 @@ export class SelectaProductPage {
   pickVariant(id: string): void {
     this.variantId.set(id || null);
     this.qty.set(1);
+    const image = this.variant()?.imageUrl;
+    if (image) this.selected.set(Math.max(0, this.photos().findIndex((photo) => photo.url === image)));
   }
 
   private select(handle: string | null): void {

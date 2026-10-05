@@ -60,6 +60,7 @@ export class OrderPage {
   readonly reserve = input<(() => Promise<PublicOrder | null>) | null>(null);
   readonly amountCents = input(0);
   readonly payerEmail = input('');
+  readonly checkoutStorageKey = input<string | null>(null);
   readonly reservationReleased = output<void>();
   readonly inline = computed(() => typeof this.reserve() === 'function');
   readonly payableTotal = computed(() => this.order()?.totalCents ?? this.amountCents());
@@ -150,8 +151,8 @@ export class OrderPage {
       this.unmountBrick();
     });
     effect(() => {
-      if (!this.inline() && this.paid() && this.cart.ready() && this.cart.lines().length) {
-        untracked(() => this.cart.clear());
+      if (this.paid() && this.cart.ready() && this.order()) {
+        untracked(() => this.cart.completeOrder(this.order()!.id));
       }
     });
     effect(() => {
@@ -161,7 +162,8 @@ export class OrderPage {
     effect(() => {
       const order = this.order();
       if (this.inline() && this.paid() && order) {
-        sessionStorage.removeItem('vendedoria-checkout-key');
+        const key = this.checkoutStorageKey();
+        if (key) sessionStorage.removeItem(key);
         untracked(() => void this.router.navigate(['/pedido', order.id], { queryParams: { t: order.token } }));
       }
     });
@@ -271,7 +273,8 @@ export class OrderPage {
     this.unmountBrick();
     this.order.set(null);
     this.errorMessage.set(null);
-    sessionStorage.removeItem('vendedoria-checkout-key');
+    const key = this.checkoutStorageKey();
+    if (key) sessionStorage.removeItem(key);
     this.reservationReleased.emit();
     this.mountBrickAfterRender();
   }

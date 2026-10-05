@@ -116,12 +116,15 @@ export class ProductPage {
   readonly serviceSummary = computed(() => serviceSummary(this.product()?.service));
 
   readonly quantity = signal(1);
+  readonly maxQuantity = computed(() => Math.min(20, this.selectedVariant()?.stockLeft ?? this.product()?.stockLeft ?? 20));
   readonly added = signal(false);
   readonly online = computed(() => this.store()?.checkout.mode === 'online');
 
   buyNow(): void {
-    this.addToCart();
-    if (this.canAdd()) void this.router.navigate(['/checkout']);
+    const product = this.product();
+    if (product && this.canAdd()) void this.router.navigate(['/checkout'], { queryParams: {
+      producto: product.handle, variante: this.selectedVariant()?.id ?? null, cantidad: Math.min(this.quantity(), this.maxQuantity()),
+    } });
   }
 
   readonly whatsappHref = computed(() => {
@@ -184,7 +187,7 @@ export class ProductPage {
   }
 
   changeQuantity(delta: number): void {
-    this.quantity.update((value) => Math.min(Math.max(value + delta, 1), 99));
+    this.quantity.update((value) => Math.min(Math.max(value + delta, 1), Math.max(1, this.maxQuantity())));
   }
 
   addToCart(): void {
@@ -204,6 +207,7 @@ export class ProductPage {
         isDigital: product.kind === 'DIGITAL',
       },
       this.quantity(),
+      this.maxQuantity(),
     );
     this.added.set(true);
   }

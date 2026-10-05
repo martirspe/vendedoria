@@ -7,6 +7,7 @@ import { OrderShipping, OrdersService } from '../orders/orders.service';
 import { orderReference } from '../orders/settlement';
 import { SalesSearchService } from './sales-search.service';
 import type { ShippingRules } from '../storefront/shipping';
+import { variantOptions } from '../catalog/variant-options';
 import {
   customDomainUrl,
   DEFAULT_STOREFRONT_URL_TEMPLATE,
@@ -1154,6 +1155,7 @@ export class SalesAgentToolsService {
     media?: Array<{ url: string }>;
     components?: Array<{ quantity: number; component: { isAvailable: boolean; stockUnlimited: boolean; stockQty: number | null } }>;
     variants?: Array<{
+      options?: Prisma.JsonValue | null;
       id: string;
       option1Name: string | null;
       option1Value: string | null;
@@ -1189,9 +1191,7 @@ export class SalesAgentToolsService {
     const variants = (product.variants ?? [])
       .filter((variant) => variant.isAvailable)
       .map((variant) => {
-        const parts = [variant.option1Value, variant.option2Value, variant.option3Value].filter(
-          Boolean,
-        );
+        const parts = variantOptions(variant).map((option) => option.value);
         return {
           id: variant.id,
           label: parts.join(' / ') || 'Variante',

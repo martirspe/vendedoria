@@ -16,6 +16,8 @@ import {
 import { InventoryUpdateDto } from './dto/inventory.dto';
 import { UpdateProductDto } from './dto/update-product.dto';
 import { MediaService } from './media.service';
+import { categorySchema, classificationDetails, validateAttributeValues } from './catalog-classification';
+import { combinationKey, MAX_VARIANTS, normalizeOption, variantOptions, type OptionRecord } from './variant-options';
 
 const PRODUCT_INCLUDE = {
   variants: true,
@@ -70,12 +72,78 @@ export class CatalogService {
     });
   }
 
+  async categories() {
+    const categories = await this.prisma.catalogCategory.findMany({ orderBy: { name: 'asc' } });
+    return categories.map((category) => categorySchema(categories, category.id));
+  }
+
+  private assertVariants(variants: ProductVariantInputDto[] | undefined) {
+    if (!variants) return;
+    if (variants.length > MAX_VARIANTS) throw new BadRequestException(`Máximo ${MAX_VARIANTS} combinaciones por producto.`);
+    const keys = new Set<string>();
+    const skus = new Set<string>();
+    const ids = new Set<string>();
+    let axes: string | undefined;
+    const labels = new Map<string, string>();
+    for (const variant of variants) {
+      if (!Number.isInteger(variant.priceCents) || variant.priceCents < 0 || variant.priceCents > 2147483647 ||
+        (variant.stockQty != null && (!Number.isInteger(variant.stockQty) || variant.stockQty < 0 || variant.stockQty > 2147483647)))
+        throw new BadRequestException('Los precios y el stock de variantes deben ser cantidades válidas, sin negativos.');
+      const options = variantOptions(variant);
+      const names = options.map((option) => normalizeOption(option.name));
+      if (!options.length || options.length > 5 || options.some((option) => !option.name || !option.value || option.name.length > 60 || option.value.length > 200) || new Set(names).size !== names.length)
+        throw new BadRequestException('Cada combinación necesita atributos distintos y valores completos.');
+      const shape = JSON.stringify([...names].sort());
+      if (axes !== undefined && axes !== shape) throw new BadRequestException('Todas las variantes deben usar los mismos atributos.');
+      axes = shape;
+      options.forEach((option) => { if (!labels.has(normalizeOption(option.name))) labels.set(normalizeOption(option.name), option.name); });
+      variant.options = options.map((option) => ({ ...option, name: labels.get(normalizeOption(option.name))! }));
+      const key = combinationKey(options);
+      if (keys.has(key)) throw new BadRequestException('Hay combinaciones repetidas. Revisa sus atributos.');
+      keys.add(key);
+      const sku = variant.sku ? normalizeOption(variant.sku) : '';
+      if (sku && skus.has(sku)) throw new BadRequestException('Cada variante debe tener un SKU distinto.');
+      if (sku) skus.add(sku);
+      if (variant.id && ids.has(variant.id)) throw new BadRequestException('Una variante aparece más de una vez.');
+      if (variant.id) ids.add(variant.id);
+    }
+  }
+
+  private async classificationData(tx: Tx, dto: ProductExtrasDto, kind: ProductKind, variants: OptionRecord[], previous?: { categoryId: string | null; attributeValues: Prisma.JsonValue | null; details?: Prisma.JsonValue | null }) {
+    const categoryId = dto.categoryId === undefined ? previous?.categoryId : dto.categoryId;
+    const categories = categoryId || previous?.categoryId ? await tx.catalogCategory.findMany() : [];
+    const previousDefinitions = previous?.categoryId ? categorySchema(categories, previous.categoryId).attributes : [];
+    const rawDetails = dto.details === undefined ? previous?.details : dto.details;
+    if (!categoryId) {
+      if (dto.attributeValues && Object.keys(dto.attributeValues).length) throw new BadRequestException('Elige una categoría para guardar sus características.');
+      return dto.categoryId === undefined && dto.attributeValues === undefined ? {} : {
+        categoryId: null, attributeValues: Prisma.DbNull,
+        ...(previousDefinitions.length ? { details: classificationDetails(rawDetails, previousDefinitions, [], {}) ?? Prisma.DbNull } : {}),
+      };
+    }
+    const schema = categorySchema(categories, categoryId);
+    if (schema.kind !== kind) throw new BadRequestException('La categoría no corresponde al tipo de producto.');
+    const old = previous?.categoryId === categoryId ? previous.attributeValues : null;
+    const values = dto.attributeValues === undefined ? (old ?? {}) : (dto.attributeValues ?? {});
+    const pairs = variants.flatMap(variantOptions);
+    for (const pair of pairs) {
+      const definition = schema.attributes.find((attribute) => normalizeOption(attribute.name) === normalizeOption(pair.name));
+      if (definition && (!definition.variant || (definition.values?.length && !definition.values.includes(pair.value))))
+        throw new BadRequestException(`El atributo ${pair.name} no permite esa variación.`);
+    }
+    const attributes = validateAttributeValues(schema.attributes, values as Record<string, string>, pairs.map((pair) => pair.name));
+    return { categoryId, attributeValues: attributes as Prisma.InputJsonObject, details: classificationDetails(rawDetails, previousDefinitions, schema.attributes, attributes) ?? Prisma.DbNull };
+  }
+
   async create(tenantId: string, dto: CreateProductDto) {
+    this.assertVariants(dto.variants);
+    if (dto.variants?.some((variant) => variant.id)) throw new BadRequestException('Las variantes de un producto nuevo no deben tener un ID existente.');
     await this.planLimits.assertCanCreateProduct(tenantId);
     try {
       return await this.prisma.$transaction(async (tx) => {
         const kind = dto.kind ?? ProductKind.PRODUCT;
         const stockless = kind !== ProductKind.PRODUCT;
+        const classification = await this.classificationData(tx, dto, kind, dto.variants ?? []);
         this.assertDigitalAccess(kind, dto.digitalAccessUrl, dto.isAvailable ?? true);
         const product = await tx.product.create({
           data: {
@@ -98,10 +166,11 @@ export class CatalogService {
             seoTitle: dto.seoTitle?.trim() || null,
             seoDescription: dto.seoDescription?.trim() || null,
             ...this.extrasData(dto),
+            ...classification,
             variants: dto.variants?.length
               ? {
                   create: dto.variants.map((variant) =>
-                    this.toVariantData(variant, stockless),
+                    this.toVariantData(variant, stockless, dto.basePriceCents),
                   ),
                 }
               : undefined,
@@ -134,7 +203,9 @@ export class CatalogService {
   }
 
   async update(tenantId: string, productId: string, dto: UpdateProductDto) {
+    this.assertVariants(dto.variants);
     const before = await this.getById(tenantId, productId);
+    if (dto.expectedUpdatedAt && Date.parse(dto.expectedUpdatedAt) !== before.updatedAt.getTime()) throw new ConflictException('El producto cambió mientras lo editabas. Vuelve a abrirlo antes de guardar.');
     const kind = dto.kind ?? before.kind;
     const stockless = kind !== ProductKind.PRODUCT;
     this.assertDigitalAccess(kind, dto.digitalAccessUrl === undefined ? before.digitalAccessUrl : dto.digitalAccessUrl,
@@ -142,18 +213,28 @@ export class CatalogService {
     let updated;
     try {
       updated = await this.prisma.$transaction(async (tx) => {
+        // Serialize edits to the same product, including set recipes and combination keys.
+        await tx.$queryRaw`SELECT "id" FROM "Product" WHERE "id" = ${productId} AND "tenantId" = ${tenantId} FOR UPDATE`;
+        const current = await tx.product.findFirstOrThrow({ where: { id: productId, tenantId }, include: PRODUCT_INCLUDE });
+        if (current.updatedAt.getTime() !== before.updatedAt.getTime()) throw new ConflictException('El producto cambió mientras lo editabas. Vuelve a abrirlo antes de guardar.');
+        const classification = await this.classificationData(tx, dto, kind, dto.variants ?? current.variants.map((variant) => ({ ...variant, options: variantOptions(variant), sku: variant.sku ?? undefined })), current);
         if (dto.variants) {
-          await this.writeVariants(tx, productId, dto.variants, stockless);
+          await this.writeVariants(tx, productId, dto.variants, stockless, dto.basePriceCents ?? current.basePriceCents);
         } else if (stockless) {
           await tx.productVariant.updateMany({
             where: { productId },
             data: { stockQty: null },
           });
         }
+        if (dto.basePriceCents !== undefined && !dto.variants) {
+          await tx.productVariant.updateMany({ where: { productId, priceInherited: true }, data: { priceCents: dto.basePriceCents } });
+        }
         await this.writeMedia(tx, productId, dto, true);
         const variantCount = dto.variants
           ? dto.variants.length
           : await tx.productVariant.count({ where: { productId } });
+        if (variantCount && (dto.components ?? current.components).length) throw new BadRequestException('Un set no puede tener variantes.');
+        if (variantCount && await tx.productComponent.count({ where: { componentId: productId } })) throw new BadRequestException('Este producto es pieza de un set; quítalo del set antes de agregar variantes.');
         if (stockless) {
           await this.assertStocklessShape(
             tx,
@@ -196,6 +277,7 @@ export class CatalogService {
             seoTitle: this.optionalText(dto.seoTitle),
             seoDescription: this.optionalText(dto.seoDescription),
             ...this.extrasData(dto),
+            ...classification,
           },
           include: PRODUCT_INCLUDE,
         });
@@ -299,6 +381,9 @@ export class CatalogService {
             stockQty: true,
             option1Value: true,
             option2Value: true,
+            option3Name: true,
+            option3Value: true,
+            options: true,
           },
         },
         _count: { select: { components: true, componentOf: true } },
@@ -313,8 +398,7 @@ export class CatalogService {
           variantId: variant.id,
           name: product.name,
           option:
-            [variant.option1Value, variant.option2Value]
-              .filter(Boolean)
+            variantOptions(variant).map((option) => option.value)
               .join(' / ') || null,
           sku: variant.sku,
           stockUnlimited: product.stockUnlimited && variant.stockQty === null,
@@ -564,6 +648,9 @@ export class CatalogService {
   }
 
   private mapConflict(error: unknown) {
+    if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2003') {
+      return new ConflictException('Este producto o una variante están vinculados a otras ventas. Desactívalos antes de retirarlos.');
+    }
     if (
       error instanceof Prisma.PrismaClientKnownRequestError &&
       error.code === 'P2002'
@@ -588,35 +675,51 @@ export class CatalogService {
     productId: string,
     variants: ProductVariantInputDto[],
     stockless: boolean,
+    basePriceCents: number,
   ) {
     const keep = variants.flatMap((variant) => (variant.id ? [variant.id] : []));
+    // Coordinate replacement with stock updates and order-line foreign keys.
+    await tx.$queryRaw`SELECT "id" FROM "ProductVariant" WHERE "productId" = ${productId} ORDER BY "id" FOR UPDATE`;
+    const owned = await tx.productVariant.count({ where: { productId, id: { in: keep } } });
+    if (owned !== keep.length) throw new BadRequestException('Alguna variante ya no existe o pertenece a otro producto. Vuelve a abrir la ficha.');
+    const reserved = await tx.productVariant.count({ where: { productId, id: { notIn: keep }, orderItems: { some: { order: { stockState: 'held' } } } } });
+    if (reserved) throw new ConflictException('Hay variantes reservadas en pedidos pendientes. Desactívalas y espera a que se liberen antes de eliminarlas.');
+    // Permit changing/swapping existing option values without transient uniqueness collisions.
+    await tx.productVariant.updateMany({ where: { productId }, data: { combinationKey: null } });
     await tx.productVariant.deleteMany({
       where: { productId, id: { notIn: keep } },
     });
+    const newVariants: Prisma.ProductVariantCreateManyInput[] = [];
     for (const variant of variants) {
-      const data = this.toVariantData(variant, stockless);
+      const data = this.toVariantData(variant, stockless, basePriceCents);
       if (variant.id) {
         const { count } = await tx.productVariant.updateMany({
-          where: { id: variant.id, productId },
+          where: { id: variant.id, productId, ...(variant.expectedStockQty !== undefined ? { stockQty: variant.expectedStockQty } : {}) },
           data,
         });
-        if (count) continue;
+        if (!count) throw new ConflictException('El stock de una variante cambió mientras editabas. Vuelve a abrir el producto para guardar con el stock actualizado.');
+        continue;
       }
-      await tx.productVariant.create({ data: { productId, ...data } });
+      newVariants.push({ productId, ...data });
     }
+    if (newVariants.length) await tx.productVariant.createMany({ data: newVariants });
   }
 
-  private toVariantData(variant: ProductVariantInputDto, stockless = false) {
+  private toVariantData(variant: ProductVariantInputDto, stockless = false, basePriceCents = variant.priceCents) {
+    const options = variantOptions(variant);
     return {
+      options: options as Prisma.InputJsonValue,
+      combinationKey: combinationKey(options),
+      priceInherited: variant.priceInherited ?? false,
       sku: variant.sku?.trim() || null,
-      option1Name: variant.option1Name ?? null,
-      option1Value: variant.option1Value ?? null,
-      option2Name: variant.option2Name ?? null,
-      option2Value: variant.option2Value ?? null,
-      option3Name: variant.option3Name ?? null,
-      option3Value: variant.option3Value ?? null,
+      option1Name: options[0]?.name ?? null,
+      option1Value: options[0]?.value ?? null,
+      option2Name: options[1]?.name ?? null,
+      option2Value: options[1]?.value ?? null,
+      option3Name: options[2]?.name ?? null,
+      option3Value: options[2]?.value ?? null,
       imageUrl: variant.imageUrl?.trim() || null,
-      priceCents: variant.priceCents,
+      priceCents: variant.priceInherited ? basePriceCents : variant.priceCents,
       isAvailable: variant.isAvailable ?? true,
       stockQty: stockless ? null : (variant.stockQty ?? null),
     };

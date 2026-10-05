@@ -59,6 +59,7 @@ else if (mode === 'test') {
   const env = {
     DATABASE_URL: 'postgresql://postgres:postgres@postgres:5432/vendedoria_test?schema=public',
     NODE_ENV: 'test',
+    RUN_ISOLATED_COMMERCE_TESTS: '1',
     MERCADOPAGO_ACCESS_TOKEN: '',
     OPENAI_API_KEY: '',
   };

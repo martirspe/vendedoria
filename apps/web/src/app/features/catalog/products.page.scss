@@ -3,6 +3,14 @@
   gap: var(--ds-space-5);
 }
 
+.combination-row {
+  display: grid;
+  gap: var(--ds-space-3);
+  padding: var(--ds-space-4);
+  outline: solid var(--ds-color-border);
+  border-radius: var(--ds-radius-md);
+}
+
 .catalog__header {
   display: flex;
   justify-content: space-between;

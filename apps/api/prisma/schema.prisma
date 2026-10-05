@@ -672,6 +672,8 @@ model Product {
   descriptionShort    String?
   descriptionFull     String?
   categories          String[] @default([])
+  categoryId          String?
+  attributeValues     Json?
   basePriceCents      Int
   currency            String   @default("PEN")
   /// SERVICE and DIGITAL have no stock, are never shipped and cannot be a set or a set piece.
@@ -702,6 +704,7 @@ model Product {
   updatedAt           DateTime @updatedAt
 
   tenant      Tenant             @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  category    CatalogCategory?   @relation(fields: [categoryId], references: [id], onDelete: Restrict)
   variants    ProductVariant[]
   media       ProductMedia[]
   orderItems  OrderItem[]
@@ -713,6 +716,7 @@ model Product {
 
   @@unique([tenantId, handle])
   @@index([tenantId])
+  @@index([tenantId, categoryId])
   @@index([tenantId, isPublishedOnStore])
   @@index([tenantId, isAvailable, sortOrder, updatedAt])
 }
@@ -731,12 +735,33 @@ model ProductVariant {
   isAvailable  Boolean @default(true)
   stockQty     Int?
   imageUrl     String?
+  /// Extensible option pairs; null reads the legacy three pairs.
+  options      Json?
+  combinationKey String?
+  /// Effective price stays materialized for existing order/agent readers.
+  priceInherited Boolean @default(false)
 
   product    Product     @relation(fields: [productId], references: [id], onDelete: Cascade)
   orderItems OrderItem[]
   liveOffers LiveOffer[]
 
   @@index([productId])
+  @@unique([productId, combinationKey])
+}
+
+/// Shared classification managed as catalog data, separate from merchant collection labels.
+model CatalogCategory {
+  id         String @id
+  name       String
+  kind       ProductKind @default(PRODUCT)
+  parentId   String?
+  /// [{ key, name, group, required, variant, values?, maxLength? }], inherited from ancestors.
+  attributes Json
+  parent     CatalogCategory? @relation("CategoryTree", fields: [parentId], references: [id], onDelete: Restrict)
+  children   CatalogCategory[] @relation("CategoryTree")
+  products   Product[]
+
+  @@index([parentId])
 }
 
 model ProductMedia {

@@ -260,6 +260,8 @@ export type PublicVariantOption = {
 };
 
 export type PublicVariant = {
+  /** Explicit variant count, or inherited product count; null means untracked. */
+  stockLeft?: number | null;
   id: string;
   label: string;
   options: PublicVariantOption[];
@@ -269,6 +271,7 @@ export type PublicVariant = {
 };
 
 export type PublicProductDetail = PublicProductCard & {
+  stockLeft?: number | null;
   descriptionFull: string | null;
   media: string[];
   variants: PublicVariant[];

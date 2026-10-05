@@ -306,6 +306,9 @@ export class CatalogImportService {
                 ...item.commerce,
               },
             });
+            if (item.commerce.basePriceCents !== undefined) {
+              await tx.productVariant.updateMany({ where: { productId: id, priceInherited: true }, data: { priceCents: item.commerce.basePriceCents } });
+            }
             await tx.productMedia.deleteMany({ where: { productId: id } });
             if (p.holdsStock)
               await tx.productComponent.deleteMany({ where: { setId: id } });

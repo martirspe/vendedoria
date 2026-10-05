@@ -4,6 +4,8 @@ import { firstValueFrom } from 'rxjs';
 import { environment } from '../../../environments/environment';
 
 export type ProductVariantDto = {
+  options?: { name: string; value: string }[] | null;
+  priceInherited?: boolean;
   id?: string;
   sku?: string | null;
   option1Name?: string | null;
@@ -66,9 +68,13 @@ export type MediaInput = { url: string; kind?: 'image' | 'related'; alt?: string
 export type ComponentInput = { productId: string; quantity: number };
 
 export type ProductKind = 'PRODUCT' | 'SERVICE' | 'DIGITAL';
+export type CatalogAttribute = { key: string; name: string; group?: string; required?: boolean; variant?: boolean; values?: string[]; maxLength?: number };
+export type CatalogCategory = { id: string; name: string; kind: ProductKind; parentId: string | null; path: { id: string; name: string }[]; attributes: CatalogAttribute[] };
 export type ServiceMode = 'onsite' | 'home' | 'online';
 
 type ProductExtrasPayload = {
+  categoryId?: string | null;
+  attributeValues?: Record<string, string> | null;
   digitalAccessUrl?: string | null;
   digitalInstructions?: string | null;
   kind?: ProductKind;
@@ -95,6 +101,8 @@ export type InventoryRow = {
 export type InventoryUpdate = { productId: string; variantId?: string; stockQty: number | null };
 
 export type ProductDto = {
+  categoryId?: string | null;
+  attributeValues?: Record<string, string> | null;
   digitalAccessUrl: string | null;
   digitalInstructions: string | null;
   id: string;
@@ -125,6 +133,9 @@ export type ProductDto = {
 };
 
 export type VariantPayload = {
+  expectedStockQty?: number | null;
+  options?: { name: string; value: string }[];
+  priceInherited?: boolean;
   id?: string;
   sku?: string;
   option1Name?: string;
@@ -158,6 +169,7 @@ export type CreateProductPayload = ProductExtrasPayload & {
 };
 
 export type UpdateProductPayload = ProductExtrasPayload & {
+  expectedUpdatedAt?: string;
   handle?: string;
   name?: string;
   descriptionShort?: string;
@@ -240,6 +252,10 @@ export class CatalogApiService {
   private readonly http = inject(HttpClient);
   private readonly base = `${environment.apiBaseUrl}/catalog/products`;
   private readonly root = `${environment.apiBaseUrl}/catalog`;
+
+  categories(): Promise<CatalogCategory[]> {
+    return firstValueFrom(this.http.get<CatalogCategory[]>(`${this.root}/categories`));
+  }
 
   /** `data` is base64 without the data-URL prefix; the browser resizes before upload. */
   uploadMedia(contentType: 'image/jpeg' | 'image/png' | 'image/webp', data: string): Promise<{ url: string }> {
