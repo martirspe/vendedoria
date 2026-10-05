@@ -1,4 +1,9 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable, Logger, Optional } from '@nestjs/common';
+import { completeSalesTurn, observeBuyer, resolveSalesReference, SalesState } from './sales-state';
+import { contextMessages } from './sales-context';
+import { validateSalesResponse } from './sales-response-validator';
+import { SalesToolRegistry } from './sales-tool-registry.service';
+import { randomUUID } from 'node:crypto';
 import { ConfigService } from '@nestjs/config';
 import { KnowledgeService } from '../knowledge/knowledge.service';
 import { PrismaService } from '../prisma/prisma.service';
@@ -61,7 +66,7 @@ function withoutQuestions(text: string): string {
 
 function journeyGuide(journeys: Array<{ stage: string }>): string {
   return journeys.length
-    ? 'journeyScripts son guiones del negocio por etapa (DISCOVER descubrir, RECOMMEND recomendar, CLOSE cerrar, SUPPORT postventa): usa el de la etapa actual de la conversación como guía, con tus palabras.'
+    ? 'journeyScripts son instrucciones internas del negocio por etapa (DISCOVER descubrir, RECOMMEND recomendar, CLOSE cerrar, SUPPORT postventa): aplica el de la etapa actual sin copiarlo ni explicarlo al cliente.'
     : '';
 }
 
@@ -86,6 +91,8 @@ export type AgentReplyResult = {
   checkoutUrl?: string;
   /** The reply was written by OpenAI (counts toward the plan's AI replies). */
   usedAi?: boolean;
+  salesState?: SalesState;
+  trace?: Record<string, unknown>;
 };
 
 type ReplyParams = {
@@ -103,6 +110,9 @@ type ReplyParams = {
   shownImageProductIds?: string[];
   /** False when the plan's AI replies for the month are used: the deterministic reply is used. */
   allowAi?: boolean;
+  salesState?: SalesState;
+  messageId?: string;
+  assertOwned?: () => Promise<void>;
 };
 
 /** What the reply must resolve before an order can be created. */
@@ -155,41 +165,96 @@ export class SalesAgentRuntimeService {
     private readonly config: ConfigService,
     private readonly tools: SalesAgentToolsService,
     private readonly knowledge: KnowledgeService,
+    @Optional() private readonly registry?: SalesToolRegistry,
   ) {}
 
   async generateReply(params: ReplyParams): Promise<AgentReplyResult> {
-    const result = await this.composeReply(params);
+    const started = Date.now();
+    const before = params.salesState?.stage;
+    const salesState = params.salesState ? observeBuyer(params.salesState, params.inboundText, params.messageId ?? 'playground') : undefined;
+    const result = await this.composeReply({ ...params, salesState });
+    if (salesState) {
+      salesState.consecutiveFallbacks = result.trace?.validation === 'fallback' ? salesState.consecutiveFallbacks + 1 : 0;
+      if (salesState.consecutiveFallbacks >= Number(this.config.get('SALES_HANDOFF_FAILURE_THRESHOLD', 3))) {
+        result.escalate = true; result.pauseOnHandoff = true;
+        result.tools.push(this.tools.escalateTrace('repeated_generation_failure'));
+        result.replyText = 'El equipo revisará tu consulta y te responderá por aquí.';
+      }
+    }
     const text = result.checkoutUrl
       ? withoutLink(result.replyText, result.checkoutUrl)
       : result.replyText;
-    return { ...result, replyText: toWhatsAppText(text) };
+    const next = salesState ? completeSalesTurn(salesState, result, Number(this.config.get('SALES_SUMMARY_THRESHOLD', 5))) : undefined;
+    const trace = next ? { traceId: params.messageId ?? randomUUID(), tenantId: params.tenantId, conversationId: params.conversationId ?? null, messageId: params.messageId ?? null, agentId: params.agentId ?? null, model: result.usedAi ? this.config.get('OPENAI_MODEL', 'gpt-4o-mini') : 'deterministic', stageBefore: before, stageAfter: next.stage, intent: next.intent, nextBestAction: next.nextBestAction, toolsExecuted: result.tools.map((tool) => ({ name: tool.name, status: tool.status })), latencyMs: Date.now() - started, outcome: result.escalate ? 'handoff' : 'reply', ...(result.trace ?? {}) } : undefined;
+    if (trace) this.logger.log(JSON.stringify(trace));
+    return { ...result, replyText: toWhatsAppText(text), ...(next ? { salesState: next, trace } : {}) };
+  }
+
+  /** LIVE clarification is read-only: the model selects a safe question; it cannot order or invent terms. */
+  async suggestLiveQuestion(params: Pick<ReplyParams, 'tenantId' | 'agentId' | 'inboundText' | 'history' | 'allowAi'>): Promise<{ text: string; usedAi: boolean }> {
+    const questions = [
+      '¿Qué información necesitas del producto que estamos presentando?',
+      '¿Cuántas unidades del producto que estamos presentando quieres comprar?',
+      '¿Quieres conocer el precio LIVE o la disponibilidad del producto?',
+      '¿Tu consulta es sobre la entrega o sobre las formas de pago?',
+    ];
+    const agent = await this.resolveAgent(params.tenantId, params.agentId);
+    const apiKey = this.config.get<string>('OPENAI_API_KEY');
+    if (!agent?.isActive || !apiKey || !params.allowAi) return { text: questions[0], usedAi: false };
+    try {
+      const response = await fetch('https://api.openai.com/v1/chat/completions', {
+        method: 'POST', headers: { Authorization: `Bearer ${apiKey}`, 'Content-Type': 'application/json' },
+        signal: AbortSignal.timeout(8000),
+        body: JSON.stringify({ model: this.config.get<string>('OPENAI_MODEL', 'gpt-4o-mini'), max_tokens: 30, response_format: { type: 'json_object' }, messages: [
+          { role: 'system', content: `${buildAgentPrompt(toPersonality(agent))}\nSelecciona únicamente el índice de la pregunta de aclaración más adecuada. Devuelve {"questionIndex":0}. No generes texto ni ejecutes acciones.` },
+          { role: 'user', content: JSON.stringify({ text: params.inboundText, history: promptHistory(params.history ?? []), questions }) },
+        ] }),
+      });
+      if (!response.ok) return { text: questions[0], usedAi: false };
+      const payload = await response.json() as { choices?: Array<{ message?: { content?: string } }> };
+      const selection = JSON.parse(payload.choices?.[0]?.message?.content ?? '{}') as { questionIndex?: number };
+      const index = selection.questionIndex;
+      return { text: typeof index === 'number' && Number.isInteger(index) && questions[index] ? questions[index] : questions[0], usedAi: true };
+    } catch {
+      return { text: questions[0], usedAi: false };
+    }
   }
 
   private async composeReply(params: ReplyParams): Promise<AgentReplyResult> {
     const mode = params.mode ?? 'production';
-    const history = (params.history ?? []).slice(-HISTORY_LIMIT);
+    const history = (params.history ?? []).slice(-Number(params.salesState ? this.config.get('SALES_RECENT_MESSAGES_LIMIT', HISTORY_LIMIT) : HISTORY_LIMIT));
     const firstTurn = !history.some((turn) => turn.role === 'agent');
-    const pendingLines = awaitingDelivery(history);
+    const state = params.salesState;
+    const pendingLines = state?.pendingLines.length ? state.pendingLines : awaitingDelivery(history);
     const contextIds = [
       ...new Set([
         ...lastRecommendedProductIds(history),
+        ...(state?.recommendedProductIds ?? []),
+        ...(state?.previousRecommendedProductIds ?? []),
+        ...(state?.selectedProduct ? [state.selectedProduct.productId] : []),
         ...pendingLines.map((line) => line.productId),
       ]),
     ];
     const refs = this.tools.extractProductRefs(params.inboundText);
+    const genericSearch = /^(?:que tienes|que tienen|que hay|que opciones|muestrame|y ahora)$/.test(normalizeText(params.inboundText).replace(/[¿?!.]/g, '').trim());
+    const searchText = genericSearch && state?.requirements.need ? state.requirements.need.value : params.inboundText;
     const [agentRow, products, runtimeKnowledge, overview] = await Promise.all([
       this.resolveAgent(params.tenantId, params.agentId, params.channelId),
       this.tools.listAvailableProducts(
         params.tenantId,
         refs.map((ref) => ref.handle),
         contextIds,
-        params.inboundText,
+        searchText,
       ),
-      this.knowledge.getRuntimeKnowledge(params.tenantId),
+      this.knowledge.getRuntimeKnowledge(params.tenantId, state ? params.inboundText : undefined),
       this.tools.catalogOverview(params.tenantId),
     ]);
 
     const agent = toPersonality(agentRow);
+
+    if (state && (this.tools.wantsHuman(params.inboundText) || this.tools.isOrderComplaint(params.inboundText))) {
+      return { replyText: agent.handoffMessage ?? 'El equipo revisará tu consulta y te responderá por aquí.', escalate: true, usedCatalog: false, pauseOnHandoff: agent.pauseOnHandoff, tools: [this.tools.escalateTrace(this.tools.wantsHuman(params.inboundText) ? 'buyer_request' : 'order_complaint')], images: [] };
+    }
 
     if (!agent.isActive && mode === 'production') {
       return {
@@ -208,9 +273,31 @@ export class SalesAgentRuntimeService {
         ? undefined
         : this.config.get<string>('OPENAI_API_KEY');
     const intent = conversationalIntent(params.inboundText);
+    if (intent === 'greeting') {
+      return {
+        replyText: this.applyTone(
+          agent,
+          firstTurn
+            ? (agent.initialMessage?.trim() ||
+              `¡Hola! Soy ${agent.name} de ${agent.companyName}. ¿Qué estás buscando hoy?`)
+            : '¡Hola de nuevo! ¿Qué estás buscando hoy?',
+        ),
+        escalate: false,
+        usedCatalog: false,
+        pauseOnHandoff: agent.pauseOnHandoff,
+        tools: pendingLines.length ? [{
+          name: 'quote_shipping', status: 'skipped', summary: 'Distrito pendiente de confirmar',
+          data: { awaitingDelivery: true, lines: pendingLines },
+        }] : [],
+        images: [],
+      };
+    }
     const contextProducts = contextIds
       .map((id) => products.find((product) => product.id === id))
       .filter((product): product is CatalogProductView => Boolean(product));
+    const reference = state ? resolveSalesReference(params.inboundText, state, products) : null;
+    if (state && reference) state.selectedProduct = { productId: reference.id, ...(state.selectedProduct?.productId === reference.id && state.selectedProduct.variantId ? { variantId: state.selectedProduct.variantId } : {}) };
+    if (state && /\b(el segundo|el primero|el tercero)\b/.test(normalizeText(params.inboundText)) && !reference && state.recommendedProductIds.length) return { replyText: 'Esa opción ya no está disponible en el catálogo. Puedo ayudarte a revisar alternativas.', escalate: false, usedCatalog: false, pauseOnHandoff: agent.pauseOnHandoff, tools: [], images: [] };
     const districtReply =
       !pendingLines.length &&
       askedForDistrict(history) &&
@@ -218,18 +305,28 @@ export class SalesAgentRuntimeService {
     const lastAgentText =
       [...history].reverse().find((turn) => turn.role === 'agent')?.text ?? '';
     const contextPick =
-      contextProducts.length === 1
+      reference ?? (contextProducts.length === 1
         ? contextProducts[0]
         : contextProducts.length > 1
           ? (this.tools.identifyProduct(params.inboundText, contextProducts) ??
             (districtReply
               ? this.tools.identifyProduct(lastAgentText, contextProducts)
               : null))
-          : null;
+          : null);
     const buying =
+      (state?.intent === 'purchase') ||
       this.tools.wantsPurchase(params.inboundText) ||
       confirmsPurchase(params.inboundText, history) ||
       (districtReply && Boolean(contextPick));
+    if (state?.orderId && buying) {
+      const existing = await this.tools.existingOrder(params.tenantId, params.conversationId, state.orderId);
+      if (existing && existing.status !== 'CANCELLED') {
+        state.paymentStatus = existing.status;
+        const paid = ['PAID', 'FULFILLING', 'SHIPPED', 'COMPLETED'].includes(existing.status);
+        return { replyText: paid ? 'Tu pedido ya tiene el pago confirmado. El equipo te ayudará con cualquier cambio.' : 'Ya tienes un pedido pendiente. Puedes completar el pago o pedir al equipo que revise un cambio.', orderId: existing.id, ...(existing.checkoutUrl && !paid ? { checkoutUrl: existing.checkoutUrl, orderRef: existing.orderRef } : {}), escalate: false, usedCatalog: false, pauseOnHandoff: agent.pauseOnHandoff, tools: [{ name: 'get_order_status', status: 'ok', summary: 'Pedido existente consultado', data: { orderId: existing.id, status: existing.status } }], images: [] };
+      }
+      if (existing?.status === 'CANCELLED') state.orderId = undefined;
+    }
     if (
       !buying &&
       (intent === 'closing' ||
@@ -251,12 +348,12 @@ export class SalesAgentRuntimeService {
     }
 
     const traces: AgentToolTrace[] = [];
-    const search = this.tools.searchCatalog(params.inboundText, products, refs);
+    const search = this.tools.searchCatalog(searchText, products, refs);
     let matches = search.matches;
     let searchTrace = search.trace;
     const photoAsked = wantsPhoto(params.inboundText);
     const browse =
-      refs.length || buying || (photoAsked && contextProducts.length)
+      refs.length || buying || reference || (state?.requirements.need && genericSearch) || (photoAsked && contextProducts.length)
         ? null
         : await this.resolveBrowse(
             params.tenantId,
@@ -268,8 +365,28 @@ export class SalesAgentRuntimeService {
       matches = browse.view.products;
       searchTrace = browse.trace;
     }
+    if (reference) {
+      matches = [reference];
+      searchTrace = { name: 'search_catalog', status: 'ok', summary: 'Referencia conversacional resuelta', data: { matchIds: [reference.id], count: 1, fromConversation: true } };
+    }
+    if (state?.intent === 'price_objection' && contextProducts.length) {
+      const anchor = contextProducts.find((p) => p.id === state.selectedProduct?.productId) ?? contextProducts[0];
+      const query = `${state.requirements.need?.value ?? anchor.categories.join(' ')} máximo ${(anchor.basePriceCents - 1) / 100}`;
+      const alternatives = await this.tools.listAvailableProducts(params.tenantId, [], [], query);
+      matches = this.tools.searchCatalog(query, alternatives).matches.filter((p) => p.basePriceCents < anchor.basePriceCents && !contextIds.includes(p.id));
+      searchTrace = { name: 'search_catalog', status: matches.length ? 'ok' : 'skipped', summary: 'Alternativas con menor precio consultadas', data: { matchIds: matches.map((p) => p.id), count: matches.length } };
+    }
+    if (state && !reference && !refs.length) {
+      const budget = state.requirements.budget ? Number(state.requirements.budget.value) : undefined;
+      const size = state.requirements.size?.value;
+      const color = state.requirements.color?.value;
+      const colorRoot = (v: string) => normalizeText(v).replace(/[oa]s?$/, '');
+      matches = matches.filter((p) => (budget === undefined || p.basePriceCents <= budget) && (!size || p.variants.some((v) => v.isAvailable && normalizeText(v.label).split(/\s*\/\s*/).includes(size))) && (!color || colorRoot([p.name, p.descriptionShort, ...p.variants.map((v) => v.label)].join(' ')).includes(colorRoot(color))));
+      searchTrace = { ...searchTrace, data: { ...searchTrace.data, matchIds: matches.map((p) => p.id), count: matches.length } };
+    }
+    if (state && !reference) matches = matches.filter((p) => !state.rejectedProducts.some((rejected) => rejected.productId === p.id));
     const fromContext =
-      !browse && !matches.length && contextProducts.length > 0;
+      !state && !browse && !matches.length && contextProducts.length > 0;
     if (fromContext) {
       matches = contextProducts.slice(0, 3);
       searchTrace = {
@@ -295,9 +412,10 @@ export class SalesAgentRuntimeService {
       if (!lines.length) {
         const target = districtReply
           ? contextPick
-          : (this.tools.identifyProduct(params.inboundText, products, refs) ??
-            (search.matches.length === 1 ? search.matches[0] : null) ??
+          : (reference ?? this.tools.identifyProduct(params.inboundText, products, refs) ??
+            (matches.length === 1 ? matches[0] : null) ??
             (contextProducts.length > 1 ? contextPick : null) ??
+            (state?.selectedProduct ? products.find((p) => p.id === state.selectedProduct?.productId) : null) ??
             (fromContext && contextProducts.length === 1
               ? contextProducts[0]
               : null));
@@ -307,17 +425,20 @@ export class SalesAgentRuntimeService {
           matches = [target];
         } else {
           matches = [target];
+          if (state) state.selectedProduct = { productId: target.id, ...(state.selectedProduct?.productId === target.id && state.selectedProduct.variantId ? { variantId: state.selectedProduct.variantId } : {}) };
           const text = normalizeText(params.inboundText);
+          const eligibleVariants = target.variants.filter((item) => item.isAvailable && (!state?.requirements.size || normalizeText(item.label).split(/\s*\/\s*/).includes(state.requirements.size.value)) && (!state?.requirements.color || normalizeText(`${item.label} ${target.name}`).includes(state.requirements.color.value.replace(/[oa]s?$/, ''))) && (!state?.requirements.budget || item.priceCents <= Number(state.requirements.budget.value)) && !state?.missingInformation.includes('size'));
           const variant =
             target.variants.length === 1
-              ? target.variants[0]
-              : target.variants.find((item) =>
+              ? eligibleVariants[0]
+              : eligibleVariants.find((item) =>
                   item.isAvailable && text.includes(normalizeText(item.label)),
-                );
-          if (target.variants.length > 1 && !variant) {
+                ) ?? (state?.selectedProduct?.variantId ? eligibleVariants.find((v) => v.id === state.selectedProduct?.variantId) : undefined) ?? (state?.requirements.size && eligibleVariants.length === 1 ? eligibleVariants[0] : undefined);
+          if (target.variants.length > 0 && !variant) {
             pending = { kind: 'variant', product: target };
           } else {
-            lines = [{ product: target, variant, quantity: 1 }];
+            lines = [{ product: target, variant, quantity: Math.min(99, Math.max(1, Number(state?.requirements.quantity?.value ?? 1))) }];
+            if (state && variant) { state.selectedProduct = { productId: target.id, variantId: variant.id }; traces.push({ name: 'select_variant', status: 'ok', summary: 'Variante confirmada', data: { productId: target.id, variantId: variant.id } }); }
           }
         }
         searchTrace = {
@@ -342,7 +463,7 @@ export class SalesAgentRuntimeService {
       if (resumed.length) {
         const plan = planDelivery({
           rules: await this.tools.shippingRules(params.tenantId),
-          text: params.inboundText,
+          text: [params.inboundText, state?.requirements.destination?.value].filter(Boolean).join('\n'),
           subtotalCents: this.tools.subtotalCents(resumed),
         });
         if (plan.kind !== 'ask' || plan.candidates.length) {
@@ -366,7 +487,7 @@ export class SalesAgentRuntimeService {
     ) {
       delivery = planDelivery({
         rules: await this.tools.shippingRules(params.tenantId),
-        text: params.inboundText,
+        text: [params.inboundText, state?.requirements.destination?.value].filter(Boolean).join('\n'),
         subtotalCents: this.tools.subtotalCents(lines),
         ignore: lines.flatMap((line) =>
           [line.product.name, line.variant?.label ?? '']
@@ -378,6 +499,7 @@ export class SalesAgentRuntimeService {
     if (delivery?.kind === 'ask') {
       pending = { kind: 'delivery', question: this.deliveryQuestion(delivery) };
     }
+    if (state && delivery?.kind === 'quote') delivery.address = state.requirements.address?.value ?? (/\b(?:calle|avenida|av\.|jiron|jr\.)\s+.+\d/i.test(params.inboundText) ? params.inboundText : null);
     traces.push(searchTrace);
 
     for (const match of matches.slice(0, 2)) {
@@ -387,6 +509,7 @@ export class SalesAgentRuntimeService {
     const { matches: faqMatches, trace: faqTrace } = this.tools.lookupFaqs(
       params.inboundText,
       runtimeKnowledge.faqs,
+      runtimeKnowledge.retrievedFaqIds,
     );
     traces.push(faqTrace);
 
@@ -415,6 +538,7 @@ export class SalesAgentRuntimeService {
     }
     let deliveryText: DeliveryText = { summary: null, note: null };
     if (lines.length && delivery?.kind !== 'ask') {
+      await params.assertOwned?.();
       const commerce = await this.tools.createOrderWithOptionalLink({
         tenantId: params.tenantId,
         mode,
@@ -445,11 +569,7 @@ export class SalesAgentRuntimeService {
 
     const images = cartOrder
       ? []
-      : this.pickImages(
-          fromContext && !photoAsked ? [] : matches,
-          params.shownImageProductIds ?? [],
-          photoAsked,
-        );
+      : this.pickImages(matches, photoAsked);
 
     if (openAiKey) {
       try {
@@ -471,6 +591,11 @@ export class SalesAgentRuntimeService {
           photoAsked,
           photoFromContext: photoAsked && fromContext,
           mode,
+          salesState: state,
+          tenantId: params.tenantId,
+          conversationId: params.conversationId,
+          toolTraces: traces,
+          authoritativeSubtotal: lines.length ? this.tools.subtotalCents(lines) : undefined,
         });
         if (ai) {
           searchTrace.data = {
@@ -498,11 +623,7 @@ export class SalesAgentRuntimeService {
               };
             }
             if (mentioned.length || !photoAsked) {
-              replyImages = this.pickImages(
-                mentioned,
-                params.shownImageProductIds ?? [],
-                photoAsked,
-              );
+              replyImages = this.pickImages(mentioned, photoAsked);
             }
           }
           let replyText = checkoutUrl
@@ -536,38 +657,42 @@ export class SalesAgentRuntimeService {
             orderRef,
             checkoutUrl,
             usedAi: true,
+            trace: { validation: 'passed', inputTokens: ai.usage?.prompt_tokens ?? 0, outputTokens: ai.usage?.completion_tokens ?? 0, retrievedProductIds: matches.map((p) => p.id), retrievedFaqIds: faqMatches.map((faq) => faq.id) },
           };
         }
       } catch (error) {
         this.logger.warn(
           `OpenAI failed, using deterministic fallback: ${
-            error instanceof Error ? error.message : 'unknown'
+            error instanceof Error ? error.name : 'unknown'
           }`,
         );
       }
     }
 
-    return {
+    const fallback = {
       ...this.deterministicReply({
         agent,
         inboundText: params.inboundText,
         firstTurn,
         catalogMatches: matches,
         faqMatches,
-        journeys,
         checkoutUrl,
         deliveryText,
         cartOrder,
         pending,
         browse: browse?.view ?? null,
         mode,
+        requestedSize: state?.requirements.size?.value,
       }),
       tools: traces,
       images,
       orderId,
       orderRef,
       checkoutUrl,
+      ...(state ? { trace: { validation: openAiKey ? 'fallback' : 'deterministic' } } : {}),
     };
+    if (state && !matches.length && !checkoutUrl && !browse && state.requirements.need) fallback.replyText = 'Con los datos que me diste no encontré una opción disponible. Puedo ayudarte a revisar alternativas.';
+    return fallback;
   }
 
   /**
@@ -662,20 +787,14 @@ export class SalesAgentRuntimeService {
     return [...new Set(found)].slice(0, MAX_IMAGES);
   }
 
-  /** Photos of the recommended products the buyer has not seen in this chat yet. */
+  /** Only an explicit buyer request authorizes product photos, including repeats. */
   private pickImages(
     products: CatalogProductView[],
-    shownProductIds: string[],
-    force: boolean,
+    requested: boolean,
   ): AgentProductImage[] {
-    const shown = new Set(shownProductIds);
+    if (!requested) return [];
     return products
-      .filter(
-        (product) =>
-          product.imageUrl &&
-          !isSoldOut(product) &&
-          (force || !shown.has(product.id)),
-      )
+      .filter((product) => product.imageUrl && !isSoldOut(product))
       .slice(0, MAX_IMAGES)
       .map((product) => ({
         productId: product.id,
@@ -804,13 +923,13 @@ export class SalesAgentRuntimeService {
     firstTurn: boolean;
     catalogMatches: CatalogProductView[];
     faqMatches: FaqMatch[];
-    journeys: JourneyView[];
     checkoutUrl?: string;
     deliveryText: DeliveryText;
     cartOrder: boolean;
     pending: PendingChoice;
     browse: BrowseView | null;
     mode: AgentRuntimeMode;
+    requestedSize?: string;
   }): Omit<AgentReplyResult, 'tools' | 'images' | 'orderId' | 'checkoutUrl'> {
     const { agent } = params;
 
@@ -874,7 +993,9 @@ export class SalesAgentRuntimeService {
         pauseOnHandoff: agent.pauseOnHandoff,
         replyText: this.applyTone(
           agent,
-          `¡Buena elección! ¿Qué opción de ${product.name} prefieres?\n${options}`,
+          params.requestedSize && !product.variants.some((v) => v.isAvailable && normalizeText(v.label).split(/\s*\/\s*/).includes(params.requestedSize!))
+            ? `La opción que pediste no está disponible. Estas son las alternativas de ${product.name}:\n${options}\n¿Quieres alguna de estas alternativas?`
+            : `¡Buena elección! ¿Qué opción de ${product.name} prefieres?\n${options}`,
         ),
       };
     }
@@ -946,12 +1067,10 @@ export class SalesAgentRuntimeService {
       const [first, second] = params.catalogMatches;
       const closeHint =
         params.pending?.kind === 'product'
-          ? '¿Cuál de estas opciones te gustaría? Te preparo el link de pago.'
-          : (params.journeys.find((item) => item.stage === 'CLOSE')
-              ?.scriptText ??
-            (second && agent.salesTechniques.includes('alternative_close')
-              ? `¿Cuál te gusta más, ${first.name} o ${second.name}? Te lo separo y te envío el link de pago.`
-              : 'Si te gusta, dime “lo quiero” y te envío el link de pago.'));
+          ? '¿Cuál de estas opciones te gustaría llevar?'
+          : second && agent.salesTechniques.includes('alternative_close')
+            ? `¿Cuál te gusta más, ${first.name} o ${second.name}?`
+            : '¿Te lo preparo?';
       const greeting = params.firstTurn
         ? `¡Hola! Soy ${agent.name} de ${agent.companyName}. `
         : '';
@@ -971,26 +1090,6 @@ export class SalesAgentRuntimeService {
         replyText: this.applyTone(
           agent,
           `${greeting}${intro}\n${lines.join('\n')}${faqNote}${moreHint}\n${closeHint}`,
-        ),
-      };
-    }
-
-    const text = normalizeText(params.inboundText);
-    if (/hola|buenas|buen\s*dia|hey/.test(text)) {
-      const discover = params.journeys.find(
-        (item) => item.stage === 'DISCOVER',
-      )?.scriptText;
-      return {
-        escalate: false,
-        usedCatalog: false,
-        pauseOnHandoff: agent.pauseOnHandoff,
-        replyText: this.applyTone(
-          agent,
-          params.firstTurn
-            ? (agent.initialMessage ??
-                discover ??
-                `¡Hola! Soy ${agent.name} de ${agent.companyName}. ¿Qué producto estás buscando hoy?`)
-            : '¡Hola de nuevo! ¿En qué más te puedo ayudar?',
         ),
       };
     }
@@ -1052,6 +1151,11 @@ export class SalesAgentRuntimeService {
     photoAsked: boolean;
     photoFromContext: boolean;
     mode: AgentRuntimeMode;
+    salesState?: SalesState;
+    tenantId: string;
+    conversationId?: string | null;
+    toolTraces: AgentToolTrace[];
+    authoritativeSubtotal?: number;
   }): Promise<{
     replyText: string;
     escalate: boolean;
@@ -1119,7 +1223,9 @@ export class SalesAgentRuntimeService {
       params.checkoutUrl
         ? ''
         : 'paymentLinkReady es false: no digas que vas a enviar ni que ya enviaste un link de pago. Si el cliente quiere comprar, pide solo el dato que falta (qué producto u opción).',
-      'La foto de cada producto que pongas en productNames se envía automáticamente justo después de tu mensaje (solo si el cliente aún no la vio): no digas que no puedes enviar fotos ni pegues enlaces de imágenes.',
+      params.photoAsked
+        ? 'El cliente solicitó fotos: las fotos disponibles de los productos que pongas en productNames se envían después de tu mensaje. No pegues enlaces de imágenes.'
+        : 'El cliente no solicitó fotos: no se enviará ninguna imagen. productNames identifica los productos de tu respuesta, no autoriza enviar fotos. No digas que envías fotos.',
       'Comparte la url de un producto solo si el cliente pide más detalles o ver la tienda; no la pegues en cada mensaje.',
       params.mode === 'playground'
         ? 'Estás en playground de prueba: sé claro si algo es simulado.'
@@ -1129,6 +1235,18 @@ export class SalesAgentRuntimeService {
       .filter(Boolean)
       .join('\n');
 
+    type ModelMessage = { role: string; content?: string | null; tool_calls?: Array<{ id: string; type: string; function: { name: string; arguments: string } }>; tool_call_id?: string };
+    const current = {
+      inboundText: params.inboundText, catalog: catalogJson,
+      ...(params.browse ? { catalogOverview: { totalProducts: params.browse.overview.total, categories: params.browse.overview.categories.slice(0, 12).map((item) => ({ category: item.label, products: item.count })) }, storeUrl: params.browse.overview.storeUrl } : {}),
+      faqs: params.faqMatches, journeyScripts: params.journeys, paymentLinkReady: Boolean(params.checkoutUrl),
+    };
+    const messages: ModelMessage[] = params.salesState ? contextMessages(system, current, params.salesState, params.history, Number(this.config.get('SALES_CONTEXT_TOKEN_BUDGET', 16000)), Number(this.config.get('SALES_RECENT_MESSAGES_LIMIT', 20))) : [
+      { role: 'system', content: system }, ...promptHistory(params.history).map((turn) => ({ role: turn.role === 'buyer' ? 'user' : 'assistant', content: turn.text })), { role: 'user', content: JSON.stringify(current) },
+    ];
+    let content: string | null | undefined;
+    let usage: { prompt_tokens?: number; completion_tokens?: number; prompt_tokens_details?: { cached_tokens?: number } } | undefined;
+    for (let round = 0; round < 3; round++) {
     const response = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
       headers: {
@@ -1140,38 +1258,10 @@ export class SalesAgentRuntimeService {
         temperature: 0.4,
         max_tokens: MAX_OUTPUT_TOKENS,
         response_format: { type: 'json_object' },
-        messages: [
-          { role: 'system', content: system },
-          ...promptHistory(params.history).map((turn) => ({
-            role: turn.role === 'buyer' ? 'user' : 'assistant',
-            content: turn.text,
-          })),
-          {
-            role: 'user',
-            content: JSON.stringify({
-              inboundText: params.inboundText,
-              catalog: catalogJson,
-              ...(params.browse
-                ? {
-                    catalogOverview: {
-                      totalProducts: params.browse.overview.total,
-                      categories: params.browse.overview.categories
-                        .slice(0, 12)
-                        .map((item) => ({
-                          category: item.label,
-                          products: item.count,
-                        })),
-                    },
-                    storeUrl: params.browse.overview.storeUrl,
-                  }
-                : {}),
-              faqs: params.faqMatches,
-              journeyScripts: params.journeys,
-              paymentLinkReady: Boolean(params.checkoutUrl),
-            }),
-          },
-        ],
+        messages,
+        ...(params.salesState && this.registry && round < 2 ? { tools: this.registry.definitions(), tool_choice: 'auto', parallel_tool_calls: false } : {}),
       }),
+      signal: AbortSignal.timeout(12000),
     });
 
     if (!response.ok) {
@@ -1179,10 +1269,34 @@ export class SalesAgentRuntimeService {
     }
 
     const payload = (await response.json()) as {
-      choices?: Array<{ message?: { content?: string } }>;
+      choices?: Array<{ message?: ModelMessage }>;
       usage?: { prompt_tokens?: number; completion_tokens?: number; prompt_tokens_details?: { cached_tokens?: number } };
     };
-    const content = payload.choices?.[0]?.message?.content;
+    const message = payload.choices?.[0]?.message;
+    usage = { prompt_tokens: (usage?.prompt_tokens ?? 0) + (payload.usage?.prompt_tokens ?? 0), completion_tokens: (usage?.completion_tokens ?? 0) + (payload.usage?.completion_tokens ?? 0), prompt_tokens_details: payload.usage?.prompt_tokens_details };
+    if (message?.tool_calls?.length && this.registry && params.salesState) {
+      if (message.tool_calls.length > 3 || round === 2) return null;
+      messages.push(message);
+      for (const call of message.tool_calls) {
+        let args: unknown;
+        try { args = JSON.parse(call.function.arguments); } catch { args = null; }
+        const tool = await this.registry.execute({ tenantId: params.tenantId, conversationId: params.conversationId, authoritativeSubtotal: params.authoritativeSubtotal }, call.function.name, args);
+        params.toolTraces.push(tool.trace);
+        if (tool.products) for (const product of tool.products) {
+          const index = params.catalogMatches.findIndex((p) => p.id === product.id);
+          if (index >= 0) params.catalogMatches[index] = product;
+          else if (params.catalogMatches.length < 12) params.catalogMatches.push(product);
+        }
+        if (tool.policyAnswers) params.faqMatches.push(...tool.policyAnswers.map((answer, index) => ({ id: `tool-policy-${index}`, question: '', answer })));
+        const output = JSON.stringify(tool.value);
+        if (Buffer.byteLength(JSON.stringify(messages) + output, 'utf8') / 2 > Number(this.config.get('SALES_CONTEXT_TOKEN_BUDGET', 16000))) return null;
+        messages.push({ role: 'tool', tool_call_id: call.id, content: output });
+      }
+      continue;
+    }
+    content = message?.content;
+    break;
+    }
     if (!content) {
       return null;
     }
@@ -1197,13 +1311,30 @@ export class SalesAgentRuntimeService {
     if (!parsed.replyText) {
       return null;
     }
-    const allowedNames = new Set(catalogJson.map((product) => product['name']));
+    if (typeof parsed.replyText !== 'string' || typeof parsed.escalate !== 'boolean' || typeof parsed.usedCatalog !== 'boolean') return null;
+    if (params.salesState) {
+      if (params.catalogMatches.length) {
+        const fresh = await this.tools.getProducts(params.tenantId, params.catalogMatches.map((p) => p.id));
+        params.catalogMatches.splice(0, params.catalogMatches.length, ...fresh);
+      }
+      const failures = validateSalesResponse(parsed.replyText, Array.isArray(parsed.productNames) ? parsed.productNames.filter((v): v is string => typeof v === 'string') : [], params.catalogMatches, params.salesState, params.faqMatches.map((faq) => faq.answer));
+      if (failures.length) { this.logger.warn(JSON.stringify({ event: 'sales_response_rejected', tenantId: params.tenantId, conversationId: params.conversationId, failures })); return null; }
+    }
+    const normalizedReply = normalizeText(parsed.replyText);
+    const copiesScript = params.journeys.some((journey) =>
+      journey.scriptText.split(/[\n.!?]+/).some((part) => {
+        const instruction = normalizeText(part);
+        return instruction.length >= 40 && normalizedReply.includes(instruction);
+      }),
+    );
+    if (copiesScript) return null;
+    const allowedNames = new Set(params.catalogMatches.map((product) => product.name));
     if (Array.isArray(parsed.productNames) && parsed.productNames.some((name) => !allowedNames.has(name))) return null;
 
     return {
       replyText: parsed.replyText,
       contextChars: JSON.stringify(catalogJson).length,
-      usage: payload.usage,
+      usage,
       escalate: Boolean(parsed.escalate),
       usedCatalog: Boolean(parsed.usedCatalog),
       productNames: Array.isArray(parsed.productNames)

@@ -3,7 +3,7 @@ import { HttpClient } from '@angular/common/http';
 import { firstValueFrom } from 'rxjs';
 import { environment } from '../../../environments/environment';
 
-export type IntegrationKey = 'store' | 'custom_domain' | 'instagram' | 'tracking' | 'team';
+export type IntegrationKey = 'store' | 'custom_domain' | 'instagram' | 'tracking' | 'team' | 'tiktok_live';
 
 export type PrepayPrice = {
   months: number;

@@ -1,9 +1,10 @@
-import { ChangeDetectionStrategy, Component, input } from '@angular/core';
+import { ChangeDetectionStrategy, Component, input, inject } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
 import { DsIconComponent } from '@vendedoria/ui';
 import { MoneyPipe } from '../core/money.pipe';
 import { OrderPage } from '../features/order/order.page';
+import { TemplateDemo } from '../core/template-demo';
 
 /** One payment engine for checkout and existing capability-token order links. */
 @Component({
@@ -14,5 +15,6 @@ import { OrderPage } from '../features/order/order.page';
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class CheckoutPaymentComponent extends OrderPage {
+  readonly demo = inject(TemplateDemo);
   readonly sectionNumber = input('');
 }

@@ -1,10 +1,26 @@
 import { Order, OrderItem, Prisma } from '@prisma/client';
 import { consumeStock, restoreStock } from './stock';
+import {
+  releaseLiveOrder,
+  settleLiveReservation,
+} from '../live/live-reservations';
 
 type SettlementOrder = Pick<
   Order,
-  'id' | 'status' | 'stockState' | 'conversationId' | 'totalCents' | 'currency' | 'code'
-> & { items: Pick<OrderItem, 'productId' | 'variantId' | 'quantity' | 'allocations'>[] };
+  | 'id'
+  | 'status'
+  | 'stockState'
+  | 'conversationId'
+  | 'totalCents'
+  | 'currency'
+  | 'code'
+> & {
+  channel?: Order['channel'];
+  items: Pick<
+    OrderItem,
+    'productId' | 'variantId' | 'quantity' | 'allocations'
+  >[];
+};
 
 export function orderReference(order: Pick<Order, 'id' | 'code'>): string {
   return order.code ?? order.id.slice(-6).toUpperCase();
@@ -41,6 +57,8 @@ export async function settlePaidOrder(
   await tx.paymentEvent.create({
     data: { orderId: order.id, status: 'paid', detail: detail?.slice(0, 100) },
   });
+  if (order.channel === 'TIKTOK_LIVE')
+    await settleLiveReservation(tx, order.id);
   if (order.conversationId) {
     await tx.conversation.update({
       where: { id: order.conversationId },
@@ -65,6 +83,8 @@ export async function releaseOrder(
   reason: string,
   paymentState?: string,
 ): Promise<void> {
+  if (order.channel === 'TIKTOK_LIVE')
+    await releaseLiveOrder(tx, order.id, paymentState === 'expired');
   if (order.stockState === 'held' || order.stockState === 'sold') {
     await restoreStock(tx, order.items);
   }
@@ -82,6 +102,10 @@ export async function releaseOrder(
     },
   });
   await tx.paymentEvent.create({
-    data: { orderId: order.id, status: paymentState ?? 'cancelled', detail: reason },
+    data: {
+      orderId: order.id,
+      status: paymentState ?? 'cancelled',
+      detail: reason,
+    },
   });
 }

@@ -40,6 +40,8 @@ export type StorefrontChecklistItem = {
 export type StorefrontSettingsView = {
   storefront: Storefront;
   url: string;
+  /** Platform-hosted original demos work even when the store uses a custom domain. */
+  templateDemoBaseUrl: string;
   totalProducts: number;
   publishedProducts: number;
   availableProducts: number;
@@ -307,6 +309,7 @@ export class StorefrontService {
     return {
       storefront,
       url: domain ? customDomainUrl(this.urlTemplate(), domain) : storefrontUrl(this.urlTemplate(), tenant.slug),
+      templateDemoBaseUrl: new URL('/_templates/', storefrontUrl(this.urlTemplate(), tenant.slug)).toString(),
       totalProducts,
       publishedProducts,
       availableProducts,

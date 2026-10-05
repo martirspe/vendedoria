@@ -161,4 +161,40 @@ describe('Storefront tenant isolation (e2e)', () => {
     await expect(catalog.remove(tenantAId, target.id)).resolves.toEqual({ deleted: true });
     expect(await prisma.product.count({ where: { id: target.id } })).toBe(0);
   });
+
+  it('filters the complete catalog, scopes facets and sorts by displayed variant prices', async () => {
+    await prisma.product.createMany({ data: Array.from({ length: 52 }, (_, index) => ({
+      tenantId: tenantAId, handle: `facet-${index}`, name: `Camisa ${index}`, basePriceCents: 9000 + index,
+      isPublishedOnStore: true, brand: 'Marca A', categories: ['Moda > Mujer > Camisas'],
+      details: { attributes: [{ name: 'Material', value: 'Algodón' }], benefits: ['Frescura'] },
+    })) });
+    await prisma.product.updateMany({ where: { tenantId: tenantBId }, data: { brand: 'Solo otro negocio' } });
+    const withVariants = await prisma.product.create({ data: {
+      tenantId: tenantAId, handle: 'facet-variants', name: 'Camisa con opciones', basePriceCents: 99999,
+      isPublishedOnStore: true, brand: 'Marca A', categories: ['Moda > Mujer > Camisas'],
+      variants: { create: [
+        { option1Name: 'Talla', option1Value: 'M', option2Name: 'Color', option2Value: 'Rojo', priceCents: 1500 },
+        { option1Name: 'Talla', option1Value: 'L', option2Name: 'Color', option2Value: 'Azul', priceCents: 2000 },
+      ] },
+    } });
+    const prefix = `/storefront/${slugA}/products`;
+    const page = (await get(prefix + '?category=Moda&page=2')).json();
+    expect(page.total).toBe(53);
+    expect(page.items).toHaveLength(24);
+    expect(page.facets.categories).toEqual(expect.arrayContaining([{ value: 'Moda', count: 53 }]));
+    expect(page.facets.groups.find((group: { key: string }) => group.key === 'brand').values)
+      .toEqual([{ value: 'Marca A', count: 53 }]);
+    const ascending = (await get(prefix + '?category=Moda&sort=price-asc&maxPriceCents=1600')).json();
+    expect(ascending.total).toBe(1);
+    expect(ascending.items[0]).toMatchObject({ handle: withVariants.handle, priceCents: 1500 });
+    const filters = (color: string) => encodeURIComponent(JSON.stringify([
+      { key: 'variant:Talla', values: ['M'] }, { key: 'variant:Color', values: [color] },
+    ]));
+    expect((await get(prefix + '?filters=' + filters('Rojo'))).json().total).toBe(1);
+    expect((await get(prefix + '?filters=' + filters('Azul'))).json().total).toBe(0);
+    const specification = encodeURIComponent(JSON.stringify([{ key: 'attribute:Material', values: ['Algodón'] }]));
+    expect((await get(prefix + '?filters=' + specification + '&q=Camisa')).json().total).toBe(52);
+    expect((await get(`/storefront/${slugB}/products?filters=${specification}`)).json().total).toBe(0);
+    expect((await get(prefix + '?filters=' + encodeURIComponent('[{"key":"tenantId","values":["x"]}]'))).statusCode).toBe(400);
+  });
 });

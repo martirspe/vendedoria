@@ -1,0 +1,28 @@
+@if (captureEnabled() && (options()?.email || options()?.whatsapp) && selection().length && !disabled()) {
+  <label class="consent">
+    <input type="checkbox" [checked]="optedIn() || hasSaved()" [disabled]="busy()" (change)="toggle($any($event.target).checked)" />
+    <span>Recordarme esta compra por {{ channelLabel() }}</span>
+  </label>
+  @if (optedIn() || hasSaved()) {
+    <div class="details">
+      @if (options()?.email && options()?.whatsapp) {
+        <select aria-label="Canal del recordatorio" [value]="channel()" [disabled]="busy()" (change)="chooseChannel($any($event.target).value)">
+          <option value="EMAIL">Correo electrónico</option>
+          <option value="WHATSAPP">WhatsApp</option>
+        </select>
+      }
+      <small>Hasta 3 recordatorios en 7 días. Puedes cancelarlos en cualquier momento. <a routerLink="/politica-de-privacidad">Privacidad</a></small>
+    </div>
+    @if (store()?.checkout?.turnstileSiteKey; as siteKey) {
+      <ds-turnstile [siteKey]="siteKey" action="recovery" theme="light" />
+    }
+  }
+}
+@if (feedback()) {
+  <p [attr.role]="failed() ? 'alert' : 'status'">{{ feedback() }}
+    @if (failed() && optedIn()) { <button type="button" [disabled]="busy()" (click)="save(true)">Reintentar</button> }
+  </p>
+}
+@if (!captureEnabled() && hasSaved()) {
+  <button type="button" [disabled]="busy()" (click)="cancel()">Cancelar recordatorios</button>
+}

@@ -7,6 +7,7 @@ import {
   IsUrl,
   Matches,
   Min,
+  Max,
   MinLength,
   ValidateIf,
   validateSync,
@@ -17,6 +18,60 @@ const AWS_REGION = /^[a-z]{2}(-[a-z]+)+-\d$/;
 const TURNSTILE_KEY = /^[\w-]{20,128}$/;
 
 class EnvironmentVariables {
+  @IsOptional() @IsIn(['legacy', 'sales-engine-v2'])
+  SALES_ENGINE_MODE?: string;
+  @IsOptional() @IsInt() @Min(0) @Max(10000)
+  SALES_DEBOUNCE_MS?: number;
+  @IsOptional() @IsInt() @Min(10) @Max(80)
+  SALES_RECENT_MESSAGES_LIMIT?: number;
+  @IsOptional() @IsInt() @Min(1) @Max(100)
+  SALES_SUMMARY_THRESHOLD?: number;
+  @IsOptional() @IsInt() @Min(4000) @Max(64000)
+  SALES_CONTEXT_TOKEN_BUDGET?: number;
+  @IsOptional() @IsInt() @Min(60) @Max(86400)
+  SALES_MEMORY_TTL_SECONDS?: number;
+  @IsOptional() @IsInt() @Min(1) @Max(365)
+  SALES_CUSTOMER_MEMORY_TTL_DAYS?: number;
+  @IsOptional() @IsInt() @Min(10000) @Max(90000)
+  SALES_LOCK_TTL_MS?: number;
+  @IsOptional() @IsInt() @Min(1000) @Max(15000)
+  SALES_TOOL_TIMEOUT_MS?: number;
+  @IsOptional() @IsInt() @Min(1) @Max(40)
+  SALES_RETRIEVAL_TOP_K?: number;
+  @IsOptional() @Min(0) @Max(1)
+  SALES_SIMILARITY_THRESHOLD?: number;
+  @IsOptional() @IsIn(['text-embedding-3-small', 'text-embedding-3-large'])
+  SALES_EMBEDDING_MODEL?: string;
+  @IsOptional() @IsInt() @Min(1) @Max(10)
+  SALES_HANDOFF_FAILURE_THRESHOLD?: number;
+  @IsOptional() @IsInt() @Min(1) @Max(8)
+  SALES_GATEWAY_CONCURRENCY?: number;
+  @IsOptional() @IsString()
+  TIKTOK_CLIENT_KEY?: string;
+
+  @IsOptional() @IsString()
+  TIKTOK_CLIENT_SECRET?: string;
+
+  @ValidateIf((env: EnvironmentVariables) => Boolean(env.TIKTOK_CLIENT_KEY || env.TIKTOK_CLIENT_SECRET || env.TIKTOK_REDIRECT_URI))
+  @IsUrl({ protocols: ['https'], require_protocol: true })
+  @Matches(/^https:\/\/[^?#]+\/api\/v1\/integrations\/tiktok-live\/oauth\/callback$/)
+  TIKTOK_REDIRECT_URI?: string;
+  @ValidateIf((env: EnvironmentVariables) => Boolean(env.REDIS_URL))
+  @Matches(/^rediss?:\/\/[^\s]+$/)
+  REDIS_URL?: string;
+
+  @ValidateIf((env: EnvironmentVariables) => Boolean(env.QDRANT_URL))
+  @IsUrl({ protocols: ['http', 'https'], require_protocol: true, require_tld: false })
+  @Matches(/^https?:\/\/[^/@?#]+\/?$/)
+  QDRANT_URL?: string;
+
+  @IsOptional() @IsString()
+  QDRANT_API_KEY?: string;
+
+  @ValidateIf((env: EnvironmentVariables) => Boolean(env.RECOVERY_EMAIL_FROM))
+  @Matches(/^[^\s<>@]+@[^\s<>@]+\.[^\s<>@]+$/)
+  RECOVERY_EMAIL_FROM?: string;
+
   @IsOptional()
   @IsInt()
   @Min(1)
@@ -189,8 +244,21 @@ export function validateEnv(config: Record<string, unknown>) {
   });
   const errors = validateSync(validated, { skipMissingProperties: false });
 
+  if (validated.REDIS_URL) {
+    try {
+      const redis = new URL(validated.REDIS_URL);
+      if (!['redis:', 'rediss:'].includes(redis.protocol) || !redis.hostname || !/^\/(?:\d{1,2})?$/.test(redis.pathname || '/') || redis.search || redis.hash) throw new Error('Invalid Redis URL');
+      decodeURIComponent(redis.username);
+      decodeURIComponent(redis.password);
+    } catch { throw new Error('REDIS_URL must be a redis/rediss URL with an optional numeric database'); }
+  }
+
   if (errors.length > 0) {
     throw new Error(errors.toString());
+  }
+  if (validated.TIKTOK_CLIENT_KEY || validated.TIKTOK_CLIENT_SECRET || validated.TIKTOK_REDIRECT_URI) {
+    if (!validated.TIKTOK_CLIENT_KEY || !validated.TIKTOK_CLIENT_SECRET || !validated.PAYMENT_CREDENTIALS_KEY) throw new Error('TikTok OAuth requires TIKTOK_CLIENT_KEY, TIKTOK_CLIENT_SECRET, TIKTOK_REDIRECT_URI and PAYMENT_CREDENTIALS_KEY together');
+    if (!validated.CORS_ORIGIN || !/^https:\/\/[^,]+$/.test(validated.CORS_ORIGIN)) throw new Error('TikTok OAuth requires a single HTTPS CORS_ORIGIN for the callback redirect');
   }
   if (validated.NODE_ENV === 'production' && TURNSTILE_TEST_SECRET.test(validated.TURNSTILE_SECRET_KEY ?? '')) {
     throw new Error('TURNSTILE_SECRET_KEY is a Cloudflare test key, which accepts any visitor; use the widget secret');

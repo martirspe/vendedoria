@@ -33,7 +33,7 @@ export class StoreShellLayout {
   readonly cart = inject(CartService);
   readonly editor = inject(StoreEditorBridge);
   private readonly currentUrl = signal(this.router.url);
-  readonly inCheckout = computed(() => this.currentUrl().split(/[?#]/)[0] === '/checkout');
+  readonly inCheckout = computed(() => ['/checkout', '/live-checkout'].includes(this.currentUrl().split(/[?#]/)[0]));
 
   readonly store = this.state.store;
   readonly year = new Date().getFullYear();
@@ -70,7 +70,8 @@ export class StoreShellLayout {
     afterNextRender(() => {
       const store = this.store();
       if (store) {
-        this.cart.load(store.slug);
+        if (this.router.url.split(/[?#]/)[0] === '/live-checkout') this.cart.restoreTransient([]);
+        else this.cart.load(store.slug);
       }
     });
   }

@@ -80,54 +80,6 @@ select {
   border: 0;
 }
 
-/* Store buttons: one shape for every call to action. */
-.store-btn {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: var(--ds-space-2);
-  min-height: var(--ds-touch-target);
-  padding: 0 var(--ds-space-5);
-  border: 1px solid transparent;
-  border-radius: 999px;
-  font-weight: 700;
-  cursor: pointer;
-  white-space: nowrap;
-  transition:
-    transform var(--ds-motion-fast) var(--ds-ease-out),
-    background-color var(--ds-motion-fast) var(--ds-ease-out),
-    opacity var(--ds-motion-fast) var(--ds-ease-out);
-}
-
-.store-btn:not(:disabled):hover {
-  transform: translateY(-1px);
-}
-
-.store-btn:disabled {
-  opacity: 0.45;
-  cursor: not-allowed;
-}
-
-.store-btn--primary {
-  background: var(--store-brand);
-  color: var(--store-on-brand);
-}
-
-.store-btn--secondary {
-  background: var(--store-bg);
-  border-color: var(--store-border);
-  color: var(--store-text);
-}
-
-.store-btn--whatsapp {
-  background: var(--store-whatsapp);
-  color: var(--store-on-whatsapp);
-}
-
-.store-btn--block {
-  width: 100%;
-}
-
 .store-chip {
   display: inline-flex;
   align-items: center;

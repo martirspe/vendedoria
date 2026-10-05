@@ -28,6 +28,23 @@ x-node: &node
   init: true
 
 services:
+  redis:
+    image: redis:7.4-alpine
+    command: redis-server --appendonly yes --maxmemory 128mb --maxmemory-policy noeviction
+    volumes: [redis_conversion:/data]
+    healthcheck:
+      test: ['CMD', 'redis-cli', 'ping']
+      interval: 5s
+      timeout: 3s
+      retries: 20
+    restart: unless-stopped
+
+  qdrant:
+    image: qdrant/qdrant:v1.19.1
+    profiles: [recommendations-vector]
+    volumes: [qdrant_conversion:/qdrant/storage]
+    restart: unless-stopped
+
   postgres:
     image: postgres:16-alpine
     container_name: vendedoria-dev-db
@@ -57,6 +74,7 @@ services:
     environment:
       <<: *node-env
       NODE_ENV: development
+      REDIS_URL: redis://redis:6379/0
       PORT: '3100'
       DATABASE_URL: postgresql://postgres:postgres@postgres:5432/vendedoria?schema=public
       CORS_ORIGIN: http://localhost:4201
@@ -67,6 +85,7 @@ services:
     ports: ['127.0.0.1:3100:3100']
     command: sh -c 'npx prisma migrate deploy && npx nest start --watch'
     depends_on:
+      redis: {condition: service_healthy}
       postgres: {condition: service_healthy}
       deps: {condition: service_completed_successfully}
     healthcheck:
@@ -114,6 +133,8 @@ services:
     restart: unless-stopped
 
 volumes:
+  redis_conversion:
+  qdrant_conversion:
   # Nombre fijo: conserva la base del stack anterior (proyecto `vendedoria`, servicio `db`).
   postgres_dev:
     name: vendedoria_vendedoria_pg

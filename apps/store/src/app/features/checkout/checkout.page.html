@@ -2,12 +2,23 @@
   <a class="back" routerLink="/carrito"><ds-icon name="arrowLeft" [size]="1" /> Volver al carrito</a>
   <header class="checkout__heading"><p class="store-eyebrow">Ya casi es tuyo</p><h1>Finaliza tu compra</h1><p>Datos, entrega y pago en una sola página. Sin crear una cuenta.</p></header>
 
-  @if (!cart.ready()) {
+  @if (liveToken) {
+    @if (liveLoading()) { <p aria-busy="true">Abriendo tu reserva LIVE…</p> }
+    @if (liveExpiresAt(); as expires) { <p role="status">Precio LIVE reservado hasta las {{ expires | date:'shortTime' }}. Completa el pago antes de que venza.</p> }
+    @if (!liveExpiresAt() && errorMessage(); as error) {
+      <p role="alert">{{ error }}</p>
+      <button type="button" class="store-btn store-btn--secondary" (click)="loadLiveReservation()">Reintentar</button>
+    }
+  }
+
+  @if (!cart.ready() || (liveToken && !liveExpiresAt())) {
     <p aria-busy="true">Cargando tu carrito…</p>
   } @else if (store()?.checkout?.mode !== 'online') {
     <div class="store-empty"><h2>Coordina tu pedido con la tienda</h2><p>Vuelve al carrito para enviar tu selección por WhatsApp.</p><a class="store-btn store-btn--primary" routerLink="/carrito">Ver mi carrito</a></div>
   } @else if (store(); as s) {
-    <form class="checkout__layout" [formGroup]="form" (ngSubmit)="$event.preventDefault()" novalidate>
+    @if (!liveToken) {
+    }
+    <form class="checkout__layout" [attr.inert]="demo.active ? '' : null" [formGroup]="form" (ngSubmit)="$event.preventDefault()" novalidate>
       <div class="checkout__main">
         <fieldset class="panel" [disabled]="submitting() || !!reservedOrder()">
           <legend>Contacto</legend>
@@ -34,12 +45,15 @@
               }
             </label>
           </div>
+          <store-cart-recovery [email]="form.controls.email.value" [phone]="form.controls.phone.value" [disabled]="submitting() || !!reservedOrder()" />
           <label class="field">
             <span>DNI o CE <em>Opcional</em></span>
             <input formControlName="document" [attr.aria-invalid]="form.controls.document.touched && form.controls.document.invalid" inputmode="numeric" maxlength="12" />
             @if (form.controls.document.touched && form.controls.document.invalid) { <small class="field__error">Escribe entre 8 y 12 dígitos.</small> }
           </label>
         </fieldset>
+
+        <store-recommendations [handles]="recommendationHandles()" context="checkout" [disabled]="submitting() || !!reservedOrder()" />
 
         @if (cart.hasServices()) {
           <fieldset class="panel" [disabled]="submitting() || !!reservedOrder()">
@@ -207,7 +221,7 @@
           }
         </ul>
 
-        @if (s.checkout.couponsEnabled) {
+        @if (!liveToken && s.checkout.couponsEnabled) {
           <fieldset class="coupon" [disabled]="submitting() || !!reservedOrder()">
             @if (coupon(); as c) {
               <p class="coupon__applied">

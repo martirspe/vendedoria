@@ -5,7 +5,7 @@ import { environment } from '../../../environments/environment';
 
 export type ChannelDto = {
   id: string;
-  type: 'WHATSAPP' | 'INSTAGRAM';
+  type: 'WHATSAPP' | 'INSTAGRAM' | 'TIKTOK_LIVE';
   connectionMode: string | null;
   healthStatus: 'CONNECTED' | 'DEGRADED' | 'DISCONNECTED' | 'PENDING';
   externalId: string | null;

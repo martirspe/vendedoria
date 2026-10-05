@@ -23,7 +23,7 @@ export const SELECTA_ROUTES: Routes = [
         pathMatch: 'full',
         loadComponent: () => import('../../features/catalog/catalog.page').then((m) => m.CatalogPage),
         resolve: { list: catalogResolver },
-        runGuardsAndResolvers: 'paramsOrQueryParamsChange',
+        runGuardsAndResolvers: 'always',
       },
       { path: 'productos/:handle', redirectTo: ({ params }) => `/producto/${params['handle']}` },
       { path: 'terminos', redirectTo: '/terminos-y-condiciones' },

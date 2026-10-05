@@ -1,4 +1,5 @@
 <section class="wrap cart-page">
+<store-cart-recovery [captureEnabled]="false" />
   <p class="eyebrow">TUS FAVORITOS, JUNTOS</p>
   <h1>Mi bolsa.</h1>
   @if (!cart.ready()) {
@@ -31,27 +32,7 @@
             <button class="icon-button" (click)="cart.remove(row.line.key)" aria-label="Quitar producto"><app-icon name="trash" /></button>
           </article>
         }
-        @if (extras().length) {
-          <section class="cross-sell" aria-labelledby="cross-sell-title">
-            <p class="eyebrow">EL TOQUE FINAL</p>
-            <h2 id="cross-sell-title">Completa tu selección</h2>
-            <div class="cross-sell-list">
-              @for (x of extras(); track x.handle) {
-                <article class="cross-sell-item">
-                  <a class="cross-sell-thumb" [routerLink]="['/producto', x.handle]" [attr.aria-label]="x.name"><app-product-image [product]="x" /></a>
-                  <div>
-                    <a [routerLink]="['/producto', x.handle]"><h3>{{ x.name }}</h3></a>
-                    <p>{{ x.descriptionShort }}</p>
-                    @if (scarcity(x)) {
-                      <small class="card-stock"><span class="stock-dot" aria-hidden="true"></span>{{ scarcity(x) }}</small>
-                    }
-                  </div>
-                  <button type="button" class="offer-add" (click)="addExtra(x)" [attr.aria-label]="'Agregar ' + x.name + ' por ' + (x.priceCents | money)"><app-icon name="plus" />{{ x.priceCents | money }}</button>
-                </article>
-              }
-            </div>
-          </section>
-        }
+        <store-recommendations [handles]="recommendationHandles()" />
       </div>
       <aside class="order-summary">
         <h2>Tu selección.</h2>

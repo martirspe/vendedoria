@@ -1,4 +1,5 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable, NotFoundException, Optional } from '@nestjs/common';
+import { SalesSearchService } from '../agent-runtime/sales-search.service';
 import { PrismaService } from '../prisma/prisma.service';
 import {
   CreateJourneyTemplateDto,
@@ -23,7 +24,7 @@ export type KnowledgeFaqView = {
 
 @Injectable()
 export class KnowledgeService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(private readonly prisma: PrismaService, @Optional() private readonly semantic?: SalesSearchService) {}
 
   listFaqs(tenantId: string) {
     return this.prisma.knowledgeFaq.findMany({
@@ -153,7 +154,8 @@ export class KnowledgeService {
     return { ok: true };
   }
 
-  async getRuntimeKnowledge(tenantId: string) {
+  async getRuntimeKnowledge(tenantId: string, query?: string) {
+    const semanticIds = query ? await this.semantic?.candidates(tenantId, query, 'faq') ?? [] : [];
     const [faqs, journeys] = await Promise.all([
       this.prisma.knowledgeFaq.findMany({
         where: {
@@ -170,7 +172,8 @@ export class KnowledgeService {
         take: 12,
       }),
     ]);
-    return { faqs, journeys };
+    const retrieved = semanticIds.length ? await this.prisma.knowledgeFaq.findMany({ where: { tenantId, id: { in: semanticIds }, isPublished: true, reviewStatus: 'APPROVED' }, take: 12 }) : [];
+    return { faqs: [...new Map([...retrieved, ...faqs].map((faq) => [faq.id, faq])).values()], journeys, retrievedFaqIds: retrieved.map((faq) => faq.id) };
   }
 
   async getQualityExtras(tenantId: string) {

@@ -1,0 +1,253 @@
+{
+  "mode": "deterministic-offline",
+  "fixtureCount": 20,
+  "runtimeCases": 17,
+  "integrationCases": 3,
+  "metrics": {
+    "context_retention": {
+      "samples": 3,
+      "value": 1
+    },
+    "repeated_question_rate": {
+      "samples": 17,
+      "value": 0
+    },
+    "intent_accuracy": {
+      "samples": 2,
+      "value": 1
+    },
+    "product_accuracy": {
+      "samples": 4,
+      "value": 1
+    },
+    "price_accuracy": {
+      "samples": 10,
+      "value": 1
+    },
+    "inventory_accuracy": {
+      "samples": 15,
+      "value": 1
+    },
+    "hallucination_rate": {
+      "samples": 17,
+      "value": 0
+    },
+    "tool_selection_accuracy": {
+      "samples": 2,
+      "value": 1
+    },
+    "state_transition_accuracy": {
+      "samples": 7,
+      "value": 1
+    },
+    "reference_resolution_accuracy": {
+      "samples": 2,
+      "value": 1
+    },
+    "handoff_accuracy": {
+      "samples": 14,
+      "value": 1
+    },
+    "sales_progression": {
+      "samples": 2,
+      "value": 1
+    }
+  },
+  "cases": [
+    {
+      "id": "01-no-budget",
+      "metrics": {
+        "repeated_question_rate": 0,
+        "hallucination_rate": 0,
+        "price_accuracy": 1,
+        "inventory_accuracy": 1,
+        "state_transition_accuracy": 1,
+        "handoff_accuracy": 1,
+        "tool_selection_accuracy": 1,
+        "sales_progression": 1
+      }
+    },
+    {
+      "id": "02-known-size",
+      "metrics": {
+        "repeated_question_rate": 0,
+        "hallucination_rate": 0,
+        "price_accuracy": 1,
+        "inventory_accuracy": 1,
+        "context_retention": 1,
+        "state_transition_accuracy": 1,
+        "handoff_accuracy": 1
+      }
+    },
+    {
+      "id": "03-exhausted",
+      "metrics": {
+        "repeated_question_rate": 0,
+        "hallucination_rate": 0,
+        "price_accuracy": 1,
+        "inventory_accuracy": 1,
+        "handoff_accuracy": 1
+      }
+    },
+    {
+      "id": "04-missing-product",
+      "metrics": {
+        "repeated_question_rate": 0,
+        "hallucination_rate": 0,
+        "inventory_accuracy": 1,
+        "product_accuracy": 1,
+        "handoff_accuracy": 1
+      }
+    },
+    {
+      "id": "05-change-choice",
+      "metrics": {
+        "repeated_question_rate": 0,
+        "hallucination_rate": 0,
+        "price_accuracy": 1,
+        "inventory_accuracy": 1,
+        "state_transition_accuracy": 1,
+        "reference_resolution_accuracy": 1
+      }
+    },
+    {
+      "id": "06-second",
+      "metrics": {
+        "repeated_question_rate": 0,
+        "hallucination_rate": 0,
+        "price_accuracy": 1,
+        "inventory_accuracy": 1,
+        "state_transition_accuracy": 1,
+        "reference_resolution_accuracy": 1
+      }
+    },
+    {
+      "id": "07-rapid-messages",
+      "integration": "D/E: concurrent rapid messages and duplicate wamid produce one reply",
+      "metrics": null
+    },
+    {
+      "id": "08-price-shipping-stock",
+      "metrics": {
+        "repeated_question_rate": 0,
+        "hallucination_rate": 0,
+        "price_accuracy": 1,
+        "inventory_accuracy": 1,
+        "handoff_accuracy": 1
+      }
+    },
+    {
+      "id": "09-price-objection",
+      "metrics": {
+        "repeated_question_rate": 0,
+        "hallucination_rate": 0,
+        "price_accuracy": 1,
+        "inventory_accuracy": 1,
+        "intent_accuracy": 1,
+        "state_transition_accuracy": 1
+      }
+    },
+    {
+      "id": "10-immediate-purchase",
+      "metrics": {
+        "repeated_question_rate": 0,
+        "hallucination_rate": 0,
+        "intent_accuracy": 1,
+        "state_transition_accuracy": 1,
+        "handoff_accuracy": 1,
+        "sales_progression": 1
+      }
+    },
+    {
+      "id": "11-change-variant",
+      "metrics": {
+        "repeated_question_rate": 0,
+        "hallucination_rate": 0,
+        "inventory_accuracy": 1,
+        "context_retention": 1,
+        "handoff_accuracy": 1
+      }
+    },
+    {
+      "id": "12-returning-customer",
+      "metrics": {
+        "repeated_question_rate": 0,
+        "hallucination_rate": 0,
+        "price_accuracy": 1,
+        "inventory_accuracy": 1,
+        "context_retention": 1,
+        "handoff_accuracy": 1
+      }
+    },
+    {
+      "id": "13-duplicate-webhook",
+      "integration": "D/E: concurrent rapid messages and duplicate wamid produce one reply",
+      "metrics": null
+    },
+    {
+      "id": "14-concurrent-messages",
+      "integration": "PostgreSQL fences concurrent owners even after a Redis lease expires",
+      "metrics": null
+    },
+    {
+      "id": "15-unavailable-information",
+      "metrics": {
+        "repeated_question_rate": 0,
+        "hallucination_rate": 0,
+        "inventory_accuracy": 1,
+        "handoff_accuracy": 1
+      }
+    },
+    {
+      "id": "16-human-request",
+      "metrics": {
+        "repeated_question_rate": 0,
+        "hallucination_rate": 0,
+        "state_transition_accuracy": 1,
+        "handoff_accuracy": 1,
+        "tool_selection_accuracy": 1
+      }
+    },
+    {
+      "id": "17-similar-products",
+      "metrics": {
+        "repeated_question_rate": 0,
+        "hallucination_rate": 0,
+        "price_accuracy": 1,
+        "inventory_accuracy": 1,
+        "product_accuracy": 1,
+        "handoff_accuracy": 1
+      }
+    },
+    {
+      "id": "18-current-price",
+      "metrics": {
+        "repeated_question_rate": 0,
+        "hallucination_rate": 0,
+        "price_accuracy": 1,
+        "inventory_accuracy": 1,
+        "handoff_accuracy": 1
+      }
+    },
+    {
+      "id": "19-deactivated-product",
+      "metrics": {
+        "repeated_question_rate": 0,
+        "hallucination_rate": 0,
+        "inventory_accuracy": 1,
+        "product_accuracy": 1,
+        "handoff_accuracy": 1
+      }
+    },
+    {
+      "id": "20-cross-tenant",
+      "metrics": {
+        "repeated_question_rate": 0,
+        "hallucination_rate": 0,
+        "inventory_accuracy": 1,
+        "product_accuracy": 1,
+        "handoff_accuracy": 1
+      }
+    }
+  ]
+}

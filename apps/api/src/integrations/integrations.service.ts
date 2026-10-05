@@ -30,6 +30,7 @@ const INTEGRATION_NAMES: Record<IntegrationKey, string> = {
   instagram: 'Instagram Direct',
   tracking: 'Píxel y Analytics',
   team: 'Equipo',
+  tiktok_live: 'TikTok LIVE',
 };
 
 export type IntegrationStateView = {

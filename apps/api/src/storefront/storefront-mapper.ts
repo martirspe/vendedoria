@@ -2,6 +2,7 @@ import type { Prisma } from '@prisma/client';
 import type {
   PublicMedia,
   PublicProductCard,
+  PublicCatalogCard,
   PublicProductDetail,
   PublicProductDetails,
   PublicSetPiece,
@@ -189,6 +190,19 @@ export function toProductCard(product: StoreProductRecord): PublicProductCard {
 }
 
 const SERVICE_MODES: readonly ServiceMode[] = ['onsite', 'home', 'online'];
+
+export function toCatalogCard(product: StoreProductRecord): PublicCatalogCard {
+  const card = toProductCard(product);
+  const left = unitsLeft(product);
+  return {
+    ...card,
+    secondaryImageUrl: sortedMedia(product).find((url) => url !== card.imageUrl) ?? null,
+    variants: product.variants.map((variant) => toVariant(product, variant)),
+    stockLeft: !card.hasVariants && card.kind === 'PRODUCT' && Number.isFinite(left) && left <= LOW_STOCK
+      ? Math.max(left, 0) : null,
+    benefit: readDetails(product.details).benefits[0] ?? null,
+  };
+}
 
 export function toProductDetail(
   product: StoreProductRecord,

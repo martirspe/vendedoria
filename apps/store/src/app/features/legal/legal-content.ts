@@ -252,13 +252,18 @@ export function legalDocs(store: StorefrontView): LegalDoc[] {
     description: `Cómo ${brand} trata tus datos personales.`,
     summary: [
       [individual
-        ? 'Usamos tus datos solo para atender tu pedido y responder tus consultas.'
-        : 'Usamos tus datos solo para atender tu pedido, emitir tu comprobante y responder tus consultas.'],
+        ? 'Usamos tus datos para atender tu pedido, responder tus consultas y las funciones opcionales que autorices.'
+        : 'Usamos tus datos para atender tu pedido, emitir tu comprobante, responder tus consultas y las funciones opcionales que autorices.'],
       ['No vendemos ni alquilamos tus datos. No guardamos los datos de tu tarjeta.'],
       ['No te enviamos publicidad sin tu consentimiento.'],
       ['Puedes ejercer tus derechos escribiendo a ', email, '.'],
     ],
     sections: [
+      {
+        id: 'seleccion-opcional',
+        title: 'Recordatorios y sugerencias opcionales',
+        blocks: [p('Si guardas tu selección y marcas la autorización de un canal, usaremos tu correo o WhatsApp para enviarte hasta 3 recordatorios por canal. Puedes cancelarlos desde el carrito o desde el enlace de cualquier aviso. Esto no reserva stock. Solo registramos productos vistos o agregados para personalizar sugerencias si autorizas esa función; puedes retirarla desde las recomendaciones. Los proveedores de mensajería y correo pueden procesar estos datos fuera del Perú para prestar el servicio que autorizaste.')],
+      },
       {
         id: 'titular',
         title: 'Titular del banco de datos',
@@ -282,6 +287,8 @@ export function legalDocs(store: StorefrontView): LegalDoc[] {
               ['Identificación y contacto', 'Nombre, correo, celular y, si lo indicas, DNI o CE', 'Tú, en el checkout'],
               ['Entrega', 'Departamento, provincia, distrito (ubigeo), dirección y referencia', 'Tú, en el checkout'],
               ['Pedido', 'Productos, montos, cupón usado y estado del pago', 'La tienda'],
+              ['Recordatorios opcionales', 'Selección, correo o WhatsApp y autorización por canal', 'Tú, al guardar tu selección'],
+              ['Sugerencias personalizadas opcionales', 'Productos vistos y agregados, con un identificador aleatorio de sesión', 'Tu navegación, solo si la autorizas'],
               ...(online ? [['Pago', 'Estado y referencia de la operación (no el número de tarjeta)', 'Mercado Pago'] as Inline[]] : []),
               ...(whatsapp ? [['Conversaciones', 'Mensajes que nos envías por WhatsApp', 'Tú'] as Inline[]] : []),
               ['Técnicos y de seguridad', 'Tu dirección IP, que se usa transformada de forma irreversible y por unos minutos para limitar intentos abusivos', 'Tu navegador'],
@@ -327,6 +334,8 @@ export function legalDocs(store: StorefrontView): LegalDoc[] {
               ['Pedidos y comprobantes', 'Mientras sean necesarios y hasta que prescriban las obligaciones tributarias y legales'],
               ['Reclamos y quejas', 'Al menos 2 años desde su registro'],
               ['Carrito guardado en tu navegador', 'Hasta que lo vacíes o borres los datos del sitio'],
+              ['Selección guardada para recordatorios', 'Hasta 7 días; los datos de contacto se eliminan antes si cancelas los avisos o reservas tu pedido'],
+              ['Navegación para sugerencias opcionales', 'Hasta 7 días; puedes retirar tu autorización desde las sugerencias'],
             ],
           ),
         ],

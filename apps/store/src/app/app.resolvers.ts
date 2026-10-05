@@ -8,6 +8,7 @@ import type {
   StorefrontView,
 } from '@vendedoria/contracts';
 import { kindTab } from './core/catalog-kinds';
+import { catalogPriceCents, catalogSelections } from './core/catalog-query';
 import { StoreApiService } from './core/store-api.service';
 import { StoreStateService } from './core/store-state.service';
 
@@ -39,18 +40,23 @@ export const templateMatch =
 export const featuredResolver: ResolveFn<PublicProductList> = () =>
   inject(StoreApiService).products({ sort: 'featured', pageSize: 8 });
 
-export const catalogResolver: ResolveFn<PublicProductList> = (route) => {
+export const catalogResolver: ResolveFn<PublicProductList | null> = (route) => {
   const params = route.queryParamMap;
   const sort = params.get('orden') as PublicProductSort | null;
   const page = Number(params.get('pagina') ?? 1);
+  const filters = catalogSelections(params.get('filtros'));
+  const pageSize = Number(params.get('porPagina') ?? CATALOG_PAGE_SIZE);
   return inject(StoreApiService).products({
     category: params.get('categoria'),
     kind: kindTab(params.get('tipo'))?.kind ?? null,
     q: params.get('q'),
+    filters: filters.length ? JSON.stringify(filters) : null,
+    minPriceCents: catalogPriceCents(params.get('desde')),
+    maxPriceCents: catalogPriceCents(params.get('hasta')),
     sort: sort && SORTS.includes(sort) ? sort : 'featured',
-    page: Number.isInteger(page) && page > 0 ? page : 1,
-    pageSize: CATALOG_PAGE_SIZE,
-  });
+    page: Number.isInteger(page) && page > 0 && page <= 500 ? page : 1,
+    pageSize: [12, 24, 48].includes(pageSize) ? pageSize : CATALOG_PAGE_SIZE,
+  }).catch(() => null);
 };
 
 export const productResolver: ResolveFn<PublicProductDetail | null> = (route) =>

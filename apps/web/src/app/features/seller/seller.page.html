@@ -380,7 +380,7 @@
               <section class="block">
                 <header class="block__head">
                   <h2>Punto de partida</h2>
-                  <p>Elige un perfil y ajústalo. Cambia el tono, el estilo y las técnicas de venta.</p>
+                  <p>Elige un perfil o configura una personalidad propia.</p>
                 </header>
                 <div class="preset-grid">
                   @for (preset of presets; track preset.id) {
@@ -395,6 +395,10 @@
                       <span>{{ preset.description }}</span>
                     </button>
                   }
+                  <button type="button" class="preset" [class.is-active]="activePreset() === 'custom'" [attr.aria-pressed]="activePreset() === 'custom'" (click)="customizePersonality()">
+                    <strong>Personalizado</strong>
+                    <span>Define tu propio tono, estilo y técnicas. Conserva tus ajustes, sin aplicar una plantilla.</span>
+                  </button>
                 </div>
               </section>
 

@@ -142,6 +142,16 @@ export class ShippingQuoteQueryDto {
 }
 
 export class CreateCheckoutDto {
+  @ApiPropertyOptional({ description: 'Signed LIVE stock reservation; prices and units come from the backend.' })
+  @IsOptional()
+  @Matches(/^[a-z0-9]{20,40}\.\d{13}\.[A-Za-z0-9_-]{43}$/)
+  liveReservationToken?: string;
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  @Matches(/^[a-z0-9]{20,40}\.\d{13}\.[A-Za-z0-9_-]{43}$/)
+  recoveryToken?: string;
+
   @ApiProperty({
     description:
       'Client generated UUID; retries with the same key return the same order',

@@ -8,6 +8,11 @@ const BASE = {
 };
 
 describe('validateEnv AWS settings', () => {
+  it('validates private conversion infrastructure without echoing credentials', () => {
+    expect(() => validateEnv({ ...BASE, REDIS_URL: 'redis://redis:6379/0', QDRANT_URL: 'http://qdrant:6333', RECOVERY_EMAIL_FROM: 'recovery@example.test' })).not.toThrow();
+    expect(() => validateEnv({ ...BASE, REDIS_URL: 'redis://user:fake-credential@redis/not-a-number' })).toThrow('REDIS_URL must be');
+    expect(() => validateEnv({ ...BASE, QDRANT_URL: 'https://user:fake-credential@example.test' })).toThrow(/QDRANT_URL/);
+  });
   it('keeps local storage and preview email working with no AWS settings', () => {
     expect(() => validateEnv(BASE)).not.toThrow();
   });

@@ -25,7 +25,7 @@ export const STRIDE_ROUTES: Routes = [
       {
         path: 'productos',
         resolve: { list: catalogResolver },
-        runGuardsAndResolvers: 'paramsOrQueryParamsChange',
+        runGuardsAndResolvers: 'always',
         loadComponent: () =>
           import('../../features/catalog/catalog.page').then(
             (m) => m.CatalogPage,

@@ -77,6 +77,11 @@ export class UpdateSalesAgentDto {
   @MaxLength(200)
   communicationStyle?: string;
 
+  @ApiPropertyOptional({ enum: ['consultative', 'friendly', 'premium', 'fast', 'custom'] })
+  @IsOptional()
+  @IsIn(['consultative', 'friendly', 'premium', 'fast', 'custom'])
+  personalityPreset?: string;
+
   @ApiPropertyOptional()
   @IsOptional()
   @IsString()

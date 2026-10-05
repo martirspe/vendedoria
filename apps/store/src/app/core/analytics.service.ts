@@ -249,6 +249,7 @@ export class AnalyticsService {
   private pageView(): void {
     if (!this.active) return;
     const win = this.window();
+    if (new URL(win.location.href).searchParams.has('recover') || new URL(win.location.href).searchParams.has('stop')) return;
     win.gtag?.('event', 'page_view', {
       page_location: win.location.href,
       page_path: win.location.pathname,

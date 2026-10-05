@@ -22,6 +22,7 @@ export class ChannelMessengerService {
     channel: Pick<Channel, 'type'>,
     conversation: { contactPhone: string | null; externalThreadId: string | null },
   ): string | null {
+    if (channel.type === 'TIKTOK_LIVE') return null;
     return channel.type === 'WHATSAPP' ? conversation.contactPhone : conversation.externalThreadId;
   }
 

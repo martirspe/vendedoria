@@ -12,7 +12,7 @@
       <div class="store__actions">
         <ds-button variant="secondary" [disabled]="busyAction() !== null" (click)="openPreview()">
           <ds-icon name="eye" />
-          {{ busyAction() === 'preview' ? 'Abriendo…' : 'Vista previa' }}
+          {{ busyAction() === 'preview' ? 'Abriendo…' : 'Vista previa de mi tienda' }}
         </ds-button>
         @if (isPublished()) {
           <ds-button variant="ghost" [disabled]="busyAction() !== null" (click)="unpublish()">
@@ -95,25 +95,44 @@
             </select></ds-select>
             <small>Define qué plantillas puedes usar.</small>
           </label>
-          <div class="templates" role="radiogroup" aria-label="Plantilla de la tienda">
+          <div class="templates" role="group" aria-label="Plantilla de la tienda">
             @for (option of templates(); track option.value) {
+              <article class="template" [class.is-selected]="form.controls.template.value === option.value">
+                <a class="template__cover" [href]="templatePreviewUrl(option.value)" target="_blank" rel="noopener"
+                  [attr.aria-label]="'Vista previa de ' + option.label + ' (abre otra pestaña)'">
+                  @if (!failedCovers().includes(option.value)) {
+                    <img [src]="option.cover" [alt]="'Diseño original de la plantilla ' + option.label"
+                      width="1440" height="1000" loading="lazy" (error)="coverFailed(option.value)" />
+                  } @else {
+                    <span class="template__fallback"><ds-icon name="eye" />Explorar {{ option.label }}</span>
+                  }
+                </a>
+                <div class="template__body">
+                  <strong>{{ option.label }}</strong>
+                  <p>{{ option.description }}</p>
+                  @if (!option.available) {
+                    <p class="optional">Disponible para {{ option.value === 'stride' ? 'Moda y accesorios' : 'Belleza y cuidado personal' }}</p>
+                  }
+                </div>
+                <div class="template__actions">
+                  <a [href]="templatePreviewUrl(option.value)" target="_blank" rel="noopener"
+                    [attr.aria-label]="'Vista previa de ' + option.label + ' (abre otra pestaña)'">
+                    <ds-icon name="eye" [size]="1" />Vista previa
+                  </a>
               <button
                 type="button"
-                role="radio"
-                class="template"
-                [class.is-selected]="form.controls.template.value === option.value"
-                [attr.aria-checked]="form.controls.template.value === option.value"
+                class="template__choose"
+                [attr.aria-pressed]="form.controls.template.value === option.value"
                 [disabled]="!option.available"
                 (click)="pickTemplate(option.value)"
               >
-                <strong>{{ option.label }}</strong>
-                <span>{{ option.description }}</span>
-                @if (!option.available) {
-                  <span class="optional">Disponible para {{ option.value === 'stride' ? 'Moda y accesorios' : 'Belleza y cuidado personal' }}</span>
-                }
+                {{ form.controls.template.value === option.value ? 'Seleccionada' : 'Elegir plantilla' }}
               </button>
+                </div>
+              </article>
             }
           </div>
+          <p class="templates-note">Explora el diseño original con productos de ejemplo. Tu tienda cambia al guardar; las fotos de la demo no reemplazan tu catálogo.</p>
 
           <div class="design-link">
             <div>
@@ -343,6 +362,10 @@
           <a routerLink="/app/products" class="rail-link">
             Elegir producto por producto <ds-icon name="chevronRight" [size]="1" />
           </a>
+        </section>
+        <section class="card">
+          <h2>Automatizaciones</h2>
+          <app-conversion-settings />
         </section>
       </aside>
     </div>

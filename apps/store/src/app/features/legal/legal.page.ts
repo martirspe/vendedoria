@@ -1,8 +1,9 @@
-import { ChangeDetectionStrategy, Component, computed, inject } from '@angular/core';
+import { ChangeDetectionStrategy, Component, afterNextRender, computed, inject } from '@angular/core';
 import { NgTemplateOutlet } from '@angular/common';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { DsIconComponent } from '@vendedoria/ui';
 import { AnalyticsService } from '../../core/analytics.service';
+import { ConversionSession } from '../../core/conversion-session.service';
 import { SeoService } from '../../core/seo.service';
 import { StoreStateService } from '../../core/store-state.service';
 import { Inline, legalDocs, legalUpdatedLabel } from './legal-content';
@@ -18,6 +19,7 @@ import type { LegalSlug } from './legal-slugs';
 export class LegalPage {
   private readonly slug = inject(ActivatedRoute).snapshot.data['slug'] as LegalSlug | undefined;
   readonly store = inject(StoreStateService).store;
+  readonly conversion = inject(ConversionSession);
 
   readonly docs = computed(() => {
     const store = this.store();
@@ -34,6 +36,7 @@ export class LegalPage {
   });
 
   constructor() {
+    afterNextRender(() => this.conversion.init());
     const doc = this.doc();
     inject(SeoService).set(
       doc

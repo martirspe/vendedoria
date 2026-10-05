@@ -111,6 +111,7 @@ export type StoreChecklistItem = {
 export type StoreSettingsView = {
   storefront: StorefrontDto;
   url: string;
+  templateDemoBaseUrl: string;
   totalProducts: number;
   publishedProducts: number;
   availableProducts: number;

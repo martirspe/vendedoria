@@ -7,6 +7,7 @@ import { PrismaService } from '../prisma/prisma.service';
 import { buildAgentContext, HISTORY_LIMIT } from '../agent-runtime/conversation-context';
 import { SalesAgentRuntimeService } from '../agent-runtime/sales-agent-runtime.service';
 import { PlanLimitsService } from '../billing/plan-limits.service';
+import { readSalesState } from '../agent-runtime/sales-state';
 
 @Injectable()
 export class PlaygroundService {
@@ -58,6 +59,7 @@ export class PlaygroundService {
     await this.prisma.playgroundMessage.deleteMany({
       where: { sessionId: session.id },
     });
+    await this.prisma.playgroundSession.update({ where: { id: session.id, tenantId }, data: { salesState: {} } });
     return this.getSession(tenantId, session.id);
   }
 
@@ -102,6 +104,7 @@ export class PlaygroundService {
       customerPhone: null,
       history: context.history,
       allowAi: await this.planLimits.canUseAi(tenantId),
+      salesState: readSalesState(session.salesState),
     });
     if (agentResult.usedAi) {
       await this.planLimits.recordAiReply(tenantId);
@@ -119,7 +122,7 @@ export class PlaygroundService {
 
     await this.prisma.playgroundSession.update({
       where: { id: session.id },
-      data: { updatedAt: new Date() },
+      data: { updatedAt: new Date(), salesState: agentResult.salesState as unknown as Prisma.InputJsonValue },
     });
 
     const refreshed = await this.getSession(tenantId, session.id);

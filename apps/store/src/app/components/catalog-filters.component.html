@@ -1,0 +1,140 @@
+@if (categories().length) {
+  <details class="filter-group" open>
+    <summary>Categorías</summary>
+    <button
+      class="category"
+      type="button"
+      [class.is-active]="!category()"
+      [attr.aria-pressed]="!category()"
+      (click)="categoryChange.emit(null)"
+    >
+      Todas las categorías
+    </button>
+    <ng-container
+      [ngTemplateOutlet]="categoryTree"
+      [ngTemplateOutletContext]="{ $implicit: categories() }"
+    />
+  </details>
+}
+<ng-template #categoryTree let-nodes>
+  <ul class="category-tree">
+    @for (node of nodes; track node.value) {
+      <li>
+        <button
+          class="category"
+          type="button"
+          [class.is-active]="category() === node.value"
+          [attr.aria-pressed]="category() === node.value"
+          (click)="categoryChange.emit(node.value)"
+        >
+          <span>{{ node.label }}</span
+          ><span class="filter-count">{{ node.count }}</span>
+        </button>
+        @if (node.children.length) {
+          <ng-container
+            [ngTemplateOutlet]="categoryTree"
+            [ngTemplateOutletContext]="{ $implicit: node.children }"
+          />
+        }
+      </li>
+    }
+  </ul>
+</ng-template>
+
+@if (facets().price; as price) {
+  <details class="filter-group" open>
+    <summary>Precio</summary>
+    <p class="price-hint">
+      {{ price.minCents | money: price.currency }} –
+      {{ price.maxCents | money: price.currency }}
+    </p>
+    @if (price.minCents < price.maxCents) {
+      <label class="price-range"
+        ><span>Precio máximo</span>
+        <input
+          type="range"
+          [min]="price.minCents"
+          [max]="price.maxCents"
+          step="1"
+          [value]="maxCents() ?? price.maxCents"
+          [attr.aria-valuetext]="
+            ((maxCents() ?? price.maxCents) / 100).toFixed(2) +
+            ' ' +
+            price.currency
+          "
+          (change)="
+            priceChange.emit({
+              min: minCents(),
+              max: +$any($event.target).value,
+            })
+          "
+        />
+      </label>
+    }
+    <form
+      (submit)="
+        $event.preventDefault(); applyPrice(minInput.value, maxInput.value)
+      "
+    >
+      <div class="price-fields">
+        <label
+          ><span>Desde ({{ price.currency }})</span>
+          <input
+            #minInput
+            type="number"
+            min="0"
+            max="21474836.47"
+            step="0.01"
+            inputmode="decimal"
+            [value]="minCents() === null ? '' : minCents()! / 100"
+            [attr.aria-describedby]="
+              priceError() ? prefix() + '-price-error' : null
+            "
+          />
+        </label>
+        <label
+          ><span>Hasta ({{ price.currency }})</span>
+          <input
+            #maxInput
+            type="number"
+            min="0"
+            max="21474836.47"
+            step="0.01"
+            inputmode="decimal"
+            [value]="maxCents() === null ? '' : maxCents()! / 100"
+            [attr.aria-describedby]="
+              priceError() ? prefix() + '-price-error' : null
+            "
+          />
+        </label>
+      </div>
+      @if (priceError()) {
+        <p class="price-error" role="alert" [id]="prefix() + '-price-error'">
+          {{ priceError() }}
+        </p>
+      }
+      <button class="store-btn store-btn--secondary price-apply" type="submit">
+        Aplicar precio
+      </button>
+    </form>
+  </details>
+}
+
+@for (group of facets().groups; track group.key; let index = $index) {
+  <details class="filter-group" [open]="index < 3 || hasSelection(group.key)">
+    <summary>{{ group.label }}</summary>
+    <div class="filter-values">
+      @for (option of group.values; track option.value) {
+        <label class="filter-option">
+          <input
+            type="checkbox"
+            [checked]="isSelected(group.key, option.value)"
+            (change)="toggle(group.key, option.value)"
+          />
+          <span>{{ option.value }}</span
+          ><span class="filter-count">{{ option.count }}</span>
+        </label>
+      }
+    </div>
+  </details>
+}

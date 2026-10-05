@@ -2,6 +2,7 @@ import { ApiPropertyOptional } from '@nestjs/swagger';
 import {
   IsIn,
   IsInt,
+  IsJSON,
   IsOptional,
   IsString,
   Max,
@@ -24,8 +25,29 @@ export class ProductListQueryDto {
   @ApiPropertyOptional()
   @IsOptional()
   @IsString()
-  @MaxLength(80)
+  @MaxLength(400)
   category?: string;
+
+  @ApiPropertyOptional({ description: 'JSON array of { key, values[] } catalog facets' })
+  @IsOptional()
+  @IsString()
+  @IsJSON()
+  @MaxLength(6000)
+  filters?: string;
+
+  @ApiPropertyOptional({ description: 'Minimum displayed price in integer cents' })
+  @IsOptional()
+  @IsInt()
+  @Min(0)
+  @Max(2147483647)
+  minPriceCents?: number;
+
+  @ApiPropertyOptional({ description: 'Maximum displayed price in integer cents' })
+  @IsOptional()
+  @IsInt()
+  @Min(0)
+  @Max(2147483647)
+  maxPriceCents?: number;
 
   @ApiPropertyOptional()
   @IsOptional()

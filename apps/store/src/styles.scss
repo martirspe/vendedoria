@@ -1,6 +1,8 @@
 @use '../../../packages/design-tokens/tokens';
 @use '../../../packages/design-tokens/storefront';
 @use 'sass:meta';
+// Shared controls stay above template reset layers and inherit each store's tokens.
+@use 'store-buttons';
 
 @font-face {
   font-family: 'Manrope';

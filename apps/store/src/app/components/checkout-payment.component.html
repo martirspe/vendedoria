@@ -3,7 +3,14 @@
     @if (!sectionNumber()) { <ds-icon name="lock" [size]="1.2" /> }
     <h2 id="checkout-pay-title">@if (sectionNumber()) { <span class="payment__number" aria-hidden="true">{{ sectionNumber() }}</span> }Pago</h2>
   </div>
-  @if (processing()) {
+  @if (demo.active) {
+    <p class="payment__notice">Vista previa del pago. No ingreses datos personales; aquí no se realizan pedidos ni cobros.</p>
+    <div class="payment__methods" role="group" aria-label="Medios de pago de ejemplo">
+      <button type="button" disabled><ds-icon name="creditCard" />Tarjeta</button>
+      <button type="button" disabled><ds-icon name="wallet" />Yape</button>
+    </div>
+    <button type="button" class="store-btn store-btn--primary store-btn--block" disabled>Pagar {{ payableTotal() | money }}</button>
+  } @else if (processing()) {
     <p role="status">Estamos confirmando tu pago. Tu pedido está registrado; espera la confirmación antes de volver a pagar.</p>
     <button type="button" class="store-btn store-btn--secondary store-btn--block" [disabled]="busy()" (click)="checkStatus()">Verificar pago</button>
   } @else if (order()?.status === 'CANCELLED' || (order() && !canPay() && !paid())) {

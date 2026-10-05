@@ -1,3 +1,5 @@
+import { RecommendationsComponent } from '../../components/recommendations.component';
+import { CartRecoveryComponent } from '../../components/cart-recovery.component';
 import { ChangeDetectionStrategy, Component, afterNextRender, computed, effect, inject } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { CartLine, CartService } from '../../core/cart.service';
@@ -5,14 +7,14 @@ import { MoneyPipe } from '../../core/money.pipe';
 import { SeoService } from '../../core/seo.service';
 import { StoreStateService } from '../../core/store-state.service';
 import { whatsappUrl } from '../../core/whatsapp';
-import { Product, SelectaCatalog, bagLine, complements, maxUnits, scarcity } from './selecta-catalog';
+import { SelectaCatalog, maxUnits } from './selecta-catalog';
 import { wholeMoney } from '../../core/store-faq';
 import { SelectaIcon } from './selecta-icon';
 import { SelectaProductImage } from './selecta-photo';
 
 @Component({
   selector: 'selecta-cart',
-  imports: [RouterLink, MoneyPipe, SelectaIcon, SelectaProductImage],
+  imports: [RecommendationsComponent, CartRecoveryComponent, RouterLink, MoneyPipe, SelectaIcon, SelectaProductImage],
   templateUrl: './cart.page.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
@@ -35,12 +37,7 @@ export class SelectaCartPage {
   readonly invalid = computed(() => this.rows().some((r) => r.line.quantity > r.max));
   /** Live catalog prices: the bag never shows a price the checkout will not charge. */
   readonly total = computed(() => this.rows().reduce((n, r) => n + r.unitCents * r.line.quantity, 0));
-  readonly extras = computed(() =>
-    complements(
-      this.cart.lines().map((l) => ({ handle: l.handle, quantity: l.quantity })),
-      this.catalog.products(),
-    ),
-  );
+  readonly recommendationHandles = computed(() => this.cart.lines().map((line) => line.handle));
   readonly freeFrom = computed(() => this.store()?.shipping.freeShippingFromCents ?? 0);
   readonly missing = computed(() => this.freeFrom() - this.total());
   readonly progress = computed(() =>
@@ -77,7 +74,6 @@ export class SelectaCartPage {
     return whatsappUrl(store.whatsappPhone, text);
   });
 
-  readonly scarcity = scarcity;
 
   constructor() {
     inject(SeoService).set({ title: 'Mi bolsa', path: '/carrito', noindex: true });
@@ -94,7 +90,4 @@ export class SelectaCartPage {
     else this.cart.setQuantity(line.key, quantity);
   }
 
-  addExtra(p: Product): void {
-    this.cart.add(bagLine(p), 1, maxUnits(p));
-  }
 }

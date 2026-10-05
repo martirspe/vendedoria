@@ -17,7 +17,7 @@
   } @else if (lines().length) {
     <div class="checkout-layout">
       <div class="checkout-form">
-        <form [formGroup]="form" (ngSubmit)="$event.preventDefault()" novalidate>
+        <form [attr.inert]="demo.active ? '' : null" [formGroup]="form" (ngSubmit)="$event.preventDefault()" novalidate>
 <fieldset class="checkout-fields" [disabled]="busy() || !!reservedOrder()">
           <section class="checkout-section">
             <h2><span aria-hidden="true">01</span>Tus datos</h2>
@@ -40,6 +40,7 @@
                 }
               </div>
             </div>
+            <store-cart-recovery [email]="form.controls.email.value" [phone]="form.controls.phone.value" [items]="items()" [disabled]="busy() || !!reservedOrder()" />
           </section>
 
           @if (hasServices()) {
@@ -125,6 +126,7 @@
             <span>Soy mayor de edad y acepto los <a routerLink="/terminos-y-condiciones" target="_blank">Términos y Condiciones</a> y la <a routerLink="/cambios-y-devoluciones" target="_blank">Política de Cambios y Devoluciones</a>. He leído la <a routerLink="/politica-de-privacidad" target="_blank">Política de Privacidad</a>.@if (carrierChosen()) { <span class="consent-shipping">También acepto la tarifa referencial de envío; cualquier diferencia requerirá mi aprobación antes del despacho.</span> }</span>
           </label>
           @if (invalid('consent')) { <small class="field-error" role="alert">Acepta los términos y revisa la política de privacidad para continuar.</small> }
+          <store-recommendations [handles]="recommendationHandles()" context="checkout" [addToCart]="false" [disabled]="busy() || !!reservedOrder()" (selected)="selectRecommendation($event)" />
           @if (!reservedOrder() && bumpOffer(); as b) {
             <label class="order-bump" [class.on]="bump() === b.handle">
               <input type="checkbox" [checked]="bump() === b.handle" (change)="bump.set($any($event.target).checked ? b.handle : null)" />

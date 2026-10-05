@@ -7,13 +7,32 @@ import { ValidationPipe } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import { AppModule } from './app.module';
+import type { FastifyRequest } from 'fastify';
 
 async function bootstrap() {
   const app = await NestFactory.create<NestFastifyApplication>(
     AppModule,
     // nginx and the store server reach the API over the Docker network; trusting only those
     // hops makes `request.ip` the real client and ignores X-Forwarded-For sent by the client.
-    new FastifyAdapter({ logger: true, trustProxy: ['loopback', 'uniquelocal'] }),
+    new FastifyAdapter({
+      logger: {
+        serializers: {
+          req: (request: FastifyRequest) => ({
+            id: request.id,
+            method: request.method,
+            url: request.url.split('?')[0],
+            host: request.hostname,
+            remoteAddress: request.ip,
+          }),
+        },
+        redact: [
+          'req.headers.authorization',
+          'req.headers.cookie',
+          'res.headers.set-cookie',
+        ],
+      },
+      trustProxy: ['loopback', 'uniquelocal'],
+    }),
     // Webhook signatures (Meta) are computed over the exact bytes received.
     { rawBody: true },
   );

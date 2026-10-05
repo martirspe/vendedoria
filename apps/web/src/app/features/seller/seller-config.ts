@@ -108,3 +108,23 @@ export const SELLER_PRESETS: SellerPreset[] = [
     salesTechniques: ['benefits', 'scarcity', 'micro_commitments', 'alternative_close', 'assumptive_close'],
   },
 ];
+
+/** A profile is selected only while all the settings it applies still match. */
+export function resolveSellerPreset(values: {
+  personalityPreset?: string;
+  communicationStyle: string;
+  salesStyle: string;
+  responseLength: string;
+  salesTechniques: string[];
+  promptMode: string;
+}): string {
+  if (values.personalityPreset === 'custom' || values.promptMode === 'custom') return 'custom';
+  const techniques = new Set(values.salesTechniques);
+  return SELLER_PRESETS.find((preset) =>
+    preset.communicationStyle === values.communicationStyle &&
+    preset.salesStyle === values.salesStyle &&
+    preset.responseLength === values.responseLength &&
+    preset.salesTechniques.length === techniques.size &&
+    preset.salesTechniques.every((technique) => techniques.has(technique)),
+  )?.id ?? 'custom';
+}

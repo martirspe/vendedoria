@@ -1,113 +1,341 @@
-<section class="store-container catalog">
-  <header class="catalog__header">
-    <div>
-      <h1>{{ heading() }}</h1>
-      <p class="catalog__count" aria-live="polite">
-        {{ list().total }} {{ list().total === 1 ? noun().singular : noun().param }}
-      </p>
-    </div>
-    <label class="catalog__sort">
-      <span>Ordenar por</span>
-      <ds-select><select [value]="sort()" (change)="changeSort($any($event.target).value)">
-        @for (option of sortOptions; track option.value) {
-          <option [value]="option.value">{{ option.label }}</option>
+<section
+  class="store-container catalog"
+  [class.catalog--selecta]="store()?.template === 'selecta'"
+  [class.catalog--stride]="store()?.template === 'stride'"
+>
+  <div class="catalog__layout" [attr.aria-busy]="loading()">
+    <aside class="catalog__sidebar" aria-label="Filtros del catálogo">
+      <div class="catalog__filter-heading">
+        <h2>Filtrar</h2>
+        @if (chips().length) {
+          <button class="catalog__clear" type="button" (click)="clearFilters()">
+            Limpiar
+          </button>
         }
-      </select></ds-select>
-    </label>
-  </header>
-
-  <form class="catalog__search" role="search" (submit)="$event.preventDefault(); searchCatalog(searchInput.value)">
-    <label>
-      <span>Buscar en el catálogo</span>
-      <input #searchInput type="search" maxlength="80" [value]="q() || ''" placeholder="Nombre, uso o característica" />
-    </label>
-    <button class="store-btn store-btn--primary" type="submit"><ds-icon name="search" [size]="1" />Buscar</button>
-  </form>
-
-  @if (kindTabs().length) {
-    <nav class="catalog__kinds" aria-label="Filtrar por tipo">
-      <a
-        [class.is-active]="!activeKind()"
-        routerLink="/productos"
-        [queryParams]="{ q: q() || null, orden: orden() || null }"
-        [attr.aria-current]="!activeKind() ? 'page' : null"
-        >Todo</a
-      >
-      @for (tab of kindTabs(); track tab.param) {
-        <a
-          [class.is-active]="activeKind()?.param === tab.param"
-          routerLink="/productos"
-          [queryParams]="{ tipo: tab.param, q: q() || null, orden: orden() || null }"
-          [attr.aria-current]="activeKind()?.param === tab.param ? 'page' : null"
-          >{{ tab.label }}</a
-        >
+      </div>
+      @if (list(); as result) {
+        <fieldset [disabled]="loading()">
+          <store-catalog-filters
+            [facets]="result.facets"
+            [category]="categoria()"
+            [selection]="selection()"
+            [minCents]="minCents()"
+            [maxCents]="maxCents()"
+            (categoryChange)="updateQuery({ categoria: $event })"
+            (selectionChange)="changeSelection($event)"
+            (priceChange)="changePrice($event)"
+          />
+        </fieldset>
       }
-    </nav>
-  }
-
-  @if (store()?.categories?.length) {
-    <nav class="catalog__filters" aria-label="Filtrar por categoría">
-      <a
-        class="store-chip"
-        [class.is-active]="!categoria()"
-        routerLink="/productos"
-        [queryParams]="{ tipo: activeKind()?.param || null, q: q() || null, orden: orden() || null }"
-        [attr.aria-current]="!categoria() ? 'page' : null"
-        >Todos</a
-      >
-      @for (category of store()!.categories; track category) {
-        <a
-          class="store-chip"
-          [class.is-active]="categoria() === category"
-          routerLink="/productos"
-          [queryParams]="{ categoria: category, tipo: activeKind()?.param || null, q: q() || null, orden: orden() || null }"
-          [attr.aria-current]="categoria() === category ? 'page' : null"
-          >{{ category }}</a
-        >
-      }
-    </nav>
-  }
-
-  @if (list().items.length) {
-    <div class="store-grid">
-      @for (product of list().items; track product.handle) {
-        <store-product-card [product]="product" />
-      }
-    </div>
-
-    @if (totalPages() > 1) {
-      <nav class="pagination" aria-label="Paginación">
-        @if (list().page > 1) {
-          <a
-            class="store-btn store-btn--secondary"
-            routerLink="/productos"
-            [queryParams]="{ pagina: list().page - 1 > 1 ? list().page - 1 : null }"
-            queryParamsHandling="merge"
-            rel="prev"
+    </aside>
+    <div class="catalog__main">
+      <header class="catalog__header">
+        <nav class="catalog__breadcrumb" aria-label="Ruta de navegación">
+          <a routerLink="/">Inicio</a
+          ><ds-icon name="chevronRight" [size]="0.8" /><span aria-current="page"
+            >Tienda</span
           >
-            <ds-icon name="chevronLeft" [size]="1" /> Anterior
-          </a>
-        }
-        <span>Página {{ list().page }} de {{ totalPages() }}</span>
-        @if (list().page < totalPages()) {
-          <a
-            class="store-btn store-btn--secondary"
-            routerLink="/productos"
-            [queryParams]="{ pagina: list().page + 1 }"
-            queryParamsHandling="merge"
-            rel="next"
+        </nav>
+        <p class="store-eyebrow">Catálogo completo</p>
+        <h1>{{ heading() }}</h1>
+      </header>
+      <form
+        class="catalog__search"
+        role="search"
+        (submit)="$event.preventDefault(); searchCatalog(searchInput.value)"
+      >
+        <label
+          ><span>Buscar en el catálogo</span
+          ><input
+            #searchInput
+            type="search"
+            maxlength="80"
+            [value]="q() || ''"
+            placeholder="Nombre, uso o característica"
+        /></label>
+        <button
+          class="store-btn store-btn--primary"
+          type="submit"
+          [disabled]="loading()"
+        >
+          <ds-icon name="search" [size]="1" />Buscar
+        </button>
+      </form>
+      @if (kindTabs().length) {
+        <nav class="catalog__kinds" aria-label="Filtrar por tipo">
+          <button
+            type="button"
+            [class.is-active]="!activeKind()"
+            [attr.aria-pressed]="!activeKind()"
+            (click)="updateQuery({ tipo: null })"
           >
-            Siguiente <ds-icon name="chevronRight" [size]="1" />
-          </a>
+            Todo
+          </button>
+          @for (tab of kindTabs(); track tab.param) {
+            <button
+              type="button"
+              [class.is-active]="activeKind()?.param === tab.param"
+              [attr.aria-pressed]="activeKind()?.param === tab.param"
+              (click)="updateQuery({ tipo: tab.param })"
+            >
+              {{ tab.label }}
+            </button>
+          }
+        </nav>
+      }
+      <div class="catalog__toolbar">
+        <button
+          class="store-btn store-btn--secondary catalog__mobile-tools"
+          type="button"
+          [disabled]="!list()"
+          aria-haspopup="dialog"
+          (click)="openDrawer()"
+        >
+          <ds-icon name="slidersHorizontal" [size]="1" />Filtros
+          @if (chips().length) {
+            <span>({{ chips().length }})</span>
+          }
+        </button>
+        <label class="catalog__sort"
+          ><span>Ordenar por</span
+          ><ds-select
+            ><select
+              [value]="sort()"
+              [disabled]="loading()"
+              (change)="changeSort($any($event.target).value)"
+            >
+              @for (option of sortOptions; track option.value) {
+                <option [value]="option.value">{{ option.label }}</option>
+              }
+            </select></ds-select
+          ></label
+        >
+        <div
+          class="catalog__views"
+          role="group"
+          aria-label="Vista del catálogo"
+        >
+          <button
+            type="button"
+            [attr.aria-pressed]="!listView()"
+            [class.is-active]="!listView()"
+            (click)="changeView(false)"
+          >
+            Cuadrícula</button
+          ><button
+            type="button"
+            [attr.aria-pressed]="listView()"
+            [class.is-active]="listView()"
+            (click)="changeView(true)"
+          >
+            <ds-icon name="list" [size]="1" />Lista
+          </button>
+        </div>
+        <p class="catalog__count" aria-live="polite" aria-atomic="true">
+          @if (loading()) {
+            Actualizando…
+          } @else if (list(); as result) {
+            {{ result.total }}
+            {{ result.total === 1 ? noun().singular : noun().param }}
+          }
+        </p>
+        <label class="catalog__size"
+          ><span>Por página</span
+          ><ds-select
+            ><select
+              [value]="pageSize()"
+              [disabled]="loading()"
+              (change)="changePageSize($any($event.target).value)"
+            >
+              @for (size of pageSizes; track size) {
+                <option [value]="size">{{ size }}</option>
+              }
+            </select></ds-select
+          ></label
+        >
+      </div>
+      @if (chips().length) {
+        <div class="catalog__active" aria-label="Filtros activos">
+          @for (chip of chips(); track chip.key + ":" + chip.value) {
+            <button
+              type="button"
+              class="catalog__chip"
+              [attr.aria-label]="'Quitar filtro: ' + chip.label"
+              (click)="removeChip(chip)"
+            >
+              {{ chip.label }}<ds-icon name="x" [size]="0.85" />
+            </button>
+          }
+          <button type="button" class="catalog__clear" (click)="clearFilters()">
+            Limpiar filtros
+          </button>
+        </div>
+      }
+      <div class="catalog__results">
+        @if (loading()) {
+          <div
+            class="store-grid catalog__grid"
+            [class.catalog__grid--list]="listView()"
+            aria-label="Cargando catálogo"
+          >
+            @for (item of skeletons; track item) {
+              <div class="catalog__skeleton" aria-hidden="true">
+                <div></div>
+                <span></span><span></span>
+              </div>
+            }
+          </div>
+        } @else if (!list() || navigationError()) {
+          <div class="store-empty" role="alert">
+            <ds-icon name="alert" [size]="2" />
+            <h2>No pudimos cargar el catálogo</h2>
+            <p>Inténtalo de nuevo para seguir explorando.</p>
+            <button
+              class="store-btn store-btn--primary"
+              type="button"
+              (click)="retry()"
+            >
+              Reintentar
+            </button>
+          </div>
+        } @else if (list(); as result) {
+          @if (result.items.length) {
+            <div
+              class="store-grid catalog__grid"
+              [class.catalog__grid--list]="listView()"
+            >
+              @for (product of result.items; track product.handle) {
+                <store-product-card
+                  [product]="product"
+                  [purchase]="product"
+                  [selection]="selection()"
+                  [listView]="listView()"
+                />
+              }
+            </div>
+          } @else {
+            <div class="store-empty">
+              <ds-icon name="search" [size]="2" />
+              <h2>
+                {{
+                  result.total
+                    ? "Esta página ya no tiene productos"
+                    : chips().length
+                      ? "Probemos con otras opciones"
+                      : "Pronto habrá más para descubrir"
+                }}
+              </h2>
+              <p>
+                {{
+                  result.total
+                    ? "Vuelve al inicio de los resultados para continuar."
+                    : chips().length
+                      ? "Quita un filtro o amplía el precio para encontrar más opciones."
+                      : "Vuelve más adelante para explorar las novedades de esta tienda."
+                }}
+              </p>
+              @if (result.total) {
+                <a
+                  class="store-btn store-btn--secondary"
+                  routerLink="/productos"
+                  [queryParams]="{ pagina: null }"
+                  queryParamsHandling="merge"
+                  >Ver resultados</a
+                >
+              } @else if (chips().length) {
+                <button
+                  class="store-btn store-btn--primary"
+                  type="button"
+                  (click)="clearFilters()"
+                >
+                  Explorar todo el catálogo
+                </button>
+              } @else {
+                <a class="store-btn store-btn--secondary" routerLink="/"
+                  >Volver al inicio</a
+                >
+              }
+            </div>
+          }
+          @if (totalPages() > 1) {
+            <nav class="pagination" aria-label="Paginación">
+              @if (result.page > 1) {
+                <a
+                  class="store-btn store-btn--secondary"
+                  routerLink="/productos"
+                  [queryParams]="{
+                    pagina: result.page - 1 > 1 ? result.page - 1 : null,
+                  }"
+                  queryParamsHandling="merge"
+                  rel="prev"
+                  ><ds-icon name="chevronLeft" [size]="1" />Anterior</a
+                >
+              }
+              <span>Página {{ result.page }} de {{ totalPages() }}</span>
+              @if (result.page < totalPages()) {
+                <a
+                  class="store-btn store-btn--secondary"
+                  routerLink="/productos"
+                  [queryParams]="{ pagina: result.page + 1 }"
+                  queryParamsHandling="merge"
+                  rel="next"
+                  >Siguiente<ds-icon name="chevronRight" [size]="1"
+                /></a>
+              }
+            </nav>
+          }
         }
-      </nav>
+      </div>
+    </div>
+  </div>
+  <dialog
+    #drawer
+    class="catalog__drawer"
+    aria-labelledby="catalog-filter-title"
+    (click)="closeBackdrop($event)"
+    (close)="restoreScrolling()"
+  >
+    <header>
+      <h2 id="catalog-filter-title">Filtros</h2>
+      <button
+        type="button"
+        class="catalog__close"
+        aria-label="Cerrar filtros"
+        (click)="closeDrawer()"
+      >
+        <ds-icon name="x" />
+      </button>
+    </header>
+    @if (list(); as result) {
+      <fieldset [disabled]="loading()">
+        <store-catalog-filters
+          prefix="catalog-mobile"
+          [facets]="result.facets"
+          [category]="categoria()"
+          [selection]="selection()"
+          [minCents]="minCents()"
+          [maxCents]="maxCents()"
+          (categoryChange)="updateQuery({ categoria: $event })"
+          (selectionChange)="changeSelection($event)"
+          (priceChange)="changePrice($event)"
+        />
+      </fieldset>
     }
-  } @else {
-    <div class="store-empty">
-      <ds-icon name="search" [size]="2" />
-      <h2>No encontramos {{ noun().param }}</h2>
-      <p>Prueba con otra búsqueda o revisa todas las categorías.</p>
-      <a class="store-btn store-btn--secondary" routerLink="/productos">Ver todo el catálogo</a>
-    </div>
-  }
+    <footer>
+      <button type="button" class="catalog__clear" (click)="clearFilters()">
+        Limpiar filtros</button
+      ><button
+        class="store-btn store-btn--primary"
+        type="button"
+        [disabled]="loading()"
+        (click)="closeDrawer()"
+      >
+        {{
+          loading()
+            ? "Actualizando…"
+            : "Ver " + (list()?.total ?? 0) + " resultados"
+        }}
+      </button>
+    </footer>
+  </dialog>
 </section>

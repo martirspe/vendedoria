@@ -1,0 +1,19 @@
+@if (demo.active) {
+  <aside class="demo-banner" aria-label="Vista previa de la plantilla">
+    <div>
+      <strong>{{ demo.label }} · Diseño original</strong>
+      <p>Productos y precios de ejemplo. No se realizan pedidos ni cobros.</p>
+    </div>
+    <nav aria-label="Páginas de la vista previa">
+      <a routerLink="/">Inicio</a><a routerLink="/productos">Catálogo</a
+      ><a routerLink="/carrito">Carrito</a>
+      <button
+        type="button"
+        [disabled]="!cart.ready()"
+        (click)="previewPayment()"
+      >
+        Ver pago
+      </button>
+    </nav>
+  </aside>
+}

@@ -8,6 +8,7 @@ import { StorefrontPublicService } from '../storefront/storefront-public.service
 import { Turnstile } from '../turnstile/turnstile.decorator';
 import { UBIGEO_DISTRICTS } from '../ubigeo/ubigeo';
 import { CheckoutService } from './checkout.service';
+import { LiveTokenDto } from '../live/dto/live.dto';
 import {
   CouponPreviewDto,
   CreateCheckoutDto,
@@ -73,6 +74,13 @@ export class CheckoutController {
     @Res({ passthrough: true }) reply: FastifyReply,
   ) {
     return this.checkout.create(await this.access(slug, preview, reply), dto);
+  }
+
+  @Post('live-reservation')
+  @HttpCode(200)
+  @RateLimit('live-checkout-access', 30)
+  async liveReservation(@Param('slug') slug: string, @Body() dto: LiveTokenDto, @Headers(PREVIEW_HEADER) preview: string | undefined, @Res({ passthrough: true }) reply: FastifyReply) {
+    return this.checkout.liveReservation(await this.access(slug, preview, reply), dto.token);
   }
 
   @Get('orders/:id')

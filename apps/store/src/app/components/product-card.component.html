@@ -1,0 +1,143 @@
+@let p = product();
+<article
+  class="card"
+  [class.card--catalog]="purchase()"
+  [class.card--list]="listView()"
+>
+  <a
+    class="card__media"
+    [routerLink]="['/producto', p.handle]"
+    [attr.aria-label]="'Ver ' + p.name"
+    (pointerenter)="secondaryReady.set(true)"
+    (focus)="secondaryReady.set(true)"
+  >
+    @if (imageUrl(); as image) {
+      <img
+        [src]="image"
+        [alt]="p.name"
+        loading="lazy"
+        decoding="async"
+        width="400"
+        height="400"
+      />
+      @if (secondaryReady() && purchase()?.secondaryImageUrl; as secondary) {
+        <img
+          class="card__secondary"
+          [src]="secondary"
+          alt=""
+          aria-hidden="true"
+          loading="lazy"
+          decoding="async"
+          width="400"
+          height="400"
+        />
+      }
+    } @else {
+      <span class="card__placeholder" aria-hidden="true"
+        ><ds-icon name="image" [size]="2"
+      /></span>
+    }
+    @if (!p.isAvailable) {
+      <span class="card__tag card__tag--muted">{{
+        p.kind === "SERVICE" ? "No disponible" : "Agotado"
+      }}</span>
+    } @else if (discount()) {
+      <span class="card__tag">-{{ discount() }}%</span>
+    } @else if (
+      (purchase()?.stockLeft ?? 0) > 0 && purchase()!.stockLeft! <= 5
+    ) {
+      <span class="card__tag"
+        >Quedan {{ purchase()!.stockLeft }}
+        {{ purchase()!.stockLeft === 1 ? "unidad" : "unidades" }}</span
+      >
+    }
+  </a>
+  <div class="card__body">
+    <div class="card__copy">
+      @if (p.brand) {
+        <span class="card__brand">{{ p.brand }}</span>
+      }
+      <h3 class="card__name">
+        <a [routerLink]="['/producto', p.handle]">{{ p.name }}</a>
+      </h3>
+      @if (purchase()?.benefit || p.descriptionShort) {
+        <p class="card__description">
+          {{ purchase()?.benefit || p.descriptionShort }}
+        </p>
+      }
+      @if (service(); as summary) {
+        <span class="card__service"
+          ><ds-icon name="clock" [size]="0.85" />{{ summary }}</span
+        >
+      }
+    </div>
+    <p class="card__price">
+      @if (p.priceVaries && !variant()) {
+        <span class="card__from">Desde</span>
+      }
+      <strong>{{ priceCents() | money: p.currency }}</strong>
+      @if (discount() > 0) {
+        <s>{{ p.compareAtPriceCents | money: p.currency }}</s>
+      }
+    </p>
+    @if (purchase(); as card) {
+      @if (card.variants.length) {
+        <label class="card__variants"
+          ><span>Elige tu opción</span>
+          <ds-select
+            ><select
+              [value]="variantId()"
+              (change)="selectVariant($any($event.target).value)"
+              [attr.aria-label]="'Opciones de ' + p.name"
+            >
+              <option value="" disabled>Selecciona una opción</option>
+              @for (option of options(); track option.id) {
+                <option [value]="option.id" [disabled]="!option.isAvailable">
+                  {{ option.label
+                  }}{{ !option.isAvailable ? " · Agotado" : "" }}
+                </option>
+              }
+            </select></ds-select
+          >
+        </label>
+      }
+      <button
+        class="store-btn store-btn--primary card__add"
+        type="button"
+        [disabled]="!canAdd()"
+        (click)="addToCart()"
+        [attr.aria-label]="'Agregar ' + p.name + ' al carrito'"
+      >
+        <ds-icon [name]="added() ? 'check' : 'shoppingBag'" [size]="1" />{{
+          !p.isAvailable
+            ? "No disponible"
+            : card.hasVariants && !variant()
+              ? "Elige una opción"
+              : added()
+                ? "Agregar otro"
+                : "Agregar al carrito"
+        }}
+      </button>
+      @if (online() && canAdd()) {
+        <button
+          class="card__buy"
+          type="button"
+          (click)="buyNow()"
+          [attr.aria-label]="'Comprar ' + p.name + ' ahora'"
+        >
+          Comprar ahora<ds-icon name="arrowRight" [size]="0.9" />
+        </button>
+      }
+      <p class="card__feedback" role="status">
+        @if (added()) {
+          Agregado al carrito. <a routerLink="/carrito">Ver carrito</a>
+        }
+      </p>
+    } @else {
+      <a class="card__action" [routerLink]="['/producto', p.handle]"
+        >{{ p.hasVariants ? "Elegir opciones" : "Ver detalle"
+        }}<ds-icon name="arrowRight" [size]="1"
+      /></a>
+    }
+  </div>
+</article>

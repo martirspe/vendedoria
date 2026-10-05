@@ -1,4 +1,5 @@
 <section class="store-container cart">
+<store-cart-recovery [captureEnabled]="false" />
   <h1>Tu carrito</h1>
 
   @if (!cart.ready()) {
@@ -56,6 +57,7 @@
         }
       </ul>
 
+      <store-recommendations [handles]="recommendationHandles()" />
       <aside class="summary" aria-labelledby="summary-title">
         <h2 id="summary-title">Resumen</h2>
         <dl>

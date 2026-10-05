@@ -1,3 +1,6 @@
+import { ConversionSession } from '../../core/conversion-session.service';
+import { RecommendationsComponent } from '../../components/recommendations.component';
+import { CartRecoveryComponent } from '../../components/cart-recovery.component';
 import { DsSelectComponent } from '@vendedoria/ui';
 import {
   ChangeDetectionStrategy,
@@ -31,7 +34,8 @@ import { SeoService } from '../../core/seo.service';
 import { isCarrier } from '../../core/shipping';
 import { StoreApiService } from '../../core/store-api.service';
 import { StoreStateService } from '../../core/store-state.service';
-import { MAX_UNITS, Product, SelectaCatalog, complements, maxUnits } from './selecta-catalog';
+import { TemplateDemo } from '../../core/template-demo';
+import { MAX_UNITS, Product, SelectaCatalog, maxUnits } from './selecta-catalog';
 import { SelectaIcon } from './selecta-icon';
 import { SelectaProductImage } from './selecta-photo';
 
@@ -52,12 +56,15 @@ type DeliveryChoice = { mode: ShippingMode; label: string; cents: number; note: 
 
 @Component({
   selector: 'selecta-checkout',
-  imports: [DsSelectComponent, ReactiveFormsModule, RouterLink, MoneyPipe, SelectaIcon, SelectaProductImage, DsTurnstileComponent, CheckoutPaymentComponent],
+  imports: [RecommendationsComponent, CartRecoveryComponent, DsSelectComponent, ReactiveFormsModule, RouterLink, MoneyPipe, SelectaIcon, SelectaProductImage, DsTurnstileComponent, CheckoutPaymentComponent],
   templateUrl: './checkout.page.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class SelectaCheckoutPage {
+  readonly demo = inject(TemplateDemo);
   private readonly host = inject<ElementRef<HTMLElement>>(ElementRef);
+  readonly conversion = inject(ConversionSession);
+  readonly recommendationHandles = computed(() => this.items().map((item) => item.handle));
   private readonly api = inject(StoreApiService);
   private readonly router = inject(Router);
   private readonly route = inject(ActivatedRoute);
@@ -137,9 +144,16 @@ export class SelectaCheckoutPage {
     });
   });
   readonly bump = signal<string | null>(null);
-  readonly bumpOffer = computed(
-    () => complements(this.base().map((l) => ({ handle: l.handle, quantity: l.quantity })), this.catalog.products(), 1)[0],
-  );
+  readonly bumpOffer = signal<Product | undefined>(undefined);
+  async selectRecommendation(product: { handle: string }): Promise<void> {
+    if (this.busy() || this.reservedOrder()) return;
+    try {
+      await this.catalog.ensure([product.handle], true);
+      const offer = this.catalog.find(product.handle);
+      if (!offer || offer.hasVariants || !offer.isAvailable || this.reservedOrder() || this.busy()) return;
+      this.bumpOffer.set(offer); this.bump.set(offer.handle);
+    } catch { this.error.set('No pudimos agregar el complemento. Inténtalo de nuevo.'); }
+  }
   readonly lines = computed<Line[]>(() => {
     const offer = this.bumpOffer();
     if (!offer || this.bump() !== offer.handle) return this.base();
@@ -412,6 +426,7 @@ export class SelectaCheckoutPage {
     try {
       const order = await this.api.checkout({
         checkoutKey: this.checkoutKey(),
+        recoveryToken: this.conversion.checkoutToken(),
         items: this.items(),
         customer: { name: v.name.trim(), email: v.email.trim(), phone: v.phone },
         ...(needsDelivery && choice
@@ -434,6 +449,7 @@ export class SelectaCheckoutPage {
         acceptTerms: true,
       }, token);
       if (this.coupon()) forgetCampaignCoupon();
+      this.conversion.remember(undefined);
       this.reservedOrder.set(order);
       return order;
     } catch (error) {
@@ -446,7 +462,7 @@ export class SelectaCheckoutPage {
     }
   }
 
-  private items() {
+  items() {
     return this.lines().map((l) => ({
       handle: l.handle,
       ...(l.variantId ? { variantId: l.variantId } : {}),

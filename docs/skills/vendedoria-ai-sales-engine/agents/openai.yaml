@@ -1,0 +1,4 @@
+interface:
+  display_name: "VendedorIA AI Sales Engine"
+  short_description: "Maintain state, sales tools and grounded buyer replies"
+  default_prompt: "Use $vendedoria-ai-sales-engine to implement, diagnose or evaluate the VendedorIA buyer-facing sales runtime."

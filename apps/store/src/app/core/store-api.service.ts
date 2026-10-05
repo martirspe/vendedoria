@@ -8,6 +8,7 @@ import type {
   PayOrderRequest,
   ProductKind,
   PublicOrder,
+  PublicLiveReservation,
   PublicProductDetail,
   PublicProductList,
   PublicProductSort,
@@ -16,6 +17,11 @@ import type {
   StoreCatalogProduct,
   StorefrontView,
   UbigeoDistrict,
+  RecoveryOptions,
+  RecoveryCaptureRequest,
+  RecoveryCaptureResult,
+  RecoveredCart,
+  StoreRecommendations,
 } from '@vendedoria/contracts';
 import { STORE_PROXY_PREFIX, TURNSTILE_HEADER } from './store-context';
 
@@ -23,6 +29,9 @@ export type ProductListParams = {
   category?: string | null;
   kind?: ProductKind | null;
   q?: string | null;
+  filters?: string | null;
+  minPriceCents?: number | null;
+  maxPriceCents?: number | null;
   sort?: PublicProductSort | null;
   page?: number | null;
   pageSize?: number;
@@ -31,6 +40,35 @@ export type ProductListParams = {
 @Injectable({ providedIn: 'root' })
 export class StoreApiService {
   private readonly http = inject(HttpClient);
+
+  liveReservation(token: string): Promise<PublicLiveReservation> {
+    return firstValueFrom(this.http.post<PublicLiveReservation>(`${STORE_PROXY_PREFIX}/live-reservation`, { token }));
+  }
+
+  recoveryOptions(): Promise<RecoveryOptions> {
+    return firstValueFrom(this.http.get<RecoveryOptions>(`${STORE_PROXY_PREFIX}/recovery/options`));
+  }
+  captureRecovery(body: RecoveryCaptureRequest, token?: string): Promise<RecoveryCaptureResult> {
+    return firstValueFrom(this.http.post<RecoveryCaptureResult>(`${STORE_PROXY_PREFIX}/recovery`, body, token ? { headers: { [TURNSTILE_HEADER]: token } } : {}));
+  }
+  restoreRecovery(token: string): Promise<RecoveredCart> {
+    return firstValueFrom(this.http.post<RecoveredCart>(`${STORE_PROXY_PREFIX}/recovery/restore`, { token }));
+  }
+  revokeRecovery(token: string): Promise<{ revoked: boolean }> {
+    return firstValueFrom(this.http.post<{ revoked: boolean }>(`${STORE_PROXY_PREFIX}/recovery/revoke`, { token }));
+  }
+  recoveryActivity(token: string, items: CheckoutItemInput[]): Promise<unknown> {
+    return firstValueFrom(this.http.post(`${STORE_PROXY_PREFIX}/recovery/activity`, { token, items }));
+  }
+  recommendations(handles: string[], context: 'product' | 'cart' | 'checkout', sessionId?: string): Promise<StoreRecommendations> {
+    return firstValueFrom(this.http.get<StoreRecommendations>(`${STORE_PROXY_PREFIX}/recommendations`, { params: { handles: handles.join(','), context, ...(sessionId ? { sessionId } : {}) } }));
+  }
+  behavior(sessionId: string, handle: string, kind: 'VIEW' | 'CART'): Promise<unknown> {
+    return firstValueFrom(this.http.post(`${STORE_PROXY_PREFIX}/behavior`, { sessionId, handle, kind, consent: true }));
+  }
+  forgetBehavior(sessionId: string): Promise<unknown> {
+    return firstValueFrom(this.http.post(`${STORE_PROXY_PREFIX}/behavior/forget`, { sessionId }));
+  }
 
   store(): Promise<StorefrontView | null> {
     return this.orNull(this.http.get<StorefrontView>(STORE_PROXY_PREFIX));

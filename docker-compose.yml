@@ -10,6 +10,27 @@
 name: vendedoria
 
 services:
+  redis:
+    image: redis:7.4-alpine
+    command: redis-server --appendonly yes --maxmemory 128mb --maxmemory-policy noeviction
+    volumes: [redis_conversion:/data]
+    healthcheck:
+      test: ['CMD', 'redis-cli', 'ping']
+      interval: 5s
+      timeout: 3s
+      retries: 20
+    restart: unless-stopped
+    security_opt: [no-new-privileges:true]
+    networks: [database]
+
+  qdrant:
+    image: qdrant/qdrant:v1.19.1
+    profiles: [recommendations-vector]
+    volumes: [qdrant_conversion:/qdrant/storage]
+    restart: unless-stopped
+    security_opt: [no-new-privileges:true]
+    networks: [database]
+
   postgres:
     image: postgres:16-bookworm
     container_name: vendedoria-db
@@ -54,6 +75,7 @@ services:
     environment:
       TZ: ${TZ:-America/Lima}
       NODE_ENV: production
+      REDIS_URL: redis://redis:6379/0
       PORT: '3000'
       DATABASE_URL: postgresql://${POSTGRES_USER:-vendedoria}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-vendedoria}?schema=public
       CORS_ORIGIN: https://${CONSOLE_HOST:?Define CONSOLE_HOST en .env}
@@ -66,6 +88,7 @@ services:
         limits:
           memory: ${API_MEMORY_LIMIT:-512M}
     depends_on:
+      redis: {condition: service_healthy}
       migrate: {condition: service_completed_successfully}
     healthcheck:
       test: ['CMD', 'node', '-e', "fetch('http://127.0.0.1:3000/api/v1/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
@@ -172,6 +195,8 @@ services:
     networks: [app]
 
 volumes:
+  redis_conversion:
+  qdrant_conversion:
   pgdata:
   uploads:
 

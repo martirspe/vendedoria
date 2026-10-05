@@ -47,6 +47,19 @@
               <span class="status">{{ featureStatusLabel(card) }}</span>
             </div>
             <p>{{ card.summary }}</p>
+            @if (card.key === 'tiktok_live' && card.state?.active) {
+              @if (tiktok(); as connection) {
+                <p>{{ connection.connected ? 'Cuenta conectada' : connection.healthStatus === 'DEGRADED' ? 'Requiere reconexión' : 'Cuenta sin conectar · operación manual disponible' }}</p>
+                @if (connection.errorCode) { <p role="alert">Revisa la autorización de tu cuenta en Configurar.</p> }
+                @if (connection.lastEventAt) { <p>Último evento: {{ connection.lastEventAt | date:'short' }}</p> }
+                @if (canManage) {
+                  <div class="feature__actions">
+                    <ds-button type="button" variant="secondary" (click)="connectTikTok()" [disabled]="busyKey() !== null || !connection.oauthAvailable">{{ connection.connected ? 'Reconectar' : 'Conectar TikTok' }}</ds-button>
+                    @if (connection.accountId) { <ds-button type="button" variant="ghost" (click)="disconnectTikTok()" [disabled]="busyKey() !== null">Desconectar cuenta</ds-button> }
+                  </div>
+                }
+              }
+            }
             <div class="feature__actions">
               @switch (card.status) {
                 @case ('active') {

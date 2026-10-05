@@ -3,6 +3,7 @@ import { Meta, Title } from '@angular/platform-browser';
 import { StoreRequestContext } from './store-context';
 import { StoreStateService } from './store-state.service';
 import { storeBrand } from './theme';
+import { TemplateDemo } from './template-demo';
 
 export type SeoInput = {
   title: string;
@@ -16,6 +17,7 @@ export type SeoInput = {
 
 @Injectable({ providedIn: 'root' })
 export class SeoService {
+  private readonly demo = inject(TemplateDemo);
   private readonly title = inject(Title);
   private readonly meta = inject(Meta);
   private readonly document = inject(DOCUMENT);
@@ -46,7 +48,7 @@ export class SeoService {
     this.tag(
       'name',
       'robots',
-      store?.isPreview || input.noindex ? 'noindex, nofollow' : 'index, follow',
+      this.demo.active || store?.isPreview || input.noindex ? 'noindex, nofollow' : 'index, follow',
     );
     this.tag('property', 'og:title', fullTitle);
     this.tag('property', 'og:description', description.slice(0, 200));

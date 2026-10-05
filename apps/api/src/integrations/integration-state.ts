@@ -1,7 +1,7 @@
 import type { PrismaService } from '../prisma/prisma.service';
 import { IntegrationKey, planAllows, resolvePlanState } from '../billing/plan-catalog';
 
-export const INTEGRATION_KEYS: IntegrationKey[] = ['store', 'custom_domain', 'instagram', 'tracking', 'team'];
+export const INTEGRATION_KEYS: IntegrationKey[] = ['store', 'custom_domain', 'instagram', 'tracking', 'team', 'tiktok_live'];
 
 /**
  * Integrations that work on top of another one. Each keeps its own switch and settings: while the
@@ -10,6 +10,7 @@ export const INTEGRATION_KEYS: IntegrationKey[] = ['store', 'custom_domain', 'in
 export const INTEGRATION_REQUIRES: Partial<Record<IntegrationKey, IntegrationKey>> = {
   custom_domain: 'store',
   tracking: 'store',
+  tiktok_live: 'store',
 };
 
 export function isIntegrationKey(value: string): value is IntegrationKey {

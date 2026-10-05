@@ -63,6 +63,7 @@ export const routes: Routes = [
       import('./layout/console-shell.layout').then((m) => m.ConsoleShellLayout),
     children: [
       { path: '', pathMatch: 'full', redirectTo: 'get-started' },
+      { path: 'tiktok-live', loadComponent: () => import('./features/live/live.page').then((m) => m.LivePage) },
       {
         path: 'products',
         loadComponent: () =>

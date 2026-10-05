@@ -25,6 +25,8 @@ import { IntegrationsModule } from './integrations/integrations.module';
 import { TeamModule } from './team/team.module';
 import { PlatformModule } from './platform/platform.module';
 import { validateEnv } from './config/env.validation';
+import { ConversionModule } from './conversion/conversion.module';
+import { LiveModule } from './live/live.module';
 
 @Module({
   imports: [
@@ -53,6 +55,8 @@ import { validateEnv } from './config/env.validation';
     ShippingModule,
     CouponsModule,
     CheckoutModule,
+    ConversionModule,
+    LiveModule,
     IntegrationsModule,
     TeamModule,
     PlatformModule,

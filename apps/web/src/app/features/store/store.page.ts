@@ -1,3 +1,4 @@
+import { ConversionSettingsComponent } from './conversion-settings.component';
 import { DsSelectComponent } from '@vendedoria/ui';
 import {
   ChangeDetectionStrategy,
@@ -45,22 +46,26 @@ export const TEMPLATE_OPTIONS: {
   value: StoreTemplate;
   label: string;
   description: string;
+  cover: string;
   industries: StoreIndustry[] | 'all';
 }[] = [
   {
     value: 'stride',
+    cover: '/template-previews/stride.webp',
     label: 'Impulso',
     description: 'Moda y calzado con portada editorial, categorías visuales y productos protagonistas. Una compra clara desde el primer vistazo.',
     industries: ['moda'],
   },
   {
     value: 'classic',
+    cover: '/template-previews/classic.webp',
     label: 'Clásica',
     description: 'Catálogo limpio con tus colores. Sirve para cualquier rubro.',
     industries: 'all',
   },
   {
     value: 'selecta',
+    cover: '/template-previews/selecta.webp',
     label: 'Selecta',
     description:
       'Editorial y elegante, pensada para belleza: sets con ahorro, complementos en el carrito y fichas con notas, beneficios y modo de uso.',
@@ -71,7 +76,7 @@ export const TEMPLATE_OPTIONS: {
 @Component({
   selector: 'app-store-page',
   standalone: true,
-  imports: [DsSelectComponent, ReactiveFormsModule, RouterLink, DsButtonComponent, DsIconComponent, IntegrationGateComponent],
+  imports: [ConversionSettingsComponent, DsSelectComponent, ReactiveFormsModule, RouterLink, DsButtonComponent, DsIconComponent, IntegrationGateComponent],
   templateUrl: './store.page.html',
   styleUrl: './store.page.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -88,6 +93,7 @@ export class StorePage {
   readonly errorMessage = signal<string | null>(null);
   readonly successMessage = signal<string | null>(null);
   readonly view = signal<StoreSettingsView | null>(null);
+  readonly failedCovers = signal<StoreTemplate[]>([]);
 
   readonly isPublished = computed(() => this.view()?.storefront.status === 'PUBLISHED');
   readonly hiddenProducts = computed(() => {
@@ -159,6 +165,17 @@ export class StorePage {
     if (!this.templates().find((t) => t.value === template)?.available) return;
     this.form.controls.template.setValue(template);
     this.form.controls.template.markAsDirty();
+  }
+
+  templatePreviewUrl(template: StoreTemplate): string {
+    const view = this.view();
+    if (!view) return '';
+    const base = view.templateDemoBaseUrl ?? new URL('/_templates/', view.url).href;
+    return new URL(`${template}/`, base).href;
+  }
+
+  coverFailed(template: StoreTemplate): void {
+    this.failedCovers.update((covers) => [...new Set([...covers, template])]);
   }
 
   async load(): Promise<void> {

@@ -1,0 +1,68 @@
+<section aria-label="Recomendaciones para tu selección">
+  @if (missingForFree()) {
+    <p>
+      Te faltan {{ missingForFree() | money }} en productos para alcanzar el
+      mínimo de envío gratis. Se confirma al elegir la entrega.
+    </p>
+  }
+  @if (status() === "loading") {
+    <p aria-busy="true">Buscando opciones para tu selección…</p>
+  } @else if (status() === "error") {
+    <p>
+      No pudimos cargar las sugerencias.
+      <button type="button" (click)="retry()">Reintentar</button>
+    </p>
+  } @else if (result().items.length) {
+    <h2>Completa tu selección</h2>
+    <div class="offers">
+      @for (item of result().items; track item.product.handle) {
+        <article>
+          <a [routerLink]="['/producto', item.product.handle]">
+            @if (item.product.imageUrl) {
+              <img
+                [src]="item.product.imageUrl"
+                [alt]="item.product.name"
+                loading="lazy"
+              />
+            }
+            <strong>{{ item.product.name }}</strong>
+          </a>
+          <p>
+            {{ item.product.priceVaries ? "Desde " : ""
+            }}{{ item.product.priceCents | money: item.product.currency }}
+          </p>
+          @if (item.reason === "bought-together") {
+            <small>Comprados juntos en esta tienda</small>
+          } @else if (item.reason === "upgrade") {
+            <small>Una opción más completa</small>
+          }
+          @if (item.product.hasVariants) {
+            <a [routerLink]="['/producto', item.product.handle]"
+              >Elegir opciones</a
+            >
+          } @else {
+            <button
+              type="button"
+              (click)="add(item.product)"
+              [disabled]="disabled() || !!adding()"
+            >
+              {{
+                adding() === item.product.handle
+                  ? "Agregando…"
+                  : "Agregar al carrito"
+              }}
+            </button>
+          }
+        </article>
+      }
+    </div>
+  } @else if (status() === "ready") {
+    <p>
+      Por ahora no hay complementos para esta selección.
+      <a routerLink="/productos">Explorar catálogo</a>
+    </p>
+  }
+  @if (feedback()) {
+    <p role="status">{{ feedback() }}</p>
+  }
+</section>

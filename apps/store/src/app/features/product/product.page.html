@@ -162,16 +162,7 @@
       </section>
     </div>
 
-    @if (p.related.length) {
-      <section class="related" aria-labelledby="related-title">
-        <h2 id="related-title">También te puede gustar</h2>
-        <div class="related__track">
-          @for (item of p.related; track item.handle) {
-            <store-product-card [product]="item" />
-          }
-        </div>
-      </section>
-    }
+    <store-recommendations [handles]="[p.handle]" context="product" />
   </div>
 } @else {
   <store-not-found-page />

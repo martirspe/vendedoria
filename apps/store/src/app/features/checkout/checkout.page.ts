@@ -1,8 +1,12 @@
+import { ConversionSession } from '../../core/conversion-session.service';
+import { RecommendationsComponent } from '../../components/recommendations.component';
+import { CartRecoveryComponent } from '../../components/cart-recovery.component';
 import { DsSelectComponent } from '@vendedoria/ui';
 import {
   ChangeDetectionStrategy,
   Component,
   ElementRef,
+  afterNextRender,
   computed,
   effect,
   inject,
@@ -11,8 +15,9 @@ import {
   viewChild,
 } from '@angular/core';
 import { HttpErrorResponse } from '@angular/common/http';
+import { DatePipe } from '@angular/common';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
-import { Router, RouterLink } from '@angular/router';
+import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import type {
   CouponPreviewResult,
   PublicOrder,
@@ -30,19 +35,26 @@ import { SeoService } from '../../core/seo.service';
 import { isCarrier } from '../../core/shipping';
 import { StoreApiService } from '../../core/store-api.service';
 import { StoreStateService } from '../../core/store-state.service';
+import { TemplateDemo } from '../../core/template-demo';
 
 const CHECKOUT_KEY = 'vendedoria-checkout-key';
 const CHALLENGE_PENDING = 'Completa la verificación de seguridad para continuar.';
 
 @Component({
   selector: 'store-checkout-page',
-  imports: [DsSelectComponent, ReactiveFormsModule, RouterLink, DsIconComponent, DsTurnstileComponent, MoneyPipe, CheckoutPaymentComponent],
+  imports: [DatePipe, RecommendationsComponent, CartRecoveryComponent, DsSelectComponent, ReactiveFormsModule, RouterLink, DsIconComponent, DsTurnstileComponent, MoneyPipe, CheckoutPaymentComponent],
   templateUrl: './checkout.page.html',
   styleUrl: './checkout.page.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class CheckoutPage {
+  readonly demo = inject(TemplateDemo);
+  readonly liveToken = inject(ActivatedRoute).snapshot.queryParamMap.get('live') ?? undefined;
+  readonly liveLoading = signal(Boolean(this.liveToken));
+  readonly liveExpiresAt = signal<string | null>(null);
   private readonly host = inject<ElementRef<HTMLElement>>(ElementRef);
+  readonly conversion = inject(ConversionSession);
+  readonly recommendationHandles = computed(() => this.items().map((item) => item.handle));
   private readonly api = inject(StoreApiService);
   private readonly router = inject(Router);
   private readonly fb = inject(FormBuilder);
@@ -132,6 +144,9 @@ export class CheckoutPage {
 
   constructor() {
     inject(SeoService).set({ title: 'Finalizar compra', path: '/checkout', noindex: true });
+    if (this.liveToken) {
+      afterNextRender(() => void this.loadLiveReservation());
+    }
     const analytics = inject(AnalyticsService);
     let checkoutTracked = false;
     effect(() => {
@@ -148,7 +163,7 @@ export class CheckoutPage {
     this.form.controls.ubigeo.valueChanges.subscribe((code) => void this.loadQuotes(code));
     const campaign = campaignCoupon();
     effect(() => {
-      if (campaign && this.store()?.checkout.couponsEnabled && this.cart.ready() && this.cart.lines().length) {
+      if (!this.liveToken && campaign && this.store()?.checkout.couponsEnabled && this.cart.ready() && this.cart.lines().length) {
         if (!this.coupon() && !this.applyingCoupon() && !this.form.controls.couponCode.value) {
           this.form.controls.couponCode.setValue(campaign);
           void this.applyCoupon();
@@ -158,7 +173,7 @@ export class CheckoutPage {
     this.form.controls.department.valueChanges.subscribe((value) => this.selectDepartment(value, false));
     this.form.controls.province.valueChanges.subscribe((value) => this.selectProvince(value, false));
     effect(() => {
-      if (this.cart.ready() && !this.cart.lines().length && !this.submitting() && !this.reservedOrder()) {
+      if (!this.liveToken && this.cart.ready() && !this.cart.lines().length && !this.submitting() && !this.reservedOrder()) {
         void this.router.navigate(['/carrito']);
       }
     });
@@ -277,6 +292,8 @@ export class CheckoutPage {
     try {
       const order = await this.api.checkout({
         checkoutKey: this.checkoutKey(),
+        recoveryToken: this.liveToken ? undefined : this.conversion.checkoutToken(),
+        liveReservationToken: this.liveToken,
         items: this.items(),
         customer: {
           name: v.name.trim(),
@@ -304,12 +321,13 @@ export class CheckoutPage {
         acceptTerms: true,
       }, token);
       if (this.coupon()) forgetCampaignCoupon();
+      if (!this.liveToken) this.conversion.remember(undefined);
       this.reservedOrder.set(order);
       return order;
     } catch (error) {
       this.errorMessage.set(this.messageFrom(error, 'No pudimos registrar tu pedido. Inténtalo de nuevo.'));
       if (error instanceof HttpErrorResponse && error.status === 409) {
-        sessionStorage.removeItem(CHECKOUT_KEY);
+        sessionStorage.removeItem(this.checkoutStorageKey());
       }
       widget?.reset();
       return null;
@@ -318,7 +336,7 @@ export class CheckoutPage {
     }
   }
 
-  private items() {
+  items() {
     return this.cart.lines().map((line) => ({
       handle: line.handle,
       ...(line.variantId ? { variantId: line.variantId } : {}),
@@ -326,14 +344,37 @@ export class CheckoutPage {
     }));
   }
 
+  async loadLiveReservation(): Promise<void> {
+    if (!this.liveToken) return;
+    this.liveLoading.set(true);
+    this.errorMessage.set(null);
+    try {
+      const reservation = await this.api.liveReservation(this.liveToken);
+      this.cart.restoreTransient([reservation.line]);
+      this.cart.ready.set(true);
+      this.liveExpiresAt.set(reservation.expiresAt);
+      this.reservedOrder.set(reservation.order);
+      this.form.controls.couponCode.setValue('');
+    } catch (error) {
+      this.errorMessage.set(this.messageFrom(error, 'No pudimos abrir tu reserva LIVE. Solicita un nuevo enlace al negocio.'));
+    } finally {
+      this.liveLoading.set(false);
+    }
+  }
+
   /** Same key while the buyer retries, so a double click never creates two orders. */
   private checkoutKey(): string {
-    let key = sessionStorage.getItem(CHECKOUT_KEY);
+    const storageKey = this.checkoutStorageKey();
+    let key = sessionStorage.getItem(storageKey);
     if (!key) {
       key = crypto.randomUUID();
-      sessionStorage.setItem(CHECKOUT_KEY, key);
+      sessionStorage.setItem(storageKey, key);
     }
     return key;
+  }
+
+  private checkoutStorageKey(): string {
+    return this.liveToken ? `${CHECKOUT_KEY}:live:${this.liveToken.split('.')[0]}` : CHECKOUT_KEY;
   }
 
   private syncAddressValidators(mode: ShippingMode | null): void {

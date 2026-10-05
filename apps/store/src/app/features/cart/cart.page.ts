@@ -1,3 +1,5 @@
+import { RecommendationsComponent } from '../../components/recommendations.component';
+import { CartRecoveryComponent } from '../../components/cart-recovery.component';
 import { ChangeDetectionStrategy, Component, computed, inject } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { DsIconComponent } from '@vendedoria/ui';
@@ -9,7 +11,7 @@ import { whatsappUrl } from '../../core/whatsapp';
 
 @Component({
   selector: 'store-cart-page',
-  imports: [RouterLink, DsIconComponent, MoneyPipe],
+  imports: [RecommendationsComponent, CartRecoveryComponent, RouterLink, DsIconComponent, MoneyPipe],
   templateUrl: './cart.page.html',
   styleUrl: './cart.page.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -18,6 +20,7 @@ export class CartPage {
   private readonly state = inject(StoreStateService);
   readonly cart = inject(CartService);
   readonly store = this.state.store;
+  readonly recommendationHandles = computed(() => this.cart.lines().map((line) => line.handle));
   readonly onlineCheckout = computed(() => this.store()?.checkout.mode === 'online');
 
   /** The order message carries one product reference per line for the sales agent. */

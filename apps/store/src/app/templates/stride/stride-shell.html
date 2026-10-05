@@ -11,7 +11,7 @@
   [style.--store-radius-control]="corners()?.control"
   [style.--store-radius-card]="corners()?.card"
 >
-  <a class="stride-skip" href="#contenido">Saltar al contenido</a>
+  <a class="stride-skip" [routerLink]="[]" fragment="contenido">Saltar al contenido</a>
   @if (s.isPreview && !editor.active()) {
   <div class="stride-preview" role="status">
     Vista previa: tus clientes verán los cambios cuando los publiques.

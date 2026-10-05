@@ -9,6 +9,7 @@ import {
   lastRecommendedProductIds,
   toWhatsAppText,
   withoutLink,
+  wantsPhoto,
 } from './conversation-context';
 
 describe('askedForDistrict', () => {
@@ -45,6 +46,14 @@ describe('confirmsPurchase', () => {
 });
 
 describe('conversationalIntent', () => {
+  it('recognizes only bare greetings, including punctuation and emojis', () => {
+    for (const text of ['Hola', '¡Hola! 😊', 'Buenos días', 'Hola, buenas tardes', 'Hola?']) {
+      expect(conversationalIntent(text)).toBe('greeting');
+    }
+    for (const text of ['Hola, quiero comprar el perfume', 'Hola, ¿hacen envíos?', 'Buenas, mándame una foto']) {
+      expect(conversationalIntent(text)).toBeNull();
+    }
+  });
   it('detects farewells and thanks', () => {
     for (const text of ['Ok, gracias', 'gracias!!', 'Chau 👋', 'Muchas gracias por la ayuda', 'listo, hasta luego']) {
       expect(conversationalIntent(text)).toBe('closing');
@@ -61,6 +70,23 @@ describe('conversationalIntent', () => {
     expect(conversationalIntent('gracias, ¿hacen envíos?')).toBeNull();
     expect(conversationalIntent('sí')).toBeNull();
     expect(conversationalIntent('')).toBeNull();
+  });
+});
+
+describe('wantsPhoto', () => {
+  it('requires a request instead of just mentioning an image', () => {
+    for (const text of ['Mándame una foto', '¿Me envías imágenes?', 'Foto del perfume, porfa', '¿Tienes fotos?', 'Quiero ver cómo se ve', 'La foto por favor', 'Envíame fotos sin filtros']) {
+      expect(wantsPhoto(text)).toBe(true);
+    }
+    for (const text of ['Hola', 'Quiero el perfume', 'No quiero fotos', 'No me mandes imágenes', 'Sin fotos por favor', 'No quiero ver cómo se ve', 'La foto no carga', 'La foto se ve borrosa', 'Tengo fotos del producto']) {
+      expect(wantsPhoto(text)).toBe(false);
+    }
+  });
+
+  it('handles separate requests and refusals', () => {
+    expect(wantsPhoto('No quiero ese perfume, pero mándame una foto del otro')).toBe(true);
+    expect(wantsPhoto('Quiero el perfume, pero no me mandes fotos')).toBe(false);
+    expect(wantsPhoto('Mándame fotos. Mejor no quiero fotos')).toBe(false);
   });
 });
 

@@ -1,0 +1,46 @@
+.demo-banner {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--ds-space-3);
+  padding: var(--ds-space-3) var(--ds-space-5);
+  background: var(--ds-color-bg);
+  color: var(--ds-color-text-primary);
+  border-bottom: 1px solid var(--ds-color-border);
+  font-family: var(--ds-font-ui);
+  font-size: var(--store-type-caption);
+  line-height: var(--store-leading-body);
+}
+p {
+  margin: 0;
+  color: var(--ds-color-text-secondary);
+}
+nav {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--ds-space-2);
+}
+a,
+button {
+  display: inline-flex;
+  align-items: center;
+  min-height: var(--ds-touch-target);
+  padding-inline: var(--ds-space-3);
+  border: 1px solid var(--ds-color-border);
+  border-radius: var(--ds-radius-sm);
+  color: inherit;
+  background: transparent;
+  font: inherit;
+  cursor: pointer;
+  text-decoration: none;
+}
+a:focus-visible,
+button:focus-visible {
+  outline: 2px solid var(--ds-color-text-primary);
+  outline-offset: var(--ds-space-1);
+}
+button:disabled {
+  cursor: default;
+  opacity: 0.6;
+}

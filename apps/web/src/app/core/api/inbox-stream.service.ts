@@ -43,7 +43,7 @@ export class InboxStreamService {
   private readonly auth = inject(AuthApiService);
   private readonly isBrowser = isPlatformBrowser(inject(PLATFORM_ID));
 
-  events(): Observable<InboxStreamEvent> {
+  events(endpoint = 'conversations/stream', parser = parseInboxEvent): Observable<InboxStreamEvent> {
     if (!this.isBrowser) return EMPTY;
     return new Observable<InboxStreamEvent>((subscriber) => {
       let controller: AbortController | null = null;
@@ -62,16 +62,16 @@ export class InboxStreamService {
       const connect = async () => {
         controller = new AbortController();
         try {
-          let response = await this.open(controller.signal);
+          let response = await this.open(controller.signal, endpoint);
           if (response.status === 401) {
             await this.auth.refreshSession();
-            response = await this.open(controller.signal);
+            response = await this.open(controller.signal, endpoint);
           }
           if (!response.ok || !response.body) throw new Error(`HTTP ${response.status}`);
           if (connectedOnce) subscriber.next({ kind: 'reconnected' });
           connectedOnce = true;
           attempt = 0;
-          await this.read(response.body, (event) => subscriber.next(event));
+          await this.read(response.body, (event) => subscriber.next(event), parser);
         } catch {
           // Dropped, unauthorized or offline: retried below while still subscribed.
         }
@@ -87,9 +87,9 @@ export class InboxStreamService {
     });
   }
 
-  private open(signal: AbortSignal): Promise<Response> {
+  private open(signal: AbortSignal, endpoint: string): Promise<Response> {
     const token = this.auth.getAccessToken();
-    return fetch(`${environment.apiBaseUrl}/conversations/stream`, {
+    return fetch(`${environment.apiBaseUrl}/${endpoint}`, {
       headers: {
         Accept: 'text/event-stream',
         ...(token ? { Authorization: `Bearer ${token}` } : {}),
@@ -102,6 +102,7 @@ export class InboxStreamService {
   private async read(
     body: ReadableStream<Uint8Array>,
     emit: (event: InboxStreamEvent) => void,
+    parser: (block: string) => InboxStreamEvent | null,
   ): Promise<void> {
     const reader = body.getReader();
     const decoder = new TextDecoder();
@@ -112,7 +113,7 @@ export class InboxStreamService {
       buffer += decoder.decode(value, { stream: true }).replace(/\r\n?/g, '\n');
       let boundary = buffer.indexOf('\n\n');
       while (boundary >= 0) {
-        const event = parseInboxEvent(buffer.slice(0, boundary));
+        const event = parser(buffer.slice(0, boundary));
         buffer = buffer.slice(boundary + 2);
         if (event) emit(event);
         boundary = buffer.indexOf('\n\n');

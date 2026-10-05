@@ -6,6 +6,8 @@ import {
   signal,
 } from '@angular/core';
 import { Router, RouterLink } from '@angular/router';
+import { DatePipe } from '@angular/common';
+import { LiveApiService, TikTokStatus } from '../../core/api/live-api.service';
 import { DsButtonComponent, DsConfirmService } from '@vendedoria/ui';
 import { DsIconComponent } from '@vendedoria/ui';
 import type { IntegrationKey } from '../../core/api/billing-api.service';
@@ -58,7 +60,7 @@ type IntegrationCard = {
 @Component({
   selector: 'app-integrations-page',
   standalone: true,
-  imports: [RouterLink, DsButtonComponent, DsIconComponent],
+  imports: [RouterLink, DatePipe, DsButtonComponent, DsIconComponent],
   templateUrl: './integrations.page.html',
   styleUrl: './integrations.page.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -66,6 +68,8 @@ type IntegrationCard = {
 export class IntegrationsPage {
   private readonly messaging = inject(MessagingApiService);
   private readonly orders = inject(OrdersApiService);
+  private readonly liveApi = inject(LiveApiService);
+  readonly tiktok = signal<TikTokStatus | null>(null);
   private readonly api = inject(IntegrationsApiService);
   private readonly confirmDialog = inject(DsConfirmService);
   private readonly router = inject(Router);
@@ -198,6 +202,7 @@ export class IntegrationsPage {
     this.actionSuccess.set(null);
     try {
       this.integrations.set(enable ? await this.api.enable(card.key) : await this.api.disable(card.key));
+      if (card.key === 'tiktok_live') this.tiktok.set(await this.liveApi.status());
       this.actionSuccess.set(
         enable
           ? `${card.name} está activa. La encuentras en el menú como «${card.navLabel}».`
@@ -248,6 +253,8 @@ export class IntegrationsPage {
         return 'Tu vendedor dejará de responder los mensajes de Instagram. Puedes activarla de nuevo cuando quieras.';
       case 'tracking':
         return 'Tu tienda dejará de enviar datos al píxel de Meta y a Google Analytics. Puedes activarla de nuevo cuando quieras.';
+      case 'tiktok_live':
+        return 'Se pausarán las nuevas reservas y el panel LIVE. Los pedidos ya creados conservan su pago y vencimiento; las reservas pendientes liberan sus unidades al vencer.';
       default:
         return 'Se cancelarán las invitaciones pendientes. Puedes activarla de nuevo cuando quieras.';
     }
@@ -257,10 +264,11 @@ export class IntegrationsPage {
     this.loading.set(true);
     this.errorMessage.set(null);
     try {
-      const [channels, provider] = await Promise.all([
+      const [channels, provider, , tiktok] = await Promise.all([
         this.messaging.listChannels(),
         this.orders.getPaymentProvider(),
         this.integrations.refresh(),
+        this.liveApi.status(),
       ]);
       this.whatsappConnected.set(
         channels.some(
@@ -269,6 +277,7 @@ export class IntegrationsPage {
         ),
       );
       this.paymentsMock.set(provider.mockMode);
+      this.tiktok.set(tiktok);
       this.paymentsProvider.set(provider.provider);
     } catch {
       this.errorMessage.set('No pudimos cargar el estado de integraciones.');
@@ -279,6 +288,22 @@ export class IntegrationsPage {
 
   setFilter(value: IntegrationCategory): void {
     this.filter.set(value);
+  }
+
+  async connectTikTok(): Promise<void> {
+    if (!this.canManage || this.busyKey()) return;
+    this.busyKey.set('tiktok_live'); this.actionError.set(null);
+    try { const result = await this.liveApi.connect(); window.location.assign(result.url); }
+    catch (error) { this.actionError.set(messageFrom(error, 'No pudimos iniciar la conexión con TikTok.')); }
+    finally { this.busyKey.set(null); }
+  }
+
+  async disconnectTikTok(): Promise<void> {
+    if (!this.canManage || this.busyKey() || !(await this.confirmDialog.confirm({ title: '¿Desconectar TikTok?', message: 'Se revocará la autorización de la cuenta. Tus campañas y pedidos se conservan.', confirmLabel: 'Desconectar', tone: 'danger' }))) return;
+    this.busyKey.set('tiktok_live'); this.actionError.set(null);
+    try { this.tiktok.set(await this.liveApi.disconnect()); this.actionSuccess.set('Cuenta TikTok desconectada.'); }
+    catch (error) { this.actionError.set(messageFrom(error, 'No pudimos desconectar TikTok.')); }
+    finally { this.busyKey.set(null); }
   }
 
   statusLabel(status: IntegrationCard['status']): string {

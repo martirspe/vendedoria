@@ -349,11 +349,32 @@ export type StoreCatalogProduct = PublicProductCard & {
 
 export type PublicProductSort = 'featured' | 'newest' | 'price-asc' | 'price-desc';
 
+/** Small purchase payload for a paginated catalog card. */
+export type PublicCatalogCard = PublicProductCard & {
+  secondaryImageUrl: string | null;
+  variants: PublicVariant[];
+  /** Low tracked stock for products without variants; never an estimate. */
+  stockLeft: number | null;
+  benefit: string | null;
+};
+
+export type PublicCatalogSelection = { key: string; values: string[] };
+export type PublicCatalogFacetValue = { value: string; count: number };
+export type PublicCatalogFacets = {
+  /** Explicit category paths use ` > `; flat categories remain flat. */
+  categories: PublicCatalogFacetValue[];
+  groups: Array<{ key: string; label: string; values: PublicCatalogFacetValue[] }>;
+  /** Only offered when the discovery collection has one currency. */
+  price: { currency: string; minCents: number; maxCents: number } | null;
+};
+
 export type PublicProductList = {
-  items: PublicProductCard[];
+  items: PublicCatalogCard[];
   total: number;
   page: number;
   pageSize: number;
+  /** Counts for the search/type collection, before the remaining filters. */
+  facets: PublicCatalogFacets;
 };
 
 export type CheckoutItemInput = {
@@ -370,7 +391,9 @@ export type CouponPreviewResult = {
 };
 
 export type CheckoutRequest = {
+  liveReservationToken?: string;
   checkoutKey: string;
+  recoveryToken?: string;
   items: CheckoutItemInput[];
   customer: { name: string; email: string; phone: string; document?: string };
   /** Omitted when the cart has only services. */
@@ -388,6 +411,38 @@ export type CheckoutRequest = {
   couponCode?: string;
   acceptTerms: true;
 };
+
+export type RecoveryOptions = { email: boolean; whatsapp: boolean; consentVersion: string };
+export type RecoveryCaptureRequest = {
+  sessionId: string;
+  token?: string;
+  items: CheckoutItemInput[];
+  email?: string;
+  phone?: string;
+  emailConsent: boolean;
+  whatsappConsent: boolean;
+};
+export type RecoveryCaptureResult = { token: string; expiresAt: string };
+export type RecoveryCartLine = {
+  handle: string;
+  name: string;
+  variantId: string | null;
+  variantLabel: string | null;
+  unitCents: number;
+  currency: string;
+  imageUrl: string | null;
+  quantity: number;
+  isService: boolean;
+  isDigital: boolean;
+  stockLeft: number | null;
+};
+export type RecoveredCart = { lines: RecoveryCartLine[]; changed: boolean; expiresAt: string };
+export type PublicLiveReservation = {
+  expiresAt: string;
+  line: { handle: string; name: string; variantId: string | null; variantLabel: string | null; quantity: number; unitCents: number; currency: string; imageUrl: string | null };
+  order: PublicOrder | null;
+};
+export type StoreRecommendations = { items: Array<{ product: PublicProductCard; reason: 'bought-together' | 'category-affinity' | 'upgrade' }> };
 
 /** Peruvian district (INEI ubigeo). */
 export type UbigeoDistrict = {

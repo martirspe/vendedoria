@@ -1,0 +1,65 @@
+:host {
+  display: block;
+  color: var(--store-text);
+  margin-block: var(--ds-space-6);
+}
+section {
+  padding: var(--ds-space-4);
+  border: var(--store-border-width) solid var(--store-border);
+  border-radius: var(--store-radius-card);
+}
+.offers {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--ds-space-4);
+}
+article {
+  flex: 1;
+  min-width: min(100%, var(--store-legal-card-min));
+}
+article a {
+  display: flex;
+  align-items: center;
+  gap: var(--ds-space-3);
+  color: inherit;
+}
+img {
+  width: var(--store-recommendation-thumb);
+  height: var(--store-recommendation-thumb);
+  object-fit: contain;
+}
+h2 {
+  font-size: var(--store-type-subheading);
+}
+p,
+small {
+  font-size: var(--store-type-caption);
+}
+small {
+  display: block;
+  color: var(--store-muted);
+}
+button,
+article > a {
+  min-height: var(--ds-touch-target);
+}
+button {
+  cursor: pointer;
+  padding: var(--ds-space-2) var(--ds-space-3);
+  background: var(--store-surface);
+  color: var(--store-text);
+  border: var(--store-border-width) solid var(--store-border);
+  border-radius: var(--store-radius-control);
+  transition: background var(--ds-motion-fast);
+}
+button:focus-visible,
+a:focus-visible,
+input:focus-visible {
+  outline: var(--store-focus-width) solid var(--store-accent);
+  outline-offset: var(--ds-space-1);
+}
+@media (prefers-reduced-motion: reduce) {
+  button {
+    transition: none;
+  }
+}

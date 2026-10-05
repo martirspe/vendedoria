@@ -2,6 +2,7 @@ import {
   StoreProductRecord,
   toProductCard,
   toProductDetail,
+  toCatalogCard,
 } from './storefront-mapper';
 
 function product(
@@ -48,6 +49,19 @@ function variant(
 }
 
 describe('storefront product mapping', () => {
+  it('exposes secondary gallery images, real benefits and bounded stock for quick purchase', () => {
+    const card = toCatalogCard(product({
+      stockQty: 3, details: { benefits: ['Protección diaria'] },
+      media: [
+        { url: 'https://cdn/primary.jpg', sortOrder: 0 },
+        { url: 'https://cdn/ambient.jpg', sortOrder: 1, kind: 'related' },
+        { url: 'https://cdn/secondary.jpg', sortOrder: 2 },
+      ],
+    }));
+    expect(card).toMatchObject({ secondaryImageUrl: 'https://cdn/secondary.jpg', stockLeft: 3, benefit: 'Protección diaria', variants: [] });
+    expect(toCatalogCard(product({ stockUnlimited: true })).stockLeft).toBeNull();
+    expect(toCatalogCard(product({ variants: [variant()] })).stockLeft).toBeNull();
+  });
   it('marks a simple product without stock as unavailable', () => {
     expect(toProductCard(product({ stockQty: 0 })).isAvailable).toBe(false);
     expect(

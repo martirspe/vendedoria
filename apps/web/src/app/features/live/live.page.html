@@ -1,0 +1,540 @@
+<section class="live-page">
+  <header class="page-header">
+    <div>
+      <p class="eyebrow">AI Seller</p>
+      <h1>TikTok LIVE</h1>
+      <p>Ofertas y ventas de tu transmisión, con stock y pagos de tu tienda.</p>
+    </div>
+    <ds-button variant="secondary" (click)="load()" [disabled]="loading() || busy()"
+      >Actualizar</ds-button
+    >
+  </header>
+  @if (error(); as message) {
+    <div class="notice notice--error" role="alert">
+      {{ message }} <ds-button variant="ghost" (click)="load()">Reintentar</ds-button>
+    </div>
+  }
+  @if (success(); as message) {
+    <p class="notice" role="status">{{ message }}</p>
+  }
+  @if (loading()) {
+    <div class="panel" aria-busy="true">Cargando conexión, campañas y catálogo…</div>
+  } @else if (!active()) {
+    <app-integration-gate key="tiktok_live" />
+  } @else if (status(); as connection) {
+    <details class="setup" [open]="!panel()">
+      <summary>Configuración y campañas</summary>
+      <section class="panel" aria-labelledby="connection-title">
+        <div class="page-header">
+          <h2 id="connection-title">Conexión y permisos</h2>
+          <span class="badge">{{
+            connection.connected
+              ? 'Cuenta conectada'
+              : connection.healthStatus === 'DEGRADED'
+                ? 'Requiere reconexión'
+                : 'Cuenta sin conectar'
+          }}</span>
+        </div>
+        <p>
+          La cuenta conectada acredita tu identidad en TikTok. Los comentarios y las respuestas
+          automáticas LIVE no están disponibles en esta conexión. Registra mensajes y comparte
+          respuestas manualmente durante la transmisión.
+        </p>
+        @if (connection.errorCode) {
+          <p class="notice notice--error">
+            Revisa tu autorización y vuelve a conectar o validar la cuenta.
+          </p>
+        }
+        @if (connection.accountId) {
+          <p>Cuenta: {{ connection.accountId }}</p>
+        }
+        <div class="actions">
+          @if (canManage) {
+            <ds-button (click)="connect()" [disabled]="busy() || !connection.oauthAvailable">{{
+              connection.connected ? 'Reconectar TikTok' : 'Conectar TikTok'
+            }}</ds-button>
+            @if (connection.accountId) {
+              <ds-button variant="secondary" (click)="verify()" [disabled]="busy()"
+                >Validar conexión</ds-button
+              ><ds-button variant="ghost" (click)="disconnect()" [disabled]="busy()"
+                >Desconectar</ds-button
+              >
+            }
+          }
+          @if (!connection.oauthAvailable) {
+            <p>
+              La conexión de cuentas aún no está habilitada. Puedes operar las campañas manualmente.
+            </p>
+          }
+        </div>
+        <dl class="capabilities">
+          @for (capability of capabilities(); track capability.key) {
+            <div>
+              <dt>{{ capability.label }}</dt>
+              <dd>{{ capability.status }}</dd>
+            </div>
+          }
+        </dl>
+        <p>
+          Webhook de desconexión:
+          {{ connection.webhook.configured ? 'Firma configurada' : 'Sin configurar' }}. No recibe
+          comentarios LIVE.
+        </p>
+        @if (connection.lastCheckedAt) {
+          <p>Última validación: {{ connection.lastCheckedAt | date: 'short' }}</p>
+        }
+        @if (connection.lastEventAt) {
+          <p>Último evento de TikTok: {{ connection.lastEventAt | date: 'short' }}</p>
+        }
+        <form [formGroup]="settingsForm" (ngSubmit)="saveSettings()" class="form-grid">
+          <label
+            >Atención<select
+              formControlName="responseMode"
+              [attr.disabled]="!canManage ? '' : null"
+            >
+              <option value="HUMAN_APPROVAL">Sugerencias con revisión humana</option>
+              <option value="HUMAN_ONLY">Solo clasificar mensajes</option>
+              <option value="AUTO" disabled>Automática · no disponible</option>
+            </select></label
+          >
+          <label
+            >Reserva de stock (segundos)<input
+              type="number"
+              formControlName="reservationSeconds"
+              min="60"
+              max="900"
+              [readOnly]="!canManage"
+          /></label>
+          <label
+            >Máximo de reservas por sesión<input
+              type="number"
+              formControlName="maxReservationsPerSession"
+              min="1"
+              max="5000"
+              [readOnly]="!canManage"
+          /></label>
+          @if (canManage) {
+            <ds-button type="submit" [disabled]="busy() || settingsForm.invalid"
+              >Guardar configuración</ds-button
+            >
+          }
+        </form>
+      </section>
+
+      <section class="panel" aria-labelledby="campaign-title">
+        <div class="page-header">
+          <h2 id="campaign-title">Campañas LIVE</h2>
+          @if (canManage) {
+            <ds-button (click)="newCampaign()" [disabled]="busy()">Nueva campaña</ds-button>
+          }
+        </div>
+        @if (!campaigns().length && !showCampaign()) {
+          <ds-empty-state
+            title="Prepara tu primera venta LIVE"
+            body="Selecciona productos publicados, define el precio LIVE y asigna un límite de unidades."
+          />
+        }
+        <ul class="campaigns">
+          @for (campaign of campaigns(); track campaign.id) {
+            <li>
+              <div>
+                <strong>{{ campaign.name }}</strong>
+                <p>
+                  {{ label(campaign.status) }} ·
+                  {{ campaign.mode === 'LIVE_LIQUIDATION' ? 'Liquidación LIVE' : 'Venta LIVE' }} ·
+                  {{ campaign.products.length }}
+                  {{ campaign.products.length === 1 ? 'producto' : 'productos' }}
+                </p>
+              </div>
+              <div class="actions">
+                @if (campaign.status === 'DRAFT') {
+                  <ds-button (click)="start(campaign.id)" [disabled]="busy()"
+                    >Iniciar sesión</ds-button
+                  >
+                  @if (canManage) {
+                    <ds-button variant="secondary" (click)="edit(campaign)" [disabled]="busy()"
+                      >Editar</ds-button
+                    >
+                  }
+                }
+                @if (campaign.sessions[0]; as session) {
+                  <ds-button variant="secondary" (click)="open(session.id)" [disabled]="busy()"
+                    >Abrir panel</ds-button
+                  >
+                }
+              </div>
+            </li>
+          }
+        </ul>
+        @if (showCampaign()) {
+          <form [formGroup]="campaignForm" (ngSubmit)="saveCampaign()">
+            <div class="form-grid">
+              <label>Nombre<input formControlName="name" maxlength="100" /></label
+              ><label
+                >Tipo<select formControlName="mode">
+                  <option value="LIVE_LIQUIDATION">Liquidación LIVE</option>
+                  <option value="LIVE_SALE">Venta LIVE</option>
+                </select></label
+              ><label
+                >Vendedor<select formControlName="salesAgentId">
+                  <option value="">Vendedor principal</option>
+                  @for (agent of agents(); track agent.id) {
+                    <option [value]="agent.id">{{ agent.name }}</option>
+                  }
+                </select></label
+              ><label
+                >Reserva (segundos)<input
+                  type="number"
+                  formControlName="reservationSeconds"
+                  min="60"
+                  max="900" /></label
+              ><label
+                >Inicio previsto<input type="datetime-local" formControlName="startsAt" /></label
+              ><label>Fin previsto<input type="datetime-local" formControlName="endsAt" /></label>
+            </div>
+            @if (!products().length) {
+              <p>
+                No tienes productos físicos publicados y disponibles.
+                <a routerLink="/app/products">Gestionar catálogo</a>
+              </p>
+            }
+            <div formArrayName="products">
+              @for (offer of offers.controls; track offer; let i = $index) {
+                <fieldset [formGroupName]="i" class="offer-form">
+                  <legend>Producto {{ i + 1 }}</legend>
+                  <div class="form-grid">
+                    <label
+                      >Producto<select formControlName="productId" (change)="selectProduct(i)">
+                        <option value="">Selecciona un producto</option>
+                        @for (p of products(); track p.id) {
+                          <option [value]="p.id">{{ p.name }}</option>
+                        }
+                      </select></label
+                    >
+                    @if (product(offer.controls.productId.value); as p) {
+                      @if (p.variants?.length) {
+                        <label
+                          >Variante<select formControlName="variantId">
+                            <option value="">Selecciona una variante</option>
+                            @for (v of p.variants; track v.id) {
+                              @if (v.isAvailable) {
+                                <option [value]="v.id">
+                                  {{ v.option1Value }} {{ v.option2Value }} ·
+                                  {{ v.priceCents / 100 | currency: 'PEN' : 'S/' }}
+                                </option>
+                              }
+                            }
+                          </select></label
+                        >
+                      }
+                      <p>
+                        Precio de catálogo: {{ p.basePriceCents / 100 | currency: 'PEN' : 'S/' }}
+                      </p>
+                    }
+                    <label
+                      >Precio LIVE (S/)<input
+                        type="number"
+                        formControlName="priceSoles"
+                        min="1"
+                        step="0.01" /></label
+                    ><label
+                      >Unidades asignadas<input
+                        type="number"
+                        formControlName="allocatedStock"
+                        min="1" /></label
+                    ><label
+                      >Máximo por comprador<input
+                        type="number"
+                        formControlName="maxPerCustomer"
+                        min="1"
+                        max="20" /></label
+                    ><label
+                      >Duración desde el inicio (minutos)<input
+                        type="number"
+                        formControlName="durationMinutes"
+                        min="1"
+                        max="1440"
+                    /></label>
+                  </div>
+                  <label class="enabled"
+                    ><input type="checkbox" formControlName="enabled" /> Incluir en la sesión</label
+                  ><ds-button
+                    variant="ghost"
+                    (click)="removeOffer(i)"
+                    [disabled]="offers.length === 1"
+                    >Quitar producto</ds-button
+                  >
+                </fieldset>
+              }
+            </div>
+            <div class="actions">
+              <ds-button variant="secondary" (click)="addOffer()" [disabled]="offers.length >= 50"
+                >Agregar producto</ds-button
+              ><ds-button type="submit" [disabled]="busy() || campaignForm.invalid"
+                >Guardar campaña</ds-button
+              ><ds-button variant="ghost" (click)="showCampaign.set(false)">Cerrar</ds-button>
+            </div>
+          </form>
+        }
+      </section>
+    </details>
+    @if (panel(); as p) {
+      <section class="panel" aria-labelledby="live-title">
+        <div class="page-header">
+          <div>
+            <p class="eyebrow">
+              {{ p.status === 'ACTIVE' ? 'SESIÓN OPERATIVA ACTIVA' : 'SESIÓN TERMINADA' }}
+            </p>
+            <h2 id="live-title">{{ p.name }}</h2>
+          </div>
+          @if (p.status === 'ACTIVE') {
+            <ds-button variant="secondary" (click)="end()" [disabled]="busy()"
+              >Terminar sesión</ds-button
+            >
+          }
+        </div>
+        <p>
+          La sesión del panel se inicia y termina manualmente; no controla la transmisión de TikTok.
+        </p>
+        <dl class="metrics">
+          <div>
+            <dt>Mensajes</dt>
+            <dd>{{ p.analytics.messages }}</dd>
+          </div>
+          <div>
+            <dt>Intenciones</dt>
+            <dd>{{ p.analytics.buyIntents }}</dd>
+          </div>
+          <div>
+            <dt>Reservas</dt>
+            <dd>{{ p.analytics.reservations }}</dd>
+          </div>
+          <div>
+            <dt>Checkouts</dt>
+            <dd>{{ p.analytics.checkouts }}</dd>
+          </div>
+          <div>
+            <dt>Ventas</dt>
+            <dd>{{ p.analytics.sales }}</dd>
+          </div>
+          <div>
+            <dt>Ingresos</dt>
+            <dd>{{ p.analytics.revenueCents / 100 | currency: 'PEN' : 'S/' }}</dd>
+          </div>
+          <div>
+            <dt>Conversión de intención a venta</dt>
+            <dd>{{ p.analytics.conversionRate | percent: '1.0-1' }}</dd>
+          </div>
+          <div>
+            <dt>Unidades vendidas</dt>
+            <dd>{{ p.analytics.unitsSold }}</dd>
+          </div>
+        </dl>
+        <div class="operation-grid">
+          <div>
+            @if (current(); as offer) {
+              <div class="current-product">
+                <p class="eyebrow">Producto actual</p>
+                <h3>{{ offer.name }}</h3>
+                <p>
+                  <s>{{ offer.regularPriceCents / 100 | currency: 'PEN' : 'S/' }}</s> →
+                  <strong>{{ offer.livePriceCents / 100 | currency: 'PEN' : 'S/' }}</strong>
+                </p>
+                <p>
+                  {{ offer.availableStock }} unidades disponibles · máximo
+                  {{ offer.maxPerCustomer }} por comprador
+                </p>
+                @if (offer.expiresAt) {
+                  <p>Oferta hasta {{ offer.expiresAt | date: 'shortTime' }}</p>
+                }
+              </div>
+            }
+            <h3>Cambiar producto</h3>
+            <div class="product-picker">
+              @for (offer of p.products; track offer.id) {
+                <button
+                  type="button"
+                  [attr.aria-pressed]="p.currentOfferId === offer.id"
+                  [disabled]="busy() || p.status !== 'ACTIVE'"
+                  (click)="change(offer)"
+                >
+                  <strong>{{ offer.name }}</strong
+                  ><span
+                    >{{ offer.livePriceCents / 100 | currency: 'PEN' : 'S/' }} ·
+                    {{ offer.availableStock }} disponibles</span
+                  >
+                </button>
+              }
+            </div>
+            @if (p.status === 'ACTIVE') {
+              <h3>Crear reserva confirmada</h3>
+              <form [formGroup]="reserveForm" (ngSubmit)="reserve()" class="form-grid">
+                <label
+                  >Alias del comprador<input
+                    formControlName="customerAlias"
+                    maxlength="100"
+                    autocomplete="off" /></label
+                ><label
+                  >Unidades<input
+                    type="number"
+                    formControlName="quantity"
+                    min="1"
+                    [max]="current()?.maxPerCustomer ?? 20" /></label
+                ><ds-button
+                  type="submit"
+                  [disabled]="busy() || reserveForm.invalid || !current()?.availableStock"
+                  >Reservar y obtener checkout</ds-button
+                >
+              </form>
+              <p class="hint">
+                Usa siempre el mismo alias para el mismo comprador. El límite se aplica por alias
+                dentro de esta sesión.
+              </p>
+            }
+            @if (checkoutUrl(); as url) {
+              <p role="status">Comparte este enlace únicamente con el comprador de la reserva.</p>
+              <div class="actions">
+                <a [href]="url" target="_blank" rel="noopener noreferrer">Abrir checkout</a
+                ><ds-button variant="secondary" (click)="copy(url)">Copiar enlace</ds-button>
+              </div>
+            }
+          </div>
+          <div>
+            <h3>Mensajes registrados manualmente</h3>
+            @if (p.status === 'ACTIVE') {
+              <form [formGroup]="messageForm" (ngSubmit)="message()" class="form-grid">
+                <label
+                  >Alias del comprador<input
+                    formControlName="customerAlias"
+                    maxlength="100"
+                    autocomplete="off" /></label
+                ><label class="wide"
+                  >Mensaje<textarea
+                    formControlName="text"
+                    maxlength="1000"
+                    rows="3"
+                  ></textarea></label
+                ><ds-button type="submit" [disabled]="busy() || messageForm.invalid"
+                  >Clasificar mensaje</ds-button
+                >
+              </form>
+            }
+            @if (!p.messages.length) {
+              <p>
+                No hay mensajes registrados. Transcribe un comentario del LIVE para clasificar su
+                intención.
+              </p>
+            }
+            <ol class="messages">
+              @for (message of p.messages; track message.id) {
+                <li>
+                  <p>{{ message.text }}</p>
+                  <small
+                    >{{ intentLabel(message.intent) }} ·
+                    {{ message.createdAt | date: 'shortTime' }}</small
+                  >
+                  @if (message.suggestedReply) {
+                    <p class="suggestion">{{ message.suggestedReply }}</p>
+                    <div class="actions">
+                      @if (!message.approvedAt) {
+                        <ds-button
+                          variant="secondary"
+                          (click)="approve(message.id)"
+                          [disabled]="busy()"
+                          >Revisar sugerencia</ds-button
+                        >
+                      } @else {
+                        <span>Revisada · envío manual</span
+                        ><ds-button variant="ghost" (click)="copy(message.suggestedReply)"
+                          >Copiar respuesta</ds-button
+                        >
+                      }
+                    </div>
+                  }
+                </li>
+              }
+            </ol>
+          </div>
+        </div>
+        <h3>Resultados por producto</h3>
+        <p>
+          {{ p.analytics.soldOut }} ofertas sin unidades disponibles ·
+          {{ p.analytics.expired }} reservas vencidas
+        </p>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Producto</th>
+                <th>Unidades vendidas</th>
+                <th>Ingresos de productos</th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (offer of p.products; track offer.id) {
+                <tr>
+                  <td>{{ offer.name }}</td>
+                  <td>{{ offer.unitsSold ?? 0 }}</td>
+                  <td>
+                    {{
+                      (p.analytics.revenueByProduct[offer.id] ?? 0) / 100 | currency: 'PEN' : 'S/'
+                    }}
+                  </td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+        <h3>Reservas y pedidos</h3>
+        @if (!p.reservations.length) {
+          <p>
+            Aún no hay reservas. Las unidades se separan solo al confirmar una reserva desde este
+            panel.
+          </p>
+        }
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Referencia</th>
+                <th>Unidades</th>
+                <th>Estado</th>
+                <th>Vence</th>
+                <th>Acciones</th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (reservation of p.reservations; track reservation.id) {
+                <tr>
+                  <td>{{ reservation.id.slice(-6) }}</td>
+                  <td>{{ reservation.quantity }}</td>
+                  <td>{{ label(reservation.status) }}</td>
+                  <td>{{ reservation.expiresAt | date: 'shortTime' }}</td>
+                  <td>
+                    <div class="actions">
+                      @if (reservation.checkoutUrl) {
+                        <ds-button variant="ghost" (click)="copy(reservation.checkoutUrl)"
+                          >Copiar checkout</ds-button
+                        ><ds-button
+                          variant="ghost"
+                          (click)="cancel(reservation.id)"
+                          [disabled]="busy()"
+                          >Cancelar</ds-button
+                        >
+                      }
+                      @if (reservation.orderId) {
+                        <a routerLink="/app/orders" [queryParams]="{ q: reservation.orderId }"
+                          >Ver pedido</a
+                        >
+                      }
+                    </div>
+                  </td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+      </section>
+    }
+  }
+</section>

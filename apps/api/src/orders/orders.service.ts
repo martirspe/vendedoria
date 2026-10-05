@@ -263,7 +263,7 @@ export class OrdersService {
     if (
       dto.status === 'SHIPPED' &&
       !pickup &&
-      order.channel === 'WEB' &&
+      ['WEB', 'TIKTOK_LIVE'].includes(order.channel) &&
       !trackingCode
     ) {
       throw new BadRequestException(
@@ -272,10 +272,14 @@ export class OrdersService {
     }
 
     const paidNow = await this.prisma.$transaction(async (tx) => {
+      await tx.$queryRaw`SELECT "id" FROM "Order" WHERE "id" = ${order.id} AND "tenantId" = ${tenantId} FOR UPDATE`;
+      const fresh = await tx.order.findFirstOrThrow({ where: { id: order.id, tenantId }, include: ORDER_INCLUDE });
+      this.assertTransition(fresh.status, dto.status);
+      if (fresh.status === dto.status) return false;
       if (dto.status === 'CANCELLED') {
-        await releaseOrder(tx, order, 'Cancelado desde la consola');
+        await releaseOrder(tx, fresh, 'Cancelado desde la consola');
       } else if (dto.status === 'PAID') {
-        return settlePaidOrder(tx, order, 'Marcado como pagado en la consola');
+        return settlePaidOrder(tx, fresh, 'Marcado como pagado en la consola');
       } else {
         await tx.order.update({
           where: { id: order.id },

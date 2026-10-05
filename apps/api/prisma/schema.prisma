@@ -35,6 +35,7 @@ enum PlatformRole {
 enum ChannelType {
   WHATSAPP
   INSTAGRAM
+  TIKTOK_LIVE
 }
 
 enum ChannelConnectionMode {
@@ -122,6 +123,7 @@ enum OrderChannel {
   WHATSAPP
   INSTAGRAM
   MANUAL
+  TIKTOK_LIVE
 }
 
 enum CouponKind {
@@ -202,6 +204,87 @@ model Tenant {
   integrations       TenantIntegration[]
   memberInvites      MemberInvite[]
   storeVersions      StorefrontVersion[]
+  conversionSettings ConversionSettings?
+  recoveryCarts      RecoveryCart[]
+  recoveryDeliveries RecoveryDelivery[]
+  storeBehavior     StoreBehaviorEvent[]
+  liveIntegration   LiveIntegration?
+  liveCampaigns     LiveCampaign[]
+  liveSessions      LiveSession[]
+  liveReservations  LiveReservation[]
+  liveEvents        LiveEvent[]
+  customerMemories  SalesCustomerMemory[]
+  salesTurns        SalesEngineTurn[]
+  salesSearchJobs   SalesSearchJob[]
+}
+
+model ConversionSettings {
+  tenantId String @id
+  recoveryEnabled Boolean @default(false)
+  emailEnabled Boolean @default(true)
+  whatsappEnabled Boolean @default(false)
+  whatsappTemplate String?
+  whatsappLanguage String @default("es_PE")
+  delaysMinutes Int[] @default([15, 120, 1440])
+  updatedAt DateTime @updatedAt
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+}
+
+/// Contact data is retained only until expiry; links contain no buyer data.
+model RecoveryCart {
+  id String @id @default(cuid())
+  tenantId String
+  sessionHash String
+  items Json
+  email String?
+  phone String?
+  emailConsentAt DateTime?
+  whatsappConsentAt DateTime?
+  consentVersion String
+  revision Int @default(1)
+  lastActivityAt DateTime @default(now())
+  expiresAt DateTime
+  revokedAt DateTime?
+  orderId String?
+  createdAt DateTime @default(now())
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  deliveries RecoveryDelivery[]
+  @@unique([tenantId, sessionHash])
+  @@index([tenantId, expiresAt])
+  @@index([expiresAt])
+}
+
+/// Durable outbox. SENDING after a crash becomes UNCERTAIN, never blindly resent.
+model RecoveryDelivery {
+  id String @id @default(cuid())
+  tenantId String
+  cartId String
+  revision Int
+  step Int
+  channel String
+  status String @default("PENDING")
+  dueAt DateTime
+  claimedAt DateTime?
+  attempts Int @default(0)
+  sentAt DateTime?
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  cart RecoveryCart @relation(fields: [cartId], references: [id], onDelete: Cascade)
+  @@unique([cartId, revision, step, channel])
+  @@index([tenantId, status, dueAt])
+  @@index([status, dueAt])
+}
+
+/// No email/phone/IP. Anonymous behavior is recorded only after explicit consent.
+model StoreBehaviorEvent {
+  id String @id @default(cuid())
+  tenantId String
+  sessionHash String
+  handle String
+  kind String
+  createdAt DateTime @default(now())
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  @@index([tenantId, sessionHash, createdAt])
+  @@index([createdAt])
 }
 
 /// Extra new chats bought on top of the plan for one calendar month (flow A).
@@ -491,6 +574,7 @@ model SalesAgent {
   audienceDescription    String?
   rulesText              String?
   communicationStyle     String?
+  personalityPreset      String?
   salesStyle             String?
   responseLength         String   @default("balanced")
   useEmojis              Boolean  @default(true)
@@ -516,6 +600,7 @@ model SalesAgent {
 
   tenant   Tenant    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   channels Channel[]
+  liveCampaigns LiveCampaign[]
 
   @@index([tenantId])
 }
@@ -624,6 +709,7 @@ model Product {
   components  ProductComponent[] @relation("SetComponents")
   /// Sets that include this product as a piece.
   componentOf ProductComponent[] @relation("ComponentOf")
+  liveOffers LiveOffer[]
 
   @@unique([tenantId, handle])
   @@index([tenantId])
@@ -648,6 +734,7 @@ model ProductVariant {
 
   product    Product     @relation(fields: [productId], references: [id], onDelete: Cascade)
   orderItems OrderItem[]
+  liveOffers LiveOffer[]
 
   @@index([productId])
 }
@@ -697,6 +784,7 @@ model Conversation {
   markedAsSale     Boolean            @default(false)
   markedUnattended Boolean            @default(false)
   lastInboundAt    DateTime?
+  salesState       Json               @default("{}")
   createdAt        DateTime           @default(now())
   updatedAt        DateTime           @updatedAt
 
@@ -704,6 +792,7 @@ model Conversation {
   channel  Channel   @relation(fields: [channelId], references: [id], onDelete: Cascade)
   messages Message[]
   orders   Order[]
+  salesTurns SalesEngineTurn[]
 
   @@unique([channelId, externalThreadId])
   @@index([tenantId, status])
@@ -718,12 +807,59 @@ model Message {
   authorType     MessageAuthorType
   body           String
   externalId     String?
+  inboundKey     String?           @unique
+  enginePending  Boolean           @default(false)
   metadata       Json?
   createdAt      DateTime          @default(now())
 
   conversation Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
 
   @@index([conversationId, createdAt])
+  @@index([enginePending, createdAt])
+}
+
+/// Persisted before actions/send. Interrupted actions or uncertain sends require human review.
+model SalesEngineTurn {
+  id String @id @default(cuid())
+  tenantId String
+  conversationId String
+  inboundIds String[]
+  status String @default("STARTED")
+  response Json?
+  trace Json?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  conversation Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  @@index([tenantId, conversationId, createdAt])
+  @@index([status, updatedAt])
+}
+
+/// Explicit preferences only; customerKey is a hash of the backend-resolved channel/thread.
+model SalesCustomerMemory {
+  tenantId String
+  customerKey String
+  facts Json
+  expiresAt DateTime
+  updatedAt DateTime @updatedAt
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  @@id([tenantId, customerKey])
+  @@index([tenantId, expiresAt])
+}
+
+/// Transactional index outbox populated by catalog/FAQ database triggers.
+model SalesSearchJob {
+  id String @id @default(cuid())
+  tenantId String
+  sourceId String
+  documentType String
+  revision Int @default(1)
+  attempts Int @default(0)
+  availableAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  @@unique([tenantId, documentType, sourceId])
+  @@index([availableAt])
 }
 
 /// Isolated agent test thread — never appears in production inbox/metrics.
@@ -731,6 +867,7 @@ model PlaygroundSession {
   id        String   @id @default(cuid())
   tenantId  String
   title     String   @default("Prueba del vendedor")
+  salesState Json @default("{}")
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
@@ -806,6 +943,7 @@ model Order {
   payments     Payment[]
   redemption   CouponRedemption?
   events       PaymentEvent[]
+  liveReservation LiveReservation?
 
   @@unique([tenantId, code])
   @@index([tenantId, status])
@@ -855,6 +993,7 @@ model OrderItem {
   variant ProductVariant? @relation(fields: [variantId], references: [id], onDelete: SetNull)
 
   @@index([orderId])
+  @@index([productId, orderId])
 }
 
 model Payment {
@@ -893,4 +1032,131 @@ model RateLimitHit {
   expiresAt DateTime
 
   @@index([expiresAt])
+}
+
+/// Login Kit identity is independent of permission to read or respond in a LIVE.
+model LiveIntegration {
+  tenantId String @id
+  channelId String?
+  healthStatus ChannelHealthStatus @default(PENDING)
+  credentialsEncrypted String?
+  accountId String?
+  scopes String[] @default([])
+  capabilities Json @default("{}")
+  oauthStateHash String? @unique
+  oauthExpiresAt DateTime?
+  accessExpiresAt DateTime?
+  refreshExpiresAt DateTime?
+  responseMode String @default("HUMAN_APPROVAL")
+  reservationSeconds Int @default(300)
+  maxReservationsPerSession Int @default(500)
+  lastCheckedAt DateTime?
+  lastEventAt DateTime?
+  errorCode String?
+  updatedAt DateTime @updatedAt
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+}
+
+model LiveCampaign {
+  id String @id @default(cuid())
+  tenantId String
+  name String
+  channel String @default("TIKTOK_LIVE")
+  status String @default("DRAFT")
+  mode String @default("LIVE_LIQUIDATION")
+  startsAt DateTime?
+  endsAt DateTime?
+  salesAgentId String?
+  reservationSeconds Int @default(300)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  salesAgent SalesAgent? @relation(fields: [salesAgentId], references: [id], onDelete: SetNull)
+  offers LiveOffer[]
+  sessions LiveSession[]
+  @@unique([tenantId, id])
+  @@index([tenantId, status, createdAt])
+}
+
+model LiveOffer {
+  id String @id @default(cuid())
+  tenantId String
+  campaignId String
+  productId String
+  variantId String?
+  livePriceCents Int
+  allocatedStock Int
+  /// Pending holds + checked-out holds + sold units; released holds decrement it.
+  claimedQty Int @default(0)
+  maxPerCustomer Int @default(2)
+  durationSeconds Int @default(3600)
+  sortOrder Int @default(0)
+  enabled Boolean @default(true)
+  campaign LiveCampaign @relation(fields: [tenantId, campaignId], references: [tenantId, id], onDelete: Cascade)
+  product Product @relation(fields: [productId], references: [id], onDelete: Restrict)
+  variant ProductVariant? @relation(fields: [variantId], references: [id], onDelete: Restrict)
+  reservations LiveReservation[]
+  @@unique([tenantId, id])
+  @@index([tenantId, campaignId, sortOrder])
+}
+
+model LiveSession {
+  id String @id @default(cuid())
+  tenantId String
+  campaignId String
+  status String @default("ACTIVE")
+  currentOfferId String?
+  startedAt DateTime @default(now())
+  endedAt DateTime?
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  campaign LiveCampaign @relation(fields: [tenantId, campaignId], references: [tenantId, id], onDelete: Cascade)
+  reservations LiveReservation[]
+  events LiveEvent[]
+  @@unique([tenantId, id])
+  @@index([tenantId, status, startedAt])
+}
+
+model LiveReservation {
+  id String @id @default(cuid())
+  tenantId String
+  sessionId String
+  offerId String
+  conversationId String
+  customerKey String
+  idempotencyKey String
+  status String @default("PENDING")
+  quantity Int
+  unitCents Int
+  /// The stock recipe and commercial snapshot actually reserved, independent of catalog edits.
+  line Json
+  expiresAt DateTime
+  orderId String? @unique
+  createdAt DateTime @default(now())
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  session LiveSession @relation(fields: [tenantId, sessionId], references: [tenantId, id], onDelete: Cascade)
+  offer LiveOffer @relation(fields: [tenantId, offerId], references: [tenantId, id], onDelete: Restrict)
+  order Order? @relation(fields: [orderId], references: [id], onDelete: Restrict)
+  @@unique([tenantId, idempotencyKey])
+  @@index([tenantId, sessionId, customerKey, offerId, status])
+  @@index([tenantId, status, expiresAt])
+  @@index([status, expiresAt])
+}
+
+/// Durable business events. External payloads and personal identifiers are not stored here.
+model LiveEvent {
+  id String @id @default(cuid())
+  tenantId String
+  sessionId String
+  kind String
+  externalEventId String
+  conversationId String?
+  intent String?
+  reservationId String?
+  suggestedReply String?
+  approvedAt DateTime?
+  createdAt DateTime @default(now())
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  session LiveSession @relation(fields: [tenantId, sessionId], references: [tenantId, id], onDelete: Cascade)
+  @@unique([tenantId, externalEventId])
+  @@index([tenantId, sessionId, createdAt])
 }

@@ -242,32 +242,7 @@
       </div>
     </section>
 
-    @if (related().length) {
-      <section class="related-products" aria-roledescription="carrusel" aria-labelledby="related-title" (mouseenter)="hovering.set(true)" (mouseleave)="hovering.set(false)" (focusin)="hovering.set(true)" (focusout)="hovering.set(false)">
-        <div class="related-head">
-          <div>
-            <p class="eyebrow">ELIGE TU PRESENTACIÓN</p>
-            <h2 id="related-title">{{ p.format === 'set' ? 'También por separado.' : 'Más de esta colección.' }}</h2>
-          </div>
-          @if (canSlide()) {
-            <div class="slider-nav">
-              <button type="button" class="slider-btn" (click)="manual(-1)" aria-label="Productos anteriores"><app-icon name="prev" /></button>
-              <button type="button" class="slider-btn" (click)="manual(1)" aria-label="Productos siguientes"><app-icon name="next" /></button>
-            </div>
-          }
-        </div>
-        <div class="related-track" #track (pointerdown)="userTook.set(true)">
-          @for (r of related(); track r.handle) {
-            <article class="product-card slide" role="group" aria-roledescription="diapositiva" [attr.aria-label]="$index + 1 + ' de ' + related().length">
-              <a class="card-image" [routerLink]="['/producto', r.handle]"><app-product-image [product]="r" /></a>
-              <p class="eyebrow">{{ r.format === 'set' ? 'Set' : 'Individual' }}</p>
-              <a [routerLink]="['/producto', r.handle]"><h3>{{ r.name }}</h3></a>
-              <strong>{{ r.priceCents | money }}</strong>
-            </article>
-          }
-        </div>
-      </section>
-    }
+    <store-recommendations [handles]="[p.handle]" context="product" />
   </div>
   @if (canBuy() && online()) {
     <div class="mobile-buy">

@@ -1,14 +1,12 @@
+import { RecommendationsComponent } from '../../components/recommendations.component';
 import { DsSelectComponent } from '@vendedoria/ui';
 import {
   ChangeDetectionStrategy,
   Component,
-  DestroyRef,
-  ElementRef,
   afterNextRender,
   computed,
   inject,
   signal,
-  viewChild,
 } from '@angular/core';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
@@ -44,7 +42,7 @@ import { SelectaPhoto, SelectaProductImage } from './selecta-photo';
 
 @Component({
   selector: 'selecta-product',
-  imports: [DsSelectComponent,
+  imports: [RecommendationsComponent, DsSelectComponent,
     RouterLink,
     MoneyPipe,
     SelectaIcon,
@@ -119,12 +117,6 @@ export class SelectaProductPage {
     const p = this.product();
     return p?.format === 'set' ? piecesOf(p, this.catalog.products()) : [];
   });
-  readonly related = computed(() => {
-    const p = this.product();
-    return p?.lineKey
-      ? this.catalog.products().filter((r) => r.handle !== p.handle && r.lineKey === p.lineKey).slice(0, 8)
-      : [];
-  });
   readonly buyParams = computed(() => {
     const p = this.product();
     return p
@@ -149,30 +141,16 @@ export class SelectaProductPage {
     );
   });
 
-  readonly track = viewChild<ElementRef<HTMLElement>>('track');
-  readonly hovering = signal(false);
-  readonly userTook = signal(false);
-  readonly canSlide = signal(false);
-
-  readonly scarcity = scarcity;
   readonly stockOf = stockOf;
+  readonly scarcity = scarcity;
   readonly maxUnits = maxUnits;
   readonly categoryOf = category;
 
   constructor() {
     if (!this.product()) markNotFound();
-    const destroy = inject(DestroyRef);
     this.route.paramMap.pipe(takeUntilDestroyed()).subscribe((params) => this.select(params.get('handle')));
     afterNextRender(() => {
       void this.catalog.refresh();
-      const id = setInterval(() => this.autoplay(), 4000);
-      const onResize = () => this.checkSlide();
-      addEventListener('resize', onResize, { passive: true });
-      this.checkSlide();
-      destroy.onDestroy(() => {
-        clearInterval(id);
-        removeEventListener('resize', onResize);
-      });
     });
   }
 
@@ -203,54 +181,16 @@ export class SelectaProductPage {
     this.qty.set(1);
   }
 
-  manual(dir: number): void {
-    this.userTook.set(true);
-    this.slide(dir);
-  }
-
-  checkSlide(): void {
-    const el = this.track()?.nativeElement;
-    this.canSlide.set(!!el && el.scrollWidth > el.clientWidth + 4);
-  }
-
-  private slide(dir: number): void {
-    const el = this.track()?.nativeElement;
-    if (!el || !this.canSlide()) return;
-    const card = el.querySelector<HTMLElement>('.slide');
-    const stepPx = card ? card.offsetWidth + parseFloat(getComputedStyle(el).columnGap || '0') : el.clientWidth;
-    const atEnd = el.scrollLeft + el.clientWidth >= el.scrollWidth - 4;
-    const atStart = el.scrollLeft <= 4;
-    el.scrollTo({
-      left: dir > 0 && atEnd ? 0 : dir < 0 && atStart ? el.scrollWidth : el.scrollLeft + dir * stepPx,
-      behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth',
-    });
-  }
-
-  private autoplay(): void {
-    const el = this.track()?.nativeElement;
-    if (!el || this.hovering() || this.userTook() || document.hidden) return;
-    if (matchMedia('(prefers-reduced-motion: reduce)').matches) return;
-    const rect = el.getBoundingClientRect();
-    if (rect.bottom > 0 && rect.top < innerHeight) this.slide(1);
-  }
-
   private select(handle: string | null): void {
     this.handle.set(handle);
     const p = this.product();
     this.selected.set(p?.details.montage && photos(p).length > 1 ? -1 : 0);
     this.qty.set(1);
     this.added.set('');
-    this.userTook.set(false);
     const variants = p?.variants ?? [];
     this.variantId.set((variants.find((v) => v.isAvailable) ?? variants[0])?.id ?? null);
     if (p) this.setSeo(p);
     if (p) this.analytics.viewProduct(p);
-    if (typeof document !== 'undefined') {
-      setTimeout(() => {
-        this.track()?.nativeElement.scrollTo({ left: 0 });
-        this.checkSlide();
-      });
-    }
   }
 
   private setSeo(p: Product): void {

@@ -9,6 +9,7 @@ export type TurnstileAction =
   | 'login'
   | 'register'
   | 'checkout'
+  | 'recovery'
   | 'platform-login';
 
 /**

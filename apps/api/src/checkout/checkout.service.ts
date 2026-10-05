@@ -12,6 +12,7 @@ import {
 import { Order, OrderItem, Prisma } from '@prisma/client';
 import type {
   CouponPreviewResult,
+  PublicLiveReservation,
   PublicOrder,
   PublicOrderStatus,
   ShippingMode,
@@ -41,7 +42,11 @@ import {
   PayOrderDto,
 } from './dto/checkout.dto';
 import { OrderEmailService } from './order-email.service';
+import { ConfigService } from '@nestjs/config';
+import { recoveryId } from '../conversion/recovery-token';
 import { fulfillmentSnapshot, orderFulfillment } from '../orders/digital-access';
+import { isIntegrationActive } from '../integrations/integration-state';
+import { liveBusinessEvent, liveReservationId, lockLiveReservation, releasePendingLiveReservation, reservedLine } from '../live/live-reservations';
 
 const RESERVATION_MS = 15 * 60_000;
 const EXPIRY_SWEEP_MS = 60_000;
@@ -117,6 +122,7 @@ export class CheckoutService implements OnModuleInit, OnModuleDestroy {
     private readonly accounts: MerchantAccountsService,
     private readonly storefront: StorefrontPublicService,
     private readonly email: OrderEmailService,
+    private readonly config: ConfigService,
   ) {}
 
   onModuleInit(): void {
@@ -131,6 +137,16 @@ export class CheckoutService implements OnModuleInit, OnModuleDestroy {
 
   onModuleDestroy(): void {
     if (this.sweep) clearInterval(this.sweep);
+  }
+
+  async liveReservation(access: StoreAccess, token: string): Promise<PublicLiveReservation> {
+    this.assertLive(access);
+    const id = liveReservationId(this.config.getOrThrow<string>('JWT_ACCESS_SECRET'), access.tenantId, token);
+    if (!id || !(await isIntegrationActive(this.prisma, access.tenantId, 'tiktok_live'))) throw new NotFoundException('Esta reserva LIVE venció o no está disponible en esta tienda.');
+    const row = await this.prisma.liveReservation.findFirst({ where: { id, tenantId: access.tenantId, expiresAt: { gt: new Date() }, status: { in: ['PENDING', 'CHECKED_OUT', 'CONVERTED'] } }, include: { order: { include: { items: true } } } });
+    if (!row) throw new NotFoundException('Esta reserva LIVE ya no está disponible.');
+    const line = reservedLine(row.line);
+    return { expiresAt: row.expiresAt.toISOString(), line: { handle: line.handle, name: line.title, variantId: line.variantId, variantLabel: null, quantity: line.quantity, unitCents: line.unitCents, currency: 'PEN', imageUrl: null }, order: row.order ? await this.view(row.order) : null };
   }
 
   async previewCoupon(
@@ -200,6 +216,7 @@ export class CheckoutService implements OnModuleInit, OnModuleDestroy {
         delivery: dto.delivery ?? null,
         serviceNote: dto.serviceNote?.trim() || null,
         coupon: dto.couponCode?.trim().toUpperCase() || null,
+        ...(dto.liveReservationToken ? { liveReservation: dto.liveReservationToken } : {}),
       }),
     );
     const replay = await this.findReplay(
@@ -224,11 +241,31 @@ export class CheckoutService implements OnModuleInit, OnModuleDestroy {
       try {
         const order = await this.prisma.$transaction(
           async (tx) => {
+            const reservationId = dto.liveReservationToken ? liveReservationId(this.config.getOrThrow<string>('JWT_ACCESS_SECRET'), access.tenantId, dto.liveReservationToken) : null;
+            if (dto.liveReservationToken && !reservationId) throw new ConflictException('La reserva LIVE venció o no corresponde a esta tienda.');
+            if (reservationId && !(await isIntegrationActive(this.prisma, access.tenantId, 'tiktok_live'))) throw new ForbiddenException('Las compras LIVE están pausadas en esta tienda.');
+            const live = reservationId ? await lockLiveReservation(tx, access.tenantId, reservationId) : null;
+            if (live?.status === 'CHECKED_OUT' && live.orderId) {
+              const existing = await tx.order.findFirst({ where: { id: live.orderId, tenantId: access.tenantId }, include: { items: true } });
+              if (existing?.checkoutKey === dto.checkoutKey && existing.requestHash === requestHash) return existing;
+              throw new ConflictException('Esta reserva ya tiene un pedido. Abre el pedido para continuar.');
+            }
+            if (live && (live.status !== 'PENDING' || live.expiresAt <= new Date())) throw new ConflictException('Esta reserva LIVE ya no está disponible.');
+            if (live && (dto.couponCode || dto.recoveryToken)) throw new BadRequestException('El precio LIVE no se combina con cupones ni carritos de recuperación.');
             const lines = await this.resolveLines(
               tx,
               access.tenantId,
               dto.items,
             );
+            const snapshot = live ? reservedLine(live.line) : null;
+            if (snapshot) {
+              const line = lines[0];
+              if (lines.length !== 1 || !line || line.productId !== snapshot.productId || line.variantId !== snapshot.variantId || line.quantity !== snapshot.quantity || !line.ships) throw new ConflictException('El carrito debe coincidir con el producto y las unidades de la reserva LIVE.');
+              line.unitCents = snapshot.unitCents;
+              line.totalCents = snapshot.totalCents;
+              line.title = snapshot.title;
+              line.coupon.unitCents = snapshot.unitCents;
+            }
             const subtotalCents = lines.reduce(
               (sum, line) => sum + line.totalCents,
               0,
@@ -291,12 +328,13 @@ export class CheckoutService implements OnModuleInit, OnModuleDestroy {
                 free: shipping.free,
               };
             }
-            const stocked = await withAllocations(tx, lines);
-            await reserveStock(tx, stocked);
-            return tx.order.create({
+            const stocked = await withAllocations(tx, snapshot ? lines.map((line) => ({ ...line, allocations: snapshot.allocations })) : lines);
+            if (!live) await reserveStock(tx, stocked);
+            const order = await tx.order.create({
               data: {
                 tenantId: access.tenantId,
-                channel: 'WEB',
+                channel: live ? 'TIKTOK_LIVE' : 'WEB',
+                conversationId: live?.conversationId ?? null,
                 status: 'PENDING_PAYMENT',
                 code: this.newCode(),
                 currency: 'PEN',
@@ -317,7 +355,7 @@ export class CheckoutService implements OnModuleInit, OnModuleDestroy {
                 requestHash,
                 publicToken: randomBytes(24).toString('base64url'),
                 stockState: 'held',
-                expiresAt: new Date(Date.now() + RESERVATION_MS),
+                expiresAt: live?.expiresAt ?? new Date(Date.now() + RESERVATION_MS),
                 items: {
                   create: stocked.map((line) => ({
                     productId: line.productId,
@@ -348,6 +386,17 @@ export class CheckoutService implements OnModuleInit, OnModuleDestroy {
               },
               include: { items: true },
             });
+            if (live) {
+              await tx.liveReservation.updateMany({ where: { id: live.id, tenantId: access.tenantId, status: 'PENDING' }, data: { status: 'CHECKED_OUT', orderId: order.id } });
+              await liveBusinessEvent(tx, live, 'live_checkout_created');
+            }
+            if (dto.recoveryToken) {
+              const cartId = recoveryId(this.config.getOrThrow<string>('JWT_ACCESS_SECRET'), access.tenantId, dto.recoveryToken);
+              if (!cartId) throw new BadRequestException('El enlace de recuperación venció. Vuelve al carrito para continuar.');
+              await tx.recoveryCart.updateMany({ where: { id: cartId, tenantId: access.tenantId, orderId: null, revokedAt: null }, data: { orderId: order.id, email: null, phone: null, emailConsentAt: null, whatsappConsentAt: null } });
+              await tx.recoveryDelivery.updateMany({ where: { cartId, tenantId: access.tenantId, status: 'PENDING' }, data: { status: 'CANCELLED' } });
+            }
+            return order;
           },
           { timeout: 15_000 },
         );
@@ -357,7 +406,8 @@ export class CheckoutService implements OnModuleInit, OnModuleDestroy {
           error instanceof Prisma.PrismaClientKnownRequestError &&
           error.code === 'P2002'
         ) {
-          const target = String(error.meta?.target ?? '');
+          const rawTarget = error.meta?.target;
+          const target = typeof rawTarget === 'string' ? rawTarget : Array.isArray(rawTarget) ? rawTarget.filter((value): value is string => typeof value === 'string').join(',') : '';
           if (target.includes('checkoutKey')) {
             const raced = await this.findReplay(
               access.tenantId,
@@ -439,7 +489,7 @@ export class CheckoutService implements OnModuleInit, OnModuleDestroy {
           id: orderId,
           tenantId: access.tenantId,
           publicToken: token,
-          channel: 'WEB',
+          channel: { in: ['WEB', 'TIKTOK_LIVE'] },
         },
         include: { items: true },
       });
@@ -617,7 +667,7 @@ export class CheckoutService implements OnModuleInit, OnModuleDestroy {
         where: {
           id: providerOrder.external_reference,
           tenantId,
-          channel: 'WEB',
+          channel: { in: ['WEB', 'TIKTOK_LIVE'] },
         },
         include: { items: true },
       });
@@ -737,7 +787,7 @@ export class CheckoutService implements OnModuleInit, OnModuleDestroy {
    */
   async reconcile(tenantId: string, orderId: string, providerOrderId?: string) {
     const order = await this.prisma.order.findFirst({
-      where: { id: orderId, tenantId, channel: 'WEB' },
+      where: { id: orderId, tenantId, channel: { in: ['WEB', 'TIKTOK_LIVE'] } },
       select: { id: true, totalCents: true, currency: true },
     });
     if (!order)
@@ -807,6 +857,13 @@ export class CheckoutService implements OnModuleInit, OnModuleDestroy {
 
   /** Releases reservations whose time ran out and no payment is in flight. */
   async expireDue(): Promise<number> {
+    const liveDue = await this.prisma.liveReservation.findMany({ where: { status: 'PENDING', orderId: null, expiresAt: { lte: new Date() } }, select: { id: true, tenantId: true }, take: 100, orderBy: { expiresAt: 'asc' } });
+    for (const row of liveDue) {
+      await this.prisma.$transaction(async (tx) => {
+        const fresh = await lockLiveReservation(tx, row.tenantId, row.id);
+        if (fresh.expiresAt <= new Date()) await releasePendingLiveReservation(tx, fresh, 'EXPIRED');
+      });
+    }
     const due = await this.prisma.order.findMany({
       where: {
         status: 'PENDING_PAYMENT',
@@ -818,7 +875,7 @@ export class CheckoutService implements OnModuleInit, OnModuleDestroy {
       take: 50,
     });
     for (const { id } of due) await this.expire(id);
-    return due.length;
+    return due.length + liveDue.length;
   }
 
   private async expire(orderId: string): Promise<void> {
@@ -1009,7 +1066,7 @@ export class CheckoutService implements OnModuleInit, OnModuleDestroy {
     token: string,
   ): Promise<FullOrder> {
     const order = await this.prisma.order.findFirst({
-      where: { id: orderId, tenantId, publicToken: token, channel: 'WEB' },
+      where: { id: orderId, tenantId, publicToken: token, channel: { in: ['WEB', 'TIKTOK_LIVE'] } },
       include: { items: true },
     });
     if (!order) throw new NotFoundException('Pedido no encontrado.');

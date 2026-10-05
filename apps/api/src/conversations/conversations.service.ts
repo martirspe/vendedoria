@@ -17,6 +17,7 @@ import { MetaWhatsAppClient } from '../channels/meta-whatsapp.client';
 import { asWhatsAppMetadata } from '../channels/whatsapp-metadata';
 import { OrderEmailService } from '../checkout/order-email.service';
 import { InboxEventsService } from './inbox-events.service';
+import { SalesGatewayService } from './sales-gateway.service';
 import {
   findMessageTemplate,
   MESSAGE_TEMPLATES,
@@ -38,6 +39,7 @@ export class ConversationsService {
     private readonly media: MediaService,
     private readonly inboxEvents: InboxEventsService,
     private readonly emails: OrderEmailService,
+    private readonly salesGateway: SalesGatewayService,
   ) {}
 
   list(
@@ -110,7 +112,9 @@ export class ConversationsService {
 
     return {
       ...conversation,
-      messagingWindow: this.getMessagingWindow(conversation.lastInboundAt),
+      messagingWindow: conversation.channel.type === 'TIKTOK_LIVE'
+        ? { canSendFreeForm: false, closesAt: null, reason: 'TikTok LIVE requiere revisión y envío manual desde su panel.' }
+        : this.getMessagingWindow(conversation.lastInboundAt),
       linkedOrder: linkedOrder
         ? {
             id: linkedOrder.id,
@@ -137,6 +141,10 @@ export class ConversationsService {
     },
   ) {
     await this.ensureOwnership(tenantId, conversationId);
+    if (data.agentEnabled) {
+      const conversation = await this.prisma.conversation.findFirst({ where: { id: conversationId, tenantId }, select: { channel: { select: { type: true } } } });
+      if (conversation?.channel.type === 'TIKTOK_LIVE') throw new BadRequestException('TikTok LIVE no permite activar respuestas automáticas. Usa su panel para revisar las sugerencias.');
+    }
     const updated = await this.prisma.conversation.update({
       where: { id: conversationId },
       data: {
@@ -156,6 +164,9 @@ export class ConversationsService {
     text: string,
   ) {
     const conversation = await this.getById(tenantId, conversationId);
+    if (conversation.channel.type === 'TIKTOK_LIVE') {
+      throw new ForbiddenException('Las respuestas LIVE se revisan y copian desde el panel TikTok LIVE. Tu conexión no permite enviarlas automáticamente.');
+    }
     const window = this.getMessagingWindow(conversation.lastInboundAt);
 
     if (!window.canSendFreeForm) {
@@ -164,6 +175,8 @@ export class ConversationsService {
       );
     }
 
+    // Pause before network I/O: an in-flight engine turn checks this before commerce and sending.
+    await this.prisma.conversation.updateMany({ where: { id: conversationId, tenantId }, data: { agentEnabled: false, status: 'PAUSED' } });
     const recipient = this.messenger.recipientOf(conversation.channel, conversation);
     const send = recipient ? await this.messenger.sendText(conversation.channel, recipient, text) : null;
     if (send && !send.ok) {
@@ -212,6 +225,7 @@ export class ConversationsService {
   ) {
     const conversation = await this.getById(tenantId, conversationId);
     const template = findMessageTemplate(templateId);
+    if (conversation.channel.type === 'TIKTOK_LIVE') throw new BadRequestException('Las plantillas de Meta no se envían a TikTok LIVE. Usa su panel para revisar las sugerencias.');
     if (!template) {
       throw new BadRequestException('Unknown message template');
     }
@@ -226,6 +240,7 @@ export class ConversationsService {
     const metadata = asWhatsAppMetadata(conversation.channel.metadata);
     let externalId: string | undefined;
     let dryRun = false;
+    await this.prisma.conversation.updateMany({ where: { id: conversationId, tenantId }, data: { agentEnabled: false, status: 'PAUSED' } });
 
     if (
       conversation.channel.type === 'WHATSAPP' &&
@@ -295,15 +310,6 @@ export class ConversationsService {
     text: string;
     externalMessageId?: string;
   }) {
-    if (params.externalMessageId) {
-      const existing = await this.prisma.message.findFirst({
-        where: { externalId: params.externalMessageId },
-      });
-      if (existing) {
-        return { duplicate: true };
-      }
-    }
-
     const channel = await this.prisma.channel.findFirst({
       where: {
         type: 'WHATSAPP',
@@ -333,15 +339,6 @@ export class ConversationsService {
     text: string;
     externalMessageId?: string;
   }) {
-    if (params.externalMessageId) {
-      const existing = await this.prisma.message.findFirst({
-        where: { externalId: params.externalMessageId },
-      });
-      if (existing) {
-        return { duplicate: true };
-      }
-    }
-
     const channel = await this.prisma.channel.findFirst({
       where: { type: 'INSTAGRAM', externalId: params.accountId },
     });
@@ -369,6 +366,11 @@ export class ConversationsService {
     },
   ) {
     const now = new Date();
+    if (params.externalMessageId && await this.salesGateway.isDuplicate(channel.tenantId, channel.id, params.externalMessageId)) return { duplicate: true };
+    if (params.externalMessageId) {
+      const duplicate = await this.prisma.message.findFirst({ where: { externalId: params.externalMessageId, direction: 'INBOUND', conversation: { tenantId: channel.tenantId, channelId: channel.id } }, select: { id: true } });
+      if (duplicate) return { duplicate: true };
+    }
     const existingConversation = await this.prisma.conversation.findUnique({
       where: {
         channelId_externalThreadId: {
@@ -382,7 +384,8 @@ export class ConversationsService {
       await this.planLimits.assertCanStartConversation(channel.tenantId);
     }
 
-    const conversation = await this.prisma.conversation.upsert({
+    const captured = await this.prisma.$transaction(async (tx) => {
+    const conversation = await tx.conversation.upsert({
       where: {
         channelId_externalThreadId: {
           channelId: channel.id,
@@ -407,15 +410,25 @@ export class ConversationsService {
       },
     });
 
-    const inbound = await this.prisma.message.create({
+    const inbound = await tx.message.create({
       data: {
         conversationId: conversation.id,
         direction: 'INBOUND',
         authorType: 'BUYER',
         body: params.text,
         externalId: params.externalMessageId,
+        inboundKey: params.externalMessageId ? `${channel.tenantId}/${channel.id}/${params.externalMessageId}` : undefined,
+        enginePending: this.salesGateway.enabled,
       },
     });
+    return { conversation, inbound };
+    }).catch((error: unknown) => {
+      if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2002') return null;
+      throw error;
+    });
+    if (!captured) return { duplicate: true };
+    const { conversation, inbound } = captured;
+    if (params.externalMessageId) await this.salesGateway.rememberInbound(channel.tenantId, channel.id, params.externalMessageId);
     const tenantId = channel.tenantId;
     this.inboxEvents.publish(tenantId, conversation.id);
 
@@ -423,6 +436,11 @@ export class ConversationsService {
       where: { id: channel.id },
       data: { lastActiveAt: now, healthStatus: 'CONNECTED' },
     });
+
+    if (this.salesGateway.enabled) {
+      await this.salesGateway.buffered(tenantId, conversation.id, inbound.id);
+      return { conversationId: conversation.id, buffered: true };
+    }
 
     if (!conversation.agentEnabled) {
       await this.prisma.conversation.update({

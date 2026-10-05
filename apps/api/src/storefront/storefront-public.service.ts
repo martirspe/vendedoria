@@ -27,7 +27,8 @@ import {
   slugFromHost,
   storefrontBaseDomain,
 } from './storefront-host';
-import { toCatalogProduct, toProductCard, toProductDetail } from './storefront-mapper';
+import { toCatalogProduct, toCatalogCard, toProductDetail } from './storefront-mapper';
+import { catalogFilterSql, catalogPriceSql, loadCatalogFacets, parseCatalogFilters } from './catalog-filters';
 import { verifyPreviewToken } from './storefront-preview';
 import { effectiveTemplate, readTemplateContent } from './store-templates';
 import { findUbigeo } from '../ubigeo/ubigeo';
@@ -38,7 +39,7 @@ function shippingOrigin(ubigeo: string | null): string | null {
   return place ? `${place.district}, ${place.department}` : null;
 }
 
-const PRODUCT_INCLUDE = {
+export const PRODUCT_INCLUDE = {
   variants: { orderBy: { id: 'asc' } },
   media: { orderBy: { sortOrder: 'asc' } },
   components: {
@@ -70,6 +71,9 @@ export type StoreAccess = {
 
 export type ProductListQuery = {
   category?: string;
+  filters?: string;
+  minPriceCents?: number;
+  maxPriceCents?: number;
   q?: string;
   sort?: PublicProductSort;
   kind?: ProductKind;
@@ -275,44 +279,32 @@ export class StorefrontPublicService {
     const pageSize = Math.min(Math.max(query.pageSize ?? 24, 1), MAX_PAGE_SIZE);
     const page = Math.max(query.page ?? 1, 1);
     const search = query.q?.trim().slice(0, 80);
-    let searchIds: string[] | undefined;
-    let searchTotal = 0;
-    if (search) {
-      const { where: searchWhere } = catalogSearchWhere(access.tenantId, search.split(/\s+/), {
-        published: true, category: query.category, kind: query.kind,
-      });
-      const sort = query.sort === 'price-asc' ? Prisma.sql`p."basePriceCents" ASC`
-        : query.sort === 'price-desc' ? Prisma.sql`p."basePriceCents" DESC`
-        : query.sort === 'newest' ? Prisma.sql`p."createdAt" DESC`
-        : Prisma.sql`p."sortOrder" ASC, p."createdAt" DESC`;
-      const [hits, counts] = await Promise.all([
-        this.prisma.$queryRaw<Array<{ id: string }>>(Prisma.sql`SELECT p.id FROM "Product" p
-          WHERE ${searchWhere} ORDER BY ${sort}, p.id LIMIT ${pageSize} OFFSET ${(page - 1) * pageSize}`),
-        this.prisma.$queryRaw<Array<{ total: number }>>(Prisma.sql`SELECT count(*)::int AS total
-          FROM "Product" p WHERE ${searchWhere}`),
-      ]);
-      searchIds = hits.map((hit) => hit.id);
-      searchTotal = counts[0]?.total ?? 0;
-    }
-    const where: Prisma.ProductWhereInput = {
-      tenantId: access.tenantId,
-      isPublishedOnStore: true,
-      ...(query.category ? { categories: { has: query.category } } : {}),
-      ...(query.kind ? { kind: query.kind } : {}),
-      ...(searchIds ? { id: { in: searchIds } } : {}),
-    };
-    const [total, products] = await Promise.all([
-      searchIds ? Promise.resolve(searchTotal) : this.prisma.product.count({ where }),
-      this.prisma.product.findMany({
-        where,
-        include: PRODUCT_INCLUDE,
-        orderBy: this.orderBy(query.sort),
-        skip: searchIds ? 0 : (page - 1) * pageSize,
-        take: pageSize,
-      }),
+    const filters = parseCatalogFilters(query.filters);
+    const base = search ? catalogSearchWhere(access.tenantId, search.split(/\s+/), {
+      published: true, kind: query.kind,
+    }).where : Prisma.sql`p."tenantId" = ${access.tenantId} AND p."isPublishedOnStore" = true
+      ${query.kind ? Prisma.sql`AND p.kind = ${query.kind}::"ProductKind"` : Prisma.empty}`;
+    const where = Prisma.sql`${base} ${catalogFilterSql(filters, query.category)}
+      ${query.minPriceCents !== undefined ? Prisma.sql`AND ${catalogPriceSql} >= ${query.minPriceCents}` : Prisma.empty}
+      ${query.maxPriceCents !== undefined ? Prisma.sql`AND ${catalogPriceSql} <= ${query.maxPriceCents}` : Prisma.empty}`;
+    const sort = query.sort === 'price-asc' ? Prisma.sql`${catalogPriceSql} ASC`
+      : query.sort === 'price-desc' ? Prisma.sql`${catalogPriceSql} DESC`
+      : query.sort === 'newest' ? Prisma.sql`p."createdAt" DESC`
+      : Prisma.sql`p."isAvailable" DESC, p."sortOrder" ASC, p."updatedAt" DESC`;
+    const [hits, counts, facets] = await Promise.all([
+      this.prisma.$queryRaw<Array<{ id: string }>>(Prisma.sql`SELECT p.id FROM "Product" p
+        WHERE ${where} ORDER BY ${sort}, p.id LIMIT ${pageSize} OFFSET ${(page - 1) * pageSize}`),
+      this.prisma.$queryRaw<Array<{ total: number }>>(Prisma.sql`SELECT count(*)::int AS total
+        FROM "Product" p WHERE ${where}`),
+      loadCatalogFacets(this.prisma, base),
     ]);
-    if (searchIds) products.sort((a, b) => searchIds.indexOf(a.id) - searchIds.indexOf(b.id));
-    return { items: products.map(toProductCard), total: searchIds ? searchTotal : total, page, pageSize };
+    const products = await this.prisma.product.findMany({
+      where: { tenantId: access.tenantId, isPublishedOnStore: true, id: { in: hits.map((hit) => hit.id) } },
+      include: PRODUCT_INCLUDE,
+    });
+    const positions = new Map(hits.map((hit, index) => [hit.id, index]));
+    products.sort((a, b) => positions.get(a.id)! - positions.get(b.id)!);
+    return { items: products.map(toCatalogCard), total: counts[0]?.total ?? 0, page, pageSize, facets };
   }
 
   async getProduct(

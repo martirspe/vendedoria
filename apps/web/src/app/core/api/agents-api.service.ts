@@ -20,6 +20,7 @@ export type SalesAgentDto = {
   audienceDescription: string | null;
   rulesText: string | null;
   communicationStyle: string | null;
+  personalityPreset?: string | null;
   salesStyle: string | null;
   responseLength: string;
   useEmojis: boolean;
@@ -65,6 +66,7 @@ export type UpdateSalesAgentPayload = Partial<{
   audienceDescription: string;
   rulesText: string;
   communicationStyle: string;
+  personalityPreset: string;
   salesStyle: string;
   responseLength: 'concise' | 'balanced' | 'detailed';
   useEmojis: boolean;

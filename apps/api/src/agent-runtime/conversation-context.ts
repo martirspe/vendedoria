@@ -85,7 +85,7 @@ function paymentLink(meta: Record<string, unknown>): Pick<ConversationTurn, 'pay
 }
 
 /** Builds the agent context from stored messages in chronological order. */
-export function buildAgentContext(messages: StoredMessage[]): AgentContext {
+export function buildAgentContext(messages: StoredMessage[], limit = HISTORY_LIMIT): AgentContext {
   const history: ConversationTurn[] = [];
   const shown = new Set<string>();
   for (const message of messages) {
@@ -107,7 +107,7 @@ export function buildAgentContext(messages: StoredMessage[]): AgentContext {
       ...paymentLink(meta),
     });
   }
-  return { history: history.slice(-HISTORY_LIMIT), shownImageProductIds: [...shown] };
+  return { history: history.slice(-limit), shownImageProductIds: [...shown] };
 }
 
 /** Products of the latest seller turn that worked with the catalog. */
@@ -156,17 +156,20 @@ const ACK_WORDS =
   /\b(ok|okay|okey|oki|vale|listo|perfecto|genial|excelente|super|bueno|buenisimo|entendido|de acuerdo|dale|ya|claro|bien|muy|amable|muchas|muchisimas|mil|a ti|a usted|por todo|por la ayuda|por tu ayuda|por su ayuda|igualmente|entonces|saludos|que tengas|buen dia|buena tarde|buenas tardes|buenas noches|lindo dia|nada mas|eso es todo|es todo)\b/g;
 
 /**
- * Short social messages that need a social answer instead of a sales pitch: a farewell
- * ("ok, gracias", "chau") or a bare acknowledgement ("listo", "perfecto"). Anything with
- * a question or extra words is a real message and returns null.
+ * Short social messages that need a social answer instead of a sales pitch: a greeting, farewell
+ * ("ok, gracias", "chau") or a bare acknowledgement ("listo", "perfecto"). A greeting
+ * with a purchase, request or other content remains a real message and returns null.
  */
-export function conversationalIntent(text: string): 'closing' | 'acknowledgement' | null {
-  if (text.includes('?')) return null;
+export function conversationalIntent(text: string): 'greeting' | 'closing' | 'acknowledgement' | null {
   const normalized = normalizeText(text)
     .replace(/[\p{P}\p{S}\p{Extended_Pictographic}]/gu, ' ')
     .replace(/\s+/g, ' ')
     .trim();
   if (!normalized) return null;
+  if (/^(?:(?:hola+|holi|holis|hey|buenas|buen dia|buenos dias|buenas tardes|buenas noches)(?:\s+|$))+$/.test(normalized)) {
+    return 'greeting';
+  }
+  if (text.includes('?')) return null;
   const closing = new RegExp(CLOSING_WORDS.source).test(normalized);
   const rest = normalized.replace(CLOSING_WORDS, ' ').replace(ACK_WORDS, ' ').trim();
   if (rest) return null;
@@ -196,7 +199,21 @@ export function askedForDistrict(history: ConversationTurn[]): boolean {
 }
 
 export function wantsPhoto(text: string): boolean {
-  return /\b(foto|fotos|fotito|imagen|imagenes|como se ve|ver como es)\b/.test(normalizeText(text));
+  const visual = /\b(fotos?|fotitos?|imagen|imagenes|como se ve|ver como es)\b/;
+  let requested = false;
+  for (const clause of normalizeText(text).split(/[.!?;,]|\bpero\b/)) {
+    if (!visual.test(clause)) continue;
+    if (/\b(no|nunca|tampoco|deja de|dejes de)\b|\bsin\s+(?:mas\s+)?(?:fotos?|fotitos?|imagen|imagenes)\b/.test(clause)) {
+      requested = false;
+      continue;
+    }
+    const asks = /^\s*(?:(?:una|unas|otra|otras)\s+)?(?:fotos?|fotitos?|imagen|imagenes)\b/.test(clause)
+      || /\b(por favor|porfa)\b/.test(clause)
+      || /\b(manda\w*|envia\w*|muestra\w*|ensena\w*|pasa\w*|comparte\w*|quiero|quisiera|necesito|ver|tienes|tienen|hay|puedes|podrias)\b.{0,60}\b(fotos?|fotitos?|imagen|imagenes)\b/.test(clause)
+      || /\b(como se ve|ver como es)\b/.test(clause);
+    if (asks) requested = true;
+  }
+  return requested;
 }
 
 /**

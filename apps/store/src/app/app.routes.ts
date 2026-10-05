@@ -8,8 +8,16 @@ import {
 } from './app.resolvers';
 import { LEGAL_SLUGS } from './features/legal/legal-slugs';
 import { StoreShellLayout } from './layout/store-shell.layout';
+import { CartService } from './core/cart.service';
 
 export const routes: Routes = [
+  {
+    path: 'live-checkout',
+    component: StoreShellLayout,
+    providers: [CartService],
+    resolve: { store: storeResolver },
+    children: [{ path: '', loadComponent: () => import('./features/checkout/checkout.page').then((m) => m.CheckoutPage) }],
+  },
   {
     path: '',
     canMatch: [templateMatch('stride')],
@@ -38,7 +46,7 @@ export const routes: Routes = [
         loadComponent: () =>
           import('./features/catalog/catalog.page').then((m) => m.CatalogPage),
         resolve: { list: catalogResolver },
-        runGuardsAndResolvers: 'paramsOrQueryParamsChange',
+        runGuardsAndResolvers: 'always',
       },
       {
         path: 'producto/:handle',

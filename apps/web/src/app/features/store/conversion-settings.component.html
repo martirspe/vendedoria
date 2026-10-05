@@ -1,0 +1,58 @@
+<details class="automation">
+  <summary>
+    <span class="automation__name">Carritos pendientes</span>
+    <span class="state" [class.state--active]="enabled()">{{ loading() ? 'Cargando…' : enabled() ? 'Activo' : 'Desactivado' }}</span>
+    <ds-icon class="chevron" name="chevronDown" [size]="1" />
+  </summary>
+  <div class="automation__body">
+    <p class="description">Un recordatorio para quien dejó su compra a medias y eligió recibirlo.</p>
+    @if (loading()) {
+      <p class="hint" aria-busy="true">Cargando configuración…</p>
+    } @else {
+      @if (error()) { <p class="message message--error" role="alert">{{ error() }}</p> }
+      @if (!loaded()) {
+        <ds-button variant="secondary" (click)="load()">Volver a cargar</ds-button>
+      } @else {
+        @if (summary(); as s) {
+          @if (s.savedCarts || s.resumedCarts || s.deliveries['SENT']) {
+            <dl class="metrics">
+              <div><dt>Guardados</dt><dd>{{ s.savedCarts }}</dd></div>
+              <div><dt>Retomados</dt><dd>{{ s.resumedCarts }}</dd></div>
+              <div><dt>Enviados</dt><dd>{{ s.deliveries['SENT'] || 0 }}</dd></div>
+            </dl>
+            <p class="hint">Actividad de los últimos 7 días.</p>
+          } @else { <p class="hint">La actividad aparecerá aquí cuando haya carritos guardados.</p> }
+          @if (s.deliveries['UNCERTAIN'] || s.deliveries['FAILED']) {
+            <p class="message">{{ s.deliveries['FAILED'] || 0 }} envíos fallidos · {{ s.deliveries['UNCERTAIN'] || 0 }} sin confirmación. Los envíos sin confirmación no se repiten automáticamente.</p>
+          }
+        }
+        <form [formGroup]="form" (ngSubmit)="save()">
+          <label class="choice choice--main"><input type="checkbox" formControlName="recoveryEnabled" role="switch" /><span>Activar recordatorios</span></label>
+          @if (form.controls.recoveryEnabled.value) {
+            <fieldset [disabled]="!auth.isManager()">
+              <legend>Canales disponibles para el cliente</legend>
+              <div class="channels">
+                <label class="choice"><input type="checkbox" formControlName="emailEnabled" /><span>Correo</span></label>
+                <label class="choice"><input type="checkbox" formControlName="whatsappEnabled" /><span>WhatsApp</span></label>
+              </div>
+              <details class="advanced">
+                <summary>Cuándo enviar los recordatorios <ds-icon name="chevronDown" [size]="1" /></summary>
+                <label class="field">Intervalos en minutos<input formControlName="delays" maxlength="40" /><small>Desde la última actividad. Hasta 3 intervalos: 15, 120, 1440.</small></label>
+              </details>
+              @if (form.controls.whatsappEnabled.value) {
+                <label class="field">Plantilla aprobada de WhatsApp<input formControlName="whatsappTemplate" maxlength="100" /></label>
+                <label class="field">Idioma de la plantilla<input formControlName="whatsappLanguage" maxlength="5" /></label>
+                <p class="hint">La plantilla de marketing debe incluir el nombre de la tienda, el enlace para retomar y el enlace para cancelar.</p>
+              }
+            </fieldset>
+          }
+          <p class="hint">Los avisos se detienen al reservar el pedido o cancelar los recordatorios.</p>
+          @if (success()) { <p class="message" role="status">{{ success() }}</p> }
+          @if (auth.isManager()) {
+            <ds-button type="submit" [disabled]="saving() || form.invalid || form.pristine">{{ saving() ? 'Guardando…' : 'Guardar configuración' }}</ds-button>
+          }
+        </form>
+      }
+    }
+  </div>
+</details>

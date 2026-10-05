@@ -14,6 +14,7 @@ import {
   TURNSTILE_HEADER,
 } from './app/core/store-context';
 import { LEGAL_SLUGS } from './app/features/legal/legal-slugs';
+import { TEMPLATE_DEMO_PREFIX, templateDemoFromPath } from './app/core/template-demo-path';
 
 const API_URL = (process.env['STORE_API_URL'] ?? 'http://localhost:3000/api/v1').replace(/\/$/, '');
 const ALLOWED_HOSTS = (process.env['STORE_ALLOWED_HOSTS'] ?? 'localhost,*.localhost')
@@ -36,8 +37,8 @@ const UPSTREAM_TIMEOUT_MS = 8_000;
 /** Paying waits for Mercado Pago (12 s) plus our own work. */
 const PAY_TIMEOUT_MS = 25_000;
 /** Only these endpoints of the tenant store are reachable through the proxy. */
-const PROXY_GET = /^(products(\/[^/]+)?|catalog(\/[^/]+)?|orders\/[a-z0-9]{20,40}|ubigeos|shipping-quote)?$/;
-const PROXY_POST = /^(checkout|coupons\/preview|orders\/[a-z0-9]{20,40}\/(pay|cancel|simulate))$/;
+const PROXY_GET = /^(products(\/[^/]+)?|catalog(\/[^/]+)?|orders\/[a-z0-9]{20,40}|ubigeos|shipping-quote|recommendations|recovery\/options)?$/;
+const PROXY_POST = /^(checkout|live-reservation|coupons\/preview|orders\/[a-z0-9]{20,40}\/(pay|cancel|simulate)|recovery(\/(restore|revoke|activity))?|behavior(\/forget)?)$/;
 
 /** Mercado Pago SDK, Card Payment Brick and Yape tokenization. */
 const MP = 'https://*.mercadopago.com https://*.mercadopago.com.pe https://*.mercadolibre.com https://*.mlstatic.com';
@@ -90,9 +91,13 @@ const resolveCache = new Map<string, { store: StoreResolveResult | null; expires
 app.disable('x-powered-by');
 app.set('trust proxy', 'loopback, uniquelocal');
 
-app.use((_req, res, next) => {
+app.use((req, res, next) => {
   res.setHeader('X-Content-Type-Options', 'nosniff');
   res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
+  if (req.query['recover'] || req.query['stop'] || req.query['live']) {
+    res.setHeader('Referrer-Policy', 'no-referrer');
+    res.setHeader('Cache-Control', 'private, no-store');
+  }
   res.setHeader('Permissions-Policy', 'camera=(), microphone=(), geolocation=()');
   if (PRODUCTION) {
     res.setHeader('Content-Security-Policy', CONTENT_SECURITY_POLICY);
@@ -126,6 +131,33 @@ app.use(
     },
   }),
 );
+
+/** Original template demos render bundled examples and never resolve/read a tenant. */
+app.use(async (req: Request, res: Response, next: NextFunction) => {
+  if (!req.path.startsWith(TEMPLATE_DEMO_PREFIX + '/')) return next();
+  const demoTemplate = templateDemoFromPath(req.path);
+  if (!demoTemplate) {
+    res.status(404).type('html').send(statusPage('Plantilla no encontrada', 'Vuelve a la selección de plantillas.'));
+    return;
+  }
+  if (req.method !== 'GET' && req.method !== 'HEAD') {
+    res.status(405).set('Allow', 'GET, HEAD').end();
+    return;
+  }
+  const base = `${TEMPLATE_DEMO_PREFIX}/${demoTemplate}`;
+  if (req.path === base) { res.redirect(308, base + '/'); return; }
+  if (req.path.startsWith(base + '/_api')) { res.status(404).end(); return; }
+  res.setHeader('X-Robots-Tag', 'noindex, nofollow');
+  res.setHeader('Cache-Control', 'private, no-store');
+  if (req.path === base + '/robots.txt') { res.type('text/plain').send('User-agent: *\nDisallow: /'); return; }
+  if (req.path === base + '/sitemap.xml') { res.status(404).end(); return; }
+  const context: StoreRequestContext = {
+    apiBase: '', previewToken: null, origin: origin(req), editorOrigin: null, demoTemplate,
+  };
+  angularApp.handle(req, context)
+    .then((response) => response ? writeResponseToNodeResponse(response, res) : next())
+    .catch(next);
+});
 
 /** Every remaining route belongs to exactly one tenant, derived from the host. */
 app.use(async (req: Request, res: Response, next: NextFunction) => {
@@ -230,7 +262,7 @@ app.use(STORE_PROXY_PREFIX, express.json({ limit: '32kb' }), async (req: Request
       signal: AbortSignal.timeout(post ? PAY_TIMEOUT_MS : UPSTREAM_TIMEOUT_MS),
     });
     res.status(upstream.status);
-    for (const header of ['content-type', 'cache-control']) {
+    for (const header of ['content-type', 'cache-control', 'server-timing']) {
       const value = upstream.headers.get(header);
       if (value) res.setHeader(header, value);
     }

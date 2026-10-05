@@ -1,3 +1,4 @@
+import { RecommendationsComponent } from '../../components/recommendations.component';
 import {
   ChangeDetectionStrategy,
   Component,
@@ -12,7 +13,6 @@ import {
 import { Router, RouterLink } from '@angular/router';
 import type { PublicProductDetail, PublicVariant } from '@vendedoria/contracts';
 import { DsIconComponent } from '@vendedoria/ui';
-import { ProductCardComponent } from '../../components/product-card.component';
 import { ProductFactsComponent } from '../../components/product-facts.component';
 import { AnalyticsService } from '../../core/analytics.service';
 import { CartService } from '../../core/cart.service';
@@ -32,11 +32,10 @@ type OptionGroup = {
 
 @Component({
   selector: 'store-product-page',
-  imports: [
+  imports: [RecommendationsComponent,
     RouterLink,
     DsIconComponent,
     MoneyPipe,
-    ProductCardComponent,
     ProductFactsComponent,
     NotFoundPage,
     STORE_EDITOR,

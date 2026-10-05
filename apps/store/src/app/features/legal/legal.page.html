@@ -39,6 +39,16 @@
             </ul>
             <p class="doc__note">Este resumen es informativo; el texto completo prevalece.</p>
           </div>
+          @if (d.slug === 'politica-de-privacidad') {
+            <section class="doc__section print-hide" aria-labelledby="personalization-title">
+              <h2 id="personalization-title">Tus preferencias de recomendaciones</h2>
+              <label class="personalization-choice">
+                <input type="checkbox" [checked]="conversion.consent()" (change)="conversion.setConsent($any($event.target).checked)" />
+                <span>Personalizar las sugerencias con los productos que veo en esta sesión.</span>
+              </label>
+              <p>Es opcional. El historial se guarda hasta 7 días; al desactivar esta opción, lo eliminamos. Las sugerencias del carrito funcionan sin activarla.</p>
+            </section>
+          }
 
           @for (section of d.sections; track section.id; let i = $index) {
             <section class="doc__section" [id]="section.id">

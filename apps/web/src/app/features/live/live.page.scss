@@ -1,0 +1,211 @@
+:host {
+  display: block;
+  min-width: 0;
+}
+.live-page {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: var(--ds-space-6);
+  padding: var(--ds-gutter);
+  color: var(--ds-color-text-primary);
+}
+.live-page > *,
+.operation-grid > * {
+  min-width: 0;
+}
+.panel {
+  background: var(--ds-color-surface);
+  border: thin solid var(--ds-color-border);
+  border-radius: var(--ds-radius-lg);
+  padding: var(--ds-space-5);
+}
+.setup summary {
+  cursor: pointer;
+  min-height: var(--ds-touch-target);
+  font-weight: bold;
+  padding: var(--ds-space-3);
+}
+.setup .panel {
+  margin-block: var(--ds-space-4);
+}
+.page-header,
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--ds-space-3);
+}
+.actions {
+  justify-content: flex-start;
+}
+.eyebrow {
+  color: var(--ds-color-text-secondary);
+  font-weight: bold;
+}
+h1,
+h2,
+h3,
+p {
+  margin-block: var(--ds-space-2) var(--ds-space-3);
+}
+.notice {
+  padding: var(--ds-space-4);
+  background: var(--ds-color-surface);
+  border-inline-start: var(--ds-space-1) solid var(--ds-color-primary);
+  border-radius: var(--ds-radius-sm);
+}
+.notice--error {
+  border-color: var(--ds-color-danger);
+}
+.badge {
+  padding: var(--ds-space-2);
+  border: thin solid var(--ds-color-border);
+  border-radius: var(--ds-radius-sm);
+}
+.capabilities,
+.metrics,
+.form-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 14rem), 1fr));
+  gap: var(--ds-space-4);
+  margin-block: var(--ds-space-4);
+}
+.capabilities div,
+.metrics div {
+  padding: var(--ds-space-3);
+  border: thin solid var(--ds-color-border);
+  border-radius: var(--ds-radius-sm);
+}
+dt,
+.hint,
+small {
+  color: var(--ds-color-text-secondary);
+}
+dd {
+  margin: 0;
+  font-weight: bold;
+}
+.metrics dd {
+  font-size: 1.4rem;
+}
+label {
+  display: grid;
+  align-content: start;
+  gap: var(--ds-space-2);
+}
+.enabled {
+  display: flex;
+  align-items: center;
+  margin-block: var(--ds-space-3);
+}
+.enabled input {
+  width: auto;
+  min-height: auto;
+}
+input,
+select,
+textarea {
+  box-sizing: border-box;
+  width: 100%;
+  min-height: var(--ds-touch-target);
+  padding: var(--ds-space-3);
+  color: var(--ds-color-text-primary);
+  background: var(--ds-color-surface);
+  border: thin solid var(--ds-color-border);
+  border-radius: var(--ds-radius-sm);
+  font: inherit;
+}
+input.ng-invalid.ng-touched,
+select.ng-invalid.ng-touched {
+  border-color: var(--ds-color-danger);
+}
+:is(input, select, textarea, button, a):focus-visible {
+  outline: medium solid var(--ds-color-focus-ring);
+  outline-offset: var(--ds-space-1);
+}
+.wide {
+  grid-column: 1 / -1;
+}
+.offer-form {
+  margin-block: var(--ds-space-4);
+  padding: var(--ds-space-4);
+  border: thin solid var(--ds-color-border);
+  border-radius: var(--ds-radius-md);
+}
+.campaigns,
+.messages {
+  list-style: none;
+  padding: 0;
+}
+.campaigns li {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--ds-space-4);
+  padding-block: var(--ds-space-4);
+  border-block-end: thin solid var(--ds-color-divider);
+}
+.operation-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: var(--ds-space-6);
+}
+.current-product {
+  padding: var(--ds-space-4);
+  border: medium solid var(--ds-color-primary);
+  border-radius: var(--ds-radius-md);
+}
+.product-picker {
+  display: grid;
+  gap: var(--ds-space-2);
+}
+.product-picker button {
+  display: grid;
+  gap: var(--ds-space-2);
+  padding: var(--ds-space-3);
+  min-height: var(--ds-touch-target);
+  text-align: start;
+  background: var(--ds-color-surface);
+  color: var(--ds-color-text-primary);
+  border: thin solid var(--ds-color-border);
+  border-radius: var(--ds-radius-sm);
+  font: inherit;
+  cursor: pointer;
+}
+.product-picker button[aria-pressed='true'] {
+  border-color: var(--ds-color-info);
+}
+.messages {
+  max-height: 32rem;
+  overflow-y: auto;
+}
+.messages li {
+  padding: var(--ds-space-4);
+  border-block-end: thin solid var(--ds-color-divider);
+}
+.suggestion {
+  padding: var(--ds-space-3);
+  background: var(--ds-color-bg);
+  border-radius: var(--ds-radius-sm);
+}
+.table-wrap {
+  overflow-x: auto;
+}
+table {
+  width: 100%;
+  border-collapse: collapse;
+  text-align: start;
+}
+th,
+td {
+  padding: var(--ds-space-3);
+  border-block-end: thin solid var(--ds-color-divider);
+  text-align: start;
+}
+@media (min-width: 60rem) {
+  .operation-grid {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  }
+}

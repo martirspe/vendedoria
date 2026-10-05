@@ -4,7 +4,7 @@ import { PlanTier } from '@prisma/client';
  * Optional features turned on from Integraciones; each plan lists the ones it includes. The sales
  * agent is the core product: the web store is an add-on from Crece up.
  */
-export type IntegrationKey = 'store' | 'custom_domain' | 'instagram' | 'tracking' | 'team';
+export type IntegrationKey = 'store' | 'custom_domain' | 'instagram' | 'tracking' | 'team' | 'tiktok_live';
 
 /** Limits of a plan; null means no fixed limit. */
 export type PlanLimits = {
@@ -113,7 +113,7 @@ export const TRIAL_LIMITS: PlanLimits = {
   couponQuota: 5,
   seatQuota: 2,
   platformBadge: false,
-  integrations: ['store', 'instagram', 'custom_domain', 'team'],
+  integrations: ['store', 'instagram', 'custom_domain', 'team', 'tiktok_live'],
 };
 
 /** Features every plan has; shown once instead of repeating them in each card. */
@@ -176,7 +176,7 @@ export const PLAN_CATALOG: PlanDefinition[] = [
     couponQuota: 5,
     seatQuota: 2,
     platformBadge: false,
-    integrations: ['store', 'instagram', 'custom_domain', 'team'],
+    integrations: ['store', 'instagram', 'custom_domain', 'team', 'tiktok_live'],
     description: 'Para vender todos los días con tu tienda web, diseñada con IA en minutos.',
     note: `Pruébalo ${PLAN_TRIAL_DAYS} días gratis, sin tarjeta. En la prueba tienes hasta 100 chats nuevos, 100 textos y 10 imágenes con IA; todo lo demás es igual.`,
     highlights: [
@@ -204,7 +204,7 @@ export const PLAN_CATALOG: PlanDefinition[] = [
     couponQuota: 20,
     seatQuota: 5,
     platformBadge: false,
-    integrations: ['store', 'instagram', 'custom_domain', 'team', 'tracking'],
+    integrations: ['store', 'instagram', 'custom_domain', 'team', 'tracking', 'tiktok_live'],
     description: 'Para negocios que invierten en anuncios y atienden en equipo.',
     note: null,
     highlights: [
@@ -231,7 +231,7 @@ export const PLAN_CATALOG: PlanDefinition[] = [
     couponQuota: null,
     seatQuota: 15,
     platformBadge: false,
-    integrations: ['store', 'instagram', 'custom_domain', 'team', 'tracking'],
+    integrations: ['store', 'instagram', 'custom_domain', 'team', 'tracking', 'tiktok_live'],
     description: 'Para negocios con mucho volumen de chats y un catálogo grande.',
     note: null,
     highlights: [
@@ -258,7 +258,7 @@ export const PLAN_CATALOG: PlanDefinition[] = [
     couponQuota: null,
     seatQuota: null,
     platformBadge: false,
-    integrations: ['store', 'instagram', 'custom_domain', 'team', 'tracking'],
+    integrations: ['store', 'instagram', 'custom_domain', 'team', 'tracking', 'tiktok_live'],
     description: 'Para negocios que necesitan más de lo que incluye Lidera.',
     note: null,
     highlights: [

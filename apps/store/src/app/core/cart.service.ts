@@ -1,5 +1,6 @@
 import { Injectable, computed, inject, signal } from '@angular/core';
 import { AnalyticsService } from './analytics.service';
+import { TemplateDemo } from './template-demo';
 
 export type CartLine = {
   key: string;
@@ -24,6 +25,7 @@ const STORAGE_PREFIX = 'vendedoria-cart:';
 @Injectable({ providedIn: 'root' })
 export class CartService {
   private readonly analytics = inject(AnalyticsService);
+  private readonly demo = inject(TemplateDemo);
   private storageKey: string | null = null;
 
   readonly lines = signal<CartLine[]>([]);
@@ -43,9 +45,10 @@ export class CartService {
 
   /** Call only in the browser (after render). */
   load(slug: string): void {
-    this.storageKey = `${STORAGE_PREFIX}${slug}`;
+    this.storageKey = this.demo.template ? `${STORAGE_PREFIX}demo:${this.demo.template}` : `${STORAGE_PREFIX}${slug}`;
     try {
-      const raw = localStorage.getItem(this.storageKey);
+      const storage = this.demo.active ? sessionStorage : localStorage;
+      const raw = storage.getItem(this.storageKey);
       const parsed: unknown = raw ? JSON.parse(raw) : [];
       this.lines.set(Array.isArray(parsed) ? parsed.filter(isCartLine) : []);
     } catch {
@@ -89,11 +92,23 @@ export class CartService {
     this.update(() => []);
   }
 
+  restore(lines: Omit<CartLine, 'key'>[]): void {
+    this.update(() => lines.map((line) => ({ ...line, key: `${line.handle}::${line.variantId ?? ''}` })));
+  }
+
+  /** A LIVE hold uses a route-scoped bag without replacing the shopper's saved cart. */
+  restoreTransient(lines: Omit<CartLine, 'key'>[]): void {
+    this.storageKey = null;
+    this.restore(lines);
+    this.ready.set(true);
+  }
+
   private update(change: (lines: CartLine[]) => CartLine[]): void {
     this.lines.update(change);
     if (this.storageKey) {
       try {
-        localStorage.setItem(this.storageKey, JSON.stringify(this.lines()));
+        const storage = this.demo.active ? sessionStorage : localStorage;
+        storage.setItem(this.storageKey, JSON.stringify(this.lines()));
       } catch {
         // Storage full or blocked (private mode): the cart still works for this visit.
       }

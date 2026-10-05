@@ -40,6 +40,7 @@ import {
   SellerSectionId,
   TECHNIQUE_GROUPS,
   asSellerSection,
+  resolveSellerPreset,
 } from './seller-config';
 
 const CUSTOM_PROMPT_MAX = 12000;
@@ -123,6 +124,7 @@ export class SellerPage {
     audienceDescription: [''],
     rulesText: [''],
     communicationStyle: [''],
+    personalityPreset: [''],
     salesStyle: [''],
     responseLength: ['balanced' as 'concise' | 'balanced' | 'detailed'],
     useEmojis: [true],
@@ -165,16 +167,7 @@ export class SellerPage {
     })),
   );
 
-  readonly activePreset = computed(() => {
-    const values = this.formValues();
-    return (
-      this.presets.find(
-        (preset) =>
-          preset.communicationStyle === values.communicationStyle &&
-          preset.salesStyle === values.salesStyle,
-      )?.id ?? null
-    );
-  });
+  readonly activePreset = computed(() => resolveSellerPreset(this.formValues()));
 
   readonly customPromptLength = computed(
     () => this.formValues().customPrompt.length,
@@ -417,11 +410,17 @@ export class SellerPage {
 
   applyPreset(preset: SellerPreset): void {
     this.form.patchValue({
+      personalityPreset: preset.id,
       communicationStyle: preset.communicationStyle,
       salesStyle: preset.salesStyle,
       responseLength: preset.responseLength,
       salesTechniques: [...preset.salesTechniques],
     });
+    this.markDirty();
+  }
+
+  customizePersonality(): void {
+    this.form.controls.personalityPreset.setValue('custom');
     this.markDirty();
   }
 
@@ -702,6 +701,7 @@ export class SellerPage {
       const values = this.form.getRawValue();
       const updated = await this.api.update(id, {
         ...values,
+        personalityPreset: this.activePreset(),
         companyName: values.companyName.trim() || undefined,
         companyDescription: values.companyDescription.trim() || undefined,
         audienceDescription: values.audienceDescription.trim() || undefined,
@@ -770,6 +770,7 @@ export class SellerPage {
       audienceDescription: agent.audienceDescription ?? '',
       rulesText: agent.rulesText ?? '',
       communicationStyle: agent.communicationStyle ?? '',
+      personalityPreset: agent.personalityPreset ?? '',
       salesStyle: agent.salesStyle ?? '',
       responseLength: (['concise', 'balanced', 'detailed'].includes(
         agent.responseLength,

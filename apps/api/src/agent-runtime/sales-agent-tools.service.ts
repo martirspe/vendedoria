@@ -1,10 +1,11 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Optional } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { Prisma, type ProductKind } from '@prisma/client';
 import { CATALOG_CANDIDATES, maximumPrice, searchCatalogIds } from '../catalog/catalog-search';
 import { PrismaService } from '../prisma/prisma.service';
 import { OrderShipping, OrdersService } from '../orders/orders.service';
 import { orderReference } from '../orders/settlement';
+import { SalesSearchService } from './sales-search.service';
 import type { ShippingRules } from '../storefront/shipping';
 import {
   customDomainUrl,
@@ -337,9 +338,10 @@ export type AgentToolName =
   | 'create_payment_link'
   | 'quote_shipping'
   | 'escalate';
+// Read tools and backend state traces share the existing audit contract.
 
 export type AgentToolTrace = {
-  name: AgentToolName;
+  name: AgentToolName | 'select_variant' | 'search_products' | 'get_product' | 'get_price' | 'check_inventory' | 'get_product_variants' | 'calculate_shipping' | 'get_commercial_policy' | 'get_order_status';
   status: 'ok' | 'error' | 'skipped';
   summary: string;
   data?: Record<string, unknown>;
@@ -395,6 +397,7 @@ export class SalesAgentToolsService {
     private readonly prisma: PrismaService,
     private readonly ordersService: OrdersService,
     private readonly config: ConfigService,
+    @Optional() private readonly semantic?: SalesSearchService,
   ) {}
 
   extractProductRefs(text: string): ProductRef[] {
@@ -434,9 +437,13 @@ export class SalesAgentToolsService {
     inboundText = '',
   ): Promise<CatalogProductView[]> {
     const tokens = queryTokens(inboundText).filter((token) => !BROWSE_WORDS.has(token));
-    const ids = await searchCatalogIds(this.prisma, tenantId, tokens, {
+    const [lexicalIds, semanticIds] = await Promise.all([searchCatalogIds(this.prisma, tenantId, tokens, {
       available: true,
       maxPriceCents: maximumPrice(inboundText),
+    }), this.semantic?.candidates(tenantId, inboundText, 'product') ?? Promise.resolve([])]);
+    const ids = [...new Set([...lexicalIds, ...semanticIds])].sort((a, b) => {
+      const rank = (id: string) => [lexicalIds, semanticIds].reduce((sum, list) => sum + (list.includes(id) ? 1 / (60 + list.indexOf(id)) : 0), 0);
+      return rank(b) - rank(a);
     });
     const pinned = [
       ...(referencedHandles.length
@@ -463,10 +470,26 @@ export class SalesAgentToolsService {
     const byId = new Map(
       [...referenced, ...products].map((product) => [product.id, product]),
     );
+    const maxPrice = maximumPrice(inboundText);
     return [...byId.values()].map((product) => ({
       ...this.toStoreView(product, base),
       ...(ids.includes(product.id) ? { searchRank: ids.length - ids.indexOf(product.id) } : {}),
-    }));
+    })).filter((product) => contextIds.includes(product.id) || referencedHandles.includes(product.handle) || maxPrice === undefined || product.basePriceCents <= maxPrice);
+  }
+
+  /** Hydration for function calls/references; a vector payload never supplies facts. */
+  async getProducts(tenantId: string, ids: string[]): Promise<CatalogProductView[]> {
+    const [rows, base] = await Promise.all([
+      this.prisma.product.findMany({ where: { tenantId, id: { in: ids.slice(0, 12) }, isAvailable: true }, include: PRODUCT_VIEW_INCLUDE }),
+      this.storeBase(tenantId),
+    ]);
+    return rows.map((row) => this.toStoreView(row, base));
+  }
+
+  async existingOrder(tenantId: string, conversationId: string | null | undefined, orderId: string) {
+    if (!conversationId) return null;
+    const order = await this.prisma.order.findFirst({ where: { id: orderId, tenantId, conversationId }, include: { payments: { take: 1, orderBy: { createdAt: 'desc' } } } });
+    return order ? { id: order.id, status: order.status, orderRef: orderReference(order), checkoutUrl: order.payments[0]?.checkoutUrl } : null;
   }
 
   /** Category counts of the whole available catalog, used to summarize it instead of listing it. */
@@ -673,7 +696,7 @@ export class SalesAgentToolsService {
 
     const asksCatalog =
       /productos?|catalogo|que\s+tienen|que\s+venden|recomend/.test(query);
-    if (!matches.length && asksCatalog && products.length) {
+    if (!matches.length && asksCatalog && products.length && tokens.every((token) => BROWSE_WORDS.has(token))) {
       matches = products.slice(0, 3);
     }
 
@@ -725,6 +748,7 @@ export class SalesAgentToolsService {
       answer: string;
       tags: string[];
     }>,
+    retrievedIds: string[] = [],
   ): {
     matches: Array<{ id: string; question: string; answer: string }>;
     trace: AgentToolTrace;
@@ -748,7 +772,7 @@ export class SalesAgentToolsService {
         )
           ? 2
           : 0;
-        return { faq, score: score + questionBoost };
+        return { faq, score: score + questionBoost + (retrievedIds.includes(faq.id) ? 5 : 0) };
       })
       .filter((item) => item.score > 0)
       .sort((a, b) => b.score - a.score)
@@ -1068,7 +1092,7 @@ export class SalesAgentToolsService {
   }
 
   wantsPurchase(text: string): boolean {
-    return /comprar|hacer\s+(un|el|mi|este)\s+pedido|pagar|checkout|link\s+de\s+pago|quiero\s+(ese|este|esa|esta|el|la)\b|lo\s+quiero|la\s+quiero|\bl[oa]\s+(llevo|compro|pido)\b|\b(separ|reserv|apart)(a|as|ame|alo|ala|amelo|amela|ar)\b|\bme\s+l[oa]\s+(separas|reservas|envias|mandas)\b/.test(
+    return /\b(?:comprar|hacer\s+(un|el|mi|este)\s+pedido|pagar|checkout|link\s+de\s+pago|quiero\s+(ese|este|esa|esta|el|la)|lo\s+quiero|la\s+quiero|l[oa]\s+(llevo|compro|pido)|(separ|reserv|apart)(a|as|ame|alo|ala|amelo|amela|ar)|me\s+l[oa]\s+(separas|reservas|envias|mandas))\b/.test(
       normalizeText(text),
     );
   }
@@ -1082,6 +1106,8 @@ export class SalesAgentToolsService {
     products: CatalogProductView[],
     refs: ProductRef[] = [],
   ): CatalogProductView | null {
+    const exact = products.filter((product) => normalizeText(text).includes(normalizeText(product.name)));
+    if (exact.length === 1) return exact[0];
     const referenced = new Set(
       refs
         .map((ref) => products.find((product) => product.handle === ref.handle))
