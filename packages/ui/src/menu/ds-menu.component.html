@@ -1,0 +1,6 @@
+<button type="button" class="ds-menu-trigger" [attr.aria-label]="label()" aria-haspopup="menu" [attr.aria-controls]="menuId()" [attr.aria-expanded]="open()" (click)="toggle()" (keydown)="onTriggerKey($event)">
+  <ng-content select="[dsMenuTrigger]" />
+</button>
+<div class="ds-menu-panel" [id]="menuId()" popover="auto" role="menu" [attr.aria-label]="label()" (toggle)="onToggle($event)" (keydown)="onMenuKey($event)" (click)="onAction($event)">
+  <ng-content />
+</div>

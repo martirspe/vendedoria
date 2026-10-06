@@ -92,7 +92,7 @@ La configuración de tienda agrega `availability` con `public`, `previewAllowed`
 
 ## UX de publicación
 
-El editor tiene cuatro etapas: tipo/información y clasificación, características/sets/variantes, fotos, precio/publicación y revisión. Muestra atributos del esquema elegido y los datos propios del tipo. Mantiene los estados de carga, reintento de clasificación, validación y error de API. Las piezas incompletas o duplicadas se rechazan en lugar de descartarse silenciosamente. Una pieza histórica fuera de las opciones actuales conserva una referencia visible para que se corrija.
+El editor presenta una ficha continua: información, fotos, precio/stock y características/sets/variantes en la columna principal; disponibilidad, tipo y publicación en la columna lateral. La barra de guardado permanece visible y la información opcional se puede desplegar. Muestra atributos del esquema elegido y los datos propios del tipo. Mantiene los estados de carga, reintento de clasificación, validación y error de API. Las piezas incompletas o duplicadas se rechazan en lugar de descartarse silenciosamente. Una pieza histórica fuera de las opciones actuales conserva una referencia visible para que se corrija.
 
 El formulario reutiliza componentes y tokens del diseño existente. La configuración de tienda muestra que una publicación se conserva durante una pausa de integración/plan y restringe acciones según disponibilidad. Los dos checkouts muestran: «Comprarás únicamente esta selección. Tu carrito se conserva para otra compra».
 

@@ -1,11 +1,10 @@
-<section class="store">
+<section class="store tw:mx-auto tw:min-w-0">
   <header class="store__header">
     <div>
       <a routerLink="/app/products" class="import__back">
         <ds-icon name="arrowLeft" [size]="0.9" /> Volver a productos
       </a>
-      <p class="store__eyebrow">Catálogo</p>
-      <h1>Importar catálogo</h1>
+      <h1 class="tw:console-title">Importar catálogo</h1>
       <p>
         Carga todos tus productos de una vez con sus fotos, precios, stock y sets. Antes de guardar
         verás qué se crea, qué se actualiza y qué queda sin publicar.
@@ -14,7 +13,7 @@
   </header>
 
   @if (errorMessage(); as error) {
-    <div class="banner banner--danger" role="alert">
+    <div class="tw:feedback tw:feedback-danger" role="alert">
       <ds-icon name="alert" />
       <span>{{ error }}</span>
     </div>

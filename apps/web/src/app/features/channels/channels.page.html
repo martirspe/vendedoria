@@ -1,22 +1,22 @@
-<section class="channels">
+<section class="channels tw:min-w-0 tw:grid-cols-1 tw:wrap-anywhere tw:[&_.panel__head]:flex-wrap tw:mx-auto tw:min-w-0">
   <header class="channels__header">
     <div>
-      <h1>Canales</h1>
+      <h1 class="tw:console-title">Canales</h1>
       <p>
         Conecta WhatsApp Business y administra los canales de venta de tu negocio.
       </p>
     </div>
   </header>
 
-  @if (errorMessage(); as error) {
-    <div class="banner banner--danger" role="alert">
+  @if (errorMessage() && !loadFailed(); as error) {
+    <div class="tw:feedback tw:feedback-danger" role="alert">
       <ds-icon name="alert" />
       <span>{{ error }}</span>
     </div>
   }
 
   @if (successMessage(); as success) {
-    <div class="banner banner--success" role="status">
+    <div class="tw:feedback tw:feedback-success" role="status">
       <ds-icon name="check" />
       <span>{{ success }}</span>
     </div>
@@ -24,16 +24,20 @@
 
   @if (loading()) {
     <div class="skeleton" aria-busy="true">Cargando canales…</div>
-  } @else {
+  } @else if (loadFailed()) {
+      <ds-empty-state title="No pudimos cargar esta sección" body="Revisa tu conexión e inténtalo de nuevo.">
+        <ds-button variant="secondary" (click)="load()">Reintentar</ds-button>
+      </ds-empty-state>
+    } @else {
     @if (diagnostics(); as diag) {
       <article class="panel panel--diagnostics">
         <div class="panel__head">
           <div>
             <h2>Diagnóstico del canal</h2>
-            <p>Qué falló y el siguiente paso accionable.</p>
+            <p>Revisa el estado de la conexión y cómo resolver los problemas.</p>
           </div>
           <span
-            class="status"
+            class="status tw:shrink-0 tw:whitespace-nowrap"
             [class.status--ok]="diag.healthStatus === 'CONNECTED'"
             [class.status--warn]="diag.healthStatus !== 'CONNECTED'"
           >
@@ -76,7 +80,7 @@
           </div>
           @if (whatsapp; as channel) {
             <span
-              class="status"
+              class="status tw:shrink-0 tw:whitespace-nowrap"
               [class.status--ok]="channel.healthStatus === 'CONNECTED'"
               [class.status--warn]="channel.healthStatus !== 'CONNECTED'"
             >
@@ -88,7 +92,7 @@
         @if (!whatsapp) {
           <ds-empty-state
             title="Aún no hay WhatsApp conectado"
-            body="Usa tu Phone Number ID y access token de Meta Cloud API. Luego configura el webhook con el verify token del servidor."
+            body="Completa los datos de Meta en el formulario para conectar el número de tu negocio."
           />
         } @else {
           <dl class="meta">

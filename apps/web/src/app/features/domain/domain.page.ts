@@ -1,3 +1,4 @@
+import { DsEmptyStateComponent } from '@vendedoria/ui';
 import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { DsButtonComponent, DsConfirmService, DsIconComponent } from '@vendedoria/ui';
@@ -17,7 +18,7 @@ const STATUS_LABELS: Record<CustomDomainView['status'], string> = {
 @Component({
   selector: 'app-domain-page',
   standalone: true,
-  imports: [ReactiveFormsModule, DsButtonComponent, DsIconComponent, IntegrationGateComponent],
+  imports: [DsEmptyStateComponent, ReactiveFormsModule, DsButtonComponent, DsIconComponent, IntegrationGateComponent],
   templateUrl: './domain.page.html',
   styleUrls: ['../store/store.page.scss', '../payments/payments.page.scss', './domain.page.scss'],
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -30,6 +31,7 @@ export class DomainPage {
   readonly canManage = inject(AuthApiService).isManager();
 
   readonly loading = signal(true);
+  readonly loadFailed = signal(false);
   readonly saving = signal(false);
   readonly copied = signal<string | null>(null);
   readonly errorMessage = signal<string | null>(null);
@@ -48,11 +50,13 @@ export class DomainPage {
 
   async load(): Promise<void> {
     this.loading.set(true);
+    this.loadFailed.set(false);
     this.errorMessage.set(null);
     try {
       await this.integrations.refresh();
       if (this.active()) this.apply(await this.api.getCustomDomain());
     } catch {
+      this.loadFailed.set(true);
       this.errorMessage.set('No pudimos cargar tu dominio. Revisa tu conexión e inténtalo de nuevo.');
     } finally {
       this.loading.set(false);

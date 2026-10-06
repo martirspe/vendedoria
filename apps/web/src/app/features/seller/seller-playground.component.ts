@@ -8,7 +8,7 @@ import {
   output,
   signal,
 } from '@angular/core';
-import { DsButtonComponent, DsIconComponent } from '@vendedoria/ui';
+import { DsButtonComponent, DsIconComponent, DsModalDirective } from '@vendedoria/ui';
 import {
   AgentsApiService,
   AgentToolTrace,
@@ -19,7 +19,7 @@ import {
 @Component({
   selector: 'app-seller-playground',
   standalone: true,
-  imports: [DsButtonComponent, DsIconComponent],
+  imports: [DsButtonComponent, DsIconComponent, DsModalDirective],
   templateUrl: './seller-playground.component.html',
   styleUrl: './seller-playground.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,

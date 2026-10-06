@@ -1,7 +1,6 @@
-<section class="shipping">
+<section class="shipping tw:mx-auto tw:min-w-0">
   <header class="shipping__header">
-    <p class="shipping__eyebrow">Ventas</p>
-    <h1>Envíos</h1>
+    <h1 class="tw:console-title">Envíos</h1>
     <p>
       Cómo reciben tus clientes sus pedidos. Tu vendedor IA cotiza con estas tarifas antes de enviar
       el link de pago, y tu tienda web las usa en el checkout.
@@ -9,13 +8,13 @@
   </header>
 
   @if (errorMessage(); as error) {
-    <div class="banner banner--danger" role="alert">
+    <div class="tw:feedback tw:feedback-danger" role="alert">
       <ds-icon name="alert" />
       <span>{{ error }}</span>
     </div>
   }
   @if (successMessage(); as success) {
-    <div class="banner banner--success" role="status">
+    <div class="tw:feedback tw:feedback-success" role="status">
       <ds-icon name="check" />
       <span>{{ success }}</span>
     </div>
@@ -30,7 +29,7 @@
     </div>
   } @else {
     @if (!options().length) {
-      <div class="banner banner--warning" role="status">
+      <div class="tw:feedback tw:feedback-warning" role="status">
         <ds-icon name="info" />
         <span>
           Aún no ofreces ninguna forma de entrega. Tu vendedor IA no cobrará envío y le dirá al cliente
@@ -40,6 +39,10 @@
     }
 
     <form class="shipping__form" [formGroup]="form" (ngSubmit)="save()">
+      <div class="tw:console-save-bar">
+        <span class="tw:px-2">Cambios de envíos</span>
+        <ds-button type="submit" [disabled]="saving() || form.pristine">{{ saving() ? 'Guardando…' : 'Guardar envíos' }}</ds-button>
+      </div>
       <section class="card">
         <h2>Envío a domicilio</h2>
         <label class="check">
@@ -123,11 +126,6 @@
         }
       </section>
 
-      <footer>
-        <ds-button type="submit" [disabled]="saving() || form.pristine">
-          {{ saving() ? 'Guardando…' : 'Guardar envíos' }}
-        </ds-button>
-      </footer>
     </form>
   }
 </section>

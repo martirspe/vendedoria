@@ -1,5 +1,5 @@
-<section class="editor" (keydown)="onKeydown($event)">
-  <header class="editor__bar">
+<section class="editor tw:console-scope tw:[&_.ds-button]:rounded-sm!" (keydown)="onKeydown($event)">
+  <header class="editor__bar tw:min-w-0">
     <div class="editor__title">
       <a routerLink="/app/store" class="icon-button" aria-label="Volver a Tienda web" title="Volver a Tienda web">
         <ds-icon name="arrowLeft" [size]="1.1" />
@@ -61,9 +61,9 @@
     }
   </header>
 
-  <div class="editor__body">
+  <div class="editor__body tw:min-w-0 tw:grid-cols-1">
     @if (loading()) {
-      <div class="editor__workspace" aria-busy="true" aria-label="Cargando el editor">
+      <div class="editor__workspace tw:min-w-0" aria-busy="true" aria-label="Cargando el editor">
         <div class="editor__canvas"><div class="skeleton-block"></div></div>
         <div class="editor__panel editor__panel--skeleton">
           <div class="skeleton-line"></div>
@@ -85,9 +85,9 @@
         <app-integration-gate key="store" />
       </div>
     } @else if (view(); as v) {
-      <div class="editor__workspace" [class.is-panel-hidden]="!panelOpen()">
-        <div class="editor__canvas" [class.is-mobile]="device() === 'mobile'">
-          <div class="editor__frame">
+      <div class="editor__workspace tw:min-w-0" [class.is-panel-hidden]="!panelOpen()">
+        <div class="editor__canvas tw:min-w-0 tw:grid-cols-1" [class.is-mobile]="device() === 'mobile'">
+          <div class="editor__frame tw:min-w-0">
             @if (frameSrc(); as src) {
               <iframe #frame [src]="src" title="Vista editable de tu tienda" referrerpolicy="no-referrer"></iframe>
             }
@@ -107,9 +107,9 @@
         </div>
 
         @if (panelOpen()) {
-          <aside class="editor__panel" aria-label="Panel de edición">
-            <div class="panel__head">
-              <div class="segmented panel__tabs" role="group" aria-label="Qué editar">
+          <aside class="editor__panel tw:min-w-0" aria-label="Panel de edición">
+            <div class="panel__head tw:min-w-0 tw:grid-cols-1">
+              <div class="segmented panel__tabs tw:flex-wrap" role="group" aria-label="Qué editar">
                 <button type="button" [attr.aria-pressed]="panelTab() === 'sections'" (click)="openTab('sections')">
                   <ds-icon name="layers" [size]="1" /> Secciones
                 </button>

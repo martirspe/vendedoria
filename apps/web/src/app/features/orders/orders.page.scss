@@ -1,6 +1,6 @@
 .orders {
   display: grid;
-  gap: var(--ds-space-5);
+  gap: var(--ds-space-4);
   position: relative;
   padding-bottom: var(--ds-space-8);
 }
@@ -8,7 +8,7 @@
 .orders__header {
   display: flex;
   justify-content: space-between;
-  gap: var(--ds-space-6);
+  gap: var(--ds-space-4);
   align-items: start;
 }
 
@@ -21,12 +21,6 @@
   text-transform: uppercase;
 }
 
-.orders__header h1 {
-  margin: 0;
-  font-family: var(--ds-font-display);
-  font-size: clamp(1.75rem, 2vw, 2.1rem);
-  letter-spacing: -0.04em;
-}
 
 .orders__header p {
   margin: var(--ds-space-2) 0 0;
@@ -297,18 +291,9 @@ tbody tr:hover {
   animation: slide-in var(--ds-motion-base) var(--ds-ease-out);
 }
 
-.backdrop {
-  position: fixed;
-  inset: 0;
-  z-index: 20;
-  border: 0;
-  background: var(--ds-color-overlay);
-  cursor: pointer;
-}
-
 .drawer__head,
 .drawer__body {
-  padding: var(--ds-space-6);
+  padding: var(--ds-space-4);
 }
 
 .drawer__head {
@@ -325,7 +310,7 @@ tbody tr:hover {
 
 .drawer__body {
   display: grid;
-  gap: var(--ds-space-5);
+  gap: var(--ds-space-4);
   overflow: auto;
   align-content: start;
 }
@@ -369,14 +354,14 @@ tbody tr:hover {
   flex: 1;
   min-width: 0;
   min-height: var(--ds-touch-target);
-  padding: var(--ds-space-3) var(--ds-space-4);
+  padding: var(--ds-control-padding-block) var(--ds-control-padding-inline);
   border: 1px solid var(--ds-color-border);
   border-radius: var(--ds-radius-md);
   font: inherit;
   font-weight: 400;
 }
 
-.modal__panel--wide {
+.modal__panel.modal__panel--wide {
   width: min(44rem, 100%);
   max-height: calc(100vh - 2rem);
 }
@@ -468,21 +453,13 @@ tbody tr:hover {
   cursor: pointer;
 }
 
-.modal {
-  position: fixed;
-  inset: 0;
-  z-index: 40;
-  display: grid;
-  place-items: center;
-  padding: var(--ds-space-4);
-  background: var(--ds-color-overlay);
-}
-
 .modal__panel {
   width: min(28rem, 100%);
+  max-height: calc(100dvh - 2 * var(--ds-space-4));
+  overflow-y: auto;
   display: grid;
   gap: var(--ds-space-4);
-  padding: var(--ds-space-6);
+  padding: var(--ds-space-4);
   border-radius: var(--ds-radius-lg);
   background: #fff;
   animation: rise var(--ds-motion-base) var(--ds-ease-out);
@@ -507,7 +484,7 @@ tbody tr:hover {
 .modal__panel input,
 .modal__panel select {
   min-height: var(--ds-touch-target);
-  padding: var(--ds-space-3) var(--ds-space-4);
+  padding: var(--ds-control-padding-block) var(--ds-control-padding-inline);
   border: 1px solid var(--ds-color-border);
   border-radius: var(--ds-radius-md);
   font: inherit;
@@ -523,24 +500,6 @@ tbody tr:hover {
   display: flex;
   justify-content: flex-end;
   gap: var(--ds-space-2);
-}
-
-.banner {
-  display: flex;
-  gap: var(--ds-space-3);
-  align-items: center;
-  padding: var(--ds-space-4);
-  border-radius: var(--ds-radius-md);
-}
-
-.banner--danger {
-  background: color-mix(in srgb, var(--ds-color-danger) 12%, white);
-  color: var(--ds-color-danger);
-}
-
-.banner--success {
-  background: color-mix(in srgb, var(--ds-color-success) 14%, white);
-  color: #0b7a45;
 }
 
 .skeleton {

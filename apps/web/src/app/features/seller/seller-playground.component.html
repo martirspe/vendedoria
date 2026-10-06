@@ -1,4 +1,4 @@
-<div class="playground" role="dialog" aria-modal="true" aria-labelledby="playground-title">
+<dialog dsModal (dsModalClose)="close()" class="tw:modal-frame" aria-labelledby="playground-title" (click)="$event.target === $event.currentTarget && close()">
   <div class="playground__panel">
     <header class="playground__head">
       <div>
@@ -97,4 +97,4 @@
       </ds-button>
     </form>
   </div>
-</div>
+</dialog>

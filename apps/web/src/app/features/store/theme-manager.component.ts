@@ -21,6 +21,7 @@ export class ThemeManagerComponent {
   readonly busy = signal(false);
   readonly error = signal<string | null>(null);
   readonly notice = signal<string | null>(null);
+  readonly coverFailed = signal(false);
   readonly current = computed(() => {
     const data = this.data();
     return data?.themes.find(theme => theme.slug === data.status.editing.template && theme.version === data.status.editing.version);

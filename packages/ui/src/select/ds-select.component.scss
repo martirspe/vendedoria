@@ -9,9 +9,9 @@ ds-select {
 }
 ds-select > select, ds-select .ds-select-trigger {
   box-sizing: border-box; width: 100%; min-width: 0; min-height: var(--ds-touch-target);
-  margin: 0; padding: var(--ds-space-3) var(--ds-space-4); border: 1px solid var(--select-border);
+  margin: 0; padding: var(--ds-control-padding-block, var(--ds-space-3)) var(--ds-control-padding-inline, var(--ds-space-4)); border: 1px solid var(--select-border);
   border-radius: var(--select-radius); background: var(--select-bg); color: var(--select-text);
-  font: inherit; font-size: var(--ds-text-base, 1rem); line-height: 1.5;
+  font: inherit; font-size: var(--ds-control-font-size, var(--ds-text-base, 1rem)); line-height: 1.5;
 }
 ds-select > select { appearance: auto; padding-inline-end: var(--ds-space-8); }
 ds-select.ds-select-enhanced > select {
@@ -36,7 +36,7 @@ ds-select .ds-select-options {
   box-sizing: border-box; position: fixed; inset: auto; margin: 0; padding: var(--ds-space-2);
   border: 1px solid var(--select-border); border-radius: var(--select-radius);
   background: var(--select-bg); color: var(--select-text); box-shadow: var(--ds-shadow-dropdown);
-  overflow-y: auto; overscroll-behavior: contain; font: inherit; font-size: 1rem;
+  overflow-y: auto; overscroll-behavior: contain; font: inherit; font-size: var(--ds-control-font-size, 1rem);
 }
 ds-select .ds-select-option {
   display: flex; align-items: center; justify-content: space-between; gap: var(--ds-space-3);

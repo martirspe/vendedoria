@@ -1,25 +1,18 @@
 :host {
   display: block;
-  height: calc(100vh - 2 * var(--ds-space-8));
+  height: calc(100dvh - var(--ds-touch-target) - 2 * var(--ds-space-8) - var(--ds-space-6));
   min-height: 36rem;
 }
 
 .inbox {
   display: grid;
-  grid-template-columns: minmax(18rem, 22rem) 1fr;
+  grid-template-columns: minmax(18rem, 22rem) minmax(0, 1fr);
   height: 100%;
   border: 1px solid var(--ds-color-border);
   border-radius: var(--ds-radius-lg);
   overflow: hidden;
   background: var(--ds-color-surface);
   box-shadow: var(--ds-shadow-sm);
-}
-
-.inbox__list,
-.inbox__thread {
-  min-height: 0;
-  display: flex;
-  flex-direction: column;
 }
 
 .inbox__list {
@@ -33,7 +26,7 @@
   gap: var(--ds-space-3);
   align-items: start;
   flex-wrap: wrap;
-  padding: var(--ds-space-5);
+  padding: var(--ds-space-4);
 }
 
 .inbox__filters {
@@ -43,11 +36,6 @@
   width: 100%;
 }
 
-.inbox__list-head h1 {
-  margin: 0;
-  font-size: 1.35rem;
-  letter-spacing: -0.03em;
-}
 
 .inbox__list-head p {
   margin: var(--ds-space-1) 0 0;
@@ -59,7 +47,7 @@
   border: 1px solid var(--ds-color-border);
   background: #fff;
   border-radius: 999px;
-  min-height: 2.25rem;
+  min-height: var(--ds-touch-target);
   padding: 0 var(--ds-space-3);
   font-weight: 700;
   cursor: pointer;
@@ -291,7 +279,7 @@ ul {
   display: inline-flex;
   align-items: center;
   gap: 0.4rem;
-  min-height: 2.5rem;
+  min-height: var(--ds-touch-target);
   padding: 0 var(--ds-space-3);
   border-radius: 999px;
   border: 1px solid var(--ds-color-border);
@@ -306,7 +294,7 @@ ul {
   display: grid;
   gap: var(--ds-space-3);
   align-content: start;
-  padding: var(--ds-space-5);
+  padding: var(--ds-space-4);
   background:
     radial-gradient(circle at top right, rgb(200 245 66 / 8%), transparent 30%),
     #fbfcfe;
@@ -447,32 +435,12 @@ ul {
   min-height: 3.25rem;
 }
 
-.banner {
-  margin: var(--ds-space-3) var(--ds-space-4) 0;
-  padding: var(--ds-space-3) var(--ds-space-4);
-  border-radius: var(--ds-radius-md);
-  font-size: 0.92rem;
-}
 
-.banner--danger {
-  background: color-mix(in srgb, var(--ds-color-danger) 12%, white);
-  color: var(--ds-color-danger);
-}
 
-.banner--warn {
-  background: color-mix(in srgb, var(--ds-color-warning) 16%, white);
-  color: #8a5a00;
-  display: grid;
-  gap: var(--ds-space-3);
-}
 
-.banner--warn strong {
-  display: block;
-}
 
-.banner--warn p {
-  margin: 0.25rem 0 0;
-}
+
+
 
 .template-box {
   display: grid;
@@ -497,32 +465,14 @@ ul {
   background: #fff;
 }
 
-.banner--info {
-  background: color-mix(in srgb, var(--ds-color-accent) 12%, white);
-  color: #2347a0;
-}
-
-.banner--info a {
-  margin-left: var(--ds-space-2);
-  font-weight: 700;
-  text-decoration: underline;
-}
-
-.order-modal {
-  position: fixed;
-  inset: 0;
-  z-index: 40;
-  display: grid;
-  place-items: center;
-  padding: var(--ds-space-4);
-  background: var(--ds-color-overlay);
-}
 
 .order-modal__panel {
   width: min(28rem, 100%);
+  max-height: calc(100dvh - 2 * var(--ds-space-4));
+  overflow-y: auto;
   display: grid;
   gap: var(--ds-space-4);
-  padding: var(--ds-space-6);
+  padding: var(--ds-space-4);
   border-radius: var(--ds-radius-lg);
   background: #fff;
 }
@@ -546,7 +496,7 @@ ul {
 .order-modal__panel input,
 .order-modal__panel select {
   min-height: var(--ds-touch-target);
-  padding: var(--ds-space-3) var(--ds-space-4);
+  padding: var(--ds-control-padding-block) var(--ds-control-padding-inline);
   border: 1px solid var(--ds-color-border);
   border-radius: var(--ds-radius-md);
   font: inherit;
@@ -565,11 +515,11 @@ ul {
 }
 
 .list-state {
-  padding: var(--ds-space-5);
+  padding: var(--ds-space-4);
   color: var(--ds-color-text-secondary);
 }
 
-@media (max-width: 960px) {
+@media (max-width: 959px) {
   :host {
     height: auto;
   }
@@ -582,6 +532,13 @@ ul {
   .inbox__list {
     border-right: 0;
     border-bottom: 1px solid var(--ds-color-border);
-    max-height: 40vh;
+    max-height: 80dvh;
   }
+
+  .thread-head { flex-wrap: wrap; }
+  .thread-head__identity { min-width: 0; overflow-wrap: anywhere; }
+  .thread-head__actions { width: 100%; }
+  .messages { min-height: 40dvh; }
+  .composer { grid-template-columns: minmax(0, 1fr); }
+  .bubble { overflow-wrap: anywhere; }
 }

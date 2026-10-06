@@ -20,6 +20,7 @@ export class InventoryPage {
   private readonly api = inject(CatalogApiService);
 
   readonly loading = signal(true);
+  readonly loadFailed = signal(false);
   readonly saving = signal(false);
   readonly errorMessage = signal<string | null>(null);
   readonly successMessage = signal<string | null>(null);
@@ -55,11 +56,13 @@ export class InventoryPage {
 
   async load(): Promise<void> {
     this.loading.set(true);
+    this.loadFailed.set(false);
     this.errorMessage.set(null);
     try {
       this.rows.set(await this.api.inventory());
       this.drafts.set({});
     } catch {
+      this.loadFailed.set(true);
       this.errorMessage.set('No pudimos cargar el inventario. Inténtalo de nuevo.');
     } finally {
       this.loading.set(false);

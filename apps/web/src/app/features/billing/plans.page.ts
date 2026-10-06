@@ -19,6 +19,7 @@ import {
   PrepayPrice,
 } from '../../core/api/billing-api.service';
 import { PlanCheckoutComponent } from './plan-checkout.component';
+import { AuthApiService } from '../../core/auth/auth-api.service';
 
 @Component({
   selector: 'app-plans-page',
@@ -30,6 +31,8 @@ import { PlanCheckoutComponent } from './plan-checkout.component';
 })
 export class PlansPage {
   private readonly api = inject(BillingApiService);
+  private readonly auth = inject(AuthApiService);
+  readonly canManage = () => this.auth.isManager();
 
   readonly loading = signal(true);
   readonly saving = signal(false);
@@ -54,6 +57,7 @@ export class PlansPage {
     try {
       this.overview.set(await this.api.getPlans());
     } catch {
+      this.overview.set(null);
       this.errorMessage.set('No pudimos cargar tus planes. Revisa tu conexión y vuelve a abrir esta página.');
     } finally {
       this.loading.set(false);
@@ -101,7 +105,7 @@ export class PlansPage {
 
   async buyChatPack(pack: ChatPack): Promise<void> {
     const data = this.overview();
-    if (!data || this.saving() || !data.chatPacksAvailable || !data.checkoutEnabled) return;
+    if (!data || !this.canManage() || this.saving() || !data.chatPacksAvailable || !data.checkoutEnabled) return;
     await this.startCheckout(
       { chatPackSize: pack.chats },
       `Pago de prueba de ${pack.chats} chats extra listo. Confírmalo para sumarlos a este mes.`,
@@ -110,6 +114,7 @@ export class PlansPage {
   }
 
   private async startCheckout(purchase: PlanPurchase, simulatedMessage: string, fallback: string): Promise<void> {
+    if (!this.canManage() || this.saving()) return;
     this.saving.set(true);
     this.clearMessages();
     this.activeCheckout.set(null);
@@ -142,7 +147,7 @@ export class PlansPage {
 
   async confirmSimulation(): Promise<void> {
     const paymentId = this.pendingSimulation();
-    if (!paymentId || this.saving()) return;
+    if (!paymentId || !this.canManage() || this.saving()) return;
     this.saving.set(true);
     this.clearMessages();
     try {
@@ -157,7 +162,7 @@ export class PlansPage {
   }
 
   canSelect(plan: PlanDefinition, data: BillingOverview): boolean {
-    if (this.saving()) return false;
+    if (!this.canManage() || this.saving()) return false;
     return plan.priceCents != null && data.checkoutEnabled;
   }
 

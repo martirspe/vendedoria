@@ -1,22 +1,6 @@
 .integrations {
   display: grid;
-  gap: var(--ds-space-5);
-}
-
-.integrations__eyebrow {
-  margin: 0 0 var(--ds-space-2);
-  color: var(--ds-color-text-secondary);
-  font-size: 0.8rem;
-  font-weight: 700;
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
-}
-
-.integrations__header h1 {
-  margin: 0;
-  font-family: var(--ds-font-display);
-  font-size: clamp(1.75rem, 2vw, 2.1rem);
-  letter-spacing: -0.04em;
+  gap: var(--ds-space-4);
 }
 
 .integrations__header p {
@@ -60,7 +44,7 @@
 .grid li {
   display: grid;
   gap: var(--ds-space-3);
-  padding: var(--ds-space-5);
+  padding: var(--ds-space-4);
   border: 1px solid var(--ds-color-border);
   border-radius: var(--ds-radius-md);
   background: var(--ds-color-surface);
@@ -109,25 +93,6 @@ li[data-status='connected'] .status {
 li[data-status='ready'] .status {
   background: color-mix(in srgb, var(--ds-color-warning) 16%, white);
   color: #8a5a00;
-}
-
-.banner {
-  display: flex;
-  gap: var(--ds-space-3);
-  align-items: center;
-  flex-wrap: wrap;
-  padding: var(--ds-space-4);
-  border-radius: var(--ds-radius-md);
-}
-
-.banner--danger {
-  background: color-mix(in srgb, var(--ds-color-danger) 12%, white);
-  color: var(--ds-color-danger);
-}
-
-.banner--success {
-  background: color-mix(in srgb, var(--ds-color-success) 14%, var(--ds-color-surface));
-  color: var(--ds-color-text-primary);
 }
 
 .features {

@@ -4,10 +4,12 @@ import { firstValueFrom } from 'rxjs';
 import { environment } from '../../../environments/environment';
 
 export type CouponKind = 'PERCENT' | 'FIXED' | 'FREE_SHIPPING' | 'BUY_X_GET_Y';
+export type CouponMethod = 'CODE' | 'AUTOMATIC';
 export type CouponScope = 'ALL' | 'CATEGORY' | 'BRAND' | 'LINE' | 'PRODUCTS';
 
 export type CouponPayload = {
-  code: string;
+  code?: string;
+  method: CouponMethod;
   label: string;
   note: string | null;
   kind: CouponKind;
@@ -29,7 +31,8 @@ export type CouponPayload = {
   applyToSets: boolean;
 };
 
-export type Coupon = CouponPayload & {
+export type Coupon = Omit<CouponPayload, 'code'> & {
+  code: string;
   id: string;
   createdAt: string;
   usedCount: number;

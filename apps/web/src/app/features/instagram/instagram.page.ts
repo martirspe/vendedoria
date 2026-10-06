@@ -1,3 +1,4 @@
+import { DsEmptyStateComponent } from '@vendedoria/ui';
 import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { DsButtonComponent, DsConfirmService, DsIconComponent } from '@vendedoria/ui';
@@ -10,7 +11,7 @@ import { IntegrationGateComponent } from '../integrations/integration-gate.compo
 @Component({
   selector: 'app-instagram-page',
   standalone: true,
-  imports: [ReactiveFormsModule, DsButtonComponent, DsIconComponent, IntegrationGateComponent],
+  imports: [DsEmptyStateComponent, ReactiveFormsModule, DsButtonComponent, DsIconComponent, IntegrationGateComponent],
   templateUrl: './instagram.page.html',
   styleUrls: ['../store/store.page.scss', '../payments/payments.page.scss'],
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -23,6 +24,7 @@ export class InstagramPage {
   readonly canManage = inject(AuthApiService).isManager();
 
   readonly loading = signal(true);
+  readonly loadFailed = signal(false);
   readonly saving = signal(false);
   readonly errorMessage = signal<string | null>(null);
   readonly successMessage = signal<string | null>(null);
@@ -45,11 +47,13 @@ export class InstagramPage {
 
   async load(): Promise<void> {
     this.loading.set(true);
+    this.loadFailed.set(false);
     this.errorMessage.set(null);
     try {
       await this.integrations.refresh();
       if (this.active()) this.status.set(await this.api.getInstagram());
     } catch {
+      this.loadFailed.set(true);
       this.errorMessage.set('No pudimos cargar tu conexión con Instagram. Inténtalo de nuevo.');
     } finally {
       this.loading.set(false);

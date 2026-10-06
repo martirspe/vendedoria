@@ -416,7 +416,7 @@
   }
 
   .editor__bar {
-    grid-template-columns: 1fr;
+    grid-template-columns: minmax(0, 1fr);
   }
 
   .editor__devices {
@@ -439,7 +439,7 @@
 
   .editor__workspace,
   .editor__workspace.is-panel-hidden {
-    grid-template-columns: 1fr;
+    grid-template-columns: minmax(0, 1fr);
   }
 
   .editor__canvas {

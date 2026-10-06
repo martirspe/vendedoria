@@ -1,0 +1,228 @@
+@layer theme, base, components, utilities;
+@import 'tailwindcss/theme.css' layer(theme) prefix(tw);
+@import 'tailwindcss/utilities.css' layer(utilities) prefix(tw) source(none);
+
+@source "./app/layout";
+@source "./app/features";
+@source "../../../packages/ui";
+
+/* The existing design system owns values; Tailwind supplies their utilities. */
+@theme inline {
+  --color-*: initial;
+  --color-canvas: var(--ds-color-bg);
+  --color-surface: var(--ds-color-surface);
+  --color-foreground: var(--ds-color-text-primary);
+  --color-muted: var(--ds-color-text-secondary);
+  --color-border: var(--ds-color-border);
+  --color-divider: var(--ds-color-divider);
+  --color-primary: var(--ds-color-primary);
+  --color-ink: var(--ds-color-ink);
+  --color-danger: var(--ds-color-danger);
+  --color-danger-text: var(--ds-color-danger-text);
+  --color-warning: var(--ds-color-warning);
+  --color-warning-text: var(--ds-color-warning-text);
+  --color-success: var(--ds-color-success);
+  --color-success-text: var(--ds-color-success-text);
+  --color-info: var(--ds-color-info);
+  --color-info-text: var(--ds-color-info-text);
+  --color-focus: var(--ds-color-focus-ring);
+  --color-overlay: var(--ds-color-overlay);
+  --color-navigation: var(--ds-console-nav-bg);
+  --color-navigation-foreground: var(--ds-console-nav-text);
+  --color-navigation-muted: var(--ds-console-nav-muted);
+  --color-navigation-hover: var(--ds-console-nav-hover);
+  --color-navigation-selected: var(--ds-console-nav-selected);
+  --color-navigation-border: var(--ds-console-nav-border);
+  --color-workspace: var(--ds-console-workspace-bg);
+  --font-ui: var(--ds-font-ui);
+  --font-display: var(--ds-font-display);
+  --spacing: var(--ds-space-1);
+  --spacing-touch: var(--ds-touch-target);
+  --spacing-gutter: var(--ds-gutter);
+  --spacing-sidebar: var(--ds-console-sidebar-width);
+  --spacing-context-sidebar: var(--ds-console-context-sidebar-width);
+  --spacing-rail: var(--ds-console-rail-width);
+  --radius-sm: var(--ds-radius-sm);
+  --radius-md: var(--ds-radius-md);
+  --radius-lg: var(--ds-radius-lg);
+  --radius-card: var(--ds-console-card-radius);
+  --container-home: var(--ds-console-home-width);
+  --container-page: var(--ds-console-page-width);
+  --container-form: var(--ds-console-form-width);
+  --text-welcome: var(--ds-console-welcome-size);
+  --text-body: var(--ds-type-sm);
+  --text-caption: var(--ds-type-caption);
+  --text-page: var(--ds-type-page);
+  --text-section: var(--ds-type-lg);
+  --shadow-sm: var(--ds-shadow-sm);
+  --shadow-dropdown: var(--ds-shadow-dropdown);
+  --ease-out: var(--ds-ease-out);
+  --default-transition-duration: var(--ds-motion-fast);
+}
+
+@theme {
+  --breakpoint-console: 56.25rem;
+  --breakpoint-inbox: 60rem;
+}
+
+@utility console-scope {
+  @apply tw:font-ui tw:text-body tw:leading-normal tw:text-foreground tw:bg-canvas;
+  --ds-control-padding-block: var(--ds-space-2);
+  --ds-control-padding-inline: var(--ds-space-3);
+  --ds-control-font-size: var(--ds-type-sm);
+  @media (min-width: 56.25rem) and (hover: hover) and (pointer: fine) {
+    --ds-touch-target: var(--ds-console-control-height);
+    --ds-control-padding-block: var(--ds-space-1);
+  }
+
+  & :focus-visible {
+    outline: 2px solid var(--ds-color-focus-ring) !important;
+    outline-offset: 2px;
+  }
+
+  & input:not([type='checkbox']):not([type='radio']):not([type='hidden']),
+  & textarea,
+  & select {
+    border-radius: var(--ds-radius-sm);
+  }
+
+  /* Navigation utilities own their desktop density and touch interaction floor. */
+  & button:not([class~='tw:console-rail-button']):not([class~='tw:console-rail-link']),
+  & summary,
+  & .switch {
+    @apply tw:min-h-touch! tw:min-w-touch!;
+  }
+}
+
+@utility console-title {
+  @apply tw:m-0 tw:font-ui tw:text-page tw:font-medium tw:leading-tight tw:tracking-tight tw:wrap-anywhere;
+}
+
+@utility console-nav-link {
+  @apply tw:flex tw:min-h-touch tw:min-w-0 tw:items-center tw:gap-3 tw:rounded-sm tw:px-3 tw:py-2 tw:text-body tw:font-medium tw:text-muted tw:no-underline;
+  transition:
+    background-color var(--ds-motion-fast) var(--ds-ease-out),
+    color var(--ds-motion-fast) var(--ds-ease-out);
+
+  &:hover {
+    @apply tw:bg-canvas tw:text-foreground;
+  }
+  &[aria-current] {
+    @apply tw:bg-primary/20 tw:font-semibold tw:text-ink;
+  }
+}
+
+@utility console-frame {
+  @apply tw:min-w-0 tw:flex-1 tw:rounded-lg tw:bg-workspace;
+  min-height: calc(100dvh - 2 * var(--ds-space-1));
+}
+
+@utility setup-progress {
+  @apply tw:h-1.5 tw:w-full tw:overflow-hidden tw:rounded-full tw:border-0;
+  &::-webkit-progress-bar { background: var(--ds-color-divider); }
+  &::-webkit-progress-value { background: var(--ds-color-ink); border-radius: var(--ds-radius-sm); }
+  &::-moz-progress-bar { background: var(--ds-color-ink); border-radius: var(--ds-radius-sm); }
+}
+
+@utility console-workspace {
+  @apply tw:mx-auto tw:w-full tw:min-w-0 tw:max-w-page tw:px-gutter tw:pt-4 tw:pb-10;
+}
+
+@utility console-rail-link {
+  @apply tw:flex tw:min-h-touch tw:min-w-0 tw:items-center tw:gap-2 tw:rounded-sm tw:px-2 tw:text-body tw:font-medium tw:text-navigation-foreground! tw:no-underline;
+  @media (min-width: 56.25rem) and (hover: hover) and (pointer: fine) {
+    min-height: var(--ds-console-nav-row-height);
+  }
+  transition: background-color var(--ds-motion-fast) var(--ds-ease-out), color var(--ds-motion-fast) var(--ds-ease-out);
+  &:hover { @apply tw:bg-navigation-hover tw:text-navigation-foreground; }
+  &[aria-current] { @apply tw:bg-navigation-selected tw:text-primary!; }
+}
+
+@utility console-navigation {
+  scrollbar-width: thin;
+  scrollbar-color: var(--ds-console-nav-border) transparent;
+}
+
+@utility console-nav-row {
+  @apply tw:grid tw:grid-cols-[minmax(0,1fr)_auto] tw:items-center tw:rounded-sm;
+  &:hover, &:focus-within { @apply tw:bg-navigation-hover; }
+  &[data-active] { @apply tw:bg-navigation-selected; }
+  & [class~='tw:console-rail-link'], & [class~='tw:console-rail-button'] {
+    background: transparent;
+    &:hover { background: transparent; }
+  }
+}
+
+@utility console-rail-button {
+  @apply tw:flex tw:size-touch tw:shrink-0 tw:cursor-pointer tw:items-center tw:justify-center tw:rounded-md tw:border-0 tw:bg-transparent tw:text-navigation-muted;
+  @media (min-width: 56.25rem) and (hover: hover) and (pointer: fine) {
+    width: var(--ds-console-nav-row-height);
+    height: var(--ds-console-nav-row-height);
+  }
+  &:hover { @apply tw:bg-navigation-hover tw:text-navigation-foreground; }
+}
+
+@utility console-card {
+  @apply tw:min-w-0 tw:rounded-lg tw:border tw:border-solid tw:border-border tw:bg-surface tw:p-4 tw:shadow-sm;
+}
+
+@utility console-field {
+  @apply tw:w-full tw:min-w-0 tw:rounded-sm tw:border tw:border-solid tw:border-border tw:bg-surface tw:font-ui tw:text-body tw:text-foreground;
+  min-height: var(--ds-touch-target);
+  padding: var(--ds-control-padding-block) var(--ds-control-padding-inline);
+}
+
+@utility console-save-bar {
+  @apply tw:sticky tw:top-2 tw:z-20 tw:mx-auto tw:flex tw:w-fit tw:max-w-full tw:flex-wrap tw:items-center tw:justify-center tw:gap-2 tw:rounded-full tw:bg-ink tw:p-1 tw:pl-4 tw:text-caption tw:text-surface tw:shadow-dropdown;
+}
+
+@utility console-icon-button {
+  @apply tw:flex tw:size-touch tw:shrink-0 tw:cursor-pointer tw:items-center tw:justify-center tw:rounded-sm tw:border-0 tw:bg-transparent tw:text-muted;
+  &:hover {
+    @apply tw:bg-canvas tw:text-foreground;
+  }
+}
+
+@utility console-action-link {
+  @apply tw:inline-flex tw:min-h-touch tw:items-center tw:justify-center tw:gap-2 tw:rounded-sm tw:bg-primary tw:px-5 tw:py-2 tw:font-semibold tw:text-ink tw:no-underline;
+  &:hover {
+    @apply tw:bg-primary/80;
+  }
+}
+
+@utility console-action-secondary {
+  @apply tw:inline-flex tw:min-h-touch tw:items-center tw:justify-center tw:gap-2 tw:rounded-sm tw:border tw:border-solid tw:border-border tw:bg-surface tw:px-5 tw:py-2 tw:font-medium tw:text-foreground tw:no-underline;
+  &:hover {
+    @apply tw:bg-canvas;
+  }
+}
+
+@utility modal-frame {
+  @apply tw:fixed tw:inset-0 tw:m-0 tw:grid tw:h-dvh tw:max-h-none tw:w-full tw:max-w-none tw:place-items-center tw:overflow-y-auto tw:border-0 tw:bg-transparent tw:p-4 tw:text-foreground;
+  &::backdrop {
+    @apply tw:bg-overlay;
+  }
+}
+
+@utility feedback {
+  @apply tw:flex tw:min-w-0 tw:flex-wrap tw:items-center tw:gap-3 tw:rounded-md tw:border tw:border-solid tw:border-border tw:bg-surface tw:p-4 tw:text-body;
+  & > span {
+    @apply tw:min-w-0 tw:flex-1 tw:wrap-anywhere;
+  }
+}
+
+@utility feedback-danger {
+  @apply tw:border-danger/20 tw:bg-danger/10 tw:text-danger-text;
+}
+
+@utility feedback-success {
+  @apply tw:border-success/20 tw:bg-success/10 tw:text-success-text;
+}
+
+@utility feedback-info {
+  @apply tw:border-info/20 tw:bg-info/10 tw:text-info-text;
+}
+
+@utility feedback-warning {
+  @apply tw:border-warning/20 tw:bg-warning/10 tw:text-warning-text;
+}

@@ -1,11 +1,9 @@
-<section class="metrics">
+<section class="metrics tw:mx-auto tw:min-w-0">
   <header class="metrics__header">
     <div>
-      <p class="metrics__eyebrow">Resultados</p>
-      <h1>Métricas</h1>
+      <h1 class="tw:console-title">Métricas</h1>
       <p>
-        Números core sin paywall: conversaciones, pedidos pagados y conversión
-        del período.
+        Conversaciones, pedidos e ingresos para entender cómo avanza tu negocio.
       </p>
     </div>
     <div class="metrics__periods" role="group" aria-label="Período">
@@ -13,6 +11,8 @@
         <button
           type="button"
           [class.is-active]="days() === period"
+          [attr.aria-pressed]="days() === period"
+          [disabled]="loading()"
           (click)="load(period)"
         >
           {{ period }} días
@@ -22,7 +22,7 @@
   </header>
 
   @if (errorMessage(); as error) {
-    <div class="banner banner--danger" role="alert">
+    <div class="tw:feedback tw:feedback-danger" role="alert">
       <ds-icon name="alert" />
       <span>{{ error }}</span>
       <ds-button type="button" variant="secondary" (click)="load()">Reintentar</ds-button>
@@ -35,11 +35,9 @@
     @if (isEmpty(data)) {
       <ds-empty-state
         title="Aún no hay movimiento"
-        body="Simula un mensaje, crea un pedido y usa Simular pago para ver números aquí."
+        body="Las conversaciones y los pedidos de tus clientes aparecerán aquí. Configura tu vendedor y conecta un canal para empezar."
       >
-        <a routerLink="/app/get-started">
-          <ds-button type="button">Ver Empezar</ds-button>
-        </a>
+        <a routerLink="/app/get-started" class="tw:console-action-link">Ver primeros pasos</a>
       </ds-empty-state>
     } @else {
       <div class="metrics__grid">
@@ -74,6 +72,9 @@
         <article>
           <span>Sin atender ahora</span>
           <strong>{{ data.unattendedOpen }}</strong>
+          @if (data.unattendedOpen > 0) {
+            <a routerLink="/app/messages" [queryParams]="{ unattended: '1' }" class="tw:inline-flex tw:min-h-touch tw:items-center tw:font-semibold tw:text-info-text tw:underline tw:underline-offset-4">Atender conversaciones</a>
+          }
         </article>
       </div>
       <p class="metrics__footnote">

@@ -1,3 +1,4 @@
+import { DsEmptyStateComponent } from '@vendedoria/ui';
 import { latestThemes } from '@vendedoria/themes/catalog';
 import { ConversionSettingsComponent } from './conversion-settings.component';
 import { ThemeManagerComponent } from './theme-manager.component';
@@ -15,7 +16,10 @@ import {
 } from '@angular/core';
 import { HttpErrorResponse } from '@angular/common/http';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
-import { RouterLink } from '@angular/router';
+import { ActivatedRoute, Router, RouterLink } from '@angular/router';
+import { takeUntilDestroyed, toSignal } from '@angular/core/rxjs-interop';
+import { map } from 'rxjs';
+import { STORE_SECTIONS } from '../../layout/console-context';
 import type { StoreTemplate } from '@vendedoria/contracts';
 import { DsButtonComponent, DsIconComponent } from '@vendedoria/ui';
 import {
@@ -51,7 +55,7 @@ export const TEMPLATE_OPTIONS = latestThemes().map(theme => ({
 @Component({
   selector: 'app-store-page',
   standalone: true,
-  imports: [ThemeManagerComponent, ConversionSettingsComponent, DsSelectComponent, ReactiveFormsModule, RouterLink, DsButtonComponent, DsIconComponent, IntegrationGateComponent],
+  imports: [DsEmptyStateComponent, ThemeManagerComponent, ConversionSettingsComponent, DsSelectComponent, ReactiveFormsModule, RouterLink, DsButtonComponent, DsIconComponent, IntegrationGateComponent],
   templateUrl: './store.page.html',
   styleUrl: './store.page.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -60,9 +64,15 @@ export class StorePage {
   private readonly api = inject(StoreApiService);
   private readonly fb = inject(FormBuilder);
   private readonly integrations = inject(IntegrationsStateService);
+  private readonly route = inject(ActivatedRoute);
+  private readonly router = inject(Router);
+  readonly section = toSignal(this.route.queryParamMap.pipe(map(params => STORE_SECTIONS.find(item => item.section === params.get('seccion'))?.section ?? 'temas')), { initialValue: 'temas' });
+  readonly sectionTitle = computed(() => STORE_SECTIONS.find(item => item.section === this.section())!.label);
+  readonly sectionDescription = computed(() => ({ temas: 'Personaliza el diseño de tu tienda y prepara tu próxima publicación.', identidad: 'La información que tus clientes ven al visitar tu tienda.', preferencias: 'Dirección, buscadores y opciones para vender online.', legal: 'Información del vendedor y políticas de la tienda.', automatizaciones: 'Configura las acciones que acompañan la compra.' })[this.section() as 'temas']);
 
   readonly active = computed(() => this.integrations.isActive('store'));
   readonly loading = signal(true);
+  readonly loadFailed = signal(false);
   readonly saving = signal(false);
   readonly busyAction = signal<'publish' | 'unpublish' | 'preview' | 'products' | null>(null);
   readonly errorMessage = signal<string | null>(null);
@@ -128,12 +138,12 @@ export class StorePage {
   );
   constructor() {
     void this.load();
-    this.form.controls.industry.valueChanges.subscribe((industry) => {
+    this.form.controls.industry.valueChanges.pipe(takeUntilDestroyed()).subscribe((industry) => {
       this.industry.set(industry);
       const allowed = this.templates().find((t) => t.value === this.form.controls.template.value)?.available;
       if (!allowed) this.form.controls.template.setValue('classic');
     });
-    this.form.controls.sellerType.valueChanges.subscribe((type) => this.sellerType.set(type));
+    this.form.controls.sellerType.valueChanges.pipe(takeUntilDestroyed()).subscribe((type) => this.sellerType.set(type));
   }
 
   pickTemplate(template: StoreTemplate): void {
@@ -155,11 +165,13 @@ export class StorePage {
 
   async load(): Promise<void> {
     this.loading.set(true);
+    this.loadFailed.set(false);
     this.errorMessage.set(null);
     try {
       await this.integrations.refresh();
       this.apply(await this.api.get());
     } catch {
+      this.loadFailed.set(true);
       this.errorMessage.set('No pudimos cargar tu tienda web. Revisa tu conexión e inténtalo de nuevo.');
     } finally {
       this.loading.set(false);
@@ -170,6 +182,9 @@ export class StorePage {
     if (this.form.invalid) {
       this.form.markAllAsTouched();
       this.errorMessage.set('Revisa los campos marcados antes de guardar.');
+      const invalid = Object.entries(this.form.controls).find(([, control]) => control.invalid)?.[0];
+      const section = ['displayName', 'tagline', 'whatsappPhone', 'contactEmail'].includes(invalid ?? '') ? 'identidad' : ['seoTitle', 'seoDescription'].includes(invalid ?? '') ? 'preferencias' : 'legal';
+      await this.router.navigate([], { relativeTo: this.route, queryParams: { seccion: section }, queryParamsHandling: 'merge' });
       return;
     }
     const values = this.form.getRawValue();

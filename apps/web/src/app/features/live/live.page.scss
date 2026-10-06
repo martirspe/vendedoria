@@ -5,8 +5,7 @@
 .live-page {
   display: grid;
   grid-template-columns: minmax(0, 1fr);
-  gap: var(--ds-space-6);
-  padding: var(--ds-gutter);
+  gap: var(--ds-space-4);
   color: var(--ds-color-text-primary);
 }
 .live-page > *,
@@ -17,7 +16,7 @@
   background: var(--ds-color-surface);
   border: thin solid var(--ds-color-border);
   border-radius: var(--ds-radius-lg);
-  padding: var(--ds-space-5);
+  padding: var(--ds-space-4);
 }
 .setup summary {
   cursor: pointer;
@@ -150,7 +149,7 @@ select.ng-invalid.ng-touched {
 .operation-grid {
   display: grid;
   grid-template-columns: minmax(0, 1fr);
-  gap: var(--ds-space-6);
+  gap: var(--ds-space-4);
 }
 .current-product {
   padding: var(--ds-space-4);

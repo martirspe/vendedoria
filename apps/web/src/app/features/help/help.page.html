@@ -1,20 +1,18 @@
-<section class="help">
+<section class="help tw:mx-auto tw:min-w-0">
   <header class="help__header">
-    <p class="help__eyebrow">Aprender</p>
-    <h1>Ayuda rápida</h1>
+    <h1 class="tw:console-title">Ayuda rápida</h1>
     <p>
-      Guías cortas para operar VendedorIA: vender por chat, cobrar con claridad
-      y no romper las reglas de Meta.
+      Guías para configurar tu negocio, atender conversaciones y dar seguimiento a tus ventas.
     </p>
   </header>
 
-  <ul class="help__list">
+  <ul class="help__list tw:md:grid-cols-2">
     @for (topic of topics; track topic.link) {
       <li>
-        <article>
+        <article class="tw:console-card">
           <h2>{{ topic.title }}</h2>
           <p>{{ topic.body }}</p>
-          <a [routerLink]="topic.link">{{ topic.cta }} →</a>
+          <a class="tw:inline-flex tw:min-h-touch tw:items-center" [routerLink]="topic.link">{{ topic.cta }} →</a>
         </article>
       </li>
     }

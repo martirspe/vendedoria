@@ -1,8 +1,7 @@
-<section class="store">
+<section class="store tw:mx-auto tw:min-w-0">
   <header class="store__header">
     <div>
-      <p class="store__eyebrow">Cuenta</p>
-      <h1>Equipo</h1>
+      <h1 class="tw:console-title">Equipo</h1>
       <p>
         Invita a las personas que te ayudan a atender mensajes y pedidos. Cada una entra con su
         propio correo y contraseña.
@@ -10,8 +9,8 @@
     </div>
   </header>
 
-  @if (errorMessage(); as error) {
-    <div class="banner banner--danger" role="alert">
+  @if (errorMessage() && !loadFailed(); as error) {
+    <div class="tw:feedback tw:feedback-danger" role="alert">
       <ds-icon name="alert" />
       <span>{{ error }}</span>
       @if (!overview()) {
@@ -20,7 +19,7 @@
     </div>
   }
   @if (successMessage(); as success) {
-    <div class="banner banner--success" role="status">
+    <div class="tw:feedback tw:feedback-success" role="status">
       <ds-icon name="check" />
       <span>{{ success }}</span>
     </div>
@@ -28,7 +27,11 @@
 
   @if (loading()) {
     <div class="skeleton" aria-busy="true">Cargando tu equipo…</div>
-  } @else if (!active()) {
+  } @else if (loadFailed()) {
+      <ds-empty-state title="No pudimos cargar esta sección" body="Revisa tu conexión e inténtalo de nuevo.">
+        <ds-button variant="secondary" (click)="load()">Reintentar</ds-button>
+      </ds-empty-state>
+    } @else if (!active()) {
     <app-integration-gate key="team" />
   } @else if (overview(); as o) {
     <div class="status-card">

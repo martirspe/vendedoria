@@ -1,12 +1,8 @@
-<section class="store">
+<section class="store tw:mx-auto tw:w-full tw:min-w-0" [class.tw:max-w-3xl]="section() !== 'temas'" [class.tw:max-w-form]="section() === 'temas'">
   <header class="store__header">
     <div>
-      <p class="store__eyebrow">Vender</p>
-      <h1>Tienda web</h1>
-      <p>
-        Tu catálogo en una web propia. Con Mercado Pago conectado tus clientes pagan con
-        tarjeta o Yape; sin él, el pedido llega a tu WhatsApp con el vendedor IA.
-      </p>
+      <h1 class="tw:console-title">{{ sectionTitle() }}</h1>
+      <p>{{ sectionDescription() }}</p>
     </div>
     @if (view(); as v) {
       <div class="store__actions">
@@ -28,17 +24,14 @@
     }
   </header>
 
-  @if (view() && active() && !saving()) {
-    <app-theme-manager (staged)="load()" />
-  }
-  @if (errorMessage(); as error) {
-    <div class="banner banner--danger" role="alert">
+  @if (errorMessage() && !loadFailed(); as error) {
+    <div class="tw:feedback tw:feedback-danger" role="alert">
       <ds-icon name="alert" />
       <span>{{ error }}</span>
     </div>
   }
   @if (successMessage(); as success) {
-    <div class="banner banner--success" role="status">
+    <div class="tw:feedback tw:feedback-success" role="status">
       <ds-icon name="check" />
       <span>{{ success }}</span>
     </div>
@@ -46,7 +39,11 @@
 
   @if (loading()) {
     <div class="skeleton" aria-busy="true">Cargando tu tienda…</div>
-  } @else if (!active()) {
+  } @else if (loadFailed()) {
+      <ds-empty-state title="No pudimos cargar esta sección" body="Revisa tu conexión e inténtalo de nuevo.">
+        <ds-button variant="secondary" (click)="load()">Reintentar</ds-button>
+      </ds-empty-state>
+    } @else if (!active()) {
     @if (view()?.storefront?.status === 'PUBLISHED') {
       <p role="status">Tu tienda conserva su publicación y configuración. Está pausada mientras la integración no esté activa. Revisa la vigencia de tu plan y activa Tienda web en Integraciones.</p>
     }
@@ -78,8 +75,9 @@
       }
     </div>
 
-    <div class="store__grid">
+    <div class="tw:grid tw:min-w-0 tw:items-start tw:gap-4">
       <form class="store__form" [formGroup]="form" (ngSubmit)="save()">
+        @if (section() === 'identidad') {
         <section class="card">
           <h2>Identidad</h2>
           <label>
@@ -91,9 +89,12 @@
             <input formControlName="tagline" maxlength="140" placeholder="Ej. Moda urbana con envío a todo Lima" />
           </label>
         </section>
+        }
 
+        @if (section() === 'temas') {
+<app-theme-manager (staged)="load()" />
         <section class="card">
-          <h2>Rubro y plantilla</h2>
+          <h2>Biblioteca de temas</h2>
           <label>
             Rubro de tu negocio
             <ds-select><select formControlName="industry">
@@ -156,7 +157,9 @@
             }
           </div>
         </section>
+        }
 
+        @if (section() === 'identidad') {
         <section class="card">
           <h2>Contacto</h2>
           <div class="row">
@@ -172,7 +175,9 @@
             </label>
           </div>
         </section>
+        }
 
+        @if (section() === 'preferencias') {
         <section class="card">
           <h2>Entregas</h2>
           <p class="hint">
@@ -182,7 +187,9 @@
             Configurar envíos <ds-icon name="chevronRight" [size]="1" />
           </a>
         </section>
+        }
 
+        @if (section() === 'legal') {
         <section class="card">
           <h2>Datos legales</h2>
           <p class="hint">
@@ -257,7 +264,9 @@
             </label>
           </div>
         </section>
+        }
 
+        @if (section() === 'preferencias') {
         <section class="card">
           <h2>Google y redes</h2>
           <label>
@@ -270,15 +279,21 @@
             <small>{{ form.controls.seoDescription.value.length }}/160 · Aparece en Google y al compartir el enlace.</small>
           </label>
         </section>
+        }
 
-        <footer>
+        @if (section() === 'automatizaciones') { <section class="card"><h2>Automatizaciones</h2><app-conversion-settings /></section> }
+        @if (section() !== 'automatizaciones' && (form.dirty || saving())) {
+        <footer class="tw:sticky tw:bottom-2 tw:z-10 tw:rounded-lg tw:border tw:border-solid tw:border-border tw:bg-surface tw:p-2 tw:shadow-sm">
           <ds-button type="submit" [disabled]="saving() || form.pristine">
             {{ saving() ? 'Guardando…' : 'Guardar cambios' }}
           </ds-button>
         </footer>
+        }
       </form>
 
+      @if (section() === 'temas' || section() === 'preferencias') {
       <aside class="store__rail">
+        @if (section() === 'preferencias') {
         @if (address(); as a) {
           <section class="card" aria-labelledby="store-address-title">
             <h2 id="store-address-title">Dirección de la tienda</h2>
@@ -336,8 +351,9 @@
           </section>
         }
 
-        <section class="card">
-          <h2>Antes de publicar</h2>
+        }
+        <details class="card">
+          <summary class="tw:min-h-touch tw:content-center tw:cursor-pointer tw:text-body tw:font-semibold">Antes de publicar · {{ requiredPending().length }} {{ requiredPending().length === 1 ? 'paso pendiente' : 'pasos pendientes' }}</summary>
           <ul class="checklist">
             @for (item of v.checklist; track item.id) {
               <li [class.is-done]="item.done">
@@ -354,7 +370,7 @@
               </li>
             }
           </ul>
-        </section>
+        </details>
 
         <section class="card">
           <h2>Productos en la tienda</h2>
@@ -371,11 +387,9 @@
             Elegir producto por producto <ds-icon name="chevronRight" [size]="1" />
           </a>
         </section>
-        <section class="card">
-          <h2>Automatizaciones</h2>
-          <app-conversion-settings />
-        </section>
+
       </aside>
+      }
     </div>
   }
 </section>

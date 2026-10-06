@@ -21,6 +21,10 @@
   --ds-color-danger: #e5484d;
   --ds-color-warning: #f5a524;
   --ds-color-info: #5b8cff;
+  --ds-color-danger-text: #b4232d;
+  --ds-color-warning-text: #805400;
+  --ds-color-success-text: #086b3c;
+  --ds-color-info-text: #294fa6;
   --ds-color-focus-ring: #5b8cff;
 
   /* Marketing */
@@ -33,6 +37,8 @@
   --ds-font-ui: 'Manrope', system-ui, sans-serif;
   --ds-type-sm: 0.875rem;
   --ds-type-lg: 1.125rem;
+  --ds-type-caption: 0.75rem;
+  --ds-type-page: clamp(1.5rem, 1.75vw, 1.75rem);
   --ds-border-width: 1px;
 
   /* Spacing / layout */
@@ -50,6 +56,25 @@
   --ds-radius-lg: 1rem;
   --ds-touch-target: 2.75rem;
   --ds-gutter: clamp(1rem, 3vw, 2rem);
+  /* Global navigation follows the compact admin rhythm; contextual settings need longer labels. */
+  --ds-console-sidebar-width: 12.5rem;
+  --ds-console-context-sidebar-width: 14rem;
+  --ds-console-rail-width: 3.75rem;
+  --ds-console-nav-row-height: 1.875rem;
+  --ds-console-control-height: 2rem;
+  --ds-menu-width: 18rem;
+  --ds-console-home-width: 61rem;
+  --ds-console-page-width: 80rem;
+  --ds-console-form-width: 68rem;
+  --ds-console-card-radius: 1.5rem;
+  --ds-console-nav-bg: var(--ds-color-ink);
+  --ds-console-nav-text: var(--ds-color-marketing-text);
+  --ds-console-nav-muted: var(--ds-color-marketing-muted);
+  --ds-console-nav-hover: color-mix(in srgb, var(--ds-console-nav-text) 8%, var(--ds-console-nav-bg));
+  --ds-console-nav-selected: color-mix(in srgb, var(--ds-color-primary) 14%, var(--ds-console-nav-bg));
+  --ds-console-nav-border: color-mix(in srgb, var(--ds-console-nav-text) 14%, var(--ds-console-nav-bg));
+  --ds-console-workspace-bg: color-mix(in srgb, var(--ds-color-bg) 35%, var(--ds-color-surface));
+  --ds-console-welcome-size: clamp(1.5rem, 2vw, 1.75rem);
   --ds-shadow-sm: 0 1px 2px rgb(11 13 18 / 6%);
   --ds-shadow-dropdown: 0 8px 28px rgb(11 13 18 / 14%);
 

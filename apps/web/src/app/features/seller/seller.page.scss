@@ -1,30 +1,14 @@
 .seller {
   display: grid;
-  gap: var(--ds-space-6);
+  gap: var(--ds-space-4);
   padding-bottom: 6rem;
 }
 
 .seller__header {
   display: flex;
   justify-content: space-between;
-  gap: var(--ds-space-6);
+  gap: var(--ds-space-4);
   align-items: start;
-}
-
-.seller__eyebrow {
-  margin: 0 0 var(--ds-space-2);
-  color: var(--ds-color-text-secondary);
-  font-size: 0.85rem;
-  font-weight: 700;
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
-}
-
-.seller__header h1 {
-  margin: 0;
-  font-family: var(--ds-font-display);
-  font-size: clamp(1.75rem, 2vw, 2.1rem);
-  letter-spacing: -0.04em;
 }
 
 .seller__header p {
@@ -64,7 +48,7 @@
 .seller__layout {
   display: grid;
   grid-template-columns: minmax(16rem, 20rem) minmax(0, 1fr);
-  gap: var(--ds-space-6);
+  gap: var(--ds-space-4);
   align-items: start;
 }
 
@@ -72,14 +56,14 @@
   position: sticky;
   top: var(--ds-space-6);
   display: grid;
-  gap: var(--ds-space-5);
+  gap: var(--ds-space-4);
 }
 
 .score {
   display: grid;
   gap: var(--ds-space-4);
   justify-items: center;
-  padding: var(--ds-space-5);
+  padding: var(--ds-space-4);
   border: 1px solid var(--ds-color-border);
   border-radius: var(--ds-radius-lg);
   background:
@@ -225,7 +209,7 @@ select {
 .agent-new {
   display: grid;
   gap: var(--ds-space-4);
-  padding: var(--ds-space-5);
+  padding: var(--ds-space-4);
   border: 1px dashed var(--ds-color-border);
   border-radius: var(--ds-radius-lg);
   background: var(--ds-color-surface);
@@ -486,13 +470,13 @@ select {
 
 .seller__form {
   display: grid;
-  gap: var(--ds-space-5);
+  gap: var(--ds-space-4);
 }
 
 .block {
   display: grid;
-  gap: var(--ds-space-5);
-  padding: var(--ds-space-6);
+  gap: var(--ds-space-4);
+  padding: var(--ds-space-4);
   border: 1px solid var(--ds-color-border);
   border-radius: var(--ds-radius-lg);
   background: var(--ds-color-surface);
@@ -530,7 +514,7 @@ label {
 input,
 textarea {
   min-height: var(--ds-touch-target);
-  padding: var(--ds-space-3) var(--ds-space-4);
+  padding: var(--ds-control-padding-block) var(--ds-control-padding-inline);
   border: 1px solid var(--ds-color-border);
   border-radius: var(--ds-radius-md);
   background: #fff;
@@ -646,24 +630,6 @@ textarea:focus {
   font-weight: 600;
 }
 
-.banner {
-  display: flex;
-  gap: var(--ds-space-3);
-  align-items: center;
-  padding: var(--ds-space-4);
-  border-radius: var(--ds-radius-md);
-}
-
-.banner--danger {
-  background: color-mix(in srgb, var(--ds-color-danger) 12%, white);
-  color: var(--ds-color-danger);
-}
-
-.banner--success {
-  background: color-mix(in srgb, var(--ds-color-success) 14%, white);
-  color: #0b7a45;
-}
-
 .skeleton {
   padding: var(--ds-space-8);
   border-radius: var(--ds-radius-lg);
@@ -740,7 +706,7 @@ textarea:focus {
 .import-box textarea {
   width: 100%;
   min-height: var(--ds-touch-target);
-  padding: 0.65rem 0.85rem;
+  padding: var(--ds-control-padding-block) var(--ds-control-padding-inline);
   border: 1px solid var(--ds-color-border);
   border-radius: var(--ds-radius-md);
   background: var(--ds-color-surface);

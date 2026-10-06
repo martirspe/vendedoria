@@ -1,22 +1,6 @@
 .plans {
   display: grid;
-  gap: var(--ds-space-5);
-}
-
-.plans__eyebrow {
-  margin: 0 0 var(--ds-space-2);
-  color: var(--ds-color-text-secondary);
-  font-size: 0.8rem;
-  font-weight: 700;
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
-}
-
-.plans__header h1 {
-  margin: 0;
-  font-family: var(--ds-font-display);
-  font-size: clamp(1.75rem, 2vw, 2.1rem);
-  letter-spacing: -0.04em;
+  gap: var(--ds-space-4);
 }
 
 .plans__header p,
@@ -209,7 +193,7 @@
 .plans__details {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: var(--ds-space-5);
+  gap: var(--ds-space-4);
 }
 
 .plans__list {
@@ -255,7 +239,7 @@
   display: grid;
   gap: var(--ds-space-4);
   align-content: start;
-  padding: var(--ds-space-5);
+  padding: var(--ds-space-4);
   border: 1px solid var(--ds-color-border);
   border-radius: var(--ds-radius-md);
   background: #fff;
@@ -290,33 +274,6 @@
   font-size: 0.9rem;
 }
 
-.banner {
-  display: flex;
-  gap: var(--ds-space-3);
-  align-items: center;
-  padding: var(--ds-space-4);
-  border-radius: var(--ds-radius-md);
-}
-
-.banner--danger {
-  background: color-mix(in srgb, var(--ds-color-danger) 12%, white);
-  color: var(--ds-color-danger);
-}
-
-.banner--info {
-  flex-wrap: wrap;
-  background: color-mix(in srgb, var(--ds-color-info) 12%, white);
-  color: var(--ds-color-text-primary);
-}
-
-.banner--info span {
-  flex: 1 1 16rem;
-}
-
-.banner--success {
-  background: color-mix(in srgb, var(--ds-color-success) 14%, white);
-  color: #0b7a45;
-}
 
 .skeleton {
   padding: var(--ds-space-8);

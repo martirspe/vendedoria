@@ -4,8 +4,8 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
-import { createHash } from 'node:crypto';
-import { type Coupon, OrderStatus, Prisma } from '@prisma/client';
+import { createHash, randomBytes } from 'node:crypto';
+import { type Coupon, CouponMethod, OrderStatus, Prisma } from '@prisma/client';
 import { PlanLimitsService } from '../billing/plan-limits.service';
 import { PrismaService } from '../prisma/prisma.service';
 import {
@@ -81,7 +81,10 @@ export class CouponsService {
   }
 
   async create(tenantId: string, dto: CreateCouponDto) {
-    const data = this.toData(dto);
+    const method = dto.method ?? CouponMethod.CODE;
+    const code = dto.code ? normalizeCouponCode(dto.code) : method === CouponMethod.AUTOMATIC ? this.automaticCode() : null;
+    if (!code) throw new BadRequestException('Indica un código para el descuento.');
+    const data = { ...this.toData(dto), method, code };
     this.assertRules(data);
     if (data.isActive !== false) {
       await this.planLimits.assertCanActivateCoupon(tenantId);
@@ -105,6 +108,7 @@ export class CouponsService {
         where: { id },
         data: {
           code: data.code,
+          method: data.method,
           label: data.label,
           note: data.note,
           kind: data.kind,
@@ -151,7 +155,7 @@ export class CouponsService {
     db: Db,
     tenantId: string,
     input: { code: string; lines: CouponLine[]; email?: string | null },
-    options: { lock?: boolean } = {},
+    options: { lock?: boolean; method?: CouponMethod } = {},
   ): Promise<CouponQuote> {
     const code = normalizeCouponCode(input.code);
     if (options.lock) {
@@ -161,6 +165,9 @@ export class CouponsService {
       where: { tenantId_code: { tenantId, code } },
     });
     if (!coupon) throw new BadRequestException('Este cupón no existe o ya no está disponible.');
+    if (coupon.method !== (options.method ?? CouponMethod.CODE)) {
+      throw new BadRequestException('Este descuento no está disponible con ese método.');
+    }
 
     const result = evaluateCoupon(coupon, input.lines);
     if (!result.ok) throw new BadRequestException(result.reason);
@@ -205,6 +212,38 @@ export class CouponsService {
     };
   }
 
+  /** Selects one eligible automatic discount. Codes always take precedence at checkout. */
+  async automaticQuote(
+    db: Db,
+    tenantId: string,
+    input: { lines: CouponLine[]; email?: string | null },
+    options: { lock?: boolean } = {},
+  ): Promise<CouponQuote | null> {
+    const candidates = await db.coupon.findMany({
+      where: { tenantId, method: CouponMethod.AUTOMATIC, isActive: true },
+      orderBy: [{ createdAt: 'asc' }],
+      take: 100,
+    });
+    const eligible = candidates
+      .map((coupon) => ({ coupon, result: evaluateCoupon(coupon, input.lines) }))
+      .filter((row): row is { coupon: Coupon; result: Extract<ReturnType<typeof evaluateCoupon>, { ok: true }> } => row.result.ok)
+      .sort((a, b) => b.result.discountCents - a.result.discountCents);
+
+    for (const { coupon } of eligible) {
+      try {
+        return await this.quote(
+          db,
+          tenantId,
+          { code: coupon.code, lines: input.lines, email: input.email },
+          { ...options, method: CouponMethod.AUTOMATIC },
+        );
+      } catch (error) {
+        if (!(error instanceof BadRequestException)) throw error;
+      }
+    }
+    return null;
+  }
+
   private async getById(tenantId: string, id: string) {
     const coupon = await this.prisma.coupon.findFirst({ where: { id, tenantId } });
     if (!coupon) throw new NotFoundException('Cupón no encontrado.');
@@ -214,6 +253,7 @@ export class CouponsService {
   private toData(dto: UpdateCouponDto) {
     const data: Partial<Omit<Coupon, 'id' | 'tenantId' | 'createdAt' | 'updatedAt'>> = {};
     if (dto.code !== undefined) data.code = normalizeCouponCode(dto.code);
+    if (dto.method !== undefined) data.method = dto.method;
     if (dto.label !== undefined) data.label = dto.label.trim();
     if (dto.note !== undefined) data.note = dto.note?.trim() || null;
     if (dto.kind !== undefined) data.kind = dto.kind;
@@ -262,5 +302,9 @@ export class CouponsService {
       return new BadRequestException('Revisa las reglas del cupón.');
     }
     return error;
+  }
+
+  private automaticCode(): string {
+    return `AUTO-${randomBytes(6).toString('hex').toUpperCase()}`;
   }
 }

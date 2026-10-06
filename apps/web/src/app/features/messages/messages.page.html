@@ -1,15 +1,16 @@
 <section class="inbox">
-  <aside class="inbox__list" aria-label="Conversaciones">
+  <aside class="inbox__list tw:flex tw:flex-col tw:min-w-0 tw:min-h-0" [class.tw:hidden]="openedConversationId()" [class.tw:inbox:flex]="openedConversationId()" aria-label="Conversaciones">
     <header class="inbox__list-head">
       <div>
-        <h1>Mensajes</h1>
-        <p>{{ conversations().length }} conversaciones</p>
+        <h1 class="tw:console-title">Mensajes</h1>
+        @if (!loadingList() && !listError()) { <p>{{ conversations().length }} conversaciones</p> }
       </div>
       <div class="inbox__filters">
         <button
           type="button"
           class="chip"
           [class.chip--active]="filterUnattended()"
+          [attr.aria-pressed]="filterUnattended()"
           (click)="toggleUnattendedFilter()"
         >
           Sin atender
@@ -18,6 +19,7 @@
           type="button"
           class="chip"
           [class.chip--active]="filterSales()"
+          [attr.aria-pressed]="filterSales()"
           (click)="toggleSalesFilter()"
         >
           Ventas
@@ -29,6 +31,7 @@
       <ds-icon name="search" />
       <input
         type="search"
+        aria-label="Buscar conversaciones"
         placeholder="Buscar conversaciones…"
         [value]="query()"
         (input)="onSearch($any($event.target).value)"
@@ -36,12 +39,18 @@
     </label>
 
     @if (loadingList()) {
-      <div class="list-state">Cargando inbox…</div>
+      <div class="list-state" role="status" aria-busy="true">Cargando conversaciones…</div>
+    } @else if (listError()) {
+      <ds-empty-state title="No pudimos cargar las conversaciones" body="Revisa tu conexión e inténtalo de nuevo.">
+        <ds-button variant="secondary" (click)="loadList()">Reintentar</ds-button>
+      </ds-empty-state>
     } @else if (conversations().length === 0) {
       <ds-empty-state
-        title="Sin conversaciones"
-        body="Conecta WhatsApp o prueba un mensaje desde Canales para ver aquí cómo responde tu vendedor."
-      />
+        [title]="query() || filterSales() || filterUnattended() ? 'No hay coincidencias' : 'Sin conversaciones todavía'"
+        [body]="query() || filterSales() || filterUnattended() ? 'Prueba otra búsqueda o cambia los filtros.' : 'Conecta un canal para recibir aquí los mensajes de tus clientes.'"
+      >
+        @if (!query() && !filterSales() && !filterUnattended()) { <a routerLink="/app/channels" class="tw:console-action-link">Conectar un canal</a> }
+      </ds-empty-state>
     } @else {
       <ul>
         @for (item of conversations(); track item.id) {
@@ -69,7 +78,7 @@
                   @if (item.markedAsSale) {
                     <span class="flag flag--sale">Venta</span>
                   }
-                  <span class="flag">{{ item.channel.type }}</span>
+                  <span class="flag">{{ channelLabel(item.channel.type) }}</span>
                 </span>
               </span>
             </button>
@@ -79,23 +88,31 @@
     }
   </aside>
 
-  <section class="inbox__thread" aria-live="polite">
+  <section class="inbox__thread tw:flex tw:flex-col tw:min-w-0 tw:min-h-0" [class.tw:hidden]="!openedConversationId()" [class.tw:inbox:flex]="!openedConversationId()" aria-label="Conversación seleccionada">
+    <h1 class="tw:sr-only tw:inbox:hidden">Mensajes</h1>
+    @if (openedConversationId()) {
+      <button type="button" class="tw:console-nav-link tw:inbox:hidden tw:cursor-pointer tw:border-0 tw:bg-surface tw:m-2" (click)="closeConversation()"><ds-icon name="chevronLeft" /> Volver a conversaciones</button>
+    }
     @if (errorMessage(); as error) {
-      <div class="banner banner--danger" role="alert">{{ error }}</div>
+      <div class="tw:feedback tw:feedback-danger" role="alert">{{ error }}</div>
     }
     @if (notice(); as info) {
-      <div class="banner banner--info" role="status">{{ info }}</div>
+      <div class="tw:feedback tw:feedback-info" role="status">{{ info }}</div>
     }
 
-    @if (!selected()) {
+    @if (loadingThread()) {
+      <div class="thread-empty" role="status" aria-busy="true">Abriendo conversación…</div>
+    } @else if (threadError()) {
+      <ds-empty-state title="No pudimos abrir la conversación" body="Revisa tu conexión y vuelve a intentarlo.">
+        <ds-button variant="secondary" (click)="openConversation(openedConversationId()!)">Reintentar</ds-button>
+      </ds-empty-state>
+    } @else if (!selected()) {
       <div class="thread-empty">
         <h2>Selecciona una conversación</h2>
         <p>
-          Revisa el hilo, pausa el agente, marca venta o responde como humano.
+          Revisa los mensajes, crea un pedido o responde personalmente. Al enviar una respuesta, la IA se pausa en esa conversación.
         </p>
       </div>
-    } @else if (loadingThread()) {
-      <div class="thread-empty">Abriendo conversación…</div>
     } @else {
       @if (selected(); as thread) {
         <header class="thread-head">
@@ -104,6 +121,7 @@
             <div>
               <h2>{{ thread.contactName || thread.contactPhone }}</h2>
               <p>{{ thread.contactPhone }}</p>
+              <span class="tw:text-caption tw:font-semibold" [class.tw:text-success-text]="thread.agentEnabled" [class.tw:text-warning-text]="!thread.agentEnabled">{{ thread.agentEnabled ? 'IA atendiendo' : 'IA pausada · atención manual' }}</span>
             </div>
           </div>
 
@@ -119,7 +137,8 @@
               <input
                 type="checkbox"
                 [checked]="thread.markedAsSale"
-                (change)="toggleSale()"
+                [disabled]="updatingThread()"
+                (change)="toggleSale($event)"
               />
               Venta
             </label>
@@ -127,11 +146,12 @@
               <input
                 type="checkbox"
                 [checked]="thread.markedUnattended"
-                (change)="toggleUnattended()"
+                [disabled]="updatingThread()"
+                (change)="toggleUnattended($event)"
               />
               Sin atender
             </label>
-            <button type="button" class="agent-toggle" (click)="toggleAgent()">
+            <button type="button" class="agent-toggle" [disabled]="updatingThread()" (click)="toggleAgent()">
               <ds-icon [name]="thread.agentEnabled ? 'pause' : 'play'" />
               {{ thread.agentEnabled ? 'Pausar IA' : 'Reactivar IA' }}
             </button>
@@ -139,7 +159,7 @@
         </header>
 
         @if (lastOrderId(); as orderId) {
-          <div class="banner banner--info" role="status">
+          <div class="tw:feedback tw:feedback-info" role="status">
             Pedido listo.
             <a [routerLink]="['/app/orders']" [queryParams]="{ orderId }">
               Ver en Pedidos
@@ -150,7 +170,7 @@
         @if (thread.linkedOrder; as order) {
           <aside class="commerce-panel" aria-label="Pedido en el hilo">
             <div class="commerce-panel__head">
-              <strong>Commerce en el hilo</strong>
+              <strong>Pedido de esta conversación</strong>
               <span class="commerce-panel__badge">{{
                 orderStatusLabel(order.status)
               }}</span>
@@ -173,13 +193,13 @@
         }
 
         @if (!thread.agentEnabled) {
-          <div class="banner banner--warn">
-            Respuestas automáticas OFF · el agente no responde en este chat
+          <div class="tw:feedback tw:feedback-warning">
+            La IA está pausada. Tú y tu equipo atienden esta conversación hasta que la reactiven.
           </div>
         }
 
         @if (!thread.messagingWindow.canSendFreeForm) {
-          <div class="banner banner--warn">
+          <div class="tw:feedback tw:feedback-warning">
             <div>
               <strong>Ventana de 24h cerrada</strong>
               <p>
@@ -214,7 +234,7 @@
           </div>
         }
 
-        <div class="messages" #messageList>
+        <div class="messages" #messageList role="log" aria-label="Historial de mensajes">
           @for (message of thread.messages; track message.id) {
             <article
               class="bubble"
@@ -275,9 +295,10 @@
         <form class="composer" [formGroup]="composer" (ngSubmit)="send()">
           <textarea
             formControlName="text"
+            aria-label="Respuesta al cliente"
             rows="2"
             placeholder="Escribe una respuesta…"
-            [disabled]="!canSend()"
+            [readOnly]="!canSend() || sending()"
           ></textarea>
           <ds-button type="submit" [disabled]="sending() || !canSend()">
             <ds-icon name="send" />
@@ -289,11 +310,10 @@
   </section>
 
   @if (orderModalOpen()) {
-    <div
-      class="order-modal"
-      role="dialog"
-      aria-modal="true"
+    <dialog dsModal (dsModalClose)="closeCreateOrder()"
+      class="tw:modal-frame"
       aria-label="Crear pedido desde el chat"
+      (click)="$event.target === $event.currentTarget && closeCreateOrder()"
     >
       <form
         class="order-modal__panel"
@@ -307,6 +327,9 @@
             como mensaje del sistema.
           </p>
         </header>
+
+        @if (errorMessage(); as error) { <div class="tw:feedback tw:feedback-danger" role="alert">{{ error }}</div> }
+        @if (!products().length) { <p class="tw:text-muted">Necesitas un producto disponible para crear un pedido. <a routerLink="/app/products" class="tw:font-semibold tw:underline">Ir a Productos</a></p> }
 
         <label>
           Producto
@@ -333,17 +356,17 @@
         </label>
 
         <footer>
-          <ds-button type="button" variant="ghost" (click)="closeCreateOrder()">
+          <ds-button type="button" variant="ghost" [disabled]="creatingOrder()" (click)="closeCreateOrder()">
             Cancelar
           </ds-button>
           <ds-button
             type="submit"
             [disabled]="creatingOrder() || products().length === 0"
           >
-            {{ creatingOrder() ? 'Creando…' : 'Crear y cobrar' }}
+            {{ creatingOrder() ? 'Creando…' : (orderForm.controls.createPaymentLink.value ? 'Crear con enlace de pago' : 'Crear pedido') }}
           </ds-button>
         </footer>
       </form>
-    </div>
+    </dialog>
   }
 </section>

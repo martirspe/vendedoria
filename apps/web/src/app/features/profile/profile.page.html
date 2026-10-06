@@ -1,7 +1,6 @@
-<section class="profile">
+<section class="profile tw:mx-auto tw:min-w-0">
   <header class="profile__header">
-    <p class="profile__eyebrow">Cuenta</p>
-    <h1>Mi perfil</h1>
+    <h1 class="tw:console-title">Mi perfil</h1>
     <p>Tus datos personales, tu contraseña y los dispositivos donde tienes la sesión abierta.</p>
   </header>
 
@@ -14,7 +13,7 @@
       </div>
     </div>
   } @else if (loadError() && !profile()) {
-    <div class="banner banner--danger" role="alert">
+    <div class="tw:feedback tw:feedback-danger" role="alert">
       <ds-icon name="alert" />
       <span>No pudimos cargar tu perfil. Revisa tu conexión e inténtalo de nuevo.</span>
       <ds-button type="button" variant="secondary" (click)="load()">Reintentar</ds-button>

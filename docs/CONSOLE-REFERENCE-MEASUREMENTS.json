@@ -1,0 +1,2102 @@
+{
+  "date": "2026-10-06",
+  "phase": "Reference composition and final compact sidebar",
+  "rules": {
+    "desktopFinePointerNavigationHeight": 30,
+    "touchNavigationHeight": 44,
+    "nonNavigationButtonsHeight": 44
+  },
+  "routeMatrix": [
+    {
+      "alerts": 0,
+      "clientWidth": 304,
+      "navigationBelowFloor": 0,
+      "navigationRowHeights": [],
+      "route": "/app/get-started",
+      "scrollWidth": 304,
+      "smallButtons": 0,
+      "unlabelledFields": 0,
+      "viewportHeight": 740,
+      "viewportWidth": 320
+    },
+    {
+      "alerts": 0,
+      "clientWidth": 320,
+      "navigationBelowFloor": 0,
+      "navigationRowHeights": [],
+      "route": "/app/products",
+      "scrollWidth": 320,
+      "smallButtons": 0,
+      "unlabelledFields": 0,
+      "viewportHeight": 740,
+      "viewportWidth": 320
+    },
+    {
+      "alerts": 0,
+      "clientWidth": 320,
+      "navigationBelowFloor": 0,
+      "navigationRowHeights": [],
+      "route": "/app/products/import",
+      "scrollWidth": 320,
+      "smallButtons": 0,
+      "unlabelledFields": 0,
+      "viewportHeight": 740,
+      "viewportWidth": 320
+    },
+    {
+      "alerts": 0,
+      "clientWidth": 320,
+      "navigationBelowFloor": 0,
+      "navigationRowHeights": [],
+      "route": "/app/inventory",
+      "scrollWidth": 320,
+      "smallButtons": 0,
+      "unlabelledFields": 0,
+      "viewportHeight": 740,
+      "viewportWidth": 320
+    },
+    {
+      "alerts": 0,
+      "clientWidth": 320,
+      "navigationBelowFloor": 0,
+      "navigationRowHeights": [],
+      "route": "/app/coupons",
+      "scrollWidth": 320,
+      "smallButtons": 0,
+      "unlabelledFields": 0,
+      "viewportHeight": 740,
+      "viewportWidth": 320
+    },
+    {
+      "alerts": 0,
+      "clientWidth": 304,
+      "navigationBelowFloor": 0,
+      "navigationRowHeights": [],
+      "route": "/app/shipping",
+      "scrollWidth": 304,
+      "smallButtons": 0,
+      "unlabelledFields": 0,
+      "viewportHeight": 740,
+      "viewportWidth": 320
+    },
+    {
+      "alerts": 0,
+      "clientWidth": 320,
+      "navigationBelowFloor": 0,
+      "navigationRowHeights": [],
+      "route": "/app/messages",
+      "scrollWidth": 320,
+      "smallButtons": 0,
+      "unlabelledFields": 0,
+      "viewportHeight": 740,
+      "viewportWidth": 320
+    },
+    {
+      "alerts": 0,
+      "clientWidth": 304,
+      "navigationBelowFloor": 0,
+      "navigationRowHeights": [],
+      "route": "/app/orders",
+      "scrollWidth": 304,
+      "smallButtons": 0,
+      "unlabelledFields": 0,
+      "viewportHeight": 740,
+      "viewportWidth": 320
+    },
+    {
+      "alerts": 0,
+      "clientWidth": 320,
+      "navigationBelowFloor": 0,
+      "navigationRowHeights": [],
+      "route": "/app/metrics",
+      "scrollWidth": 320,
+      "smallButtons": 0,
+      "unlabelledFields": 0,
+      "viewportHeight": 740,
+      "viewportWidth": 320
+    },
+    {
+      "alerts": 0,
+      "clientWidth": 304,
+      "navigationBelowFloor": 0,
+      "navigationRowHeights": [],
+      "route": "/app/channels",
+      "scrollWidth": 304,
+      "smallButtons": 0,
+      "unlabelledFields": 0,
+      "viewportHeight": 740,
+      "viewportWidth": 320
+    },
+    {
+      "alerts": 0,
+      "clientWidth": 304,
+      "navigationBelowFloor": 0,
+      "navigationRowHeights": [],
+      "route": "/app/payments",
+      "scrollWidth": 304,
+      "smallButtons": 0,
+      "unlabelledFields": 0,
+      "viewportHeight": 740,
+      "viewportWidth": 320
+    },
+    {
+      "alerts": 0,
+      "clientWidth": 304,
+      "navigationBelowFloor": 0,
+      "navigationRowHeights": [],
+      "route": "/app/integrations",
+      "scrollWidth": 304,
+      "smallButtons": 0,
+      "unlabelledFields": 0,
+      "viewportHeight": 740,
+      "viewportWidth": 320
+    },
+    {
+      "alerts": 0,
+      "clientWidth": 320,
+      "navigationBelowFloor": 0,
+      "navigationRowHeights": [],
+      "route": "/app/store",
+      "scrollWidth": 320,
+      "smallButtons": 0,
+      "unlabelledFields": 0,
+      "viewportHeight": 740,
+      "viewportWidth": 320
+    },
+    {
+      "alerts": 0,
+      "clientWidth": 304,
+      "navigationBelowFloor": 0,
+      "navigationRowHeights": [],
+      "route": "/app/store/editor",
+      "scrollWidth": 304,
+      "smallButtons": 0,
+      "unlabelledFields": 0,
+      "viewportHeight": 740,
+      "viewportWidth": 320
+    },
+    {
+      "alerts": 0,
+      "clientWidth": 320,
+      "navigationBelowFloor": 0,
+      "navigationRowHeights": [],
+      "route": "/app/domain",
+      "scrollWidth": 320,
+      "smallButtons": 0,
+      "unlabelledFields": 0,
+      "viewportHeight": 740,
+      "viewportWidth": 320
+    },
+    {
+      "alerts": 0,
+      "clientWidth": 320,
+      "navigationBelowFloor": 0,
+      "navigationRowHeights": [],
+      "route": "/app/tracking",
+      "scrollWidth": 320,
+      "smallButtons": 0,
+      "unlabelledFields": 0,
+      "viewportHeight": 740,
+      "viewportWidth": 320
+    },
+    {
+      "alerts": 0,
+      "clientWidth": 320,
+      "navigationBelowFloor": 0,
+      "navigationRowHeights": [],
+      "route": "/app/instagram",
+      "scrollWidth": 320,
+      "smallButtons": 0,
+      "unlabelledFields": 0,
+      "viewportHeight": 740,
+      "viewportWidth": 320
+    },
+    {
+      "alerts": 0,
+      "clientWidth": 320,
+      "navigationBelowFloor": 0,
+      "navigationRowHeights": [],
+      "route": "/app/team",
+      "scrollWidth": 320,
+      "smallButtons": 0,
+      "unlabelledFields": 0,
+      "viewportHeight": 740,
+      "viewportWidth": 320
+    },
+    {
+      "alerts": 0,
+      "clientWidth": 304,
+      "navigationBelowFloor": 0,
+      "navigationRowHeights": [],
+      "route": "/app/plans",
+      "scrollWidth": 304,
+      "smallButtons": 0,
+      "unlabelledFields": 0,
+      "viewportHeight": 740,
+      "viewportWidth": 320
+    },
+    {
+      "alerts": 0,
+      "clientWidth": 320,
+      "navigationBelowFloor": 0,
+      "navigationRowHeights": [],
+      "route": "/app/settings",
+      "scrollWidth": 320,
+      "smallButtons": 0,
+      "unlabelledFields": 0,
+      "viewportHeight": 740,
+      "viewportWidth": 320
+    },
+    {
+      "alerts": 0,
+      "clientWidth": 304,
+      "navigationBelowFloor": 0,
+      "navigationRowHeights": [],
+      "route": "/app/profile",
+      "scrollWidth": 304,
+      "smallButtons": 0,
+      "unlabelledFields": 0,
+      "viewportHeight": 740,
+      "viewportWidth": 320
+    },
+    {
+      "alerts": 0,
+      "clientWidth": 304,
+      "navigationBelowFloor": 0,
+      "navigationRowHeights": [],
+      "route": "/app/help",
+      "scrollWidth": 304,
+      "smallButtons": 0,
+      "unlabelledFields": 0,
+      "viewportHeight": 740,
+      "viewportWidth": 320
+    },
+    {
+      "alerts": 0,
+      "clientWidth": 320,
+      "navigationBelowFloor": 0,
+      "navigationRowHeights": [],
+      "route": "/app/tiktok-live",
+      "scrollWidth": 320,
+      "smallButtons": 0,
+      "unlabelledFields": 0,
+      "viewportHeight": 740,
+      "viewportWidth": 320
+    },
+    {
+      "alerts": 0,
+      "clientWidth": 320,
+      "navigationBelowFloor": 0,
+      "navigationRowHeights": [],
+      "route": "/app/seller/profile",
+      "scrollWidth": 320,
+      "smallButtons": 0,
+      "unlabelledFields": 0,
+      "viewportHeight": 740,
+      "viewportWidth": 320
+    },
+    {
+      "alerts": 0,
+      "clientWidth": 320,
+      "navigationBelowFloor": 0,
+      "navigationRowHeights": [],
+      "route": "/app/seller/personality",
+      "scrollWidth": 320,
+      "smallButtons": 0,
+      "unlabelledFields": 0,
+      "viewportHeight": 740,
+      "viewportWidth": 320
+    },
+    {
+      "alerts": 0,
+      "clientWidth": 320,
+      "navigationBelowFloor": 0,
+      "navigationRowHeights": [],
+      "route": "/app/seller/sales",
+      "scrollWidth": 320,
+      "smallButtons": 0,
+      "unlabelledFields": 0,
+      "viewportHeight": 740,
+      "viewportWidth": 320
+    },
+    {
+      "alerts": 0,
+      "clientWidth": 320,
+      "navigationBelowFloor": 0,
+      "navigationRowHeights": [],
+      "route": "/app/seller/knowledge",
+      "scrollWidth": 320,
+      "smallButtons": 0,
+      "unlabelledFields": 0,
+      "viewportHeight": 740,
+      "viewportWidth": 320
+    },
+    {
+      "alerts": 0,
+      "clientWidth": 320,
+      "navigationBelowFloor": 0,
+      "navigationRowHeights": [],
+      "route": "/app/seller/rules",
+      "scrollWidth": 320,
+      "smallButtons": 0,
+      "unlabelledFields": 0,
+      "viewportHeight": 740,
+      "viewportWidth": 320
+    },
+    {
+      "alerts": 0,
+      "clientWidth": 320,
+      "navigationBelowFloor": 0,
+      "navigationRowHeights": [],
+      "route": "/app/seller/advanced",
+      "scrollWidth": 320,
+      "smallButtons": 0,
+      "unlabelledFields": 0,
+      "viewportHeight": 740,
+      "viewportWidth": 320
+    },
+    {
+      "alerts": 0,
+      "clientWidth": 374,
+      "navigationBelowFloor": 0,
+      "navigationRowHeights": [],
+      "route": "/app/get-started",
+      "scrollWidth": 374,
+      "smallButtons": 0,
+      "unlabelledFields": 0,
+      "viewportHeight": 843,
+      "viewportWidth": 390
+    },
+    {
+      "alerts": 0,
+      "clientWidth": 390,
+      "navigationBelowFloor": 0,
+      "navigationRowHeights": [],
+      "route": "/app/products",
+      "scrollWidth": 390,
+      "smallButtons": 0,
+      "unlabelledFields": 0,
+      "viewportHeight": 843,
+      "viewportWidth": 390
+    },
+    {
+      "alerts": 0,
+      "clientWidth": 390,
+      "navigationBelowFloor": 0,
+      "navigationRowHeights": [],
+      "route": "/app/products/import",
+      "scrollWidth": 390,
+      "smallButtons": 0,
+      "unlabelledFields": 0,
+      "viewportHeight": 843,
+      "viewportWidth": 390
+    },
+    {
+      "alerts": 0,
+      "clientWidth": 390,
+      "navigationBelowFloor": 0,
+      "navigationRowHeights": [],
+      "route": "/app/inventory",
+      "scrollWidth": 390,
+      "smallButtons": 0,
+      "unlabelledFields": 0,
+      "viewportHeight": 843,
+      "viewportWidth": 390
+    },
+    {
+      "alerts": 0,
+      "clientWidth": 390,
+      "navigationBelowFloor": 0,
+      "navigationRowHeights": [],
+      "route": "/app/coupons",
+      "scrollWidth": 390,
+      "smallButtons": 0,
+      "unlabelledFields": 0,
+      "viewportHeight": 843,
+      "viewportWidth": 390
+    },
+    {
+      "alerts": 0,
+      "clientWidth": 374,
+      "navigationBelowFloor": 0,
+      "navigationRowHeights": [],
+      "route": "/app/shipping",
+      "scrollWidth": 374,
+      "smallButtons": 0,
+      "unlabelledFields": 0,
+      "viewportHeight": 843,
+      "viewportWidth": 390
+    },
+    {
+      "alerts": 0,
+      "clientWidth": 390,
+      "navigationBelowFloor": 0,
+      "navigationRowHeights": [],
+      "route": "/app/messages",
+      "scrollWidth": 390,
+      "smallButtons": 0,
+      "unlabelledFields": 0,
+      "viewportHeight": 843,
+      "viewportWidth": 390
+    },
+    {
+      "alerts": 0,
+      "clientWidth": 390,
+      "navigationBelowFloor": 0,
+      "navigationRowHeights": [],
+      "route": "/app/orders",
+      "scrollWidth": 390,
+      "smallButtons": 0,
+      "unlabelledFields": 0,
+      "viewportHeight": 843,
+      "viewportWidth": 390
+    },
+    {
+      "alerts": 0,
+      "clientWidth": 390,
+      "navigationBelowFloor": 0,
+      "navigationRowHeights": [],
+      "route": "/app/metrics",
+      "scrollWidth": 390,
+      "smallButtons": 0,
+      "unlabelledFields": 0,
+      "viewportHeight": 843,
+      "viewportWidth": 390
+    },
+    {
+      "alerts": 0,
+      "clientWidth": 374,
+      "navigationBelowFloor": 0,
+      "navigationRowHeights": [],
+      "route": "/app/channels",
+      "scrollWidth": 374,
+      "smallButtons": 0,
+      "unlabelledFields": 0,
+      "viewportHeight": 843,
+      "viewportWidth": 390
+    },
+    {
+      "alerts": 0,
+      "clientWidth": 374,
+      "navigationBelowFloor": 0,
+      "navigationRowHeights": [],
+      "route": "/app/payments",
+      "scrollWidth": 374,
+      "smallButtons": 0,
+      "unlabelledFields": 0,
+      "viewportHeight": 843,
+      "viewportWidth": 390
+    },
+    {
+      "alerts": 0,
+      "clientWidth": 374,
+      "navigationBelowFloor": 0,
+      "navigationRowHeights": [],
+      "route": "/app/integrations",
+      "scrollWidth": 374,
+      "smallButtons": 0,
+      "unlabelledFields": 0,
+      "viewportHeight": 843,
+      "viewportWidth": 390
+    },
+    {
+      "alerts": 0,
+      "clientWidth": 374,
+      "navigationBelowFloor": 0,
+      "navigationRowHeights": [],
+      "route": "/app/store",
+      "scrollWidth": 374,
+      "smallButtons": 0,
+      "unlabelledFields": 0,
+      "viewportHeight": 843,
+      "viewportWidth": 390
+    },
+    {
+      "alerts": 0,
+      "clientWidth": 374,
+      "navigationBelowFloor": 0,
+      "navigationRowHeights": [],
+      "route": "/app/store/editor",
+      "scrollWidth": 374,
+      "smallButtons": 0,
+      "unlabelledFields": 0,
+      "viewportHeight": 843,
+      "viewportWidth": 390
+    },
+    {
+      "alerts": 0,
+      "clientWidth": 390,
+      "navigationBelowFloor": 0,
+      "navigationRowHeights": [],
+      "route": "/app/domain",
+      "scrollWidth": 390,
+      "smallButtons": 0,
+      "unlabelledFields": 0,
+      "viewportHeight": 843,
+      "viewportWidth": 390
+    },
+    {
+      "alerts": 0,
+      "clientWidth": 390,
+      "navigationBelowFloor": 0,
+      "navigationRowHeights": [],
+      "route": "/app/tracking",
+      "scrollWidth": 390,
+      "smallButtons": 0,
+      "unlabelledFields": 0,
+      "viewportHeight": 843,
+      "viewportWidth": 390
+    },
+    {
+      "alerts": 0,
+      "clientWidth": 390,
+      "navigationBelowFloor": 0,
+      "navigationRowHeights": [],
+      "route": "/app/instagram",
+      "scrollWidth": 390,
+      "smallButtons": 0,
+      "unlabelledFields": 0,
+      "viewportHeight": 843,
+      "viewportWidth": 390
+    },
+    {
+      "alerts": 0,
+      "clientWidth": 390,
+      "navigationBelowFloor": 0,
+      "navigationRowHeights": [],
+      "route": "/app/team",
+      "scrollWidth": 390,
+      "smallButtons": 0,
+      "unlabelledFields": 0,
+      "viewportHeight": 843,
+      "viewportWidth": 390
+    },
+    {
+      "alerts": 0,
+      "clientWidth": 374,
+      "navigationBelowFloor": 0,
+      "navigationRowHeights": [],
+      "route": "/app/plans",
+      "scrollWidth": 374,
+      "smallButtons": 0,
+      "unlabelledFields": 0,
+      "viewportHeight": 843,
+      "viewportWidth": 390
+    },
+    {
+      "alerts": 0,
+      "clientWidth": 390,
+      "navigationBelowFloor": 0,
+      "navigationRowHeights": [],
+      "route": "/app/settings",
+      "scrollWidth": 390,
+      "smallButtons": 0,
+      "unlabelledFields": 0,
+      "viewportHeight": 843,
+      "viewportWidth": 390
+    },
+    {
+      "alerts": 0,
+      "clientWidth": 374,
+      "navigationBelowFloor": 0,
+      "navigationRowHeights": [],
+      "route": "/app/profile",
+      "scrollWidth": 374,
+      "smallButtons": 0,
+      "unlabelledFields": 0,
+      "viewportHeight": 843,
+      "viewportWidth": 390
+    },
+    {
+      "alerts": 0,
+      "clientWidth": 374,
+      "navigationBelowFloor": 0,
+      "navigationRowHeights": [],
+      "route": "/app/help",
+      "scrollWidth": 374,
+      "smallButtons": 0,
+      "unlabelledFields": 0,
+      "viewportHeight": 843,
+      "viewportWidth": 390
+    },
+    {
+      "alerts": 0,
+      "clientWidth": 390,
+      "navigationBelowFloor": 0,
+      "navigationRowHeights": [],
+      "route": "/app/tiktok-live",
+      "scrollWidth": 390,
+      "smallButtons": 0,
+      "unlabelledFields": 0,
+      "viewportHeight": 843,
+      "viewportWidth": 390
+    },
+    {
+      "alerts": 0,
+      "clientWidth": 390,
+      "navigationBelowFloor": 0,
+      "navigationRowHeights": [],
+      "route": "/app/seller/profile",
+      "scrollWidth": 390,
+      "smallButtons": 0,
+      "unlabelledFields": 0,
+      "viewportHeight": 843,
+      "viewportWidth": 390
+    },
+    {
+      "alerts": 0,
+      "clientWidth": 390,
+      "navigationBelowFloor": 0,
+      "navigationRowHeights": [],
+      "route": "/app/seller/personality",
+      "scrollWidth": 390,
+      "smallButtons": 0,
+      "unlabelledFields": 0,
+      "viewportHeight": 843,
+      "viewportWidth": 390
+    },
+    {
+      "alerts": 0,
+      "clientWidth": 390,
+      "navigationBelowFloor": 0,
+      "navigationRowHeights": [],
+      "route": "/app/seller/sales",
+      "scrollWidth": 390,
+      "smallButtons": 0,
+      "unlabelledFields": 0,
+      "viewportHeight": 843,
+      "viewportWidth": 390
+    },
+    {
+      "alerts": 0,
+      "clientWidth": 390,
+      "navigationBelowFloor": 0,
+      "navigationRowHeights": [],
+      "route": "/app/seller/knowledge",
+      "scrollWidth": 390,
+      "smallButtons": 0,
+      "unlabelledFields": 0,
+      "viewportHeight": 843,
+      "viewportWidth": 390
+    },
+    {
+      "alerts": 0,
+      "clientWidth": 390,
+      "navigationBelowFloor": 0,
+      "navigationRowHeights": [],
+      "route": "/app/seller/rules",
+      "scrollWidth": 390,
+      "smallButtons": 0,
+      "unlabelledFields": 0,
+      "viewportHeight": 843,
+      "viewportWidth": 390
+    },
+    {
+      "alerts": 0,
+      "clientWidth": 390,
+      "navigationBelowFloor": 0,
+      "navigationRowHeights": [],
+      "route": "/app/seller/advanced",
+      "scrollWidth": 390,
+      "smallButtons": 0,
+      "unlabelledFields": 0,
+      "viewportHeight": 843,
+      "viewportWidth": 390
+    },
+    {
+      "alerts": 0,
+      "clientWidth": 752,
+      "navigationBelowFloor": 0,
+      "navigationRowHeights": [],
+      "route": "/app/get-started",
+      "scrollWidth": 752,
+      "smallButtons": 0,
+      "unlabelledFields": 0,
+      "viewportHeight": 1024,
+      "viewportWidth": 768
+    },
+    {
+      "alerts": 0,
+      "clientWidth": 768,
+      "navigationBelowFloor": 0,
+      "navigationRowHeights": [],
+      "route": "/app/products",
+      "scrollWidth": 768,
+      "smallButtons": 0,
+      "unlabelledFields": 0,
+      "viewportHeight": 1024,
+      "viewportWidth": 768
+    },
+    {
+      "alerts": 0,
+      "clientWidth": 768,
+      "navigationBelowFloor": 0,
+      "navigationRowHeights": [],
+      "route": "/app/products/import",
+      "scrollWidth": 768,
+      "smallButtons": 0,
+      "unlabelledFields": 0,
+      "viewportHeight": 1024,
+      "viewportWidth": 768
+    },
+    {
+      "alerts": 0,
+      "clientWidth": 768,
+      "navigationBelowFloor": 0,
+      "navigationRowHeights": [],
+      "route": "/app/inventory",
+      "scrollWidth": 768,
+      "smallButtons": 0,
+      "unlabelledFields": 0,
+      "viewportHeight": 1024,
+      "viewportWidth": 768
+    },
+    {
+      "alerts": 0,
+      "clientWidth": 768,
+      "navigationBelowFloor": 0,
+      "navigationRowHeights": [],
+      "route": "/app/coupons",
+      "scrollWidth": 768,
+      "smallButtons": 0,
+      "unlabelledFields": 0,
+      "viewportHeight": 1024,
+      "viewportWidth": 768
+    },
+    {
+      "alerts": 0,
+      "clientWidth": 768,
+      "navigationBelowFloor": 0,
+      "navigationRowHeights": [],
+      "route": "/app/shipping",
+      "scrollWidth": 768,
+      "smallButtons": 0,
+      "unlabelledFields": 0,
+      "viewportHeight": 1024,
+      "viewportWidth": 768
+    },
+    {
+      "alerts": 0,
+      "clientWidth": 768,
+      "navigationBelowFloor": 0,
+      "navigationRowHeights": [],
+      "route": "/app/messages",
+      "scrollWidth": 768,
+      "smallButtons": 0,
+      "unlabelledFields": 0,
+      "viewportHeight": 1024,
+      "viewportWidth": 768
+    },
+    {
+      "alerts": 0,
+      "clientWidth": 768,
+      "navigationBelowFloor": 0,
+      "navigationRowHeights": [],
+      "route": "/app/orders",
+      "scrollWidth": 768,
+      "smallButtons": 0,
+      "unlabelledFields": 0,
+      "viewportHeight": 1024,
+      "viewportWidth": 768
+    },
+    {
+      "alerts": 0,
+      "clientWidth": 768,
+      "navigationBelowFloor": 0,
+      "navigationRowHeights": [],
+      "route": "/app/metrics",
+      "scrollWidth": 768,
+      "smallButtons": 0,
+      "unlabelledFields": 0,
+      "viewportHeight": 1024,
+      "viewportWidth": 768
+    },
+    {
+      "alerts": 0,
+      "clientWidth": 752,
+      "navigationBelowFloor": 0,
+      "navigationRowHeights": [],
+      "route": "/app/channels",
+      "scrollWidth": 752,
+      "smallButtons": 0,
+      "unlabelledFields": 0,
+      "viewportHeight": 1024,
+      "viewportWidth": 768
+    },
+    {
+      "alerts": 0,
+      "clientWidth": 752,
+      "navigationBelowFloor": 0,
+      "navigationRowHeights": [],
+      "route": "/app/payments",
+      "scrollWidth": 752,
+      "smallButtons": 0,
+      "unlabelledFields": 0,
+      "viewportHeight": 1024,
+      "viewportWidth": 768
+    },
+    {
+      "alerts": 0,
+      "clientWidth": 752,
+      "navigationBelowFloor": 0,
+      "navigationRowHeights": [],
+      "route": "/app/integrations",
+      "scrollWidth": 752,
+      "smallButtons": 0,
+      "unlabelledFields": 0,
+      "viewportHeight": 1024,
+      "viewportWidth": 768
+    },
+    {
+      "alerts": 0,
+      "clientWidth": 752,
+      "navigationBelowFloor": 0,
+      "navigationRowHeights": [],
+      "route": "/app/store",
+      "scrollWidth": 752,
+      "smallButtons": 0,
+      "unlabelledFields": 0,
+      "viewportHeight": 1024,
+      "viewportWidth": 768
+    },
+    {
+      "alerts": 0,
+      "clientWidth": 768,
+      "navigationBelowFloor": 0,
+      "navigationRowHeights": [],
+      "route": "/app/store/editor",
+      "scrollWidth": 768,
+      "smallButtons": 0,
+      "unlabelledFields": 0,
+      "viewportHeight": 1024,
+      "viewportWidth": 768
+    },
+    {
+      "alerts": 0,
+      "clientWidth": 768,
+      "navigationBelowFloor": 0,
+      "navigationRowHeights": [],
+      "route": "/app/domain",
+      "scrollWidth": 768,
+      "smallButtons": 0,
+      "unlabelledFields": 0,
+      "viewportHeight": 1024,
+      "viewportWidth": 768
+    },
+    {
+      "alerts": 0,
+      "clientWidth": 768,
+      "navigationBelowFloor": 0,
+      "navigationRowHeights": [],
+      "route": "/app/tracking",
+      "scrollWidth": 768,
+      "smallButtons": 0,
+      "unlabelledFields": 0,
+      "viewportHeight": 1024,
+      "viewportWidth": 768
+    },
+    {
+      "alerts": 0,
+      "clientWidth": 768,
+      "navigationBelowFloor": 0,
+      "navigationRowHeights": [],
+      "route": "/app/instagram",
+      "scrollWidth": 768,
+      "smallButtons": 0,
+      "unlabelledFields": 0,
+      "viewportHeight": 1024,
+      "viewportWidth": 768
+    },
+    {
+      "alerts": 0,
+      "clientWidth": 768,
+      "navigationBelowFloor": 0,
+      "navigationRowHeights": [],
+      "route": "/app/team",
+      "scrollWidth": 768,
+      "smallButtons": 0,
+      "unlabelledFields": 0,
+      "viewportHeight": 1024,
+      "viewportWidth": 768
+    },
+    {
+      "alerts": 0,
+      "clientWidth": 752,
+      "navigationBelowFloor": 0,
+      "navigationRowHeights": [],
+      "route": "/app/plans",
+      "scrollWidth": 752,
+      "smallButtons": 0,
+      "unlabelledFields": 0,
+      "viewportHeight": 1024,
+      "viewportWidth": 768
+    },
+    {
+      "alerts": 0,
+      "clientWidth": 768,
+      "navigationBelowFloor": 0,
+      "navigationRowHeights": [],
+      "route": "/app/settings",
+      "scrollWidth": 768,
+      "smallButtons": 0,
+      "unlabelledFields": 0,
+      "viewportHeight": 1024,
+      "viewportWidth": 768
+    },
+    {
+      "alerts": 0,
+      "clientWidth": 752,
+      "navigationBelowFloor": 0,
+      "navigationRowHeights": [],
+      "route": "/app/profile",
+      "scrollWidth": 752,
+      "smallButtons": 0,
+      "unlabelledFields": 0,
+      "viewportHeight": 1024,
+      "viewportWidth": 768
+    },
+    {
+      "alerts": 0,
+      "clientWidth": 768,
+      "navigationBelowFloor": 0,
+      "navigationRowHeights": [],
+      "route": "/app/help",
+      "scrollWidth": 768,
+      "smallButtons": 0,
+      "unlabelledFields": 0,
+      "viewportHeight": 1024,
+      "viewportWidth": 768
+    },
+    {
+      "alerts": 0,
+      "clientWidth": 768,
+      "navigationBelowFloor": 0,
+      "navigationRowHeights": [],
+      "route": "/app/tiktok-live",
+      "scrollWidth": 768,
+      "smallButtons": 0,
+      "unlabelledFields": 0,
+      "viewportHeight": 1024,
+      "viewportWidth": 768
+    },
+    {
+      "alerts": 0,
+      "clientWidth": 768,
+      "navigationBelowFloor": 0,
+      "navigationRowHeights": [],
+      "route": "/app/seller/profile",
+      "scrollWidth": 768,
+      "smallButtons": 0,
+      "unlabelledFields": 0,
+      "viewportHeight": 1024,
+      "viewportWidth": 768
+    },
+    {
+      "alerts": 0,
+      "clientWidth": 768,
+      "navigationBelowFloor": 0,
+      "navigationRowHeights": [],
+      "route": "/app/seller/personality",
+      "scrollWidth": 768,
+      "smallButtons": 0,
+      "unlabelledFields": 0,
+      "viewportHeight": 1024,
+      "viewportWidth": 768
+    },
+    {
+      "alerts": 0,
+      "clientWidth": 768,
+      "navigationBelowFloor": 0,
+      "navigationRowHeights": [],
+      "route": "/app/seller/sales",
+      "scrollWidth": 768,
+      "smallButtons": 0,
+      "unlabelledFields": 0,
+      "viewportHeight": 1024,
+      "viewportWidth": 768
+    },
+    {
+      "alerts": 0,
+      "clientWidth": 768,
+      "navigationBelowFloor": 0,
+      "navigationRowHeights": [],
+      "route": "/app/seller/knowledge",
+      "scrollWidth": 768,
+      "smallButtons": 0,
+      "unlabelledFields": 0,
+      "viewportHeight": 1024,
+      "viewportWidth": 768
+    },
+    {
+      "alerts": 0,
+      "clientWidth": 768,
+      "navigationBelowFloor": 0,
+      "navigationRowHeights": [],
+      "route": "/app/seller/rules",
+      "scrollWidth": 768,
+      "smallButtons": 0,
+      "unlabelledFields": 0,
+      "viewportHeight": 1024,
+      "viewportWidth": 768
+    },
+    {
+      "alerts": 0,
+      "clientWidth": 768,
+      "navigationBelowFloor": 0,
+      "navigationRowHeights": [],
+      "route": "/app/seller/advanced",
+      "scrollWidth": 768,
+      "smallButtons": 0,
+      "unlabelledFields": 0,
+      "viewportHeight": 1024,
+      "viewportWidth": 768
+    },
+    {
+      "alerts": 0,
+      "clientWidth": 1424,
+      "navigationBelowFloor": 0,
+      "navigationRowHeights": [
+        44,
+        30
+      ],
+      "route": "/app/get-started",
+      "scrollWidth": 1424,
+      "smallButtons": 0,
+      "unlabelledFields": 0,
+      "viewportHeight": 900,
+      "viewportWidth": 1440
+    },
+    {
+      "alerts": 0,
+      "clientWidth": 1440,
+      "navigationBelowFloor": 0,
+      "navigationRowHeights": [
+        44,
+        30
+      ],
+      "route": "/app/products",
+      "scrollWidth": 1440,
+      "smallButtons": 0,
+      "unlabelledFields": 0,
+      "viewportHeight": 900,
+      "viewportWidth": 1440
+    },
+    {
+      "alerts": 0,
+      "clientWidth": 1440,
+      "navigationBelowFloor": 0,
+      "navigationRowHeights": [
+        44,
+        30
+      ],
+      "route": "/app/products/import",
+      "scrollWidth": 1440,
+      "smallButtons": 0,
+      "unlabelledFields": 0,
+      "viewportHeight": 900,
+      "viewportWidth": 1440
+    },
+    {
+      "alerts": 0,
+      "clientWidth": 1440,
+      "navigationBelowFloor": 0,
+      "navigationRowHeights": [
+        44,
+        30
+      ],
+      "route": "/app/inventory",
+      "scrollWidth": 1440,
+      "smallButtons": 0,
+      "unlabelledFields": 0,
+      "viewportHeight": 900,
+      "viewportWidth": 1440
+    },
+    {
+      "alerts": 0,
+      "clientWidth": 1440,
+      "navigationBelowFloor": 0,
+      "navigationRowHeights": [
+        44,
+        30
+      ],
+      "route": "/app/coupons",
+      "scrollWidth": 1440,
+      "smallButtons": 0,
+      "unlabelledFields": 0,
+      "viewportHeight": 900,
+      "viewportWidth": 1440
+    },
+    {
+      "alerts": 0,
+      "clientWidth": 1424,
+      "navigationBelowFloor": 0,
+      "navigationRowHeights": [
+        44,
+        30
+      ],
+      "route": "/app/shipping",
+      "scrollWidth": 1424,
+      "smallButtons": 0,
+      "unlabelledFields": 0,
+      "viewportHeight": 900,
+      "viewportWidth": 1440
+    },
+    {
+      "alerts": 0,
+      "clientWidth": 1440,
+      "navigationBelowFloor": 0,
+      "navigationRowHeights": [
+        44,
+        30
+      ],
+      "route": "/app/messages",
+      "scrollWidth": 1440,
+      "smallButtons": 0,
+      "unlabelledFields": 0,
+      "viewportHeight": 900,
+      "viewportWidth": 1440
+    },
+    {
+      "alerts": 0,
+      "clientWidth": 1440,
+      "navigationBelowFloor": 0,
+      "navigationRowHeights": [
+        44,
+        30
+      ],
+      "route": "/app/orders",
+      "scrollWidth": 1440,
+      "smallButtons": 0,
+      "unlabelledFields": 0,
+      "viewportHeight": 900,
+      "viewportWidth": 1440
+    },
+    {
+      "alerts": 0,
+      "clientWidth": 1440,
+      "navigationBelowFloor": 0,
+      "navigationRowHeights": [
+        44,
+        30
+      ],
+      "route": "/app/metrics",
+      "scrollWidth": 1440,
+      "smallButtons": 0,
+      "unlabelledFields": 0,
+      "viewportHeight": 900,
+      "viewportWidth": 1440
+    },
+    {
+      "alerts": 0,
+      "clientWidth": 1440,
+      "navigationBelowFloor": 0,
+      "navigationRowHeights": [
+        44,
+        30
+      ],
+      "route": "/app/channels",
+      "scrollWidth": 1440,
+      "smallButtons": 0,
+      "unlabelledFields": 0,
+      "viewportHeight": 900,
+      "viewportWidth": 1440
+    },
+    {
+      "alerts": 0,
+      "clientWidth": 1440,
+      "navigationBelowFloor": 0,
+      "navigationRowHeights": [
+        44,
+        30
+      ],
+      "route": "/app/payments",
+      "scrollWidth": 1440,
+      "smallButtons": 0,
+      "unlabelledFields": 0,
+      "viewportHeight": 900,
+      "viewportWidth": 1440
+    },
+    {
+      "alerts": 0,
+      "clientWidth": 1424,
+      "navigationBelowFloor": 0,
+      "navigationRowHeights": [
+        44,
+        30
+      ],
+      "route": "/app/integrations",
+      "scrollWidth": 1424,
+      "smallButtons": 0,
+      "unlabelledFields": 0,
+      "viewportHeight": 900,
+      "viewportWidth": 1440
+    },
+    {
+      "alerts": 0,
+      "clientWidth": 1424,
+      "navigationBelowFloor": 0,
+      "navigationRowHeights": [
+        44,
+        30
+      ],
+      "route": "/app/store",
+      "scrollWidth": 1424,
+      "smallButtons": 0,
+      "unlabelledFields": 0,
+      "viewportHeight": 900,
+      "viewportWidth": 1440
+    },
+    {
+      "alerts": 0,
+      "clientWidth": 1440,
+      "navigationBelowFloor": 0,
+      "navigationRowHeights": [],
+      "route": "/app/store/editor",
+      "scrollWidth": 1440,
+      "smallButtons": 0,
+      "unlabelledFields": 0,
+      "viewportHeight": 900,
+      "viewportWidth": 1440
+    },
+    {
+      "alerts": 0,
+      "clientWidth": 1440,
+      "navigationBelowFloor": 0,
+      "navigationRowHeights": [
+        44,
+        30
+      ],
+      "route": "/app/domain",
+      "scrollWidth": 1440,
+      "smallButtons": 0,
+      "unlabelledFields": 0,
+      "viewportHeight": 900,
+      "viewportWidth": 1440
+    },
+    {
+      "alerts": 0,
+      "clientWidth": 1440,
+      "navigationBelowFloor": 0,
+      "navigationRowHeights": [
+        44,
+        30
+      ],
+      "route": "/app/tracking",
+      "scrollWidth": 1440,
+      "smallButtons": 0,
+      "unlabelledFields": 0,
+      "viewportHeight": 900,
+      "viewportWidth": 1440
+    },
+    {
+      "alerts": 0,
+      "clientWidth": 1440,
+      "navigationBelowFloor": 0,
+      "navigationRowHeights": [
+        44,
+        30
+      ],
+      "route": "/app/instagram",
+      "scrollWidth": 1440,
+      "smallButtons": 0,
+      "unlabelledFields": 0,
+      "viewportHeight": 900,
+      "viewportWidth": 1440
+    },
+    {
+      "alerts": 0,
+      "clientWidth": 1440,
+      "navigationBelowFloor": 0,
+      "navigationRowHeights": [
+        44,
+        30
+      ],
+      "route": "/app/team",
+      "scrollWidth": 1440,
+      "smallButtons": 0,
+      "unlabelledFields": 0,
+      "viewportHeight": 900,
+      "viewportWidth": 1440
+    },
+    {
+      "alerts": 0,
+      "clientWidth": 1424,
+      "navigationBelowFloor": 0,
+      "navigationRowHeights": [
+        44,
+        30
+      ],
+      "route": "/app/plans",
+      "scrollWidth": 1424,
+      "smallButtons": 0,
+      "unlabelledFields": 0,
+      "viewportHeight": 900,
+      "viewportWidth": 1440
+    },
+    {
+      "alerts": 0,
+      "clientWidth": 1440,
+      "navigationBelowFloor": 0,
+      "navigationRowHeights": [
+        44,
+        30
+      ],
+      "route": "/app/settings",
+      "scrollWidth": 1440,
+      "smallButtons": 0,
+      "unlabelledFields": 0,
+      "viewportHeight": 900,
+      "viewportWidth": 1440
+    },
+    {
+      "alerts": 0,
+      "clientWidth": 1424,
+      "navigationBelowFloor": 0,
+      "navigationRowHeights": [
+        44,
+        30
+      ],
+      "route": "/app/profile",
+      "scrollWidth": 1424,
+      "smallButtons": 0,
+      "unlabelledFields": 0,
+      "viewportHeight": 900,
+      "viewportWidth": 1440
+    },
+    {
+      "alerts": 0,
+      "clientWidth": 1440,
+      "navigationBelowFloor": 0,
+      "navigationRowHeights": [
+        44,
+        30
+      ],
+      "route": "/app/help",
+      "scrollWidth": 1440,
+      "smallButtons": 0,
+      "unlabelledFields": 0,
+      "viewportHeight": 900,
+      "viewportWidth": 1440
+    },
+    {
+      "alerts": 0,
+      "clientWidth": 1440,
+      "navigationBelowFloor": 0,
+      "navigationRowHeights": [
+        44,
+        30
+      ],
+      "route": "/app/tiktok-live",
+      "scrollWidth": 1440,
+      "smallButtons": 0,
+      "unlabelledFields": 0,
+      "viewportHeight": 900,
+      "viewportWidth": 1440
+    },
+    {
+      "alerts": 0,
+      "clientWidth": 1440,
+      "navigationBelowFloor": 0,
+      "navigationRowHeights": [
+        44,
+        30
+      ],
+      "route": "/app/seller/profile",
+      "scrollWidth": 1440,
+      "smallButtons": 0,
+      "unlabelledFields": 0,
+      "viewportHeight": 900,
+      "viewportWidth": 1440
+    },
+    {
+      "alerts": 0,
+      "clientWidth": 1440,
+      "navigationBelowFloor": 0,
+      "navigationRowHeights": [
+        44,
+        30
+      ],
+      "route": "/app/seller/personality",
+      "scrollWidth": 1440,
+      "smallButtons": 0,
+      "unlabelledFields": 0,
+      "viewportHeight": 900,
+      "viewportWidth": 1440
+    },
+    {
+      "alerts": 0,
+      "clientWidth": 1440,
+      "navigationBelowFloor": 0,
+      "navigationRowHeights": [
+        44,
+        30
+      ],
+      "route": "/app/seller/sales",
+      "scrollWidth": 1440,
+      "smallButtons": 0,
+      "unlabelledFields": 0,
+      "viewportHeight": 900,
+      "viewportWidth": 1440
+    },
+    {
+      "alerts": 0,
+      "clientWidth": 1440,
+      "navigationBelowFloor": 0,
+      "navigationRowHeights": [
+        44,
+        30
+      ],
+      "route": "/app/seller/knowledge",
+      "scrollWidth": 1440,
+      "smallButtons": 0,
+      "unlabelledFields": 0,
+      "viewportHeight": 900,
+      "viewportWidth": 1440
+    },
+    {
+      "alerts": 0,
+      "clientWidth": 1440,
+      "navigationBelowFloor": 0,
+      "navigationRowHeights": [
+        44,
+        30
+      ],
+      "route": "/app/seller/rules",
+      "scrollWidth": 1440,
+      "smallButtons": 0,
+      "unlabelledFields": 0,
+      "viewportHeight": 900,
+      "viewportWidth": 1440
+    },
+    {
+      "alerts": 0,
+      "clientWidth": 1440,
+      "navigationBelowFloor": 0,
+      "navigationRowHeights": [
+        44,
+        30
+      ],
+      "route": "/app/seller/advanced",
+      "scrollWidth": 1440,
+      "smallButtons": 0,
+      "unlabelledFields": 0,
+      "viewportHeight": 900,
+      "viewportWidth": 1440
+    },
+    {
+      "alerts": 0,
+      "clientWidth": 359,
+      "navigationBelowFloor": 0,
+      "navigationRowHeights": [],
+      "route": "/app/products",
+      "scrollWidth": 359,
+      "smallButtons": 0,
+      "unlabelledFields": 0,
+      "viewportHeight": 800,
+      "viewportWidth": 359
+    },
+    {
+      "alerts": 0,
+      "clientWidth": 343,
+      "navigationBelowFloor": 0,
+      "navigationRowHeights": [],
+      "route": "/app/channels",
+      "scrollWidth": 343,
+      "smallButtons": 0,
+      "unlabelledFields": 0,
+      "viewportHeight": 800,
+      "viewportWidth": 359
+    },
+    {
+      "alerts": 0,
+      "clientWidth": 359,
+      "navigationBelowFloor": 0,
+      "navigationRowHeights": [],
+      "route": "/app/messages",
+      "scrollWidth": 359,
+      "smallButtons": 0,
+      "unlabelledFields": 0,
+      "viewportHeight": 800,
+      "viewportWidth": 359
+    },
+    {
+      "alerts": 0,
+      "clientWidth": 343,
+      "navigationBelowFloor": 0,
+      "navigationRowHeights": [],
+      "route": "/app/orders",
+      "scrollWidth": 343,
+      "smallButtons": 0,
+      "unlabelledFields": 0,
+      "viewportHeight": 800,
+      "viewportWidth": 359
+    },
+    {
+      "alerts": 0,
+      "clientWidth": 359,
+      "navigationBelowFloor": 0,
+      "navigationRowHeights": [],
+      "route": "/app/settings",
+      "scrollWidth": 359,
+      "smallButtons": 0,
+      "unlabelledFields": 0,
+      "viewportHeight": 800,
+      "viewportWidth": 359
+    },
+    {
+      "alerts": 0,
+      "clientWidth": 343,
+      "navigationBelowFloor": 0,
+      "navigationRowHeights": [],
+      "route": "/app/store/editor",
+      "scrollWidth": 343,
+      "smallButtons": 0,
+      "unlabelledFields": 0,
+      "viewportHeight": 800,
+      "viewportWidth": 359
+    },
+    {
+      "alerts": 0,
+      "clientWidth": 720,
+      "navigationBelowFloor": 0,
+      "navigationRowHeights": [],
+      "route": "/app/products",
+      "scrollWidth": 720,
+      "smallButtons": 0,
+      "unlabelledFields": 0,
+      "viewportHeight": 900,
+      "viewportWidth": 720
+    },
+    {
+      "alerts": 0,
+      "clientWidth": 704,
+      "navigationBelowFloor": 0,
+      "navigationRowHeights": [],
+      "route": "/app/channels",
+      "scrollWidth": 704,
+      "smallButtons": 0,
+      "unlabelledFields": 0,
+      "viewportHeight": 900,
+      "viewportWidth": 720
+    },
+    {
+      "alerts": 0,
+      "clientWidth": 720,
+      "navigationBelowFloor": 0,
+      "navigationRowHeights": [],
+      "route": "/app/messages",
+      "scrollWidth": 720,
+      "smallButtons": 0,
+      "unlabelledFields": 0,
+      "viewportHeight": 900,
+      "viewportWidth": 720
+    },
+    {
+      "alerts": 0,
+      "clientWidth": 720,
+      "navigationBelowFloor": 0,
+      "navigationRowHeights": [],
+      "route": "/app/orders",
+      "scrollWidth": 720,
+      "smallButtons": 0,
+      "unlabelledFields": 0,
+      "viewportHeight": 900,
+      "viewportWidth": 720
+    },
+    {
+      "alerts": 0,
+      "clientWidth": 720,
+      "navigationBelowFloor": 0,
+      "navigationRowHeights": [],
+      "route": "/app/settings",
+      "scrollWidth": 720,
+      "smallButtons": 0,
+      "unlabelledFields": 0,
+      "viewportHeight": 900,
+      "viewportWidth": 720
+    },
+    {
+      "alerts": 0,
+      "clientWidth": 704,
+      "navigationBelowFloor": 0,
+      "navigationRowHeights": [],
+      "route": "/app/store/editor",
+      "scrollWidth": 704,
+      "smallButtons": 0,
+      "unlabelledFields": 0,
+      "viewportHeight": 900,
+      "viewportWidth": 720
+    },
+    {
+      "alerts": 0,
+      "clientWidth": 1024,
+      "navigationBelowFloor": 0,
+      "navigationRowHeights": [
+        44,
+        30
+      ],
+      "route": "/app/products",
+      "scrollWidth": 1024,
+      "smallButtons": 0,
+      "unlabelledFields": 0,
+      "viewportHeight": 768,
+      "viewportWidth": 1024
+    },
+    {
+      "alerts": 0,
+      "clientWidth": 1008,
+      "navigationBelowFloor": 0,
+      "navigationRowHeights": [
+        44,
+        30
+      ],
+      "route": "/app/channels",
+      "scrollWidth": 1008,
+      "smallButtons": 0,
+      "unlabelledFields": 0,
+      "viewportHeight": 768,
+      "viewportWidth": 1024
+    },
+    {
+      "alerts": 0,
+      "clientWidth": 1024,
+      "navigationBelowFloor": 0,
+      "navigationRowHeights": [
+        44,
+        30
+      ],
+      "route": "/app/messages",
+      "scrollWidth": 1024,
+      "smallButtons": 0,
+      "unlabelledFields": 0,
+      "viewportHeight": 768,
+      "viewportWidth": 1024
+    },
+    {
+      "alerts": 0,
+      "clientWidth": 1024,
+      "navigationBelowFloor": 0,
+      "navigationRowHeights": [
+        44,
+        30
+      ],
+      "route": "/app/orders",
+      "scrollWidth": 1024,
+      "smallButtons": 0,
+      "unlabelledFields": 0,
+      "viewportHeight": 768,
+      "viewportWidth": 1024
+    },
+    {
+      "alerts": 0,
+      "clientWidth": 1024,
+      "navigationBelowFloor": 0,
+      "navigationRowHeights": [
+        44,
+        30
+      ],
+      "route": "/app/settings",
+      "scrollWidth": 1024,
+      "smallButtons": 0,
+      "unlabelledFields": 0,
+      "viewportHeight": 768,
+      "viewportWidth": 1024
+    },
+    {
+      "alerts": 0,
+      "clientWidth": 1024,
+      "navigationBelowFloor": 0,
+      "navigationRowHeights": [],
+      "route": "/app/store/editor",
+      "scrollWidth": 1024,
+      "smallButtons": 0,
+      "unlabelledFields": 0,
+      "viewportHeight": 768,
+      "viewportWidth": 1024
+    },
+    {
+      "alerts": 0,
+      "clientWidth": 1920,
+      "navigationBelowFloor": 0,
+      "navigationRowHeights": [
+        44,
+        30
+      ],
+      "route": "/app/products",
+      "scrollWidth": 1920,
+      "smallButtons": 0,
+      "unlabelledFields": 0,
+      "viewportHeight": 1079,
+      "viewportWidth": 1920
+    },
+    {
+      "alerts": 0,
+      "clientWidth": 1904,
+      "navigationBelowFloor": 0,
+      "navigationRowHeights": [
+        44,
+        30
+      ],
+      "route": "/app/channels",
+      "scrollWidth": 1904,
+      "smallButtons": 0,
+      "unlabelledFields": 0,
+      "viewportHeight": 1079,
+      "viewportWidth": 1920
+    },
+    {
+      "alerts": 0,
+      "clientWidth": 1920,
+      "navigationBelowFloor": 0,
+      "navigationRowHeights": [
+        44,
+        30
+      ],
+      "route": "/app/messages",
+      "scrollWidth": 1920,
+      "smallButtons": 0,
+      "unlabelledFields": 0,
+      "viewportHeight": 1079,
+      "viewportWidth": 1920
+    },
+    {
+      "alerts": 0,
+      "clientWidth": 1920,
+      "navigationBelowFloor": 0,
+      "navigationRowHeights": [
+        44,
+        30
+      ],
+      "route": "/app/orders",
+      "scrollWidth": 1920,
+      "smallButtons": 0,
+      "unlabelledFields": 0,
+      "viewportHeight": 1079,
+      "viewportWidth": 1920
+    },
+    {
+      "alerts": 0,
+      "clientWidth": 1920,
+      "navigationBelowFloor": 0,
+      "navigationRowHeights": [
+        44,
+        30
+      ],
+      "route": "/app/settings",
+      "scrollWidth": 1920,
+      "smallButtons": 0,
+      "unlabelledFields": 0,
+      "viewportHeight": 1079,
+      "viewportWidth": 1920
+    },
+    {
+      "alerts": 0,
+      "clientWidth": 1920,
+      "navigationBelowFloor": 0,
+      "navigationRowHeights": [],
+      "route": "/app/store/editor",
+      "scrollWidth": 1920,
+      "smallButtons": 0,
+      "unlabelledFields": 0,
+      "viewportHeight": 1079,
+      "viewportWidth": 1920
+    },
+    {
+      "alerts": 0,
+      "clientWidth": 827,
+      "navigationBelowFloor": 0,
+      "navigationRowHeights": [],
+      "route": "/app/products",
+      "scrollWidth": 827,
+      "smallButtons": 0,
+      "unlabelledFields": 0,
+      "viewportHeight": 390,
+      "viewportWidth": 843
+    },
+    {
+      "alerts": 0,
+      "clientWidth": 827,
+      "navigationBelowFloor": 0,
+      "navigationRowHeights": [],
+      "route": "/app/channels",
+      "scrollWidth": 827,
+      "smallButtons": 0,
+      "unlabelledFields": 0,
+      "viewportHeight": 390,
+      "viewportWidth": 843
+    },
+    {
+      "alerts": 0,
+      "clientWidth": 827,
+      "navigationBelowFloor": 0,
+      "navigationRowHeights": [],
+      "route": "/app/messages",
+      "scrollWidth": 827,
+      "smallButtons": 0,
+      "unlabelledFields": 0,
+      "viewportHeight": 390,
+      "viewportWidth": 843
+    },
+    {
+      "alerts": 0,
+      "clientWidth": 827,
+      "navigationBelowFloor": 0,
+      "navigationRowHeights": [],
+      "route": "/app/orders",
+      "scrollWidth": 827,
+      "smallButtons": 0,
+      "unlabelledFields": 0,
+      "viewportHeight": 390,
+      "viewportWidth": 843
+    },
+    {
+      "alerts": 0,
+      "clientWidth": 827,
+      "navigationBelowFloor": 0,
+      "navigationRowHeights": [],
+      "route": "/app/settings",
+      "scrollWidth": 827,
+      "smallButtons": 0,
+      "unlabelledFields": 0,
+      "viewportHeight": 390,
+      "viewportWidth": 843
+    },
+    {
+      "alerts": 0,
+      "clientWidth": 843,
+      "navigationBelowFloor": 0,
+      "navigationRowHeights": [],
+      "route": "/app/store/editor",
+      "scrollWidth": 843,
+      "smallButtons": 0,
+      "unlabelledFields": 0,
+      "viewportHeight": 390,
+      "viewportWidth": 843
+    }
+  ],
+  "interactions": [
+    {
+      "case": "Expanded sidebar with product children",
+      "alerts": 0,
+      "clientWidth": 1424,
+      "navigationBelowFloor": 0,
+      "navigationRowHeights": [
+        44,
+        30
+      ],
+      "route": "/app/get-started",
+      "scrollWidth": 1424,
+      "smallButtons": 0,
+      "unlabelledFields": 0,
+      "viewportHeight": 900,
+      "viewportWidth": 1440
+    },
+    {
+      "case": "Collapsed sidebar",
+      "alerts": 0,
+      "clientWidth": 1424,
+      "navigationBelowFloor": 0,
+      "navigationRowHeights": [
+        30
+      ],
+      "route": "/app/get-started",
+      "scrollWidth": 1424,
+      "smallButtons": 0,
+      "unlabelledFields": 0,
+      "viewportHeight": 900,
+      "viewportWidth": 1440,
+      "focus": "Expandir navegación",
+      "logoRowBottom": 55.98404407501221,
+      "opacity": [
+        "1",
+        "0"
+      ],
+      "railWidth": 59.99002456665039,
+      "searchTop": 63.97938919067383,
+      "toggleCount": 1
+    },
+    {
+      "case": "Expand control replaces logo on hover",
+      "expanded": "false",
+      "hover": true,
+      "opacity": [
+        "0",
+        "1"
+      ],
+      "toggleCount": 1
+    },
+    {
+      "case": "Mobile menu initial focus",
+      "alerts": 0,
+      "clientWidth": 374,
+      "navigationBelowFloor": 0,
+      "navigationRowHeights": [
+        44
+      ],
+      "route": "/app/get-started",
+      "scrollWidth": 374,
+      "smallButtons": 0,
+      "unlabelledFields": 0,
+      "viewportHeight": 844,
+      "viewportWidth": 390,
+      "dialogs": 1,
+      "focus": "VendedorIA"
+    },
+    {
+      "case": "Mobile Shift Tab wraps",
+      "dialogs": 1,
+      "focus": "Cerrar sesión"
+    },
+    {
+      "case": "Mobile Tab wraps",
+      "dialogs": 1,
+      "focus": "VendedorIA"
+    },
+    {
+      "case": "Mobile Escape restores trigger",
+      "dialogs": 0,
+      "focus": "Abrir navegación"
+    },
+    {
+      "case": "Mobile menu search transfers modal focus",
+      "dialogs": 1,
+      "focus": "INPUT"
+    },
+    {
+      "case": "Mobile search Escape restores menu trigger",
+      "dialogs": 0,
+      "focus": "Abrir navegación"
+    },
+    {
+      "case": "Mobile menu final width",
+      "alerts": 0,
+      "clientWidth": 374,
+      "navigationBelowFloor": 0,
+      "navigationRowHeights": [
+        44
+      ],
+      "route": "/app/get-started",
+      "scrollWidth": 374,
+      "smallButtons": 0,
+      "unlabelledFields": 0,
+      "viewportHeight": 844,
+      "viewportWidth": 390,
+      "menuClientWidth": 208,
+      "menuScrollWidth": 208
+    },
+    {
+      "case": "New product continuous desktop form",
+      "alerts": 0,
+      "clientWidth": 1424,
+      "navigationBelowFloor": 0,
+      "navigationRowHeights": [
+        44,
+        30
+      ],
+      "route": "/app/products",
+      "scrollWidth": 1424,
+      "smallButtons": 0,
+      "unlabelledFields": 0,
+      "viewportHeight": 900,
+      "viewportWidth": 1440
+    },
+    {
+      "case": "Unsaved physical product form",
+      "alerts": 0,
+      "clientWidth": 304,
+      "navigationBelowFloor": 0,
+      "navigationRowHeights": [],
+      "route": "/app/products",
+      "scrollWidth": 304,
+      "smallButtons": 0,
+      "unlabelledFields": 0,
+      "viewportHeight": 843,
+      "viewportWidth": 320
+    },
+    {
+      "case": "Unsaved physical product form",
+      "alerts": 0,
+      "clientWidth": 374,
+      "navigationBelowFloor": 0,
+      "navigationRowHeights": [],
+      "route": "/app/products",
+      "scrollWidth": 374,
+      "smallButtons": 0,
+      "unlabelledFields": 0,
+      "viewportHeight": 844,
+      "viewportWidth": 390
+    },
+    {
+      "case": "Unsaved physical product form",
+      "alerts": 0,
+      "clientWidth": 752,
+      "navigationBelowFloor": 0,
+      "navigationRowHeights": [],
+      "route": "/app/products",
+      "scrollWidth": 752,
+      "smallButtons": 0,
+      "unlabelledFields": 0,
+      "viewportHeight": 1024,
+      "viewportWidth": 768
+    },
+    {
+      "case": "Unsaved physical product form",
+      "alerts": 0,
+      "clientWidth": 1424,
+      "navigationBelowFloor": 0,
+      "navigationRowHeights": [
+        44,
+        30
+      ],
+      "route": "/app/products",
+      "scrollWidth": 1424,
+      "smallButtons": 0,
+      "unlabelledFields": 0,
+      "viewportHeight": 900,
+      "viewportWidth": 1440
+    },
+    {
+      "case": "Unsaved physical product form",
+      "alerts": 0,
+      "clientWidth": 374,
+      "navigationBelowFloor": 0,
+      "navigationRowHeights": [],
+      "route": "/app/products",
+      "scrollWidth": 374,
+      "smallButtons": 0,
+      "unlabelledFields": 0,
+      "viewportHeight": 844,
+      "viewportWidth": 390
+    },
+    {
+      "case": "Unsaved service on mobile",
+      "alerts": 0,
+      "clientWidth": 374,
+      "navigationBelowFloor": 0,
+      "navigationRowHeights": [],
+      "route": "/app/products",
+      "scrollWidth": 374,
+      "smallButtons": 0,
+      "unlabelledFields": 0,
+      "viewportHeight": 844,
+      "viewportWidth": 390
+    },
+    {
+      "case": "Service kind retained after desktop resize",
+      "alerts": 0,
+      "clientWidth": 1424,
+      "navigationBelowFloor": 0,
+      "navigationRowHeights": [
+        44,
+        30
+      ],
+      "route": "/app/products",
+      "scrollWidth": 1424,
+      "smallButtons": 0,
+      "unlabelledFields": 0,
+      "viewportHeight": 900,
+      "viewportWidth": 1440,
+      "selectedType": "Servicio"
+    }
+  ]
+}

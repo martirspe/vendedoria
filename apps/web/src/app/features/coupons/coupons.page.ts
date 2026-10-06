@@ -1,11 +1,13 @@
+import { DsEmptyStateComponent } from '@vendedoria/ui';
 import { DsSelectComponent } from '@vendedoria/ui';
 import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
 import { HttpErrorResponse } from '@angular/common/http';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
-import { DsButtonComponent, DsConfirmService, DsIconComponent } from '@vendedoria/ui';
+import { DsButtonComponent, DsConfirmService, DsIconComponent, DsModalDirective } from '@vendedoria/ui';
 import {
   Coupon,
   CouponKind,
+  CouponMethod,
   CouponPayload,
   CouponScope,
   CouponTargets,
@@ -24,6 +26,11 @@ const KIND_LABELS: Record<CouponKind, string> = {
   BUY_X_GET_Y: 'Compra X, lleva Y',
 };
 
+const METHOD_LABELS: Record<CouponMethod, string> = {
+  CODE: 'Código de descuento',
+  AUTOMATIC: 'Descuento automático',
+};
+
 const toCents = (soles: number | null) =>
   soles === null || Number.isNaN(soles) ? null : Math.round(soles * 100);
 const toSoles = (cents: number | null) => (cents === null ? null : cents / 100);
@@ -37,7 +44,7 @@ const fromLocalInput = (value: string) => (value ? new Date(value).toISOString()
 @Component({
   selector: 'app-coupons-page',
   standalone: true,
-  imports: [DsSelectComponent, ReactiveFormsModule, DsButtonComponent, DsIconComponent, IntegrationGateComponent],
+  imports: [DsEmptyStateComponent, DsSelectComponent, ReactiveFormsModule, DsButtonComponent, DsIconComponent, DsModalDirective, IntegrationGateComponent],
   templateUrl: './coupons.page.html',
   styleUrls: ['../store/store.page.scss', '../payments/payments.page.scss', './coupons.page.scss'],
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -51,9 +58,12 @@ export class CouponsPage {
 
   readonly active = computed(() => this.integrations.isActive('store'));
   readonly kindLabels = KIND_LABELS;
+  readonly methodLabels = METHOD_LABELS;
   readonly kinds = Object.keys(KIND_LABELS) as CouponKind[];
+  readonly methods: CouponMethod[] = ['CODE', 'AUTOMATIC'];
 
   readonly loading = signal(true);
+  readonly loadFailed = signal(false);
   readonly saving = signal(false);
   readonly errorMessage = signal<string | null>(null);
   readonly successMessage = signal<string | null>(null);
@@ -63,9 +73,11 @@ export class CouponsPage {
   readonly copiedCode = signal<string | null>(null);
   /** `null` = editor closed, `'new'` = creating, otherwise the coupon being edited. */
   readonly editing = signal<Coupon | 'new' | null>(null);
+  readonly selectingType = signal(false);
 
   readonly form = this.fb.nonNullable.group({
     code: ['', [Validators.required, Validators.pattern(/^[A-Za-z0-9_-]{3,30}$/)]],
+    method: ['CODE' as CouponMethod],
     label: ['', [Validators.required, Validators.minLength(3), Validators.maxLength(80)]],
     note: [''],
     kind: ['PERCENT' as CouponKind],
@@ -88,6 +100,7 @@ export class CouponsPage {
   });
 
   readonly kind = signal<CouponKind>('PERCENT');
+  readonly method = signal<CouponMethod>('CODE');
   readonly scope = signal<CouponScope>('ALL');
   readonly selectedTargets = signal<string[]>([]);
 
@@ -124,11 +137,14 @@ export class CouponsPage {
       this.scope.set(scope);
       this.setTargets([]);
     });
+    this.form.controls.method.valueChanges.subscribe((method) => this.setMethod(method));
     void this.load();
   }
 
   async load(): Promise<void> {
     this.loading.set(true);
+    this.loadFailed.set(false);
+    this.errorMessage.set(null);
     try {
       await this.integrations.refresh();
       if (!this.active()) return;
@@ -140,16 +156,31 @@ export class CouponsPage {
         .then((view) => this.storeUrl.set(view.url))
         .catch(() => this.storeUrl.set(null));
     } catch {
-      this.errorMessage.set('No pudimos cargar tus cupones.');
+      this.loadFailed.set(true);
+      this.errorMessage.set('No pudimos cargar tus descuentos.');
     } finally {
       this.loading.set(false);
     }
   }
 
-  startCreate(): void {
+  openCreatePicker(): void {
+    this.selectingType.set(true);
+  }
+
+  startCreate(kind: CouponKind = 'PERCENT', method: CouponMethod = 'CODE'): void {
+    this.selectingType.set(false);
     this.clearMessages();
-    this.kind.set('PERCENT');
-    this.form.reset();
+    this.kind.set(kind);
+    this.form.reset({
+      kind,
+      method,
+      isActive: true,
+      applyToSets: true,
+      value: kind === 'BUY_X_GET_Y' ? 100 : kind === 'PERCENT' ? 10 : null,
+      buyQuantity: 2,
+      getQuantity: 1,
+    });
+    this.setMethod(method);
     this.scope.set('ALL');
     this.setTargets([]);
     this.editing.set('new');
@@ -159,8 +190,10 @@ export class CouponsPage {
     this.clearMessages();
     const percentLike = coupon.kind === 'PERCENT' || coupon.kind === 'BUY_X_GET_Y';
     this.kind.set(coupon.kind);
+    this.method.set(coupon.method);
     this.form.reset({
       code: coupon.code,
+      method: coupon.method,
       label: coupon.label,
       note: coupon.note ?? '',
       kind: coupon.kind,
@@ -182,6 +215,7 @@ export class CouponsPage {
       applyToSets: coupon.applyToSets,
     });
     this.scope.set(coupon.scope);
+    this.setMethod(coupon.method);
     this.setTargets(coupon.targets);
     this.editing.set(coupon);
   }
@@ -208,15 +242,15 @@ export class CouponsPage {
     try {
       if (editing === 'new') {
         await this.api.create(payload);
-        this.successMessage.set(`Cupón ${payload.code} creado.`);
+        this.successMessage.set(payload.method === 'CODE' ? `Código ${payload.code} creado.` : 'Descuento automático creado.');
       } else if (editing) {
         await this.api.update(editing.id, payload);
-        this.successMessage.set(`Cupón ${payload.code} actualizado.`);
+        this.successMessage.set(payload.method === 'CODE' ? `Código ${payload.code} actualizado.` : 'Descuento automático actualizado.');
       }
       this.editing.set(null);
       this.coupons.set(await this.api.list());
     } catch (error) {
-      this.errorMessage.set(this.messageFrom(error, 'No se pudo guardar el cupón.'));
+      this.errorMessage.set(this.messageFrom(error, 'No se pudo guardar el descuento.'));
     } finally {
       this.saving.set(false);
     }
@@ -234,9 +268,9 @@ export class CouponsPage {
 
   async remove(coupon: Coupon): Promise<void> {
     const confirmed = await this.confirmDialog.confirm({
-      title: `¿Eliminar el cupón ${coupon.code}?`,
-      message: 'Los compradores ya no podrán usarlo. Esta acción no se puede deshacer.',
-      confirmLabel: 'Eliminar cupón',
+      title: `¿Eliminar ${coupon.method === 'CODE' ? 'el código' : 'el descuento'} ${coupon.method === 'CODE' ? coupon.code : coupon.label}?`,
+      message: 'Dejará de aplicarse a las nuevas compras. Esta acción no se puede deshacer.',
+      confirmLabel: 'Eliminar descuento',
       tone: 'danger',
     });
     if (!confirmed) return;
@@ -244,9 +278,9 @@ export class CouponsPage {
     try {
       await this.api.remove(coupon.id);
       this.coupons.set(this.coupons().filter((c) => c.id !== coupon.id));
-      this.successMessage.set('Cupón eliminado.');
+      this.successMessage.set('Descuento eliminado.');
     } catch (error) {
-      this.errorMessage.set(this.messageFrom(error, 'No se pudo eliminar el cupón.'));
+      this.errorMessage.set(this.messageFrom(error, 'No se pudo eliminar el descuento.'));
     }
   }
 
@@ -287,7 +321,8 @@ export class CouponsPage {
     const bxgy = v.kind === 'BUY_X_GET_Y';
     const percentLike = v.kind === 'PERCENT' || bxgy;
     return {
-      code: v.code.trim().toUpperCase(),
+      code: v.method === 'CODE' ? v.code.trim().toUpperCase() : undefined,
+      method: v.method,
       label: v.label.trim(),
       note: v.note.trim() || null,
       kind: v.kind,
@@ -316,6 +351,7 @@ export class CouponsPage {
   }
 
   campaignLink(coupon: Coupon): string | null {
+    if (coupon.method !== 'CODE') return null;
     const url = this.storeUrl();
     return url ? `${url.replace(/\/$/, '')}/?cupon=${encodeURIComponent(coupon.code)}` : null;
   }
@@ -335,6 +371,18 @@ export class CouponsPage {
   private clearMessages(): void {
     this.errorMessage.set(null);
     this.successMessage.set(null);
+  }
+
+  private setMethod(method: CouponMethod): void {
+    this.method.set(method);
+    const code = this.form.controls.code;
+    if (method === 'CODE') {
+      code.setValidators([Validators.required, Validators.pattern(/^[A-Za-z0-9_-]{3,30}$/)]);
+    } else {
+      code.clearValidators();
+      code.setValue('', { emitEvent: false });
+    }
+    code.updateValueAndValidity({ emitEvent: false });
   }
 
   private messageFrom(error: unknown, fallback: string): string {

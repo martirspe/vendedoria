@@ -5,3 +5,6 @@ export * from './src/empty-state/ds-empty-state.component';
 export * from './src/select/ds-select.component';
 export * from './src/icon/ds-icon.component';
 export * from './src/turnstile/ds-turnstile.component';
+export * from './src/dialog/ds-modal.directive';
+export * from './src/setup-visual/ds-setup-visual.component';
+export * from './src/menu/ds-menu.component';

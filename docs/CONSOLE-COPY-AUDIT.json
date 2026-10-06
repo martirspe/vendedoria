@@ -1,0 +1,229 @@
+{
+  "scanned": 91,
+  "hits": [
+    {
+      "file": "apps/web/src/app/features/domain/domain.page.html",
+      "line": 4,
+      "rule": "dev-jargon",
+      "level": "high",
+      "text": "<h1 class=\"tw:console-title\">Dominio propio</h1>"
+    },
+    {
+      "file": "apps/web/src/app/features/domain/domain.page.html",
+      "line": 26,
+      "rule": "dev-jargon",
+      "level": "high",
+      "text": "<div class=\"skeleton\" aria-busy=\"true\">Cargando tu dominio…</div>"
+    },
+    {
+      "file": "apps/web/src/app/features/domain/domain.page.html",
+      "line": 37,
+      "rule": "dev-jargon",
+      "level": "high",
+      "text": "<strong>{{ v.domain ?? 'Aún no conectas un dominio' }}</strong>"
+    },
+    {
+      "file": "apps/web/src/app/features/domain/domain.page.html",
+      "line": 40,
+      "rule": "dev-jargon",
+      "level": "high",
+      "text": "@case ('active') { Tu tienda abre en tu dominio. La dirección anterior redirige aquí. }"
+    },
+    {
+      "file": "apps/web/src/app/features/domain/domain.page.html",
+      "line": 41,
+      "rule": "dev-jargon",
+      "level": "high",
+      "text": "@case ('pending') { Crea el registro DNS de abajo en tu proveedor de dominio y luego pulsa «Comprobar». }"
+    },
+    {
+      "file": "apps/web/src/app/features/domain/domain.page.html",
+      "line": 42,
+      "rule": "dev-jargon",
+      "level": "high",
+      "text": "@case ('failed') { Tu proveedor de dominio ya no apunta a tu tienda. Revisa el registro DNS y vuelve a comprobar. }"
+    },
+    {
+      "file": "apps/web/src/app/features/domain/domain.page.html",
+      "line": 55,
+      "rule": "dev-jargon",
+      "level": "high",
+      "text": "<h2>Tu dominio</h2>"
+    },
+    {
+      "file": "apps/web/src/app/features/domain/domain.page.html",
+      "line": 66,
+      "rule": "dev-jargon",
+      "level": "high",
+      "text": "<small>Usa el subdominio «www» de un dominio que ya hayas comprado.</small>"
+    },
+    {
+      "file": "apps/web/src/app/features/domain/domain.page.html",
+      "line": 72,
+      "rule": "dev-jargon",
+      "level": "high",
+      "text": "{{ saving() ? 'Guardando…' : v.domain ? 'Cambiar dominio' : 'Guardar dominio' }}"
+    },
+    {
+      "file": "apps/web/src/app/features/domain/domain.page.html",
+      "line": 76,
+      "rule": "dev-jargon",
+      "level": "high",
+      "text": "<ds-button type=\"button\" variant=\"ghost\" [disabled]=\"saving()\" (click)=\"remove()\">Quitar dominio</ds-button>"
+    },
+    {
+      "file": "apps/web/src/app/features/domain/domain.page.html",
+      "line": 80,
+      "rule": "dev-jargon",
+      "level": "high",
+      "text": "<p class=\"hint\">Solo el dueño o un administrador puede cambiar el dominio.</p>"
+    },
+    {
+      "file": "apps/web/src/app/features/domain/domain.page.html",
+      "line": 88,
+      "rule": "dev-jargon",
+      "level": "high",
+      "text": "<li>Entra al panel de tu proveedor de dominio (donde lo compraste) y abre la sección DNS.</li>"
+    },
+    {
+      "file": "apps/web/src/app/features/domain/domain.page.ts",
+      "line": 12,
+      "rule": "dev-jargon",
+      "level": "high",
+      "text": "Sin dominio"
+    },
+    {
+      "file": "apps/web/src/app/features/domain/domain.page.ts",
+      "line": 60,
+      "rule": "dev-jargon",
+      "level": "high",
+      "text": "No pudimos cargar tu dominio. Revisa tu conexión e inténtalo de nuevo."
+    },
+    {
+      "file": "apps/web/src/app/features/domain/domain.page.ts",
+      "line": 69,
+      "rule": "dev-jargon",
+      "level": "high",
+      "text": "Escribe tu dominio, por ejemplo www.mitienda.pe."
+    },
+    {
+      "file": "apps/web/src/app/features/domain/domain.page.ts",
+      "line": 74,
+      "rule": "dev-jargon",
+      "level": "high",
+      "text": "Dominio guardado. Ahora crea el registro en tu proveedor y pulsa «Comprobar»."
+    },
+    {
+      "file": "apps/web/src/app/features/domain/domain.page.ts",
+      "line": 75,
+      "rule": "dev-jargon",
+      "level": "high",
+      "text": "No pudimos guardar tu dominio."
+    },
+    {
+      "file": "apps/web/src/app/features/domain/domain.page.ts",
+      "line": 83,
+      "rule": "dev-jargon",
+      "level": "high",
+      "text": "No pudimos comprobar tu dominio. Inténtalo en unos minutos."
+    },
+    {
+      "file": "apps/web/src/app/features/domain/domain.page.ts",
+      "line": 97,
+      "rule": "dev-jargon",
+      "level": "high",
+      "text": "¿Quitar tu dominio?"
+    },
+    {
+      "file": "apps/web/src/app/features/domain/domain.page.ts",
+      "line": 99,
+      "rule": "dev-jargon",
+      "level": "high",
+      "text": "Quitar dominio"
+    },
+    {
+      "file": "apps/web/src/app/features/domain/domain.page.ts",
+      "line": 103,
+      "rule": "dev-jargon",
+      "level": "high",
+      "text": "Dominio quitado."
+    },
+    {
+      "file": "apps/web/src/app/features/domain/domain.page.ts",
+      "line": 103,
+      "rule": "dev-jargon",
+      "level": "high",
+      "text": "No pudimos quitar tu dominio."
+    },
+    {
+      "file": "apps/web/src/app/features/integrations/integrations.page.html",
+      "line": 43,
+      "rule": "unfinished",
+      "level": "medium",
+      "text": "<li [attr.data-status]=\"card.status === 'active' ? 'connected' : card.status === 'available' ? 'ready' : 'waitlist'\">"
+    },
+    {
+      "file": "apps/web/src/app/features/integrations/integrations.page.ts",
+      "line": 251,
+      "rule": "dev-jargon",
+      "level": "high",
+      "text": "Tu tienda dejará de abrir en tu dominio y volverá a su dirección de VendedorIA. Puedes activarla de nuevo cuando quieras."
+    },
+    {
+      "file": "apps/web/src/app/features/legal/legal-content.ts",
+      "line": 113,
+      "rule": "dev-jargon",
+      "level": "high",
+      "text": "la tienda web del Negocio, en un subdominio de la plataforma o en su dominio propio."
+    },
+    {
+      "file": "apps/web/src/app/features/marketing/marketing-features.component.html",
+      "line": 52,
+      "rule": "dev-jargon",
+      "level": "high",
+      "text": "<li><ds-icon name=\"globe\" /> <span><strong>Tu dominio</strong> www.tumarca.pe para tu tienda</span></li>"
+    },
+    {
+      "file": "apps/web/src/app/features/marketing/marketing-pricing.component.ts",
+      "line": 34,
+      "rule": "dev-jargon",
+      "level": "high",
+      "text": "Tu dominio propio"
+    },
+    {
+      "file": "apps/web/src/app/features/seller/seller-config.ts",
+      "line": 48,
+      "rule": "internal-tone",
+      "level": "medium",
+      "text": "Urgencia honesta"
+    },
+    {
+      "file": "apps/web/src/app/features/seller/seller-config.ts",
+      "line": 88,
+      "rule": "internal-tone",
+      "level": "medium",
+      "text": "Entusiasta y honesto: recomienda lo que de verdad le sirve y lo dice con confianza"
+    },
+    {
+      "file": "apps/web/src/app/features/seller/seller.page.html",
+      "line": 726,
+      "rule": "dev-marker",
+      "level": "high",
+      "text": "placeholder=\"ROL: Eres asesora de una tienda de perfumes nicho…&#10;&#10;MÉTODO:&#10;1. Pregunta para quién es y qué aromas le gustan.&#10;2. Recomienda máximo "
+    },
+    {
+      "file": "apps/web/src/app/layout/console-shell.layout.ts",
+      "line": 388,
+      "rule": "dev-jargon",
+      "level": "high",
+      "text": "Tienda web, dominio, Instagram, analítica y equipo"
+    },
+    {
+      "file": "apps/web/src/app/core/integrations/integrations-state.service.ts",
+      "line": 45,
+      "rule": "dev-jargon",
+      "level": "high",
+      "text": "Dominio propio"
+    }
+  ]
+}

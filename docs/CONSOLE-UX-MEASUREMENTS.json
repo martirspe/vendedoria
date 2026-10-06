@@ -1,0 +1,1589 @@
+{
+  "date": "2026-10-06",
+  "scope": "console",
+  "conditions": "Local QA account; loaded, empty and inactive-integration states. No real purchases, messages or credential changes.",
+  "method": "Read-only DOM measurements; visible buttons must be at least 44 px. Hidden aria-hidden autofill inputs are excluded from label checks. Horizontal tables retain scoped scrolling.",
+  "matrix": [
+    {
+      "alerts": 0,
+      "clientWidth": 305,
+      "route": "/app/get-started",
+      "scrollWidth": 305,
+      "smallButtons": 0,
+      "unlabelledFields": 0,
+      "viewportHeight": 740,
+      "viewportWidth": 320
+    },
+    {
+      "alerts": 0,
+      "clientWidth": 305,
+      "route": "/app/products",
+      "scrollWidth": 305,
+      "smallButtons": 0,
+      "unlabelledFields": 0,
+      "viewportHeight": 740,
+      "viewportWidth": 320
+    },
+    {
+      "alerts": 0,
+      "clientWidth": 320,
+      "route": "/app/products/import",
+      "scrollWidth": 320,
+      "smallButtons": 0,
+      "unlabelledFields": 0,
+      "viewportHeight": 740,
+      "viewportWidth": 320
+    },
+    {
+      "alerts": 0,
+      "clientWidth": 320,
+      "route": "/app/inventory",
+      "scrollWidth": 320,
+      "smallButtons": 0,
+      "unlabelledFields": 0,
+      "viewportHeight": 740,
+      "viewportWidth": 320
+    },
+    {
+      "alerts": 0,
+      "clientWidth": 320,
+      "route": "/app/coupons",
+      "scrollWidth": 320,
+      "smallButtons": 0,
+      "unlabelledFields": 0,
+      "viewportHeight": 740,
+      "viewportWidth": 320
+    },
+    {
+      "alerts": 0,
+      "clientWidth": 305,
+      "route": "/app/shipping",
+      "scrollWidth": 305,
+      "smallButtons": 0,
+      "unlabelledFields": 0,
+      "viewportHeight": 740,
+      "viewportWidth": 320
+    },
+    {
+      "alerts": 0,
+      "clientWidth": 320,
+      "empty": "Sin conversaciones todavía",
+      "route": "/app/messages",
+      "scrollWidth": 320,
+      "smallButtons": 0,
+      "unlabelledFields": 0,
+      "viewportHeight": 740,
+      "viewportWidth": 320
+    },
+    {
+      "alerts": 0,
+      "clientWidth": 305,
+      "empty": "No hay pedidos",
+      "route": "/app/orders",
+      "scrollWidth": 305,
+      "smallButtons": 0,
+      "unlabelledFields": 0,
+      "viewportHeight": 740,
+      "viewportWidth": 320
+    },
+    {
+      "alerts": 0,
+      "clientWidth": 320,
+      "empty": "Aún no hay movimiento",
+      "route": "/app/metrics",
+      "scrollWidth": 320,
+      "smallButtons": 0,
+      "unlabelledFields": 0,
+      "viewportHeight": 740,
+      "viewportWidth": 320
+    },
+    {
+      "alerts": 0,
+      "clientWidth": 305,
+      "empty": "Aún no hay WhatsApp conectado",
+      "route": "/app/channels",
+      "scrollWidth": 305,
+      "smallButtons": 0,
+      "unlabelledFields": 0,
+      "viewportHeight": 740,
+      "viewportWidth": 320
+    },
+    {
+      "alerts": 0,
+      "clientWidth": 305,
+      "route": "/app/payments",
+      "scrollWidth": 305,
+      "smallButtons": 0,
+      "unlabelledFields": 0,
+      "viewportHeight": 740,
+      "viewportWidth": 320
+    },
+    {
+      "alerts": 0,
+      "clientWidth": 305,
+      "route": "/app/integrations",
+      "scrollWidth": 305,
+      "smallButtons": 0,
+      "unlabelledFields": 0,
+      "viewportHeight": 740,
+      "viewportWidth": 320
+    },
+    {
+      "alerts": 0,
+      "clientWidth": 305,
+      "route": "/app/store",
+      "scrollWidth": 305,
+      "smallButtons": 0,
+      "unlabelledFields": 0,
+      "viewportHeight": 740,
+      "viewportWidth": 320
+    },
+    {
+      "alerts": 0,
+      "clientWidth": 305,
+      "route": "/app/store/editor",
+      "scrollWidth": 305,
+      "smallButtons": 0,
+      "unlabelledFields": 0,
+      "viewportHeight": 740,
+      "viewportWidth": 320
+    },
+    {
+      "alerts": 0,
+      "clientWidth": 320,
+      "empty": "Dominio propio está desactivada",
+      "route": "/app/domain",
+      "scrollWidth": 320,
+      "smallButtons": 0,
+      "unlabelledFields": 0,
+      "viewportHeight": 740,
+      "viewportWidth": 320
+    },
+    {
+      "alerts": 0,
+      "clientWidth": 320,
+      "empty": "Píxel y Analytics está desactivada",
+      "route": "/app/tracking",
+      "scrollWidth": 320,
+      "smallButtons": 0,
+      "unlabelledFields": 0,
+      "viewportHeight": 740,
+      "viewportWidth": 320
+    },
+    {
+      "alerts": 0,
+      "clientWidth": 320,
+      "empty": "Instagram Direct está desactivada",
+      "route": "/app/instagram",
+      "scrollWidth": 320,
+      "smallButtons": 0,
+      "unlabelledFields": 0,
+      "viewportHeight": 740,
+      "viewportWidth": 320
+    },
+    {
+      "alerts": 0,
+      "clientWidth": 320,
+      "empty": "Equipo está desactivada",
+      "route": "/app/team",
+      "scrollWidth": 320,
+      "smallButtons": 0,
+      "unlabelledFields": 0,
+      "viewportHeight": 740,
+      "viewportWidth": 320
+    },
+    {
+      "alerts": 0,
+      "clientWidth": 305,
+      "route": "/app/plans",
+      "scrollWidth": 305,
+      "smallButtons": 0,
+      "unlabelledFields": 0,
+      "viewportHeight": 740,
+      "viewportWidth": 320
+    },
+    {
+      "alerts": 0,
+      "clientWidth": 320,
+      "route": "/app/settings",
+      "scrollWidth": 320,
+      "smallButtons": 0,
+      "unlabelledFields": 0,
+      "viewportHeight": 740,
+      "viewportWidth": 320
+    },
+    {
+      "alerts": 0,
+      "clientWidth": 305,
+      "route": "/app/profile",
+      "scrollWidth": 305,
+      "smallButtons": 0,
+      "unlabelledFields": 0,
+      "viewportHeight": 740,
+      "viewportWidth": 320
+    },
+    {
+      "alerts": 0,
+      "clientWidth": 305,
+      "route": "/app/help",
+      "scrollWidth": 305,
+      "smallButtons": 0,
+      "unlabelledFields": 0,
+      "viewportHeight": 740,
+      "viewportWidth": 320
+    },
+    {
+      "alerts": 0,
+      "clientWidth": 320,
+      "empty": "TikTok LIVE está desactivada",
+      "route": "/app/tiktok-live",
+      "scrollWidth": 320,
+      "smallButtons": 0,
+      "unlabelledFields": 0,
+      "viewportHeight": 740,
+      "viewportWidth": 320
+    },
+    {
+      "alerts": 0,
+      "clientWidth": 320,
+      "empty": "Crea tu primer vendedor IA",
+      "route": "/app/seller/profile",
+      "scrollWidth": 320,
+      "smallButtons": 0,
+      "unlabelledFields": 0,
+      "viewportHeight": 740,
+      "viewportWidth": 320
+    },
+    {
+      "alerts": 0,
+      "clientWidth": 320,
+      "empty": "Crea tu primer vendedor IA",
+      "route": "/app/seller/personality",
+      "scrollWidth": 320,
+      "smallButtons": 0,
+      "unlabelledFields": 0,
+      "viewportHeight": 740,
+      "viewportWidth": 320
+    },
+    {
+      "alerts": 0,
+      "clientWidth": 320,
+      "empty": "Crea tu primer vendedor IA",
+      "route": "/app/seller/sales",
+      "scrollWidth": 320,
+      "smallButtons": 0,
+      "unlabelledFields": 0,
+      "viewportHeight": 740,
+      "viewportWidth": 320
+    },
+    {
+      "alerts": 0,
+      "clientWidth": 320,
+      "empty": "Crea tu primer vendedor IA",
+      "route": "/app/seller/knowledge",
+      "scrollWidth": 320,
+      "smallButtons": 0,
+      "unlabelledFields": 0,
+      "viewportHeight": 740,
+      "viewportWidth": 320
+    },
+    {
+      "alerts": 0,
+      "clientWidth": 320,
+      "empty": "Crea tu primer vendedor IA",
+      "route": "/app/seller/rules",
+      "scrollWidth": 320,
+      "smallButtons": 0,
+      "unlabelledFields": 0,
+      "viewportHeight": 740,
+      "viewportWidth": 320
+    },
+    {
+      "alerts": 0,
+      "clientWidth": 320,
+      "empty": "Crea tu primer vendedor IA",
+      "route": "/app/seller/advanced",
+      "scrollWidth": 320,
+      "smallButtons": 0,
+      "unlabelledFields": 0,
+      "viewportHeight": 740,
+      "viewportWidth": 320
+    },
+    {
+      "alerts": 0,
+      "clientWidth": 375,
+      "route": "/app/get-started",
+      "scrollWidth": 375,
+      "smallButtons": 0,
+      "unlabelledFields": 0,
+      "viewportHeight": 844,
+      "viewportWidth": 390
+    },
+    {
+      "alerts": 0,
+      "clientWidth": 390,
+      "route": "/app/products",
+      "scrollWidth": 390,
+      "smallButtons": 0,
+      "unlabelledFields": 0,
+      "viewportHeight": 844,
+      "viewportWidth": 390
+    },
+    {
+      "alerts": 0,
+      "clientWidth": 390,
+      "route": "/app/products/import",
+      "scrollWidth": 390,
+      "smallButtons": 0,
+      "unlabelledFields": 0,
+      "viewportHeight": 844,
+      "viewportWidth": 390
+    },
+    {
+      "alerts": 0,
+      "clientWidth": 390,
+      "route": "/app/inventory",
+      "scrollWidth": 390,
+      "smallButtons": 0,
+      "unlabelledFields": 0,
+      "viewportHeight": 844,
+      "viewportWidth": 390
+    },
+    {
+      "alerts": 0,
+      "clientWidth": 390,
+      "route": "/app/coupons",
+      "scrollWidth": 390,
+      "smallButtons": 0,
+      "unlabelledFields": 0,
+      "viewportHeight": 844,
+      "viewportWidth": 390
+    },
+    {
+      "alerts": 0,
+      "clientWidth": 375,
+      "route": "/app/shipping",
+      "scrollWidth": 375,
+      "smallButtons": 0,
+      "unlabelledFields": 0,
+      "viewportHeight": 844,
+      "viewportWidth": 390
+    },
+    {
+      "alerts": 0,
+      "clientWidth": 390,
+      "empty": "Sin conversaciones todavía",
+      "route": "/app/messages",
+      "scrollWidth": 390,
+      "smallButtons": 0,
+      "unlabelledFields": 0,
+      "viewportHeight": 844,
+      "viewportWidth": 390
+    },
+    {
+      "alerts": 0,
+      "clientWidth": 375,
+      "empty": "No hay pedidos",
+      "route": "/app/orders",
+      "scrollWidth": 375,
+      "smallButtons": 0,
+      "unlabelledFields": 0,
+      "viewportHeight": 844,
+      "viewportWidth": 390
+    },
+    {
+      "alerts": 0,
+      "clientWidth": 390,
+      "empty": "Aún no hay movimiento",
+      "route": "/app/metrics",
+      "scrollWidth": 390,
+      "smallButtons": 0,
+      "unlabelledFields": 0,
+      "viewportHeight": 844,
+      "viewportWidth": 390
+    },
+    {
+      "alerts": 0,
+      "clientWidth": 375,
+      "empty": "Aún no hay WhatsApp conectado",
+      "route": "/app/channels",
+      "scrollWidth": 375,
+      "smallButtons": 0,
+      "unlabelledFields": 0,
+      "viewportHeight": 844,
+      "viewportWidth": 390
+    },
+    {
+      "alerts": 0,
+      "clientWidth": 375,
+      "route": "/app/payments",
+      "scrollWidth": 375,
+      "smallButtons": 0,
+      "unlabelledFields": 0,
+      "viewportHeight": 844,
+      "viewportWidth": 390
+    },
+    {
+      "alerts": 0,
+      "clientWidth": 375,
+      "route": "/app/integrations",
+      "scrollWidth": 375,
+      "smallButtons": 0,
+      "unlabelledFields": 0,
+      "viewportHeight": 844,
+      "viewportWidth": 390
+    },
+    {
+      "alerts": 0,
+      "clientWidth": 375,
+      "route": "/app/store",
+      "scrollWidth": 375,
+      "smallButtons": 0,
+      "unlabelledFields": 0,
+      "viewportHeight": 844,
+      "viewportWidth": 390
+    },
+    {
+      "alerts": 0,
+      "clientWidth": 375,
+      "route": "/app/store/editor",
+      "scrollWidth": 375,
+      "smallButtons": 0,
+      "unlabelledFields": 0,
+      "viewportHeight": 844,
+      "viewportWidth": 390
+    },
+    {
+      "alerts": 0,
+      "clientWidth": 390,
+      "empty": "Dominio propio está desactivada",
+      "route": "/app/domain",
+      "scrollWidth": 390,
+      "smallButtons": 0,
+      "unlabelledFields": 0,
+      "viewportHeight": 844,
+      "viewportWidth": 390
+    },
+    {
+      "alerts": 0,
+      "clientWidth": 390,
+      "empty": "Píxel y Analytics está desactivada",
+      "route": "/app/tracking",
+      "scrollWidth": 390,
+      "smallButtons": 0,
+      "unlabelledFields": 0,
+      "viewportHeight": 844,
+      "viewportWidth": 390
+    },
+    {
+      "alerts": 0,
+      "clientWidth": 390,
+      "empty": "Instagram Direct está desactivada",
+      "route": "/app/instagram",
+      "scrollWidth": 390,
+      "smallButtons": 0,
+      "unlabelledFields": 0,
+      "viewportHeight": 844,
+      "viewportWidth": 390
+    },
+    {
+      "alerts": 0,
+      "clientWidth": 390,
+      "empty": "Equipo está desactivada",
+      "route": "/app/team",
+      "scrollWidth": 390,
+      "smallButtons": 0,
+      "unlabelledFields": 0,
+      "viewportHeight": 844,
+      "viewportWidth": 390
+    },
+    {
+      "alerts": 0,
+      "clientWidth": 375,
+      "route": "/app/plans",
+      "scrollWidth": 375,
+      "smallButtons": 0,
+      "unlabelledFields": 0,
+      "viewportHeight": 844,
+      "viewportWidth": 390
+    },
+    {
+      "alerts": 0,
+      "clientWidth": 390,
+      "route": "/app/settings",
+      "scrollWidth": 390,
+      "smallButtons": 0,
+      "unlabelledFields": 0,
+      "viewportHeight": 844,
+      "viewportWidth": 390
+    },
+    {
+      "alerts": 0,
+      "clientWidth": 375,
+      "route": "/app/profile",
+      "scrollWidth": 375,
+      "smallButtons": 0,
+      "unlabelledFields": 0,
+      "viewportHeight": 844,
+      "viewportWidth": 390
+    },
+    {
+      "alerts": 0,
+      "clientWidth": 375,
+      "route": "/app/help",
+      "scrollWidth": 375,
+      "smallButtons": 0,
+      "unlabelledFields": 0,
+      "viewportHeight": 844,
+      "viewportWidth": 390
+    },
+    {
+      "alerts": 0,
+      "clientWidth": 390,
+      "empty": "TikTok LIVE está desactivada",
+      "route": "/app/tiktok-live",
+      "scrollWidth": 390,
+      "smallButtons": 0,
+      "unlabelledFields": 0,
+      "viewportHeight": 844,
+      "viewportWidth": 390
+    },
+    {
+      "alerts": 0,
+      "clientWidth": 390,
+      "empty": "Crea tu primer vendedor IA",
+      "route": "/app/seller/profile",
+      "scrollWidth": 390,
+      "smallButtons": 0,
+      "unlabelledFields": 0,
+      "viewportHeight": 844,
+      "viewportWidth": 390
+    },
+    {
+      "alerts": 0,
+      "clientWidth": 390,
+      "empty": "Crea tu primer vendedor IA",
+      "route": "/app/seller/personality",
+      "scrollWidth": 390,
+      "smallButtons": 0,
+      "unlabelledFields": 0,
+      "viewportHeight": 844,
+      "viewportWidth": 390
+    },
+    {
+      "alerts": 0,
+      "clientWidth": 390,
+      "empty": "Crea tu primer vendedor IA",
+      "route": "/app/seller/sales",
+      "scrollWidth": 390,
+      "smallButtons": 0,
+      "unlabelledFields": 0,
+      "viewportHeight": 844,
+      "viewportWidth": 390
+    },
+    {
+      "alerts": 0,
+      "clientWidth": 390,
+      "empty": "Crea tu primer vendedor IA",
+      "route": "/app/seller/knowledge",
+      "scrollWidth": 390,
+      "smallButtons": 0,
+      "unlabelledFields": 0,
+      "viewportHeight": 844,
+      "viewportWidth": 390
+    },
+    {
+      "alerts": 0,
+      "clientWidth": 390,
+      "empty": "Crea tu primer vendedor IA",
+      "route": "/app/seller/rules",
+      "scrollWidth": 390,
+      "smallButtons": 0,
+      "unlabelledFields": 0,
+      "viewportHeight": 844,
+      "viewportWidth": 390
+    },
+    {
+      "alerts": 0,
+      "clientWidth": 390,
+      "empty": "Crea tu primer vendedor IA",
+      "route": "/app/seller/advanced",
+      "scrollWidth": 390,
+      "smallButtons": 0,
+      "unlabelledFields": 0,
+      "viewportHeight": 844,
+      "viewportWidth": 390
+    },
+    {
+      "alerts": 0,
+      "clientWidth": 753,
+      "route": "/app/get-started",
+      "scrollWidth": 753,
+      "smallButtons": 0,
+      "unlabelledFields": 0,
+      "viewportHeight": 1024,
+      "viewportWidth": 768
+    },
+    {
+      "alerts": 0,
+      "clientWidth": 768,
+      "route": "/app/products",
+      "scrollWidth": 768,
+      "smallButtons": 0,
+      "unlabelledFields": 0,
+      "viewportHeight": 1024,
+      "viewportWidth": 768
+    },
+    {
+      "alerts": 0,
+      "clientWidth": 768,
+      "route": "/app/products/import",
+      "scrollWidth": 768,
+      "smallButtons": 0,
+      "unlabelledFields": 0,
+      "viewportHeight": 1024,
+      "viewportWidth": 768
+    },
+    {
+      "alerts": 0,
+      "clientWidth": 768,
+      "route": "/app/inventory",
+      "scrollWidth": 768,
+      "smallButtons": 0,
+      "unlabelledFields": 0,
+      "viewportHeight": 1024,
+      "viewportWidth": 768
+    },
+    {
+      "alerts": 0,
+      "clientWidth": 768,
+      "route": "/app/coupons",
+      "scrollWidth": 768,
+      "smallButtons": 0,
+      "unlabelledFields": 0,
+      "viewportHeight": 1024,
+      "viewportWidth": 768
+    },
+    {
+      "alerts": 0,
+      "clientWidth": 753,
+      "route": "/app/shipping",
+      "scrollWidth": 753,
+      "smallButtons": 0,
+      "unlabelledFields": 0,
+      "viewportHeight": 1024,
+      "viewportWidth": 768
+    },
+    {
+      "alerts": 0,
+      "clientWidth": 768,
+      "empty": "Sin conversaciones todavía",
+      "route": "/app/messages",
+      "scrollWidth": 768,
+      "smallButtons": 0,
+      "unlabelledFields": 0,
+      "viewportHeight": 1024,
+      "viewportWidth": 768
+    },
+    {
+      "alerts": 0,
+      "clientWidth": 768,
+      "empty": "No hay pedidos",
+      "route": "/app/orders",
+      "scrollWidth": 768,
+      "smallButtons": 0,
+      "unlabelledFields": 0,
+      "viewportHeight": 1024,
+      "viewportWidth": 768
+    },
+    {
+      "alerts": 0,
+      "clientWidth": 768,
+      "empty": "Aún no hay movimiento",
+      "route": "/app/metrics",
+      "scrollWidth": 768,
+      "smallButtons": 0,
+      "unlabelledFields": 0,
+      "viewportHeight": 1024,
+      "viewportWidth": 768
+    },
+    {
+      "alerts": 0,
+      "clientWidth": 753,
+      "empty": "Aún no hay WhatsApp conectado",
+      "route": "/app/channels",
+      "scrollWidth": 753,
+      "smallButtons": 0,
+      "unlabelledFields": 0,
+      "viewportHeight": 1024,
+      "viewportWidth": 768
+    },
+    {
+      "alerts": 0,
+      "clientWidth": 753,
+      "route": "/app/payments",
+      "scrollWidth": 753,
+      "smallButtons": 0,
+      "unlabelledFields": 0,
+      "viewportHeight": 1024,
+      "viewportWidth": 768
+    },
+    {
+      "alerts": 0,
+      "clientWidth": 753,
+      "route": "/app/integrations",
+      "scrollWidth": 753,
+      "smallButtons": 0,
+      "unlabelledFields": 0,
+      "viewportHeight": 1024,
+      "viewportWidth": 768
+    },
+    {
+      "alerts": 0,
+      "clientWidth": 753,
+      "route": "/app/store",
+      "scrollWidth": 753,
+      "smallButtons": 0,
+      "unlabelledFields": 0,
+      "viewportHeight": 1024,
+      "viewportWidth": 768
+    },
+    {
+      "alerts": 0,
+      "clientWidth": 768,
+      "route": "/app/store/editor",
+      "scrollWidth": 768,
+      "smallButtons": 0,
+      "unlabelledFields": 0,
+      "viewportHeight": 1024,
+      "viewportWidth": 768
+    },
+    {
+      "alerts": 0,
+      "clientWidth": 768,
+      "empty": "Dominio propio está desactivada",
+      "route": "/app/domain",
+      "scrollWidth": 768,
+      "smallButtons": 0,
+      "unlabelledFields": 0,
+      "viewportHeight": 1024,
+      "viewportWidth": 768
+    },
+    {
+      "alerts": 0,
+      "clientWidth": 768,
+      "empty": "Píxel y Analytics está desactivada",
+      "route": "/app/tracking",
+      "scrollWidth": 768,
+      "smallButtons": 0,
+      "unlabelledFields": 0,
+      "viewportHeight": 1024,
+      "viewportWidth": 768
+    },
+    {
+      "alerts": 0,
+      "clientWidth": 768,
+      "empty": "Instagram Direct está desactivada",
+      "route": "/app/instagram",
+      "scrollWidth": 768,
+      "smallButtons": 0,
+      "unlabelledFields": 0,
+      "viewportHeight": 1024,
+      "viewportWidth": 768
+    },
+    {
+      "alerts": 0,
+      "clientWidth": 768,
+      "empty": "Equipo está desactivada",
+      "route": "/app/team",
+      "scrollWidth": 768,
+      "smallButtons": 0,
+      "unlabelledFields": 0,
+      "viewportHeight": 1024,
+      "viewportWidth": 768
+    },
+    {
+      "alerts": 0,
+      "clientWidth": 753,
+      "route": "/app/plans",
+      "scrollWidth": 753,
+      "smallButtons": 0,
+      "unlabelledFields": 0,
+      "viewportHeight": 1024,
+      "viewportWidth": 768
+    },
+    {
+      "alerts": 0,
+      "clientWidth": 768,
+      "route": "/app/settings",
+      "scrollWidth": 768,
+      "smallButtons": 0,
+      "unlabelledFields": 0,
+      "viewportHeight": 1024,
+      "viewportWidth": 768
+    },
+    {
+      "alerts": 0,
+      "clientWidth": 753,
+      "route": "/app/profile",
+      "scrollWidth": 753,
+      "smallButtons": 0,
+      "unlabelledFields": 0,
+      "viewportHeight": 1024,
+      "viewportWidth": 768
+    },
+    {
+      "alerts": 0,
+      "clientWidth": 753,
+      "route": "/app/help",
+      "scrollWidth": 753,
+      "smallButtons": 0,
+      "unlabelledFields": 0,
+      "viewportHeight": 1024,
+      "viewportWidth": 768
+    },
+    {
+      "alerts": 0,
+      "clientWidth": 768,
+      "empty": "TikTok LIVE está desactivada",
+      "route": "/app/tiktok-live",
+      "scrollWidth": 768,
+      "smallButtons": 0,
+      "unlabelledFields": 0,
+      "viewportHeight": 1024,
+      "viewportWidth": 768
+    },
+    {
+      "alerts": 0,
+      "clientWidth": 768,
+      "empty": "Crea tu primer vendedor IA",
+      "route": "/app/seller/profile",
+      "scrollWidth": 768,
+      "smallButtons": 0,
+      "unlabelledFields": 0,
+      "viewportHeight": 1024,
+      "viewportWidth": 768
+    },
+    {
+      "alerts": 0,
+      "clientWidth": 768,
+      "empty": "Crea tu primer vendedor IA",
+      "route": "/app/seller/personality",
+      "scrollWidth": 768,
+      "smallButtons": 0,
+      "unlabelledFields": 0,
+      "viewportHeight": 1024,
+      "viewportWidth": 768
+    },
+    {
+      "alerts": 0,
+      "clientWidth": 768,
+      "empty": "Crea tu primer vendedor IA",
+      "route": "/app/seller/sales",
+      "scrollWidth": 768,
+      "smallButtons": 0,
+      "unlabelledFields": 0,
+      "viewportHeight": 1024,
+      "viewportWidth": 768
+    },
+    {
+      "alerts": 0,
+      "clientWidth": 768,
+      "empty": "Crea tu primer vendedor IA",
+      "route": "/app/seller/knowledge",
+      "scrollWidth": 768,
+      "smallButtons": 0,
+      "unlabelledFields": 0,
+      "viewportHeight": 1024,
+      "viewportWidth": 768
+    },
+    {
+      "alerts": 0,
+      "clientWidth": 768,
+      "empty": "Crea tu primer vendedor IA",
+      "route": "/app/seller/rules",
+      "scrollWidth": 768,
+      "smallButtons": 0,
+      "unlabelledFields": 0,
+      "viewportHeight": 1024,
+      "viewportWidth": 768
+    },
+    {
+      "alerts": 0,
+      "clientWidth": 768,
+      "empty": "Crea tu primer vendedor IA",
+      "route": "/app/seller/advanced",
+      "scrollWidth": 768,
+      "smallButtons": 0,
+      "unlabelledFields": 0,
+      "viewportHeight": 1024,
+      "viewportWidth": 768
+    },
+    {
+      "alerts": 0,
+      "clientWidth": 1425,
+      "route": "/app/get-started",
+      "scrollWidth": 1425,
+      "smallButtons": 0,
+      "unlabelledFields": 0,
+      "viewportHeight": 900,
+      "viewportWidth": 1440
+    },
+    {
+      "alerts": 0,
+      "clientWidth": 1440,
+      "route": "/app/products",
+      "scrollWidth": 1440,
+      "smallButtons": 0,
+      "unlabelledFields": 0,
+      "viewportHeight": 900,
+      "viewportWidth": 1440
+    },
+    {
+      "alerts": 0,
+      "clientWidth": 1440,
+      "route": "/app/products/import",
+      "scrollWidth": 1440,
+      "smallButtons": 0,
+      "unlabelledFields": 0,
+      "viewportHeight": 900,
+      "viewportWidth": 1440
+    },
+    {
+      "alerts": 0,
+      "clientWidth": 1440,
+      "route": "/app/inventory",
+      "scrollWidth": 1440,
+      "smallButtons": 0,
+      "unlabelledFields": 0,
+      "viewportHeight": 900,
+      "viewportWidth": 1440
+    },
+    {
+      "alerts": 0,
+      "clientWidth": 1440,
+      "route": "/app/coupons",
+      "scrollWidth": 1440,
+      "smallButtons": 0,
+      "unlabelledFields": 0,
+      "viewportHeight": 900,
+      "viewportWidth": 1440
+    },
+    {
+      "alerts": 0,
+      "clientWidth": 1425,
+      "route": "/app/shipping",
+      "scrollWidth": 1425,
+      "smallButtons": 0,
+      "unlabelledFields": 0,
+      "viewportHeight": 900,
+      "viewportWidth": 1440
+    },
+    {
+      "alerts": 0,
+      "clientWidth": 1425,
+      "empty": "Sin conversaciones todavía",
+      "route": "/app/messages",
+      "scrollWidth": 1425,
+      "smallButtons": 0,
+      "unlabelledFields": 0,
+      "viewportHeight": 900,
+      "viewportWidth": 1440
+    },
+    {
+      "alerts": 0,
+      "clientWidth": 1440,
+      "empty": "No hay pedidos",
+      "route": "/app/orders",
+      "scrollWidth": 1440,
+      "smallButtons": 0,
+      "unlabelledFields": 0,
+      "viewportHeight": 900,
+      "viewportWidth": 1440
+    },
+    {
+      "alerts": 0,
+      "clientWidth": 1440,
+      "empty": "Aún no hay movimiento",
+      "route": "/app/metrics",
+      "scrollWidth": 1440,
+      "smallButtons": 0,
+      "unlabelledFields": 0,
+      "viewportHeight": 900,
+      "viewportWidth": 1440
+    },
+    {
+      "alerts": 0,
+      "clientWidth": 1425,
+      "empty": "Aún no hay WhatsApp conectado",
+      "route": "/app/channels",
+      "scrollWidth": 1425,
+      "smallButtons": 0,
+      "unlabelledFields": 0,
+      "viewportHeight": 900,
+      "viewportWidth": 1440
+    },
+    {
+      "alerts": 0,
+      "clientWidth": 1425,
+      "route": "/app/payments",
+      "scrollWidth": 1425,
+      "smallButtons": 0,
+      "unlabelledFields": 0,
+      "viewportHeight": 900,
+      "viewportWidth": 1440
+    },
+    {
+      "alerts": 0,
+      "clientWidth": 1425,
+      "route": "/app/integrations",
+      "scrollWidth": 1425,
+      "smallButtons": 0,
+      "unlabelledFields": 0,
+      "viewportHeight": 900,
+      "viewportWidth": 1440
+    },
+    {
+      "alerts": 0,
+      "clientWidth": 1425,
+      "route": "/app/store",
+      "scrollWidth": 1425,
+      "smallButtons": 0,
+      "unlabelledFields": 0,
+      "viewportHeight": 900,
+      "viewportWidth": 1440
+    },
+    {
+      "alerts": 0,
+      "clientWidth": 1440,
+      "route": "/app/store/editor",
+      "scrollWidth": 1440,
+      "smallButtons": 0,
+      "unlabelledFields": 0,
+      "viewportHeight": 900,
+      "viewportWidth": 1440
+    },
+    {
+      "alerts": 0,
+      "clientWidth": 1440,
+      "empty": "Dominio propio está desactivada",
+      "route": "/app/domain",
+      "scrollWidth": 1440,
+      "smallButtons": 0,
+      "unlabelledFields": 0,
+      "viewportHeight": 900,
+      "viewportWidth": 1440
+    },
+    {
+      "alerts": 0,
+      "clientWidth": 1440,
+      "empty": "Píxel y Analytics está desactivada",
+      "route": "/app/tracking",
+      "scrollWidth": 1440,
+      "smallButtons": 0,
+      "unlabelledFields": 0,
+      "viewportHeight": 900,
+      "viewportWidth": 1440
+    },
+    {
+      "alerts": 0,
+      "clientWidth": 1440,
+      "empty": "Instagram Direct está desactivada",
+      "route": "/app/instagram",
+      "scrollWidth": 1440,
+      "smallButtons": 0,
+      "unlabelledFields": 0,
+      "viewportHeight": 900,
+      "viewportWidth": 1440
+    },
+    {
+      "alerts": 0,
+      "clientWidth": 1440,
+      "empty": "Equipo está desactivada",
+      "route": "/app/team",
+      "scrollWidth": 1440,
+      "smallButtons": 0,
+      "unlabelledFields": 0,
+      "viewportHeight": 900,
+      "viewportWidth": 1440
+    },
+    {
+      "alerts": 0,
+      "clientWidth": 1425,
+      "route": "/app/plans",
+      "scrollWidth": 1425,
+      "smallButtons": 0,
+      "unlabelledFields": 0,
+      "viewportHeight": 900,
+      "viewportWidth": 1440
+    },
+    {
+      "alerts": 0,
+      "clientWidth": 1440,
+      "route": "/app/settings",
+      "scrollWidth": 1440,
+      "smallButtons": 0,
+      "unlabelledFields": 0,
+      "viewportHeight": 900,
+      "viewportWidth": 1440
+    },
+    {
+      "alerts": 0,
+      "clientWidth": 1425,
+      "route": "/app/profile",
+      "scrollWidth": 1425,
+      "smallButtons": 0,
+      "unlabelledFields": 0,
+      "viewportHeight": 900,
+      "viewportWidth": 1440
+    },
+    {
+      "alerts": 0,
+      "clientWidth": 1425,
+      "route": "/app/help",
+      "scrollWidth": 1425,
+      "smallButtons": 0,
+      "unlabelledFields": 0,
+      "viewportHeight": 900,
+      "viewportWidth": 1440
+    },
+    {
+      "alerts": 0,
+      "clientWidth": 1440,
+      "empty": "TikTok LIVE está desactivada",
+      "route": "/app/tiktok-live",
+      "scrollWidth": 1440,
+      "smallButtons": 0,
+      "unlabelledFields": 0,
+      "viewportHeight": 900,
+      "viewportWidth": 1440
+    },
+    {
+      "alerts": 0,
+      "clientWidth": 1440,
+      "empty": "Crea tu primer vendedor IA",
+      "route": "/app/seller/profile",
+      "scrollWidth": 1440,
+      "smallButtons": 0,
+      "unlabelledFields": 0,
+      "viewportHeight": 900,
+      "viewportWidth": 1440
+    },
+    {
+      "alerts": 0,
+      "clientWidth": 1440,
+      "empty": "Crea tu primer vendedor IA",
+      "route": "/app/seller/personality",
+      "scrollWidth": 1440,
+      "smallButtons": 0,
+      "unlabelledFields": 0,
+      "viewportHeight": 900,
+      "viewportWidth": 1440
+    },
+    {
+      "alerts": 0,
+      "clientWidth": 1440,
+      "empty": "Crea tu primer vendedor IA",
+      "route": "/app/seller/sales",
+      "scrollWidth": 1440,
+      "smallButtons": 0,
+      "unlabelledFields": 0,
+      "viewportHeight": 900,
+      "viewportWidth": 1440
+    },
+    {
+      "alerts": 0,
+      "clientWidth": 1440,
+      "empty": "Crea tu primer vendedor IA",
+      "route": "/app/seller/knowledge",
+      "scrollWidth": 1440,
+      "smallButtons": 0,
+      "unlabelledFields": 0,
+      "viewportHeight": 900,
+      "viewportWidth": 1440
+    },
+    {
+      "alerts": 0,
+      "clientWidth": 1440,
+      "empty": "Crea tu primer vendedor IA",
+      "route": "/app/seller/rules",
+      "scrollWidth": 1440,
+      "smallButtons": 0,
+      "unlabelledFields": 0,
+      "viewportHeight": 900,
+      "viewportWidth": 1440
+    },
+    {
+      "alerts": 0,
+      "clientWidth": 1440,
+      "empty": "Crea tu primer vendedor IA",
+      "route": "/app/seller/advanced",
+      "scrollWidth": 1440,
+      "smallButtons": 0,
+      "unlabelledFields": 0,
+      "viewportHeight": 900,
+      "viewportWidth": 1440
+    }
+  ],
+  "additionalResponsiveChecks": [
+    {
+      "alerts": 0,
+      "clientWidth": 360,
+      "route": "/app/products",
+      "scrollWidth": 360,
+      "smallButtons": 0,
+      "unlabelledFields": 0,
+      "viewportHeight": 800,
+      "viewportWidth": 360
+    },
+    {
+      "alerts": 0,
+      "clientWidth": 345,
+      "route": "/app/channels",
+      "scrollWidth": 345,
+      "smallButtons": 0,
+      "unlabelledFields": 0,
+      "viewportHeight": 800,
+      "viewportWidth": 360
+    },
+    {
+      "alerts": 0,
+      "clientWidth": 360,
+      "route": "/app/messages",
+      "scrollWidth": 360,
+      "smallButtons": 0,
+      "unlabelledFields": 0,
+      "viewportHeight": 800,
+      "viewportWidth": 360
+    },
+    {
+      "alerts": 0,
+      "clientWidth": 345,
+      "route": "/app/orders",
+      "scrollWidth": 345,
+      "smallButtons": 0,
+      "unlabelledFields": 0,
+      "viewportHeight": 800,
+      "viewportWidth": 360
+    },
+    {
+      "alerts": 0,
+      "clientWidth": 360,
+      "route": "/app/settings",
+      "scrollWidth": 360,
+      "smallButtons": 0,
+      "unlabelledFields": 0,
+      "viewportHeight": 800,
+      "viewportWidth": 360
+    },
+    {
+      "alerts": 0,
+      "clientWidth": 345,
+      "route": "/app/store/editor",
+      "scrollWidth": 345,
+      "smallButtons": 0,
+      "unlabelledFields": 0,
+      "viewportHeight": 800,
+      "viewportWidth": 360
+    },
+    {
+      "alerts": 0,
+      "clientWidth": 720,
+      "route": "/app/products",
+      "scrollWidth": 720,
+      "smallButtons": 0,
+      "unlabelledFields": 0,
+      "viewportHeight": 900,
+      "viewportWidth": 720
+    },
+    {
+      "alerts": 0,
+      "clientWidth": 705,
+      "route": "/app/channels",
+      "scrollWidth": 705,
+      "smallButtons": 0,
+      "unlabelledFields": 0,
+      "viewportHeight": 900,
+      "viewportWidth": 720
+    },
+    {
+      "alerts": 0,
+      "clientWidth": 720,
+      "route": "/app/messages",
+      "scrollWidth": 720,
+      "smallButtons": 0,
+      "unlabelledFields": 0,
+      "viewportHeight": 900,
+      "viewportWidth": 720
+    },
+    {
+      "alerts": 0,
+      "clientWidth": 720,
+      "route": "/app/orders",
+      "scrollWidth": 720,
+      "smallButtons": 0,
+      "unlabelledFields": 0,
+      "viewportHeight": 900,
+      "viewportWidth": 720
+    },
+    {
+      "alerts": 0,
+      "clientWidth": 720,
+      "route": "/app/settings",
+      "scrollWidth": 720,
+      "smallButtons": 0,
+      "unlabelledFields": 0,
+      "viewportHeight": 900,
+      "viewportWidth": 720
+    },
+    {
+      "alerts": 0,
+      "clientWidth": 705,
+      "route": "/app/store/editor",
+      "scrollWidth": 705,
+      "smallButtons": 0,
+      "unlabelledFields": 0,
+      "viewportHeight": 900,
+      "viewportWidth": 720
+    },
+    {
+      "alerts": 0,
+      "clientWidth": 1024,
+      "route": "/app/products",
+      "scrollWidth": 1024,
+      "smallButtons": 0,
+      "unlabelledFields": 0,
+      "viewportHeight": 768,
+      "viewportWidth": 1024
+    },
+    {
+      "alerts": 0,
+      "clientWidth": 1009,
+      "route": "/app/channels",
+      "scrollWidth": 1009,
+      "smallButtons": 0,
+      "unlabelledFields": 0,
+      "viewportHeight": 768,
+      "viewportWidth": 1024
+    },
+    {
+      "alerts": 0,
+      "clientWidth": 1009,
+      "route": "/app/messages",
+      "scrollWidth": 1009,
+      "smallButtons": 0,
+      "unlabelledFields": 0,
+      "viewportHeight": 768,
+      "viewportWidth": 1024
+    },
+    {
+      "alerts": 0,
+      "clientWidth": 1024,
+      "route": "/app/orders",
+      "scrollWidth": 1024,
+      "smallButtons": 0,
+      "unlabelledFields": 0,
+      "viewportHeight": 768,
+      "viewportWidth": 1024
+    },
+    {
+      "alerts": 0,
+      "clientWidth": 1024,
+      "route": "/app/settings",
+      "scrollWidth": 1024,
+      "smallButtons": 0,
+      "unlabelledFields": 0,
+      "viewportHeight": 768,
+      "viewportWidth": 1024
+    },
+    {
+      "alerts": 0,
+      "clientWidth": 1024,
+      "route": "/app/store/editor",
+      "scrollWidth": 1024,
+      "smallButtons": 0,
+      "unlabelledFields": 0,
+      "viewportHeight": 768,
+      "viewportWidth": 1024
+    },
+    {
+      "alerts": 0,
+      "clientWidth": 1920,
+      "route": "/app/products",
+      "scrollWidth": 1920,
+      "smallButtons": 0,
+      "unlabelledFields": 0,
+      "viewportHeight": 1080,
+      "viewportWidth": 1920
+    },
+    {
+      "alerts": 0,
+      "clientWidth": 1905,
+      "route": "/app/channels",
+      "scrollWidth": 1905,
+      "smallButtons": 0,
+      "unlabelledFields": 0,
+      "viewportHeight": 1080,
+      "viewportWidth": 1920
+    },
+    {
+      "alerts": 0,
+      "clientWidth": 1905,
+      "route": "/app/messages",
+      "scrollWidth": 1905,
+      "smallButtons": 0,
+      "unlabelledFields": 0,
+      "viewportHeight": 1080,
+      "viewportWidth": 1920
+    },
+    {
+      "alerts": 0,
+      "clientWidth": 1920,
+      "route": "/app/orders",
+      "scrollWidth": 1920,
+      "smallButtons": 0,
+      "unlabelledFields": 0,
+      "viewportHeight": 1080,
+      "viewportWidth": 1920
+    },
+    {
+      "alerts": 0,
+      "clientWidth": 1920,
+      "route": "/app/settings",
+      "scrollWidth": 1920,
+      "smallButtons": 0,
+      "unlabelledFields": 0,
+      "viewportHeight": 1080,
+      "viewportWidth": 1920
+    },
+    {
+      "alerts": 0,
+      "clientWidth": 1920,
+      "route": "/app/store/editor",
+      "scrollWidth": 1920,
+      "smallButtons": 0,
+      "unlabelledFields": 0,
+      "viewportHeight": 1080,
+      "viewportWidth": 1920
+    },
+    {
+      "alerts": 0,
+      "clientWidth": 829,
+      "route": "/app/products",
+      "scrollWidth": 829,
+      "smallButtons": 0,
+      "unlabelledFields": 0,
+      "viewportHeight": 390,
+      "viewportWidth": 844
+    },
+    {
+      "alerts": 0,
+      "clientWidth": 829,
+      "route": "/app/channels",
+      "scrollWidth": 829,
+      "smallButtons": 0,
+      "unlabelledFields": 0,
+      "viewportHeight": 390,
+      "viewportWidth": 844
+    },
+    {
+      "alerts": 0,
+      "clientWidth": 829,
+      "route": "/app/messages",
+      "scrollWidth": 829,
+      "smallButtons": 0,
+      "unlabelledFields": 0,
+      "viewportHeight": 390,
+      "viewportWidth": 844
+    },
+    {
+      "alerts": 0,
+      "clientWidth": 829,
+      "route": "/app/orders",
+      "scrollWidth": 829,
+      "smallButtons": 0,
+      "unlabelledFields": 0,
+      "viewportHeight": 390,
+      "viewportWidth": 844
+    },
+    {
+      "alerts": 0,
+      "clientWidth": 829,
+      "route": "/app/settings",
+      "scrollWidth": 829,
+      "smallButtons": 0,
+      "unlabelledFields": 0,
+      "viewportHeight": 390,
+      "viewportWidth": 844
+    },
+    {
+      "alerts": 0,
+      "clientWidth": 844,
+      "route": "/app/store/editor",
+      "scrollWidth": 844,
+      "smallButtons": 0,
+      "unlabelledFields": 0,
+      "viewportHeight": 390,
+      "viewportWidth": 844
+    }
+  ],
+  "keyboardChecks": [
+    {
+      "case": "mobile-navigation",
+      "duplicateIds": [],
+      "focusInside": true,
+      "modal": true
+    },
+    {
+      "case": "search-autofocus",
+      "focusTag": "INPUT",
+      "focusType": "search",
+      "modal": true
+    },
+    {
+      "case": "ctrl-k",
+      "focused": "INPUT",
+      "modal": true
+    },
+    {
+      "case": "skip-to-main",
+      "focused": "console-main",
+      "path": "/app/inventory"
+    },
+    {
+      "case": "navigation-escape-final",
+      "dialogCount": 0,
+      "focus": "Abrir navegación"
+    },
+    {
+      "case": "search-escape-final",
+      "dialogCount": 0,
+      "focus": "Buscar páginas y acciones"
+    },
+    {
+      "case": "navigation-tab-loop-final",
+      "focusInside": true,
+      "focusedTag": "A"
+    },
+    {
+      "case": "navigation-shift-tab-loop-final",
+      "focusInside": true,
+      "focusedText": ""
+    },
+    {
+      "case": "order-modal-final",
+      "focusInside": true,
+      "modal": true,
+      "panelBottom": 374,
+      "panelHeight": 358,
+      "panelTop": 16,
+      "scrollHeight": 631,
+      "viewportHeight": 390
+    },
+    {
+      "case": "order-escape-final",
+      "dialogCount": 0,
+      "focus": "Nuevo pedido"
+    }
+  ]
+}

@@ -1,8 +1,7 @@
-<section class="integrations">
+<section class="integrations tw:mx-auto tw:min-w-0">
   <header class="integrations__header">
     <div>
-      <p class="integrations__eyebrow">Conectores</p>
-      <h1>Integraciones</h1>
+      <h1 class="tw:console-title">Integraciones</h1>
       <p>
         Tu vendedor IA funciona solo. Suma las funciones que tu negocio necesite, como
         la tienda web, y conecta tus canales y cobros. Al activar una función, aparece
@@ -12,20 +11,20 @@
   </header>
 
   @if (errorMessage(); as error) {
-    <div class="banner banner--danger" role="alert">
+    <div class="tw:feedback tw:feedback-danger" role="alert">
       <ds-icon name="alert" />
       <span>{{ error }}</span>
       <ds-button type="button" variant="secondary" (click)="load()">Reintentar</ds-button>
     </div>
   }
   @if (actionError(); as error) {
-    <div class="banner banner--danger" role="alert">
+    <div class="tw:feedback tw:feedback-danger" role="alert">
       <ds-icon name="alert" />
       <span>{{ error }}</span>
     </div>
   }
   @if (actionSuccess(); as success) {
-    <div class="banner banner--success" role="status">
+    <div class="tw:feedback tw:feedback-success" role="status">
       <ds-icon name="check" />
       <span>{{ success }}</span>
     </div>

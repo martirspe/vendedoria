@@ -1,23 +1,21 @@
-<section class="catalog" [class.catalog--editing]="editorOpen()">
+<section class="catalog tw:mx-auto tw:grid tw:w-full tw:max-w-page tw:gap-5" [class.catalog--editing]="editorOpen()">
   @if (!editorOpen()) {
     <header class="catalog__header">
       <div>
-        <p class="catalog__eyebrow">Catálogo</p>
-        <h1>Catálogo</h1>
-        <p>
-          Publica lo que tu vendedor IA puede ofrecer por chat: claro, con precio
-          y listo para pedir.
-        </p>
+        <h1 class="tw:console-title">Productos</h1>
+        <p>Tu catálogo para vender por chat y en tu tienda.</p>
       </div>
       <div class="catalog__actions">
+        <a routerLink="/app/inventory" class="tw:console-action-secondary"><ds-icon name="list" [size]="0.95" />Inventario</a>
+        <ds-button type="button" variant="secondary" [disabled]="loading() || loadFailed() || !filteredProducts().length" (click)="exportCatalog()">Exportar resultados</ds-button>
         <a routerLink="/app/products/import" class="catalog__import">
           <ds-icon name="upload" [size]="0.95" /> Importar catálogo
         </a>
-        <ds-button type="button" (click)="openCreate()">Agregar al catálogo</ds-button>
+        <ds-button type="button" (click)="openCreate()">Agregar producto</ds-button>
       </div>
     </header>
 
-    @if (errorMessage() && !editorOpen()) {
+    @if (errorMessage() && !editorOpen() && !loadFailed()) {
       <p class="catalog__banner catalog__banner--error" role="alert">
         {{ errorMessage() }}
       </p>
@@ -30,6 +28,10 @@
 
     @if (loading()) {
       <p class="catalog__muted">Cargando catálogo…</p>
+    } @else if (loadFailed()) {
+      <ds-empty-state title="No pudimos cargar esta sección" body="Revisa tu conexión e inténtalo de nuevo.">
+        <ds-button variant="secondary" (click)="load()">Reintentar</ds-button>
+      </ds-empty-state>
     } @else if (products().length === 0) {
       <ds-empty-state
         title="Aún no hay productos"
@@ -41,8 +43,8 @@
         </a>
       </ds-empty-state>
     } @else {
-      @if (kindCounts().servicios > 0 || kindCounts().digitales > 0 || kindFilter() !== 'todos') {
-        <div class="kind-filter" role="group" aria-label="Filtrar por tipo">
+      <div class="tw:overflow-hidden tw:rounded-lg tw:border tw:border-solid tw:border-border tw:bg-surface tw:shadow-sm">
+        <div class="kind-filter tw:border-0 tw:border-b tw:border-solid tw:border-divider tw:p-3" role="group" aria-label="Filtrar por tipo">
           @for (option of kindOptions; track option.id) {
             <button
               type="button"
@@ -54,62 +56,75 @@
             </button>
           }
         </div>
-      }
+        <div class="tw:grid tw:gap-3 tw:border-0 tw:border-b tw:border-solid tw:border-divider tw:p-3 tw:lg:grid-cols-2">
+          <label class="tw:grid tw:min-w-0 tw:gap-1 tw:text-caption tw:font-medium">Buscar productos
+            <input type="search" class="tw:console-field" placeholder="Nombre, SKU, marca o colección" maxlength="200" [value]="listState().query" (input)="setListFilter('q', $any($event.target).value)" />
+          </label>
+          <div class="tw:grid tw:min-w-0 tw:grid-cols-2 tw:gap-3 tw:sm:grid-cols-3">
+            <label class="tw:grid tw:min-w-0 tw:gap-1 tw:text-caption tw:font-medium">Disponibilidad<ds-select><select [value]="listState().status" (change)="setListFilter('estado', $any($event.target).value)"><option value="todos">Todas</option><option value="disponibles">Disponibles</option><option value="pausados">No disponibles</option></select></ds-select></label>
+            @if (storeActive()) { <label class="tw:grid tw:min-w-0 tw:gap-1 tw:text-caption tw:font-medium">Tienda web<ds-select><select [value]="listState().publication" (change)="setListFilter('tienda', $any($event.target).value)"><option value="todos">Todos</option><option value="visibles">Visibles</option><option value="ocultos">Ocultos</option></select></ds-select></label> }
+            <label class="tw:grid tw:min-w-0 tw:gap-1 tw:text-caption tw:font-medium">Ordenar por<ds-select><select [value]="listState().sort" (change)="setListFilter('orden', $any($event.target).value)"><option value="recientes">Más recientes</option><option value="antiguos">Más antiguos</option><option value="nombre">Nombre, A–Z</option><option value="nombre-desc">Nombre, Z–A</option></select></ds-select></label>
+          </div>
+        </div>
+        @if (hasListFilters()) { <div class="tw:flex tw:items-center tw:justify-between tw:gap-2 tw:px-3 tw:py-2 tw:text-caption"><span role="status">{{ filteredProducts().length }} {{ filteredProducts().length === 1 ? 'resultado' : 'resultados' }} de {{ products().length }}</span><button type="button" class="tw:console-action-secondary" (click)="clearListFilters()">Limpiar filtros</button></div> }
       @if (!visibleProducts().length) {
-        <p class="catalog__muted">
-          No hay {{ kindFilter() === 'servicios' ? 'servicios' : 'productos' }} con este filtro.
-          <button type="button" class="link-btn" (click)="setKindFilter('todos')">Ver todo</button>
+        <p class="catalog__muted tw:m-0 tw:p-4">
+          No hay productos que coincidan. Prueba otra búsqueda o limpia los filtros.
         </p>
       }
-      <ul class="product-grid">
+      <div class="tw:hidden tw:grid-cols-12 tw:gap-4 tw:bg-canvas/50 tw:px-4 tw:py-3 tw:text-caption tw:font-medium tw:text-muted tw:md:grid" aria-hidden="true">
+        <span class="tw:col-span-5">Producto</span><span class="tw:col-span-2">Estado</span><span class="tw:col-span-3">Inventario</span><span class="tw:col-span-2 tw:text-right">Precio</span>
+      </div>
+      <ul class="tw:m-0 tw:grid tw:list-none tw:p-0">
         @for (product of visibleProducts(); track product.id) {
-          <li class="product-card">
-            <button type="button" class="product-card__hit" (click)="openEdit(product)">
-              <div class="product-card__media">
+          <li class="tw:border-0 tw:border-t tw:border-solid tw:border-divider">
+            <button type="button" class="tw:grid tw:w-full tw:cursor-pointer tw:grid-cols-2 tw:items-center tw:gap-x-4 tw:gap-y-2 tw:border-0 tw:bg-transparent tw:px-3 tw:py-2 tw:text-left tw:text-body tw:text-foreground tw:hover:bg-canvas/50 tw:md:grid-cols-12" (click)="openEdit(product)" [attr.aria-label]="'Editar ' + product.name">
+              <span class="tw:col-span-2 tw:flex tw:min-w-0 tw:items-center tw:gap-3 tw:md:col-span-5">
+                <span class="tw:grid tw:size-10 tw:shrink-0 tw:place-items-center tw:overflow-hidden tw:rounded-sm tw:border tw:border-solid tw:border-border tw:bg-canvas">
                 @if (thumb(product); as url) {
-                  <img [src]="url" [alt]="product.name" loading="lazy" />
+                  <img [src]="url" alt="" class="tw:h-full tw:w-full tw:object-cover" loading="lazy" />
                 } @else {
-                  <span class="product-card__placeholder" aria-hidden="true">
-                    <ds-icon name="image" />
-                  </span>
+                  <ds-icon name="image" aria-hidden="true" class="tw:text-muted" />
                 }
-                <span
-                  class="product-card__badge"
-                  [class.product-card__badge--off]="!product.isAvailable"
-                >
-                  {{ product.isAvailable ? 'Disponible' : 'No disponible' }}
                 </span>
-              </div>
-              <div class="product-card__body">
-                <h2>{{ product.name }}</h2>
-                <p>{{ formatPrice(product.basePriceCents, product.currency) }}</p>
-                <span>{{ stockLabel(product) }}</span>
-                @let score = listScore(product);
-                <span class="product-card__score" [class.product-card__score--low]="score < 50">
-                  Información para recomendar: {{ score }}%
+                <span class="tw:grid tw:min-w-0 tw:gap-1">
+                  <span class="tw:font-semibold tw:wrap-anywhere">{{ product.name }}</span>
+                  <span class="tw:text-caption tw:text-muted">{{ product.sku || (product.kind === 'SERVICE' ? 'Servicio' : product.kind === 'DIGITAL' ? 'Producto digital' : 'Producto físico') }}</span>
+                  <span class="tw:text-caption tw:text-muted tw:md:hidden">{{ stockLabel(product) }}</span>
+                  @if (storeActive() && product.isPublishedOnStore) { <span class="tw:text-caption tw:text-success-text">Visible en tienda</span> }
                 </span>
-                @if (storeActive() && product.isPublishedOnStore) {
-                  <span class="product-card__store">
-                    <ds-icon name="store" [size]="0.9" /> En tienda web
-                  </span>
-                }
-              </div>
+              </span>
+              <span class="tw:md:col-span-2"><span class="tw:inline-flex tw:rounded-full tw:bg-canvas tw:px-2 tw:py-1 tw:text-caption" [class.tw:bg-success/10]="product.isAvailable" [class.tw:text-success-text]="product.isAvailable">{{ product.isAvailable ? 'Disponible' : 'No disponible' }}</span></span>
+              <span class="tw:hidden tw:text-caption tw:text-muted tw:md:col-span-3 tw:md:grid tw:md:gap-1"><span>{{ stockLabel(product) }}</span><span>Información: {{ listScore(product) }}%</span></span>
+              <span class="tw:text-right tw:font-medium tw:tabular-nums tw:md:col-span-2">{{ formatPrice(product.basePriceCents, product.currency) }}</span>
             </button>
           </li>
         }
       </ul>
+      <nav aria-label="Páginas del catálogo" class="tw:flex tw:flex-wrap tw:items-center tw:justify-between tw:gap-3 tw:border-0 tw:border-t tw:border-solid tw:border-divider tw:p-3 tw:text-caption">
+        <span role="status">{{ listStart() }}–{{ listEnd() }} de {{ filteredProducts().length }}</span>
+        <div class="tw:flex tw:flex-wrap tw:items-center tw:gap-2">
+          <label class="tw:flex tw:items-center tw:gap-2">Por página<select class="tw:console-field" [value]="listState().pageSize" (change)="setListFilter('porPagina', $any($event.target).value)"><option value="25">25</option><option value="50">50</option><option value="100">100</option></select></label>
+          <ds-button type="button" variant="secondary" [label]="'Página anterior'" [disabled]="currentPage() <= 1" (click)="setListPage(currentPage() - 1)"><ds-icon name="chevronLeft" [size]="0.9" /></ds-button>
+          <span>Página {{ currentPage() }} de {{ totalPages() }}</span>
+          <ds-button type="button" variant="secondary" [label]="'Página siguiente'" [disabled]="currentPage() >= totalPages()" (click)="setListPage(currentPage() + 1)"><ds-icon name="chevronRight" [size]="0.9" /></ds-button>
+        </div>
+      </nav>
+      </div>
     }
   } @else {
-    <form class="publish" [formGroup]="productForm" (ngSubmit)="saveProduct()">
+    <form class="publish tw:mx-auto tw:grid tw:w-full tw:max-w-form tw:gap-5" [formGroup]="productForm" (ngSubmit)="saveProduct()">
+      <div class="tw:console-save-bar">
+        <span class="tw:px-2">{{ isEditing() ? 'Editar producto' : 'Nuevo producto' }}</span>
+        <ds-button type="button" variant="ghost" class="tw:[&_.ds-button]:text-surface! tw:[&_.ds-button:hover]:bg-navigation-hover!" [disabled]="saving() || deleting()" (click)="closeEditor()">Cancelar</ds-button>
+        <ds-button type="submit" [disabled]="saving() || deleting() || !readinessReady()">{{ saving() ? 'Guardando…' : 'Guardar' }}</ds-button>
+      </div>
       <header class="publish__top">
         <div>
-          <button type="button" class="publish__back" (click)="closeEditor()">
+          <button type="button" class="publish__back" [disabled]="saving() || deleting()" (click)="closeEditor()">
             ← Volver al catálogo
           </button>
-          <h1>{{ isEditing() ? 'Editar ficha' : 'Agregar al catálogo' }}</h1>
-          <p>
-            Nombre y descripción con los que tu vendedor lo presentará en el chat.
-          </p>
+          <h1 class="tw:console-title">{{ isEditing() ? 'Editar producto' : 'Agregar producto' }}</h1>
         </div>
         <div class="publish__actions">
           @if (isEditing()) {
@@ -123,15 +138,6 @@
               {{ deleting() ? 'Eliminando…' : 'Eliminar' }}
             </ds-button>
           }
-          <ds-button type="button" variant="secondary" (click)="closeEditor()">
-            Cancelar
-          </ds-button>
-          <ds-button
-            type="submit"
-            [disabled]="saving() || !readinessReady()"
-          >
-            {{ saving() ? 'Guardando…' : isEditing() ? 'Guardar cambios' : 'Publicar' }}
-          </ds-button>
         </div>
       </header>
 
@@ -141,41 +147,19 @@
         </p>
       }
 
-      <nav class="kind-filter" aria-label="Etapas de publicación">@for (step of editorSteps; track step.id) { <button type="button" [attr.aria-current]="editorStep() === step.id ? 'step' : null" [class.is-active]="editorStep() === step.id" (click)="editorStep.set(step.id)">{{ step.label }}</button> }</nav>
-      <div class="publish__layout">
-        <div class="publish__main">
-          @if (editorStep() === 'basics') {
-          <section class="pub-card">
+      <div class="publish__layout tw:grid tw:items-start tw:gap-5 tw:lg:grid-cols-3">
+        <div class="publish__main tw:grid tw:min-w-0 tw:gap-4 tw:lg:col-span-2">
+
+          <section class="pub-card tw:console-card tw:grid tw:gap-4">
             <header class="pub-card__head">
               <h2>Información del producto</h2>
               <p>Nombre y descripción con los que tu vendedor lo presentará.</p>
             </header>
+            <div class="tw:lg:hidden"><ng-container [ngTemplateOutlet]="productType" /></div>
 
-            <div class="kind-toggle" role="radiogroup" aria-label="Qué vendes">
-              <button
-                type="button"
-                role="radio"
-                [attr.aria-checked]="isPhysical()"
-                [class.is-active]="isPhysical()"
-                (click)="setKind('PRODUCT')"
-              >
-                <ds-icon name="package" [size]="1" /> Producto físico
-              </button>
-              <button
-                type="button"
-                role="radio"
-                [attr.aria-checked]="isService()"
-                [class.is-active]="isService()"
-                (click)="setKind('SERVICE')"
-              >
-                <ds-icon name="calendar" [size]="1" /> Servicio
-              </button>
-              <button type="button" role="radio" [attr.aria-checked]="isDigital()" [class.is-active]="isDigital()" (click)="setKind('DIGITAL')">
-                <ds-icon name="fileText" [size]="1" /> Producto digital
-              </button>
-            </div>
+
             @if (classificationError()) { <p role="alert">No pudimos cargar la clasificación. <button type="button" class="link-btn" (click)="loadCategories()">Reintentar</button></p> }
-            <label class="field"><span>Categoría del producto</span><ds-select><select [ngModel]="categoryId()" [ngModelOptions]="{ standalone: true }" (ngModelChange)="setCategory($event)"><option value="">Sin clasificación específica</option>@for (category of kindCategories(); track category.id) { <option [value]="category.id">{{ categoryPath(category) }}</option> }</select></ds-select><span class="field__hint">La clasificación define las características. Tus colecciones de tienda se mantienen aparte.</span></label>
+
             @if (isDigital()) {
               <p class="field__hint">Sin stock ni envío. El enlace se entrega al confirmarse el pago.</p>
               <label class="field">
@@ -224,13 +208,13 @@
             </label>
 
             <label class="field">
-              <span>Identificador (handle) <em>*</em></span>
+              <span>Dirección del producto <em>*</em></span>
               <input
                 formControlName="handle"
                 autocomplete="off"
                 (input)="onHandleInput()"
               />
-              <span class="field__hint">Se genera solo; edítalo si quieres una URL estable.</span>
+              <span class="field__hint">Se genera a partir del nombre. Puedes editarla antes de guardar.</span>
             </label>
 
             <label class="field">
@@ -246,12 +230,160 @@
                 <span class="field__count">{{ descriptionCount() }}/1000</span>
               </span>
             </label>
+            <label class="field"><span>Categoría del producto</span><ds-select><select [ngModel]="categoryId()" [ngModelOptions]="{ standalone: true }" (ngModelChange)="setCategory($event)"><option value="">Sin clasificación específica</option>@for (category of kindCategories(); track category.id) { <option [value]="category.id">{{ categoryPath(category) }}</option> }</select></ds-select><span class="field__hint">La clasificación define las características. Tus colecciones de tienda se mantienen aparte.</span></label>
           </section>
 
-          }
-          @if (editorStep() === 'configuration') {
+
+
+<section class="pub-card tw:console-card tw:grid tw:gap-4">
+            <header class="pub-card__head">
+              <h2>Fotos</h2>
+              <p>La primera foto será la principal en el catálogo.</p>
+            </header>
+
+            <div class="media-drop">
+              <ds-icon name="upload" />
+              <p>Sube fotos desde tu equipo; las optimizamos antes de enviarlas.</p>
+              <label class="upload-btn" [class.is-busy]="uploading()">
+                <input
+                  type="file"
+                  accept="image/jpeg,image/png,image/webp"
+                  multiple
+                  [disabled]="uploading()"
+                  (change)="onFiles($any($event.target))"
+                />
+                {{ uploading() ? 'Subiendo…' : 'Elegir fotos' }}
+              </label>
+              <p class="field__hint">O pega la URL pública de una imagen:</p>
+              <div class="media-drop__row">
+                <input
+                  type="url"
+                  [value]="mediaDraft()"
+                  (input)="onMediaDraftInput($any($event.target).value)"
+                  placeholder="https://…" aria-label="Dirección de una imagen"
+                  (keydown.enter)="$event.preventDefault(); addMediaUrl()"
+                />
+                <ds-button type="button" variant="secondary" (click)="addMediaUrl()">
+                  Importar
+                </ds-button>
+              </div>
+            </div>
+
+            @if (media().length) {
+              <ul class="media-list">
+                @for (item of media(); track item.url; let i = $index; let last = $last) {
+                  <li>
+                    <img [src]="item.url" [alt]="item.alt" loading="lazy" />
+                    <div class="media-list__fields">
+                      <input
+                        [value]="item.alt"
+                        maxlength="160"
+                        placeholder="Texto alternativo (qué se ve)"
+                        aria-label="Texto alternativo"
+                        (input)="updateMedia(i, { alt: $any($event.target).value })"
+                      />
+                      <input
+                        [value]="item.caption"
+                        maxlength="200"
+                        placeholder="Leyenda (opcional)"
+                        aria-label="Leyenda"
+                        (input)="updateMedia(i, { caption: $any($event.target).value })"
+                      />
+                      <label class="check-row">
+                        <input
+                          type="checkbox"
+                          [checked]="item.kind === 'related'"
+                          (change)="updateMedia(i, { kind: $any($event.target).checked ? 'related' : 'image' })"
+                        />
+                        <span>Foto de ambiente (no va en la galería principal)</span>
+                      </label>
+                    </div>
+                    <div class="media-list__actions">
+                      @if (i === 0) {
+                        <span class="pill tw:bg-primary/20">Principal</span>
+                      }
+                      <button type="button" class="icon-btn" [disabled]="i === 0" (click)="moveMedia(i, -1)" aria-label="Subir foto">
+                        <ds-icon name="chevronUp" />
+                      </button>
+                      <button type="button" class="icon-btn" [disabled]="last" (click)="moveMedia(i, 1)" aria-label="Bajar foto">
+                        <ds-icon name="chevronDown" />
+                      </button>
+                      <button type="button" class="icon-btn" (click)="removeMediaUrl(i)" aria-label="Quitar foto">
+                        <ds-icon name="x" />
+                      </button>
+                    </div>
+                  </li>
+                }
+              </ul>
+            }
+
+            <p class="field__hint">Máximo 12 fotos (JPG, PNG o WebP).</p>
+          </section>
+
+<section class="pub-card tw:console-card tw:grid tw:gap-4">
+            <h2>{{ isPhysical() ? 'Precio y stock' : 'Precio' }}</h2>
+            <label class="field">
+              <span>Precio <em>*</em></span>
+              <div class="price-row">
+                <span class="price-row__currency">{{ productForm.controls.currency.value }}</span>
+                <input
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  formControlName="price"
+                  placeholder="0,00"
+                />
+              </div>
+            </label>
+
+            <label class="field">
+              <span class="field__label-row">
+                SKU
+                <span class="pill pill--soft">Opcional</span>
+              </span>
+              <input formControlName="sku" maxlength="60" autocomplete="off" placeholder="PER-50" />
+            </label>
+
+            @if (!isPhysical()) {
+              <p class="field__hint">{{ isDigital() ? 'Sin stock físico: el acceso se entrega al confirmarse el pago.' : 'Sin stock físico: el día y la hora se coordinan con el comprador.' }}</p>
+            } @else if (setEnabled()) {
+              <p class="field__hint">El stock del set sale de sus piezas: se vende mientras todas tengan unidades.</p>
+            } @else {
+            <label class="field">
+              <span class="field__label-row">
+                Stock
+                <span class="pill pill--soft">Opcional</span>
+              </span>
+              <div class="stock-row">
+                <input
+                  type="number"
+                  min="0"
+                  step="1"
+                  formControlName="stockQty"
+                  [placeholder]="
+                    productForm.controls.stockUnlimited.value
+                      ? 'uds. Ilimitado'
+                      : 'Cantidad'
+                  "
+                />
+                <label class="switch switch--compact">
+                  <input type="checkbox" formControlName="stockUnlimited" />
+                  <span class="switch__track" aria-hidden="true"></span>
+                  <span class="visually-hidden">Stock ilimitado</span>
+                </label>
+              </div>
+              <span class="field__hint">
+                Se descuenta con cada pedido. Si el pedido se cancela, las unidades
+                vuelven.
+              </span>
+            </label>
+            }
+
+            <input type="hidden" formControlName="currency" />
+          </section>
+
           @if (selectedCategory(); as category) {
-            <section class="pub-card"><header class="pub-card__head"><h2>Características de {{ category.name }}</h2><p>Completa los datos que corresponden a esta categoría.</p></header>
+            <section class="pub-card tw:console-card tw:grid tw:gap-4"><header class="pub-card__head"><h2>Características de {{ category.name }}</h2><p>Completa los datos que corresponden a esta categoría.</p></header>
             <div class="field-grid field-grid--two">
               @for (attribute of category.attributes; track attribute.key) {
                 <label class="field"><span>{{ attribute.name }}{{ attribute.required ? ' *' : '' }}</span>
@@ -263,7 +395,7 @@
               }
             </div></section>
           }
-          <section class="pub-card pub-card--row">
+          <section class="pub-card tw:console-card tw:grid tw:gap-4 pub-card--row">
             <div>
               <h2>Descripción detallada</h2>
               <p>
@@ -282,7 +414,7 @@
           </section>
 
           @if (sellerHelpEnabled()) {
-            <section class="pub-card">
+            <section class="pub-card tw:console-card tw:grid tw:gap-4">
               <label class="field">
                 <span>Descripción completa</span>
                 <textarea
@@ -295,8 +427,233 @@
             </section>
           }
 
-          <section class="pub-card">
-            <header class="pub-card__head">
+
+
+          @if (isPhysical() && (!categoryId() || categoryId() === 'fragrances') && (detailsEnabled() || categoryId() === 'fragrances')) {
+          <section class="pub-card tw:console-card tw:grid tw:gap-4 pub-card--row">
+            <div>
+              <h2>Detalles de fragancia</h2>
+              <p>Familia, intensidad, notas y pirámide olfativa para perfumes y cosmética.</p>
+            </div>
+            <label class="switch">
+              <input
+                type="checkbox"
+                [checked]="detailsEnabled()"
+                (change)="toggleDetails($any($event.target).checked)"
+              />
+              <span class="switch__track" aria-hidden="true"></span>
+              <span class="visually-hidden">Activar detalles de belleza y fragancia</span>
+            </label>
+          </section>
+
+          @if (detailsEnabled()) {
+            <section class="pub-card tw:console-card tw:grid tw:gap-4">
+              <div class="field-grid field-grid--two">
+                <label class="field">
+                  <span>Familia</span>
+                  <input formControlName="family" maxlength="80" placeholder="Floral" />
+                </label>
+                <label class="field">
+                  <span>Intensidad</span>
+                  <input formControlName="intensity" maxlength="80" placeholder="Intensa" />
+                </label>
+              </div>
+              <label class="field">
+                <span>Notas e ingredientes</span>
+                <textarea formControlName="notesText" rows="3" placeholder="Uno por línea"></textarea>
+              </label>
+              <label class="field">
+                <span>Contenido destacado</span>
+                <textarea formControlName="highlightsText" rows="2" placeholder="Uno por línea. Se muestra cuando esta pieza va dentro de un set."></textarea>
+              </label>
+              <label class="field">
+                <span>Pirámide olfativa</span>
+                <textarea formControlName="scentText" rows="3" placeholder="Salida: bergamota y pimienta rosa"></textarea>
+                <span class="field__hint">Una nota por línea con el formato «Nota: descripción». Máximo 6.</span>
+              </label>
+              <label class="check-row">
+                <input type="checkbox" formControlName="montage" />
+                <span>Mostrar las fotos juntas como una composición</span>
+              </label>
+            </section>
+          }
+
+          }
+
+          @if (isPhysical()) {
+          <section class="pub-card tw:console-card tw:grid tw:gap-4 pub-card--row">
+            <div>
+              <h2>Se vende como set</h2>
+              <p>Arma un set con productos de tu catálogo. Su stock sale de las piezas.</p>
+            </div>
+            <label class="switch">
+              <input
+                type="checkbox"
+                [checked]="setEnabled()"
+                (change)="toggleSet($any($event.target).checked)"
+              />
+              <span class="switch__track" aria-hidden="true"></span>
+              <span class="visually-hidden">Vender como set</span>
+            </label>
+          </section>
+          }
+
+          @if (setEnabled() && isPhysical()) {
+            <section class="pub-card tw:console-card tw:grid tw:gap-4">
+              <header class="pub-card__head pub-card__head--inline">
+                <div>
+                  <h2>Piezas del set</h2>
+                  <p>Al vender un set se descuenta cada pieza de su propio stock.</p>
+                </div>
+                <ds-button
+                  type="button"
+                  variant="secondary"
+                  [disabled]="components().length >= pieceOptions().length"
+                  (click)="addComponent()"
+                >
+                  Añadir pieza
+                </ds-button>
+              </header>
+              @if (!pieceOptions().length) {
+                <p class="field__hint">Primero publica las piezas como productos simples (sin variantes).</p>
+              }
+              <ul class="variant-list">
+                @for (row of components(); track $index; let i = $index) {
+                  <li class="variant-row variant-row--set">
+                    <label class="field">
+                      <span>Producto</span>
+                      <ds-select><select
+                        [ngModel]="row.productId"
+                        [ngModelOptions]="{ standalone: true }"
+                        (ngModelChange)="updateComponent(i, { productId: $event })"
+                      >
+                        <option value="">Elige una pieza…</option>
+                        @if (row.productId && !pieceSelectable(row.productId)) { <option [value]="row.productId">{{ pieceName(row.productId) || 'Pieza guardada' }} · revisa su configuración</option> }
+                        @for (option of pieceOptions(); track option.id) {
+                          <option [value]="option.id">{{ option.name }}{{ option.sku ? ' · ' + option.sku : '' }}</option>
+                        }
+                      </select></ds-select>
+                    </label>
+                    <label class="field">
+                      <span>Unidades</span>
+                      <input
+                        type="number"
+                        min="1"
+                        max="20"
+                        step="1"
+                        [value]="row.quantity"
+                        (input)="updateComponent(i, { quantity: +$any($event.target).value || 1 })"
+                      />
+                    </label>
+                    <button type="button" class="icon-btn" (click)="removeComponent(i)" aria-label="Quitar pieza">
+                      <ds-icon name="x" />
+                    </button>
+                  </li>
+                }
+              </ul>
+            </section>
+          }
+
+          @if (!setEnabled() || isService()) {
+          <section class="pub-card tw:console-card tw:grid tw:gap-4 pub-card--row">
+            <div>
+              <h2>¿Tiene opciones para elegir?</h2>
+              <p>
+                {{ isPhysical() ? 'Colores, tallas o tamaños: cada opción con su propio precio y stock.' : 'Modalidades o versiones: cada opción con su propio precio, sin stock físico.' }}
+              </p>
+            </div>
+            <label class="switch">
+              <input
+                type="checkbox"
+                [checked]="variantsEnabled()"
+                (change)="toggleVariants($any($event.target).checked)"
+              />
+              <span class="switch__track" aria-hidden="true"></span>
+              <span class="visually-hidden">Activar variantes</span>
+            </label>
+          </section>
+
+          @if (variantsEnabled()) {
+            <section class="pub-card tw:console-card tw:grid tw:gap-3">
+              <header class="pub-card__head"><h2>Opciones de variantes</h2><p>Define las opciones. Las combinaciones se actualizan al terminar de editar un campo.</p></header>
+              @for (axis of axes(); track $index; let axisIndex = $index) {
+                <div class="tw:grid tw:gap-2 tw:rounded-sm tw:border tw:border-solid tw:border-border tw:p-3">
+                  <label class="field"><span>Nombre de la opción {{ axisIndex + 1 }}</span><input [value]="axis.name" maxlength="60" (input)="updateAxis(axisIndex, { name: $any($event.target).value })" (blur)="generateVariants()" placeholder="Color o talla" /></label>
+                  <span class="tw:text-caption tw:font-medium">Valores de {{ axis.name || 'la opción' }}</span>
+                  @for (value of axisValues(axis); track $index; let valueIndex = $index) {
+                    <div class="tw:flex tw:min-w-0 tw:items-center tw:gap-2">
+                      <input class="tw:console-field" [attr.aria-label]="'Valor ' + (valueIndex + 1) + ' de ' + (axis.name || 'la opción ' + (axisIndex + 1))" [value]="value" maxlength="200" (input)="updateAxisValue(axisIndex, valueIndex, $any($event.target).value)" (blur)="generateVariants()" placeholder="Ej. Negro" />
+                      <button type="button" class="tw:console-icon-button" [attr.aria-label]="'Quitar valor ' + (value || valueIndex + 1) + ' de ' + (axis.name || 'la opción')" (click)="removeAxisValue(axisIndex, valueIndex)"><ds-icon name="trash" [size]="0.9" /></button>
+                    </div>
+                  }
+                  <div class="tw:flex tw:flex-wrap tw:items-center tw:justify-between tw:gap-2">
+                    <button type="button" class="tw:console-action-secondary" [disabled]="axisValues(axis).length >= 50" (click)="addAxisValue(axisIndex)"><ds-icon name="plus" [size]="0.9" />Agregar otro valor</button>
+                    <button type="button" class="tw:console-action-secondary tw:text-danger-text" (click)="removeAxis(axisIndex)">Eliminar opción</button>
+                  </div>
+                </div>
+              }
+              <div class="tw:flex tw:flex-wrap tw:items-center tw:justify-between tw:gap-2">
+                <ds-button type="button" variant="secondary" [disabled]="axes().length >= 5" (click)="addAxis()"><ds-icon name="plus" [size]="0.9" />Agregar otra opción</ds-button>
+                <span class="tw:text-caption tw:text-muted" role="status">{{ variantDrafts().length }} variantes · máximo 500</span>
+              </div>
+              @if (variantError()) { <p class="tw:m-0 tw:text-caption tw:text-danger-text" role="alert">{{ variantError() }}</p> }
+              @if (axesPending() && !variantError()) { <p class="tw:m-0 tw:text-caption tw:text-muted" role="status">Termina de editar las opciones para actualizar las variantes.</p> }
+              @if (variantDrafts().length) {
+                <div class="tw:grid tw:gap-3 tw:border-0 tw:border-t tw:border-solid tw:border-divider tw:pt-3 tw:sm:grid-cols-2">
+                  <label class="field"><span>Agrupar por</span><ds-select><select [value]="activeVariantGroup() || '__all'" (change)="setVariantGroup($any($event.target).value)">@for (name of variantGroupOptions(); track name) { <option [value]="name">{{ name }}</option> }<option value="__all">Sin agrupar</option></select></ds-select></label>
+                  <label class="field"><span>Buscar variantes</span><input type="search" [value]="variantQuery()" maxlength="100" (input)="setVariantQuery($any($event.target).value)" placeholder="Valor de opción o SKU" /></label>
+                </div>
+                <div class="tw:grid tw:gap-3">
+                  @for (group of variantGroups(); track group.key; let groupIndex = $index) {
+                    <section class="tw:overflow-hidden tw:rounded-sm tw:border tw:border-solid tw:border-border">
+                      <header class="tw:flex tw:items-center tw:gap-2 tw:bg-canvas tw:px-3 tw:py-2">
+                        <button type="button" class="tw:grid tw:size-touch tw:shrink-0 tw:cursor-pointer tw:place-items-center tw:overflow-hidden tw:rounded-sm tw:border tw:border-dashed tw:border-border tw:bg-surface" [attr.aria-label]="'Asignar foto al grupo ' + group.key" (click)="variantPhotoTarget.set({ indexes: group.indexes, label: 'Grupo ' + group.key })">@if (group.image) { <img [src]="group.image" alt="" class="tw:size-full tw:object-cover" /> } @else { <ds-icon name="image" [size]="1" /> }</button>
+                        <button type="button" class="tw:flex tw:min-w-0 tw:flex-1 tw:cursor-pointer tw:items-center tw:justify-between tw:gap-2 tw:border-0 tw:bg-transparent tw:p-0 tw:text-left tw:text-body tw:text-foreground" [attr.aria-expanded]="!variantGroupsClosed()[group.key]" [attr.aria-controls]="'variant-group-' + groupIndex" (click)="toggleVariantGroup(group.key)"><span class="tw:grid tw:min-w-0"><strong class="tw:font-medium tw:wrap-anywhere">{{ group.key }}</strong><span class="tw:text-caption tw:text-muted">{{ group.total }} variantes@if (group.rows.length < group.total) { · {{ group.rows.length }} en esta página }</span></span><ds-icon [name]="variantGroupsClosed()[group.key] ? 'chevronDown' : 'chevronUp'" [size]="0.85" /></button>
+                      </header>
+                      @if (!variantGroupsClosed()[group.key]) {
+                        <div [id]="'variant-group-' + groupIndex" class="tw:grid">
+                          @for (row of group.rows; track row.key) {
+                            @let variant = row.variant;
+                            <div class="tw:grid tw:gap-2 tw:border-0 tw:border-t tw:border-solid tw:border-divider tw:p-3">
+                              <div class="tw:grid tw:grid-cols-2 tw:items-center tw:gap-2 tw:md:grid-cols-12">
+                                <div class="tw:col-span-2 tw:flex tw:min-w-0 tw:items-center tw:gap-2 tw:md:col-span-4">
+                                  <button type="button" class="tw:grid tw:size-touch tw:shrink-0 tw:cursor-pointer tw:place-items-center tw:overflow-hidden tw:rounded-sm tw:border tw:border-dashed tw:border-border tw:bg-surface" [attr.aria-label]="'Asignar foto a ' + variantLabel(variant)" (click)="variantPhotoTarget.set({ indexes: [row.index], label: variantLabel(variant) })">@if (variant.imageUrl) { <img [src]="variant.imageUrl" alt="" class="tw:size-full tw:object-cover" /> } @else { <ds-icon name="image" [size]="0.9" /> }</button>
+                                  <span class="tw:grid tw:min-w-0 tw:gap-1"><strong class="tw:text-body tw:font-medium tw:wrap-anywhere">{{ variantChildLabel(variant) }}</strong><span class="tw:text-caption tw:text-muted tw:wrap-anywhere">{{ variant.sku || 'Sin SKU' }}</span></span>
+                                </div>
+                                <label class="tw:grid tw:min-w-0 tw:gap-1 tw:text-caption tw:text-muted tw:md:col-span-3">Precio · {{ productForm.controls.currency.value }}<input class="tw:console-field" type="number" min="0" step="0.01" [attr.aria-label]="'Precio de ' + variantLabel(variant)" [value]="variant.priceInherited ? productForm.controls.price.value : variant.price" (input)="onVariantPriceInput(row.index, $any($event.target).value)" /></label>
+                                @if (isPhysical()) { <label class="tw:grid tw:min-w-0 tw:gap-1 tw:text-caption tw:text-muted tw:md:col-span-3">Stock<input class="tw:console-field" type="number" min="0" step="1" [attr.aria-label]="'Stock de ' + variantLabel(variant)" [value]="variant.stockQty ?? ''" placeholder="Del producto" (input)="updateVariantStock(row.index, $any($event.target).value)" /></label> }
+                                <span class="tw:col-span-2 tw:text-caption tw:md:col-span-2" [class.tw:text-success-text]="variant.isAvailable">{{ variant.isAvailable ? 'Disponible' : 'No disponible' }}</span>
+                              </div>
+                              <details class="tw:text-caption">
+                                <summary class="tw:cursor-pointer tw:content-center tw:text-muted">Detalles de {{ variantLabel(variant) }}</summary>
+                                <div class="tw:grid tw:gap-2 tw:pt-2">
+                                  <label class="field"><span>SKU de {{ variantLabel(variant) }}</span><input [value]="variant.sku" maxlength="60" (input)="updateVariant(row.index, { sku: $any($event.target).value })" /></label>
+                                  <label class="check-row"><input type="checkbox" [checked]="variant.priceInherited" (change)="updateVariant(row.index, { priceInherited: $any($event.target).checked })" /><span>Usar el precio del producto</span></label>
+                                  <label class="check-row"><input type="checkbox" [checked]="variant.isAvailable" (change)="updateVariant(row.index, { isAvailable: $any($event.target).checked })" /><span>Ofrecer {{ variantLabel(variant) }}</span></label>
+                                  @if (isPhysical()) { <span class="tw:text-muted">Stock vacío usa el del producto; cero significa agotado.</span> }
+                                  <button type="button" class="tw:console-action-secondary tw:justify-self-start tw:text-danger-text" (click)="removeVariant(row.index)">Eliminar {{ variantLabel(variant) }}</button>
+                                </div>
+                              </details>
+                            </div>
+                          }
+                        </div>
+                      }
+                    </section>
+                  } @empty { <p class="tw:m-0 tw:text-body tw:text-muted">No hay variantes que coincidan con tu búsqueda.</p> }
+                </div>
+                <nav class="tw:flex tw:flex-wrap tw:items-center tw:justify-between tw:gap-2 tw:text-caption" aria-label="Páginas de variantes">
+                  <span>{{ matchingVariants().length }} variantes · página {{ variantPage() + 1 }} de {{ variantPageCount() }}</span>
+                  <div class="tw:flex tw:gap-2"><ds-button type="button" variant="secondary" [disabled]="variantPage() === 0" (click)="variantPage.set(variantPage() - 1)">Anterior</ds-button><ds-button type="button" variant="secondary" [disabled]="(variantPage() + 1) * 25 >= matchingVariants().length" (click)="variantPage.set(variantPage() + 1)">Siguiente</ds-button></div>
+                </nav>
+                <p class="tw:m-0 tw:text-caption tw:text-muted">Las variantes nuevas empiezan con stock cero. Las retiradas se eliminan al guardar el producto.</p>
+              }
+            </section>
+          }
+
+          }
+
+<details class="pub-card tw:console-card">
+            <summary class="tw:min-h-touch tw:cursor-pointer tw:content-center tw:text-body tw:font-semibold">Información para tu vendedor</summary><div class="tw:grid tw:gap-4 tw:pt-3"><header class="pub-card__head">
               <h2>Ficha para vender mejor</h2>
               <p>
                 Tu vendedor usa estos datos para recomendar y responder dudas sin inventar; también se muestran en la
@@ -428,324 +785,11 @@
                 </li>
               }
             </ul>
-          </section>
-
-          @if (isPhysical() && (!categoryId() || categoryId() === 'fragrances') && (detailsEnabled() || categoryId() === 'fragrances')) {
-          <section class="pub-card pub-card--row">
-            <div>
-              <h2>Detalles de fragancia</h2>
-              <p>Familia, intensidad, notas y pirámide olfativa para perfumes y cosmética.</p>
-            </div>
-            <label class="switch">
-              <input
-                type="checkbox"
-                [checked]="detailsEnabled()"
-                (change)="toggleDetails($any($event.target).checked)"
-              />
-              <span class="switch__track" aria-hidden="true"></span>
-              <span class="visually-hidden">Activar detalles de belleza y fragancia</span>
-            </label>
-          </section>
-
-          @if (detailsEnabled()) {
-            <section class="pub-card">
-              <div class="field-grid field-grid--two">
-                <label class="field">
-                  <span>Familia</span>
-                  <input formControlName="family" maxlength="80" placeholder="Floral" />
-                </label>
-                <label class="field">
-                  <span>Intensidad</span>
-                  <input formControlName="intensity" maxlength="80" placeholder="Intensa" />
-                </label>
-              </div>
-              <label class="field">
-                <span>Notas e ingredientes</span>
-                <textarea formControlName="notesText" rows="3" placeholder="Uno por línea"></textarea>
-              </label>
-              <label class="field">
-                <span>Contenido destacado</span>
-                <textarea formControlName="highlightsText" rows="2" placeholder="Uno por línea. Se muestra cuando esta pieza va dentro de un set."></textarea>
-              </label>
-              <label class="field">
-                <span>Pirámide olfativa</span>
-                <textarea formControlName="scentText" rows="3" placeholder="Salida: bergamota y pimienta rosa"></textarea>
-                <span class="field__hint">Una nota por línea con el formato «Nota: descripción». Máximo 6.</span>
-              </label>
-              <label class="check-row">
-                <input type="checkbox" formControlName="montage" />
-                <span>Mostrar las fotos juntas como una composición</span>
-              </label>
-            </section>
-          }
-
-          }
-
-          @if (isPhysical()) {
-          <section class="pub-card pub-card--row">
-            <div>
-              <h2>Se vende como set</h2>
-              <p>Arma un set con productos de tu catálogo. Su stock sale de las piezas.</p>
-            </div>
-            <label class="switch">
-              <input
-                type="checkbox"
-                [checked]="setEnabled()"
-                (change)="toggleSet($any($event.target).checked)"
-              />
-              <span class="switch__track" aria-hidden="true"></span>
-              <span class="visually-hidden">Vender como set</span>
-            </label>
-          </section>
-          }
-
-          @if (setEnabled() && isPhysical()) {
-            <section class="pub-card">
-              <header class="pub-card__head pub-card__head--inline">
-                <div>
-                  <h2>Piezas del set</h2>
-                  <p>Al vender un set se descuenta cada pieza de su propio stock.</p>
-                </div>
-                <ds-button
-                  type="button"
-                  variant="secondary"
-                  [disabled]="components().length >= pieceOptions().length"
-                  (click)="addComponent()"
-                >
-                  Añadir pieza
-                </ds-button>
-              </header>
-              @if (!pieceOptions().length) {
-                <p class="field__hint">Primero publica las piezas como productos simples (sin variantes).</p>
-              }
-              <ul class="variant-list">
-                @for (row of components(); track $index; let i = $index) {
-                  <li class="variant-row variant-row--set">
-                    <label class="field">
-                      <span>Producto</span>
-                      <ds-select><select
-                        [ngModel]="row.productId"
-                        [ngModelOptions]="{ standalone: true }"
-                        (ngModelChange)="updateComponent(i, { productId: $event })"
-                      >
-                        <option value="">Elige una pieza…</option>
-                        @if (row.productId && !pieceSelectable(row.productId)) { <option [value]="row.productId">{{ pieceName(row.productId) || 'Pieza guardada' }} · revisa su configuración</option> }
-                        @for (option of pieceOptions(); track option.id) {
-                          <option [value]="option.id">{{ option.name }}{{ option.sku ? ' · ' + option.sku : '' }}</option>
-                        }
-                      </select></ds-select>
-                    </label>
-                    <label class="field">
-                      <span>Unidades</span>
-                      <input
-                        type="number"
-                        min="1"
-                        max="20"
-                        step="1"
-                        [value]="row.quantity"
-                        (input)="updateComponent(i, { quantity: +$any($event.target).value || 1 })"
-                      />
-                    </label>
-                    <button type="button" class="icon-btn" (click)="removeComponent(i)" aria-label="Quitar pieza">
-                      <ds-icon name="x" />
-                    </button>
-                  </li>
-                }
-              </ul>
-            </section>
-          }
-
-          @if (!setEnabled() || isService()) {
-          <section class="pub-card pub-card--row">
-            <div>
-              <h2>¿Tiene opciones para elegir?</h2>
-              <p>
-                {{ isPhysical() ? 'Colores, tallas o tamaños: cada opción con su propio precio y stock.' : 'Modalidades o versiones: cada opción con su propio precio, sin stock físico.' }}
-              </p>
-            </div>
-            <label class="switch">
-              <input
-                type="checkbox"
-                [checked]="variantsEnabled()"
-                (change)="toggleVariants($any($event.target).checked)"
-              />
-              <span class="switch__track" aria-hidden="true"></span>
-              <span class="visually-hidden">Activar variantes</span>
-            </label>
-          </section>
-
-          @if (variantsEnabled()) {
-            <section class="pub-card">
-              <header class="pub-card__head"><h2>Atributos de variantes</h2><p>Agrega valores separados por comas. Genera las combinaciones después de editar los atributos.</p></header>
-              @for (axis of axes(); track $index; let i = $index) {
-                <div class="field-grid field-grid--two">
-                  <label class="field"><span>Atributo {{ i + 1 }}</span><input [value]="axis.name" maxlength="60" (input)="updateAxis(i, { name: $any($event.target).value })" placeholder="Color" /></label>
-                  <label class="field"><span>Valores</span><input [value]="axis.values" (input)="updateAxis(i, { values: $any($event.target).value })" placeholder="Negro, Blanco" /></label>
-                </div>
-                <button type="button" class="link-btn" (click)="removeAxis(i)">Quitar atributo {{ axis.name }}</button>
-              }
-              <div class="catalog__actions">
-                <ds-button type="button" variant="secondary" [disabled]="axes().length >= 5" (click)="addAxis()">Agregar atributo</ds-button>
-                <ds-button type="button" (click)="generateVariants()">Generar combinaciones</ds-button>
-              </div>
-              <p class="field__hint">Máximo 500 combinaciones. Se conservan las ediciones de las combinaciones existentes; los valores retirados se eliminan al guardar. Las variantes nuevas empiezan con stock cero.</p>
-              @if (axesPending()) { <p role="status">Genera las combinaciones para aplicar los cambios de atributos.</p> }
-              <p role="status">{{ variantDrafts().length }} combinaciones</p>
-              <ul class="variant-list">
-                @for (variant of variantRows(); track variant.id || variantPage() * 25 + $index; let row = $index) {
-                  @let i = variantPage() * 25 + row;
-                  <li class="combination-row">
-                    <div class="field-grid field-grid--two">
-                      @for (option of variant.options; track $index; let j = $index) {
-                        <label class="field"><span>{{ option.name }}</span><input [value]="option.value" maxlength="200" (input)="updateVariantOption(i, j, $any($event.target).value)" /></label>
-                      }
-                      <label class="field"><span>SKU</span><input [value]="variant.sku" maxlength="60" (input)="updateVariant(i, { sku: $any($event.target).value })" /></label>
-                      <label class="field"><span>Precio</span><input type="number" min="0" step="0.01" [disabled]="variant.priceInherited" [value]="variant.priceInherited ? productForm.controls.price.value : variant.price" (input)="onVariantPriceInput(i, $any($event.target).value)" /></label>
-                      @if (isPhysical()) {
-                        <label class="field"><span>Stock de esta variante</span><input type="number" min="0" step="1" [value]="variant.stockQty ?? ''" (input)="updateVariantStock(i, $any($event.target).value)" /><span class="field__hint">Vacío usa el stock del producto; cero significa agotado.</span></label>
-                      }
-                      <label class="field"><span>Imagen de esta combinación</span><ds-select><select [ngModel]="variant.imageUrl ?? ''" [ngModelOptions]="{ standalone: true }" (ngModelChange)="updateVariant(i, { imageUrl: $event || null })"><option value="">Usar imagen del producto</option>@if (variant.imageUrl && !hasMedia(variant.imageUrl)) { <option [value]="variant.imageUrl">Imagen guardada</option> }@for (photo of media(); track photo.url; let photoIndex = $index) { <option [value]="photo.url">Foto {{ photoIndex + 1 }}{{ photo.alt ? ' · ' + photo.alt : '' }}</option> }</select></ds-select></label>
-                    </div>
-                    <label class="check-row"><input type="checkbox" [checked]="variant.priceInherited" (change)="updateVariant(i, { priceInherited: $any($event.target).checked })" /><span>Usar el precio del producto</span></label>
-                    <label class="check-row"><input type="checkbox" [checked]="variant.isAvailable" (change)="updateVariant(i, { isAvailable: $any($event.target).checked })" /><span>Ofrecer esta combinación</span></label>
-                    <button type="button" class="link-btn" (click)="removeVariant(i)">Eliminar combinación</button>
-                  </li>
-                }
-              </ul>
-              <div class="catalog__actions" aria-label="Páginas de combinaciones">
-                <ds-button type="button" variant="secondary" [disabled]="variantPage() === 0" (click)="variantPage.set(variantPage() - 1)">Anterior</ds-button>
-                <span>Página {{ variantPage() + 1 }}</span>
-                <ds-button type="button" variant="secondary" [disabled]="(variantPage() + 1) * 25 >= variantDrafts().length" (click)="variantPage.set(variantPage() + 1)">Siguiente</ds-button>
-              </div>
-            </section>
-          }
-          }
-          }
-          @if (editorStep() === 'media') {
-          <section class="pub-card">
-            <header class="pub-card__head">
-              <h2>Fotos</h2>
-              <p>La primera foto será la principal en el catálogo.</p>
-            </header>
-
-            <div class="media-drop">
-              <ds-icon name="upload" />
-              <p>Sube fotos desde tu equipo; las optimizamos antes de enviarlas.</p>
-              <label class="upload-btn" [class.is-busy]="uploading()">
-                <input
-                  type="file"
-                  accept="image/jpeg,image/png,image/webp"
-                  multiple
-                  [disabled]="uploading()"
-                  (change)="onFiles($any($event.target))"
-                />
-                {{ uploading() ? 'Subiendo…' : 'Elegir fotos' }}
-              </label>
-              <p class="field__hint">O pega la URL pública de una imagen:</p>
-              <div class="media-drop__row">
-                <input
-                  type="url"
-                  [value]="mediaDraft()"
-                  (input)="onMediaDraftInput($any($event.target).value)"
-                  placeholder="https://…"
-                  (keydown.enter)="$event.preventDefault(); addMediaUrl()"
-                />
-                <ds-button type="button" variant="secondary" (click)="addMediaUrl()">
-                  Importar
-                </ds-button>
-              </div>
-            </div>
-
-            @if (media().length) {
-              <ul class="media-list">
-                @for (item of media(); track item.url; let i = $index; let last = $last) {
-                  <li>
-                    <img [src]="item.url" [alt]="item.alt" loading="lazy" />
-                    <div class="media-list__fields">
-                      <input
-                        [value]="item.alt"
-                        maxlength="160"
-                        placeholder="Texto alternativo (qué se ve)"
-                        aria-label="Texto alternativo"
-                        (input)="updateMedia(i, { alt: $any($event.target).value })"
-                      />
-                      <input
-                        [value]="item.caption"
-                        maxlength="200"
-                        placeholder="Leyenda (opcional)"
-                        aria-label="Leyenda"
-                        (input)="updateMedia(i, { caption: $any($event.target).value })"
-                      />
-                      <label class="check-row">
-                        <input
-                          type="checkbox"
-                          [checked]="item.kind === 'related'"
-                          (change)="updateMedia(i, { kind: $any($event.target).checked ? 'related' : 'image' })"
-                        />
-                        <span>Foto de ambiente (no va en la galería principal)</span>
-                      </label>
-                    </div>
-                    <div class="media-list__actions">
-                      @if (i === 0) {
-                        <span class="media-grid__main">Principal</span>
-                      }
-                      <button type="button" class="icon-btn" [disabled]="i === 0" (click)="moveMedia(i, -1)" aria-label="Subir foto">
-                        <ds-icon name="chevronUp" />
-                      </button>
-                      <button type="button" class="icon-btn" [disabled]="last" (click)="moveMedia(i, 1)" aria-label="Bajar foto">
-                        <ds-icon name="chevronDown" />
-                      </button>
-                      <button type="button" class="icon-btn" (click)="removeMediaUrl(i)" aria-label="Quitar foto">
-                        <ds-icon name="x" />
-                      </button>
-                    </div>
-                  </li>
-                }
-              </ul>
-            }
-
-            <p class="field__hint">Máximo 12 fotos (JPG, PNG o WebP).</p>
-          </section>
-          }
-          @if (editorStep() !== 'publication') { <ds-button type="button" (click)="nextStep()">Continuar</ds-button> }
+          </div></details>
         </div>
 
-        <aside class="publish__rail">
-          <section class="pub-card">
-            <h2>¿Listo para guardar?</h2>
-            <ul class="ready-list">
-              @for (item of readiness(); track item.id) {
-                <li [class.ready-list__item--done]="item.done">
-                  <span class="ready-list__dot" aria-hidden="true">
-                    @if (item.done) {
-                      <ds-icon name="check" />
-                    }
-                  </span>
-                  {{ item.label }}
-                </li>
-              }
-            </ul>
-          </section>
-
-          <section class="pub-card">
-            <h2>Información para recomendar: {{ completeness().score }}%</h2>
-            <p class="field__hint">Revisa los datos que ayudan al comprador a elegir. El porcentaje mide información registrada, no su exactitud.</p>
-            <ul class="ready-list">
-              @for (item of completeness().items; track item.id) {
-                <li [class.ready-list__item--done]="item.done">
-                  <span class="ready-list__dot" aria-hidden="true">
-                    @if (item.done) {
-                      <ds-icon name="check" />
-                    }
-                  </span>
-                  {{ item.label }}
-                </li>
-              }
-            </ul>
-          </section>
-
-          @if (editorStep() === 'publication') {
-          <section class="pub-card">
+        <aside class="publish__rail tw:grid tw:min-w-0 tw:content-start tw:gap-4">
+<section class="pub-card tw:console-card tw:grid tw:gap-4">
             <header class="pub-card__head pub-card__head--inline">
               <div>
                 <h2>Disponibilidad</h2>
@@ -771,70 +815,20 @@
               </span>
             </div>
           </section>
-
-          <section class="pub-card">
-            <h2>{{ isPhysical() ? 'Precio y stock' : 'Precio' }}</h2>
-            <label class="field">
-              <span>Precio <em>*</em></span>
-              <div class="price-row">
-                <span class="price-row__currency">{{ productForm.controls.currency.value }}</span>
-                <input
-                  type="number"
-                  min="0"
-                  step="0.01"
-                  formControlName="price"
-                  placeholder="0,00"
-                />
-              </div>
-            </label>
-
-            <label class="field">
-              <span class="field__label-row">
-                SKU
-                <span class="pill pill--soft">Opcional</span>
-              </span>
-              <input formControlName="sku" maxlength="60" autocomplete="off" placeholder="PER-50" />
-            </label>
-
-            @if (!isPhysical()) {
-              <p class="field__hint">{{ isDigital() ? 'Sin stock físico: el acceso se entrega al confirmarse el pago.' : 'Sin stock físico: el día y la hora se coordinan con el comprador.' }}</p>
-            } @else if (setEnabled()) {
-              <p class="field__hint">El stock del set sale de sus piezas: se vende mientras todas tengan unidades.</p>
-            } @else {
-            <label class="field">
-              <span class="field__label-row">
-                Stock
-                <span class="pill pill--soft">Opcional</span>
-              </span>
-              <div class="stock-row">
-                <input
-                  type="number"
-                  min="0"
-                  step="1"
-                  formControlName="stockQty"
-                  [placeholder]="
-                    productForm.controls.stockUnlimited.value
-                      ? 'uds. Ilimitado'
-                      : 'Cantidad'
-                  "
-                />
-                <label class="switch switch--compact">
-                  <input type="checkbox" formControlName="stockUnlimited" />
-                  <span class="switch__track" aria-hidden="true"></span>
-                  <span class="visually-hidden">Stock ilimitado</span>
-                </label>
-              </div>
-              <span class="field__hint">
-                Se descuenta con cada pedido. Si el pedido se cancela, las unidades
-                vuelven.
-              </span>
-            </label>
-            }
-
-            <input type="hidden" formControlName="currency" />
+          <section class="pub-card tw:console-card tw:hidden tw:gap-4 tw:lg:grid">
+            <h2>Tipo de producto</h2>
+            <ng-container [ngTemplateOutlet]="productType" />
           </section>
 
-          <section class="pub-card">
+
+
+
+
+
+
+
+
+          <section class="pub-card tw:console-card tw:grid tw:gap-4">
             <header class="pub-card__head pub-card__head--inline">
               <div>
                 @if (storeActive()) {
@@ -890,7 +884,7 @@
             </label>
           </section>
 
-          <section class="pub-card">
+          <section class="pub-card tw:console-card tw:grid tw:gap-4">
             <h2>Colecciones de la tienda</h2>
             <div class="chips">
               @for (cat of categoryChips(); track cat) {
@@ -910,7 +904,7 @@
                 type="text"
                 [value]="categoryDraft()"
                 (input)="onCategoryDraftInput($any($event.target).value)"
-                placeholder="Selecciona o crea categorías"
+                placeholder="Nombre de la colección" aria-label="Nombre de la colección"
                 (keydown.enter)="$event.preventDefault(); addCategoryFromDraft()"
               />
               <ds-button
@@ -922,13 +916,62 @@
               </ds-button>
             </div>
             <span class="field__hint">
-              Reutiliza tus categorías o crea nuevas al escribir.
+              Agrupa productos en colecciones de tu tienda.
             </span>
             <input type="hidden" formControlName="categoriesText" />
           </section>
-          }
+
+        <section class="pub-card tw:console-card tw:grid tw:gap-4">
+            <h2>¿Listo para guardar?</h2>
+            <ul class="ready-list">
+              @for (item of readiness(); track item.id) {
+                <li [class.ready-list__item--done]="item.done">
+                  <span class="ready-list__dot" aria-hidden="true">
+                    @if (item.done) {
+                      <ds-icon name="check" />
+                    }
+                  </span>
+                  {{ item.label }}
+                </li>
+              }
+            </ul>
+          </section>
+<details class="pub-card tw:console-card">
+            <summary class="tw:min-h-touch tw:cursor-pointer tw:content-center tw:text-body tw:font-semibold">Información para recomendar: {{ completeness().score }}%</summary><div class="tw:grid tw:gap-4 tw:pt-3">
+            <p class="field__hint">Revisa los datos que ayudan al comprador a elegir. El porcentaje mide información registrada, no su exactitud.</p>
+            <ul class="ready-list">
+              @for (item of completeness().items; track item.id) {
+                <li [class.ready-list__item--done]="item.done">
+                  <span class="ready-list__dot" aria-hidden="true">
+                    @if (item.done) {
+                      <ds-icon name="check" />
+                    }
+                  </span>
+                  {{ item.label }}
+                </li>
+              }
+            </ul>
+          </div></details>
         </aside>
       </div>
     </form>
   }
 </section>
+<ng-template #productType>
+  <label class="field"><span>Qué vendes</span><ds-select><select [value]="productForm.controls.kind.value" (change)="setKind($any($event.target).value)"><option value="PRODUCT">Producto físico</option><option value="SERVICE">Servicio</option><option value="DIGITAL">Producto digital</option></select></ds-select></label>
+</ng-template>
+@if (variantPhotoTarget(); as target) {
+  <dialog dsModal (dsModalClose)="variantPhotoTarget.set(null)" class="tw:console-scope tw:modal-frame" aria-labelledby="variant-photo-title">
+    <div class="tw:grid tw:max-h-full tw:w-full tw:max-w-lg tw:gap-3 tw:overflow-y-auto tw:rounded-lg tw:border tw:border-solid tw:border-border tw:bg-surface tw:p-4 tw:shadow-dropdown">
+      <header class="tw:flex tw:items-center tw:justify-between tw:gap-2"><div class="tw:grid tw:min-w-0 tw:gap-1"><h2 id="variant-photo-title" class="tw:m-0 tw:text-section tw:font-semibold">Elige una foto</h2><p class="tw:m-0 tw:text-caption tw:text-muted tw:wrap-anywhere">{{ target.label }}@if (target.indexes.length > 1) { · {{ target.indexes.length }} variantes }</p></div><button type="button" class="tw:console-icon-button" aria-label="Cerrar selección de foto" (click)="variantPhotoTarget.set(null)"><ds-icon name="x" /></button></header>
+      @if (errorMessage()) { <p class="tw:feedback tw:feedback-danger" role="alert">{{ errorMessage() }}</p> }
+      <div class="tw:grid tw:grid-cols-3 tw:gap-2">
+        @for (photo of media(); track photo.url; let photoIndex = $index) { <button type="button" class="tw:grid tw:cursor-pointer tw:gap-1 tw:rounded-sm tw:border tw:border-solid tw:border-border tw:bg-surface tw:p-1 tw:text-caption tw:hover:border-focus" [attr.aria-label]="'Usar foto ' + (photoIndex + 1)" (click)="selectVariantPhoto(photo.url)"><img [src]="photo.url" alt="" class="tw:aspect-square tw:w-full tw:rounded-sm tw:object-cover" /><span>Foto {{ photoIndex + 1 }}</span></button> } @empty { <p class="tw:col-span-3 tw:m-0 tw:text-body tw:text-muted">Sube una foto para asignarla a esta variante.</p> }
+      </div>
+      <div class="tw:flex tw:flex-wrap tw:items-center tw:justify-between tw:gap-2">
+        <label class="tw:console-action-secondary tw:cursor-pointer"><input #variantPhotoUpload type="file" class="tw:sr-only" accept="image/jpeg,image/png,image/webp" [disabled]="uploading() || media().length >= maxMedia" (change)="onFiles(variantPhotoUpload)" />{{ uploading() ? 'Subiendo…' : 'Subir foto' }}</label>
+        <ds-button type="button" variant="secondary" [disabled]="uploading()" (click)="selectVariantPhoto(null)">Usar foto del producto</ds-button>
+      </div>
+    </div>
+  </dialog>
+}

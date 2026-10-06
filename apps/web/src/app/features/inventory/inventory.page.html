@@ -1,31 +1,30 @@
-<section class="store">
+<section class="store tw:mx-auto tw:min-w-0">
   <header class="store__header">
     <div>
-      <p class="store__eyebrow">Vender</p>
-      <h1>Inventario</h1>
+      <h1 class="tw:console-title">Inventario</h1>
       <p>
         Stock por SKU de todos tus productos y variantes. Los sets no aparecen: se venden
         mientras sus piezas tengan unidades.
       </p>
     </div>
-    @if (changes().length) {
-      <div class="store__actions">
-        <ds-button variant="ghost" [disabled]="saving()" (click)="discard()">Descartar</ds-button>
-        <ds-button [disabled]="saving()" (click)="save()">
-          {{ saving() ? 'Guardando…' : 'Guardar ' + changes().length + (changes().length === 1 ? ' cambio' : ' cambios') }}
-        </ds-button>
-      </div>
-    }
   </header>
 
-  @if (errorMessage(); as error) {
-    <div class="banner banner--danger" role="alert">
+  @if (changes().length) {
+    <div class="tw:console-save-bar" aria-label="Acciones de inventario">
+      <span class="tw:px-2">{{ changes().length }} {{ changes().length === 1 ? 'cambio pendiente' : 'cambios pendientes' }}</span>
+      <ds-button variant="ghost" class="tw:[&_.ds-button]:text-surface! tw:[&_.ds-button:hover]:bg-navigation-hover!" [disabled]="saving()" (click)="discard()">Descartar</ds-button>
+      <ds-button [disabled]="saving()" (click)="save()">{{ saving() ? 'Guardando…' : 'Guardar' }}</ds-button>
+    </div>
+  }
+
+  @if (errorMessage() && !loadFailed(); as error) {
+    <div class="tw:feedback tw:feedback-danger" role="alert">
       <ds-icon name="alert" />
       <span>{{ error }}</span>
     </div>
   }
   @if (successMessage(); as success) {
-    <div class="banner banner--success" role="status">
+    <div class="tw:feedback tw:feedback-success" role="status">
       <ds-icon name="check" />
       <span>{{ success }}</span>
     </div>
@@ -33,7 +32,11 @@
 
   @if (loading()) {
     <div class="skeleton" aria-busy="true">Cargando inventario…</div>
-  } @else if (!rows().length) {
+  } @else if (loadFailed()) {
+      <ds-empty-state title="No pudimos cargar esta sección" body="Revisa tu conexión e inténtalo de nuevo.">
+        <ds-button variant="secondary" (click)="load()">Reintentar</ds-button>
+      </ds-empty-state>
+    } @else if (!rows().length) {
     <ds-empty-state title="Aún no hay productos" body="Publica productos para controlar su stock desde aquí.">
       <a routerLink="/app/products" class="rail-link">Ir a productos <ds-icon name="chevronRight" [size]="1" /></a>
     </ds-empty-state>

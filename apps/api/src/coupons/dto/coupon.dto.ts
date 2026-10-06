@@ -1,5 +1,5 @@
 import { ApiProperty, ApiPropertyOptional, PartialType } from '@nestjs/swagger';
-import { CouponKind, CouponScope } from '@prisma/client';
+import { CouponKind, CouponMethod, CouponScope } from '@prisma/client';
 import { Transform } from 'class-transformer';
 import {
   ArrayMaxSize,
@@ -23,13 +23,19 @@ const upper = ({ value }: { value: unknown }) =>
   typeof value === 'string' ? value.trim().toUpperCase() : value;
 
 export class CreateCouponDto {
-  @ApiProperty({ example: 'VERANO10' })
+  @ApiPropertyOptional({ example: 'VERANO10', description: 'Required for a discount code; generated internally for an automatic discount.' })
   @Transform(upper)
+  @IsOptional()
   @IsString()
   @Matches(COUPON_CODE_PATTERN, {
     message: 'El código usa de 3 a 30 letras, números, guion o guion bajo.',
   })
-  code!: string;
+  code?: string;
+
+  @ApiPropertyOptional({ enum: CouponMethod, default: CouponMethod.CODE })
+  @IsOptional()
+  @IsEnum(CouponMethod)
+  method?: CouponMethod;
 
   @ApiProperty({ example: '10 % en polos' })
   @IsString()

@@ -1,8 +1,7 @@
-<section class="store">
+<section class="store tw:mx-auto tw:min-w-0">
   <header class="store__header">
     <div>
-      <p class="store__eyebrow">Resultados</p>
-      <h1>Píxel y Analytics</h1>
+      <h1 class="tw:console-title">Píxel y Analytics</h1>
       <p>
         Mide las visitas, los carritos y las compras de tu tienda en Meta y Google Analytics
         para medir tus anuncios. Solo se mide a quien acepta las cookies.
@@ -10,8 +9,8 @@
     </div>
   </header>
 
-  @if (errorMessage(); as error) {
-    <div class="banner banner--danger" role="alert">
+  @if (errorMessage() && !loadFailed(); as error) {
+    <div class="tw:feedback tw:feedback-danger" role="alert">
       <ds-icon name="alert" />
       <span>{{ error }}</span>
       @if (!settings()) {
@@ -20,7 +19,7 @@
     </div>
   }
   @if (successMessage(); as success) {
-    <div class="banner banner--success" role="status">
+    <div class="tw:feedback tw:feedback-success" role="status">
       <ds-icon name="check" />
       <span>{{ success }}</span>
     </div>
@@ -28,7 +27,11 @@
 
   @if (loading()) {
     <div class="skeleton" aria-busy="true">Cargando tu analítica…</div>
-  } @else if (!active()) {
+  } @else if (loadFailed()) {
+      <ds-empty-state title="No pudimos cargar esta sección" body="Revisa tu conexión e inténtalo de nuevo.">
+        <ds-button variant="secondary" (click)="load()">Reintentar</ds-button>
+      </ds-empty-state>
+    } @else if (!active()) {
     <app-integration-gate key="tracking" />
   } @else if (settings()) {
     <div class="status-card" [class.status-card--live]="connected()">
@@ -47,6 +50,12 @@
 
     <div class="store__grid">
       <form class="store__form" [formGroup]="form" (ngSubmit)="save()">
+        @if (canManage) {
+          <div class="tw:console-save-bar">
+            <span class="tw:px-2">Cambios de medición</span>
+            <ds-button type="submit" [disabled]="saving()">{{ saving() ? 'Guardando…' : 'Guardar' }}</ds-button>
+          </div>
+        }
         <section class="card">
           <h2>Tus códigos</h2>
           <label>
@@ -78,11 +87,7 @@
           </label>
           <small>Deja un campo vacío para dejar de usarlo.</small>
         </section>
-        @if (canManage) {
-          <footer>
-            <ds-button type="submit" [disabled]="saving()">{{ saving() ? 'Guardando…' : 'Guardar' }}</ds-button>
-          </footer>
-        } @else {
+        @if (!canManage) {
           <p class="hint">Solo el dueño o un administrador puede cambiar estos códigos.</p>
         }
       </form>

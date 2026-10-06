@@ -1,6 +1,8 @@
+import { DsEmptyStateComponent } from '@vendedoria/ui';
 import { ChangeDetectionStrategy, Component, inject, signal } from '@angular/core';
 import { HttpErrorResponse } from '@angular/common/http';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
+import { AuthApiService } from '../../core/auth/auth-api.service';
 import { DsButtonComponent, DsConfirmService, DsIconComponent } from '@vendedoria/ui';
 import {
   ConnectPaymentAccountPayload,
@@ -13,7 +15,7 @@ const CREDENTIAL = /^(APP_USR|TEST)-[A-Za-z0-9-]{20,200}$/;
 @Component({
   selector: 'app-payments-page',
   standalone: true,
-  imports: [ReactiveFormsModule, DsButtonComponent, DsIconComponent],
+  imports: [DsEmptyStateComponent, ReactiveFormsModule, DsButtonComponent, DsIconComponent],
   templateUrl: './payments.page.html',
   styleUrls: ['../store/store.page.scss', './payments.page.scss'],
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -22,8 +24,11 @@ export class PaymentsPage {
   private readonly api = inject(PaymentsApiService);
   private readonly fb = inject(FormBuilder);
   private readonly confirmDialog = inject(DsConfirmService);
+  private readonly auth = inject(AuthApiService);
+  readonly canManage = () => this.auth.isManager();
 
   readonly loading = signal(true);
+  readonly loadFailed = signal(false);
   readonly saving = signal(false);
   readonly copied = signal(false);
   readonly errorMessage = signal<string | null>(null);
@@ -43,10 +48,12 @@ export class PaymentsPage {
 
   async load(): Promise<void> {
     this.loading.set(true);
+    this.loadFailed.set(false);
     this.errorMessage.set(null);
     try {
       this.apply(await this.api.get());
     } catch {
+      this.loadFailed.set(true);
       this.errorMessage.set('No pudimos cargar el estado de tus cobros.');
     } finally {
       this.loading.set(false);
@@ -54,6 +61,7 @@ export class PaymentsPage {
   }
 
   async save(): Promise<void> {
+    if (!this.canManage() || this.loading() || this.loadFailed() || this.saving()) return;
     const connected = this.view()?.connected ?? false;
     const values = this.form.getRawValue();
     if (!connected && !values.accessToken.trim()) {
@@ -83,6 +91,7 @@ export class PaymentsPage {
   }
 
   async disconnect(): Promise<void> {
+    if (!this.canManage() || this.saving()) return;
     const confirmed = await this.confirmDialog.confirm({
       title: '¿Desconectar Mercado Pago?',
       message: 'Tu tienda dejará de cobrar online hasta que vuelvas a conectar una cuenta.',

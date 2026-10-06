@@ -1,0 +1,45 @@
+:host {
+  --menu-bg: var(--ds-color-surface);
+  --menu-text: var(--ds-color-text-primary);
+  --menu-border: var(--ds-color-border);
+  --menu-hover: var(--ds-color-bg);
+  display: block;
+  min-width: 0;
+}
+:host([data-tone='navigation']) {
+  --menu-bg: var(--ds-console-nav-bg);
+  --menu-text: var(--ds-console-nav-text);
+  --menu-border: var(--ds-console-nav-border);
+  --menu-hover: var(--ds-console-nav-hover);
+}
+.ds-menu-trigger {
+  display: flex;
+  align-items: center;
+  min-height: var(--ds-touch-target);
+  width: 100%;
+  padding: var(--ds-space-1) var(--ds-space-2);
+  border: 0;
+  border-radius: var(--ds-radius-sm);
+  background: transparent;
+  color: var(--menu-text);
+  text-align: left;
+  cursor: pointer;
+}
+.ds-menu-trigger:hover,
+.ds-menu-trigger[aria-expanded='true'] { background: var(--menu-hover); }
+.ds-menu-panel {
+  position: fixed;
+  inset: auto;
+  margin: 0;
+  width: min(var(--ds-menu-width), calc(100vw - 2 * var(--ds-space-2)));
+  max-height: calc(100dvh - 2 * var(--ds-space-2));
+  overflow-y: auto;
+  padding: var(--ds-space-2);
+  border: 1px solid var(--menu-border);
+  border-radius: var(--ds-radius-md);
+  background: var(--menu-bg);
+  color: var(--menu-text);
+  font: inherit;
+  box-shadow: var(--ds-shadow-dropdown);
+}
+.ds-menu-trigger:focus-visible { outline: 2px solid var(--ds-color-focus-ring); outline-offset: 2px; }

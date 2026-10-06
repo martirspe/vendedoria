@@ -282,7 +282,12 @@ export class CheckoutService implements OnModuleInit, OnModuleDestroy {
                   },
                   { lock: true },
                 )
-              : null;
+              : await this.coupons.automaticQuote(
+                  tx,
+                  access.tenantId,
+                  { lines: lines.map((l) => l.coupon), email },
+                  { lock: true },
+                );
             const shipsGoods = lines.some((line) => line.ships);
             const hasServices = lines.some((line) => line.isService);
             if (coupon?.freeShipping) {
@@ -343,7 +348,8 @@ export class CheckoutService implements OnModuleInit, OnModuleDestroy {
                 discountCents,
                 shippingCents,
                 totalCents: subtotalCents - discountCents + shippingCents,
-                couponCode: coupon?.coupon.code ?? null,
+                couponCode:
+                  coupon?.coupon.method === 'CODE' ? coupon.coupon.code : null,
                 customerName: dto.customer.name.trim(),
                 customerEmail: email,
                 customerPhone: dto.customer.phone,

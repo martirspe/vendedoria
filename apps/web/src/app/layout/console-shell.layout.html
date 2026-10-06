@@ -1,166 +1,146 @@
-<div class="console">
-  <aside class="console__sidebar" aria-label="Navegación de consola">
-    <a class="console__brand" routerLink="/app/get-started">
-      <span class="console__brand-mark" aria-hidden="true">
-        <ds-icon name="sparkles" [size]="1.05" />
-      </span>
-      <span class="console__brand-text">VendedorIA</span>
-    </a>
-
-    <div class="console__quick">
-      <button type="button" class="console__quick-btn" (click)="openPalette()">
-        <ds-icon name="command" [size]="1" />
-        <span>Ir a…</span>
-        <kbd>Ctrl K</kbd>
-      </button>
-      <a class="console__quick-link" routerLink="/app/channels">
-        <ds-icon name="radio" [size]="1" />
-        WhatsApp
-      </a>
-    </div>
-
-    <nav class="console__nav">
-      @for (group of navGroups(); track group.id) {
-        <div class="console__group">
-          @if (group.label) {
-            <p class="console__group-label">{{ group.label }}</p>
-          }
-          <ul class="console__list">
-            @for (item of group.items; track item.path) {
-              <li>
-                @if (item.children) {
-                  <div class="console__parent" [class.is-open]="isExpanded(item)">
-                    <a
-                      [routerLink]="item.path"
-                      [class.is-active]="isInSection(item)"
-                    >
-                      <ds-icon [name]="item.icon" [size]="1.1" />
-                      <span>{{ item.label }}</span>
-                    </a>
-                    <button
-                      type="button"
-                      class="console__toggle"
-                      [attr.aria-expanded]="isExpanded(item)"
-                      [attr.aria-controls]="'nav-' + group.id"
-                      [attr.aria-label]="(isExpanded(item) ? 'Ocultar' : 'Mostrar') + ' secciones de ' + item.label"
-                      (click)="toggleItem(item)"
-                    >
-                      <ds-icon name="chevronDown" [size]="0.95" />
-                    </button>
-                  </div>
-                  @if (isExpanded(item)) {
-                    <ul class="console__sublist" [id]="'nav-' + group.id">
-                      @for (child of item.children; track child.path) {
-                        <li>
-                          <a [routerLink]="child.path" routerLinkActive="is-active">
-                            {{ child.label }}
-                          </a>
-                        </li>
-                      }
-                    </ul>
-                  }
-                } @else {
-                  <a [routerLink]="item.path" routerLinkActive="is-active">
-                    <ds-icon [name]="item.icon" [size]="1.1" />
-                    <span>{{ item.label }}</span>
-                  </a>
-                }
-              </li>
-            }
-          </ul>
-        </div>
-      }
-    </nav>
-
-    <div class="console__footer">
-      <ul class="console__list">
-        @for (item of footerItems(); track item.path) {
-          <li>
-            <a [routerLink]="item.path" routerLinkActive="is-active">
-              <ds-icon [name]="item.icon" [size]="1.1" />
-              <span>{{ item.label }}</span>
-            </a>
-          </li>
-        }
-      </ul>
-      <div class="console__account">
-        <a
-          class="console__user"
-          routerLink="/app/profile"
-          routerLinkActive="is-active"
-          [attr.aria-label]="'Mi perfil: ' + (userName() || 'tu cuenta')"
-        >
-          <span class="console__avatar" aria-hidden="true">{{ userInitials() || '·' }}</span>
-          <span class="console__user-text">
-            <strong>{{ userName() || 'Mi perfil' }}</strong>
-            <small>{{ userDetail() }}</small>
-          </span>
-        </a>
-        <button
-          type="button"
-          class="console__logout"
-          aria-label="Cerrar sesión"
-          title="Cerrar sesión"
-          (click)="logout()"
-        >
-          <ds-icon name="logOut" [size]="1.1" />
-        </button>
-      </div>
-    </div>
+<div class="tw:console-scope tw:flex tw:min-h-dvh tw:items-start tw:gap-1 tw:bg-navigation tw:p-1 tw:[&_.ds-button]:rounded-full!">
+  <a [href]="contentHref()" class="tw:sr-only tw:focus:not-sr-only tw:focus:fixed tw:focus:left-4 tw:focus:top-4 tw:focus:z-50 tw:console-action-link">Saltar al contenido</a>
+  <aside id="console-navigation" class="tw:console-navigation tw:sticky tw:top-1 tw:hidden tw:h-[calc(100dvh-2*var(--ds-space-1))] tw:shrink-0 tw:flex-col tw:gap-2 tw:overflow-y-auto tw:overflow-x-hidden tw:px-1 tw:py-2 tw:text-navigation-foreground tw:console:flex" [class.tw:w-sidebar]="!navCollapsed()" [class.tw:w-rail]="navCollapsed()" aria-label="Navegación de consola">
+    <ng-container [ngTemplateOutlet]="navigation" [ngTemplateOutletContext]="{ compact: navCollapsed() }" />
   </aside>
-
-  <div class="console__content">
-    @if (quotaWarning(); as warning) {
-      <div class="console__quota" role="status">
-        <span>{{ warning }}</span>
-        @if (quotaAction() === 'onboarding') {
-          <a [href]="onboardingUrl" target="_blank" rel="noopener">Agendar mi sesión</a>
-        } @else {
-          <a routerLink="/app/plans">Ver planes</a>
+  @if (context(); as c) {
+    <aside class="tw:sticky tw:top-1 tw:hidden tw:h-[calc(100dvh-2*var(--ds-space-1))] tw:w-context-sidebar tw:shrink-0 tw:flex-col tw:gap-4 tw:overflow-y-auto tw:px-2 tw:py-3 tw:text-navigation-foreground tw:console:flex" aria-label="Ajustes de sección">
+      <a routerLink="/app/get-started" class="tw:console-rail-link"><ds-icon name="chevronLeft" [size]="1" />{{ c.label }}</a>
+      <label class="tw:relative tw:block"><span class="tw:sr-only">Buscar en {{ c.label }}</span><input type="search" class="tw:console-field tw:w-full tw:bg-navigation-hover! tw:text-navigation-foreground! tw:border-navigation-border!" placeholder="Buscar ajustes" [value]="contextQuery()" (input)="contextQuery.set($any($event.target).value)" /></label>
+      <nav [attr.aria-label]="'Secciones de ' + c.label" class="tw:grid tw:gap-4">
+        @for (group of contextGroups(); track group.label) {
+          <div class="tw:grid tw:gap-1"><p class="tw:m-0 tw:px-2 tw:text-caption tw:text-navigation-muted">{{ group.label }}</p>
+            @for (item of group.items; track item.label) { <a class="tw:console-rail-link" [routerLink]="item.path" [queryParams]="item.section && item.section !== 'temas' ? { seccion: item.section } : {}" [attr.aria-current]="isContextActive(item) ? 'page' : null"><ds-icon [name]="item.icon" [size]="1" />{{ item.label }}</a> }
+          </div>
+        } @empty { <p class="tw:px-2 tw:text-caption tw:text-navigation-muted" role="status">No hay ajustes que coincidan.</p> }
+      </nav>
+    </aside>
+  }
+  <div class="tw:console-frame">
+    <header class="tw:flex tw:min-h-16 tw:items-center tw:justify-between tw:gap-3 tw:px-gutter tw:py-2">
+      <div class="tw:flex tw:min-w-0 tw:items-center tw:gap-2">
+        <button type="button" class="tw:console-icon-button tw:console:hidden" aria-label="Abrir navegación" aria-haspopup="dialog" [attr.aria-expanded]="mobileNavOpen()" (click)="mobileNavOpen.set(true)"><ds-icon name="menu" /></button>
+        @if (context(); as c) {
+          <ds-menu class="tw:console:hidden! tw:min-w-0" [label]="'Secciones de ' + c.label" menuId="console-context-menu">
+            <span dsMenuTrigger class="tw:flex tw:min-w-0 tw:items-center tw:gap-2 tw:text-caption"><span class="tw:truncate">{{ contextLocation() }}</span><ds-icon name="chevronDown" [size]="0.85" /></span>
+            @for (group of c.groups; track group.label) { <p class="tw:m-0 tw:px-2 tw:py-2 tw:text-caption tw:text-muted" role="presentation">{{ group.label }}</p>@for (item of group.items; track item.label) { <a role="menuitem" class="tw:console-nav-link" [routerLink]="item.path" [queryParams]="item.section && item.section !== 'temas' ? { seccion: item.section } : {}" [attr.aria-current]="isContextActive(item) ? 'page' : null"><ds-icon [name]="item.icon" [size]="1" />{{ item.label }}</a> } }
+          </ds-menu>
         }
+        <p class="tw:m-0 tw:min-w-0 tw:truncate tw:text-caption tw:text-muted" [class.tw:console:invisible]="isHome()" [class.tw:hidden]="!!context()" [class.tw:console:block]="!!context()">
+          @if (currentLocation().group; as group) { <span>{{ group }}</span><span class="tw:mx-2" aria-hidden="true">/</span> }
+          <span>{{ currentLocation().label }}</span>
+        </p>
+      </div>
+      <a routerLink="/app/plans" class="tw:inline-flex tw:min-h-touch tw:shrink-0 tw:items-center tw:gap-3 tw:rounded-full tw:bg-ink tw:px-4 tw:text-caption tw:font-semibold tw:text-surface! tw:shadow-sm"><span class="tw:size-2 tw:rounded-full tw:bg-primary" aria-hidden="true"></span>Tu plan<ds-icon name="chevronRight" [size]="0.85" /></a>
+    </header>
+    @if (quotaWarning(); as warning) {
+      <div class="tw:mx-gutter tw:feedback tw:feedback-warning" role="status"><span>{{ warning }}</span>
+        @if (quotaAction() === 'onboarding') { <a class="tw:console-action-secondary" [href]="onboardingUrl" target="_blank" rel="noopener">Agendar mi sesión</a> }
+        @else { <a class="tw:console-action-secondary" routerLink="/app/plans">Ver planes</a> }
       </div>
     }
-
-    <main class="console__main">
-      <div class="console__main-inner">
-        <router-outlet />
-      </div>
-    </main>
+    <main id="console-main" tabindex="-1" class="tw:console-workspace"><router-outlet /></main>
   </div>
 </div>
 
-@if (paletteOpen()) {
-  <div
-    class="palette"
-    role="dialog"
-    aria-modal="true"
-    aria-label="Ir a sección"
-    (click)="closePalette()"
-  >
-    <div class="palette__panel" (click)="$event.stopPropagation()">
-      <label class="palette__search">
-        <ds-icon name="search" />
-        <input
-          type="search"
-          placeholder="Empezar, WhatsApp, Mensajes…"
-          [value]="paletteQuery()"
-          (input)="onPaletteQuery($any($event.target).value)"
-          autofocus
-        />
-      </label>
-      <ul class="palette__list">
-        @for (action of filteredPalette(); track action.id) {
-          <li>
-            <button type="button" (click)="runPaletteAction(action)">
-              <ds-icon [name]="action.icon" [size]="1.05" />
-              <span>
-                <strong>{{ action.label }}</strong>
-                <small>{{ action.hint }}</small>
-              </span>
-            </button>
-          </li>
-        }
-      </ul>
+<ng-template #navigation let-mobile="mobile" let-compact="compact">
+  <div class="tw:flex tw:min-h-touch tw:items-center tw:gap-1" [class.tw:justify-between]="!compact" [class.tw:justify-center]="compact">
+    @if (compact) {
+      <button type="button" class="tw:console-rail-button tw:min-w-touch tw:group tw:relative" data-nav-toggle aria-label="Expandir navegación" title="Expandir navegación" aria-controls="console-navigation" [attr.aria-expanded]="!navCollapsed()" (click)="toggleNavigation()">
+        <span class="tw:grid tw:size-7 tw:place-items-center tw:rounded-sm tw:bg-primary tw:text-ink tw:transition-opacity tw:group-hover:opacity-0 tw:group-focus-visible:opacity-0" aria-hidden="true"><ds-icon name="sparkles" [size]="1.1" /></span>
+        <span class="tw:absolute tw:inset-0 tw:grid tw:place-items-center tw:opacity-0 tw:transition-opacity tw:group-hover:opacity-100 tw:group-focus-visible:opacity-100" aria-hidden="true"><ds-icon name="panelOpen" [size]="1.1" /></span>
+      </button>
+    } @else {
+      <a class="tw:flex tw:min-h-touch tw:min-w-touch tw:items-center tw:gap-2 tw:px-2 tw:font-display tw:text-section tw:font-bold tw:text-navigation-foreground" routerLink="/app/get-started" aria-label="VendedorIA" title="VendedorIA" (click)="closeNavigation()"><span class="tw:grid tw:size-7 tw:shrink-0 tw:place-items-center tw:rounded-sm tw:bg-primary tw:text-ink" aria-hidden="true"><ds-icon name="sparkles" [size]="1.1" /></span><span>VendedorIA</span></a>
+    }
+    @if (mobile) {
+      <button type="button" class="tw:console-rail-button" aria-label="Cerrar navegación" (click)="closeNavigation()"><ds-icon name="x" /></button>
+    } @else if (!compact) {
+      <button type="button" class="tw:console-rail-button" data-nav-toggle aria-label="Contraer navegación" aria-controls="console-navigation" [attr.aria-expanded]="!navCollapsed()" (click)="toggleNavigation()"><ds-icon name="panelClose" [size]="1" /></button>
+    }
+  </div>
+  <button type="button" class="tw:console-rail-link tw:w-full tw:cursor-pointer tw:border tw:border-solid tw:border-navigation-border tw:bg-navigation-hover tw:text-left" aria-label="Buscar páginas y acciones" title="Buscar páginas y acciones (Ctrl K)" aria-haspopup="dialog" [class.tw:justify-center]="compact" (click)="closeNavigation(); openPalette()"><ds-icon name="search" [size]="1" />@if (!compact) { <span class="tw:flex-1">Buscar</span><kbd class="tw:text-caption tw:font-normal tw:text-navigation-muted">Ctrl K</kbd> }</button>
+  <nav aria-label="Secciones de tu negocio" class="tw:grid tw:gap-2">
+    @for (group of navGroups(); track group.id) {
+      <div class="tw:grid tw:gap-1" [class.tw:pt-1]="!!group.label">
+        @if (group.label && !compact) { <p class="tw:m-0 tw:px-3 tw:pt-3 tw:pb-1 tw:text-caption tw:text-navigation-muted">{{ group.label }}</p> }
+        <ul class="tw:m-0 tw:grid tw:list-none tw:p-0">
+          @for (item of group.items; track item.path) {
+            <li>
+              @if (item.children && !compact) {
+                <div class="tw:console-nav-row" [attr.data-active]="isInSection(item) || null">
+                  <a class="tw:console-rail-link" [routerLink]="item.path" [attr.aria-current]="isInSection(item) ? 'location' : null" (click)="closeNavigation()"><ds-icon [name]="item.icon" [size]="1" /><span>{{ item.label }}</span></a>
+                  <button type="button" class="tw:console-rail-button" [attr.aria-expanded]="isExpanded(item)" [attr.aria-controls]="'nav-' + item.icon + (mobile ? '-mobile' : '')" [attr.aria-label]="(isExpanded(item) ? 'Ocultar' : 'Mostrar') + ' secciones de ' + item.label" (click)="toggleItem(item)"><ds-icon [name]="isExpanded(item) ? 'chevronUp' : 'chevronDown'" [size]="0.85" /></button>
+                </div>
+                @if (isExpanded(item)) {
+                  <ul class="tw:m-0 tw:ml-5 tw:grid tw:list-none tw:border-0 tw:border-l tw:border-solid tw:border-navigation-border tw:pl-2" [id]="'nav-' + item.icon + (mobile ? '-mobile' : '')">
+                    @for (child of item.children; track child.path) { <li><a class="tw:console-rail-link tw:text-caption" [routerLink]="child.path" routerLinkActive="is-active" ariaCurrentWhenActive="page" (click)="closeNavigation()">{{ child.label }}</a></li> }
+                  </ul>
+                }
+              } @else {
+                <a class="tw:console-rail-link" [routerLink]="item.path" [attr.aria-current]="isInSection(item) ? 'page' : null" [attr.aria-label]="item.label" [title]="item.label" [class.tw:justify-center]="compact" (click)="closeNavigation()"><ds-icon [name]="item.icon" [size]="1" />@if (!compact) { <span>{{ item.label }}</span> }</a>
+              }
+            </li>
+          }
+        </ul>
+      </div>
+    }
+  </nav>
+  <div class="tw:mt-auto tw:grid tw:min-w-0 tw:grid-cols-1 tw:gap-1 tw:pt-3">
+    <ul class="tw:m-0 tw:grid tw:list-none tw:p-0">
+      @for (item of footerItems(); track item.path) { <li><a class="tw:console-rail-link" [routerLink]="item.path" routerLinkActive="is-active" ariaCurrentWhenActive="page" [attr.aria-label]="item.label" [title]="item.label" [class.tw:justify-center]="compact" (click)="closeNavigation()"><ds-icon [name]="item.icon" [size]="1" />@if (!compact) { <span>{{ item.label }}</span> }</a></li> }
+    </ul>
+    @if (!compact) {
+      <a routerLink="/app/plans" class="tw:grid tw:gap-1 tw:rounded-sm tw:border tw:border-solid tw:border-navigation-border tw:bg-navigation-hover tw:px-3 tw:py-3 tw:text-navigation-foreground tw:no-underline" (click)="closeNavigation()">
+        <span class="tw:flex tw:items-center tw:justify-between tw:gap-2 tw:text-body tw:font-semibold">Tu plan <ds-icon name="chevronRight" [size]="0.85" /></span>
+        <small class="tw:text-caption tw:text-navigation-muted">Revisa uso, límites y opciones.</small>
+      </a>
+    }
+    <div class="tw:min-w-0 tw:border-0 tw:border-t tw:border-solid tw:border-navigation-border tw:pt-2">
+      <ds-menu label="Menú de cuenta" [menuId]="'console-account-menu' + (mobile ? '-mobile' : '')" tone="navigation">
+        <span dsMenuTrigger class="tw:flex tw:w-full tw:min-w-0 tw:items-center tw:gap-2" [class.tw:justify-center]="compact">
+          <span class="tw:grid tw:size-6 tw:shrink-0 tw:place-items-center tw:rounded-sm tw:bg-primary tw:text-caption tw:font-semibold tw:text-ink" aria-hidden="true">{{ userInitials() || '·' }}</span>
+          @if (!compact) { <span class="tw:min-w-0 tw:flex-1 tw:truncate tw:text-caption tw:font-semibold">{{ businessName() }}</span><ds-icon name="chevronUp" [size]="0.85" /> }
+        </span>
+        <div class="tw:grid tw:min-w-0 tw:gap-1 tw:border-0 tw:border-b tw:border-solid tw:border-navigation-border tw:px-2 tw:py-2" role="presentation"><strong class="tw:truncate tw:text-body">{{ businessName() }}</strong><span class="tw:truncate tw:text-caption tw:text-navigation-muted">{{ userName() }}</span><span class="tw:truncate tw:text-caption tw:text-navigation-muted">{{ userEmail() }}</span></div>
+        @for (item of accountItems; track item.path) { <a role="menuitem" class="tw:console-rail-link" [routerLink]="item.path" (click)="closeNavigation()"><ds-icon [name]="item.icon" [size]="1" />{{ item.label }}</a> }
+        <button role="menuitem" type="button" class="tw:console-rail-link tw:w-full tw:cursor-pointer tw:border-0 tw:bg-transparent tw:text-left" (click)="logout()"><ds-icon name="logOut" [size]="1" />Cerrar sesión</button>
+      </ds-menu>
     </div>
   </div>
+</ng-template>
+
+@if (mobileNavOpen()) {
+  <dialog dsModal (dsModalClose)="closeNavigation()" aria-label="Navegación de consola" class="tw:console-scope tw:fixed tw:inset-y-0 tw:left-0 tw:right-auto tw:m-0 tw:flex tw:h-dvh tw:max-h-none tw:w-sidebar tw:max-w-full tw:flex-col tw:gap-2 tw:overflow-y-auto tw:border-0 tw:bg-navigation tw:p-2 tw:text-navigation-foreground tw:shadow-dropdown tw:backdrop:bg-overlay">
+    <ng-container [ngTemplateOutlet]="navigation" [ngTemplateOutletContext]="{ mobile: true, compact: false }" />
+  </dialog>
+}
+@if (paletteOpen()) {
+  <dialog dsModal (dsModalClose)="closePalette()" aria-labelledby="palette-title" class="tw:console-scope tw:modal-frame" (click)="closePalette()">
+    <div class="tw:flex tw:max-h-full tw:w-full tw:max-w-2xl tw:min-w-0 tw:flex-col tw:overflow-hidden tw:rounded-card tw:border tw:border-solid tw:border-border tw:bg-surface tw:shadow-dropdown" (click)="$event.stopPropagation()">
+      <h2 id="palette-title" class="tw:sr-only">Buscar en {{ businessName() }}</h2>
+      <div class="tw:flex tw:items-center tw:gap-2 tw:border-0 tw:border-b tw:border-solid tw:border-border tw:p-3">
+        <ds-icon name="search" [size]="1.1" />
+        <input id="console-search" type="search" role="combobox" aria-label="Buscar productos, páginas y acciones" aria-autocomplete="list" aria-controls="console-search-results" [attr.aria-expanded]="searchResults().length > 0" [attr.aria-activedescendant]="selectedSearchResult() ? 'search-result-' + paletteIndex() : null" class="tw:min-h-touch tw:min-w-0 tw:flex-1 tw:border-0 tw:bg-transparent tw:font-ui tw:text-body tw:text-foreground" placeholder="Buscar productos, páginas y acciones" [value]="paletteQuery()" (input)="onPaletteQuery($any($event.target).value)" (keydown)="onSearchKey($event)" autofocus />
+        <button type="button" class="tw:console-icon-button" aria-label="Filtros de búsqueda" aria-controls="console-search-filters" [attr.aria-expanded]="paletteFiltersOpen()" (click)="paletteFiltersOpen.set(!paletteFiltersOpen())"><ds-icon name="slidersHorizontal" [size]="1" /></button>
+        <button type="button" class="tw:console-icon-button" aria-label="Cerrar búsqueda" (click)="closePalette()"><ds-icon name="x" [size]="1" /></button>
+      </div>
+      <div id="console-search-filters" class="tw:flex tw:flex-wrap tw:gap-1 tw:px-3 tw:py-2" aria-label="Filtrar búsqueda">
+        @for (filter of searchFilters; track filter.id) { @if (paletteFiltersOpen() || filter.id === paletteFilter() || paletteFilter() === 'todos') { <button type="button" class="tw:console-action-secondary tw:px-3! tw:text-caption!" [attr.aria-pressed]="paletteFilter() === filter.id" [class.tw:bg-primary]="paletteFilter() === filter.id" (click)="setSearchFilter(filter.id)">{{ filter.label }}</button> } }
+      </div>
+      <p class="tw:m-0 tw:px-4 tw:pb-2 tw:text-caption tw:text-muted">{{ !paletteQuery() && paletteFilter() === 'todos' ? (paletteRecent().length ? 'Recientes y accesos rápidos' : 'Accesos rápidos') : 'Resultados' }}</p>
+      <div class="tw:min-h-64 tw:min-w-0 tw:overflow-y-auto tw:px-2 tw:pb-3">
+        @if (paletteLoading() && (paletteQuery() || paletteFilter() === 'productos')) { <p class="tw:px-2 tw:text-caption tw:text-muted" role="status" aria-busy="true">Buscando productos…</p> }
+        @if (paletteError() && (paletteFilter() === 'productos' || paletteQuery())) { <div class="tw:feedback tw:feedback-warning" role="status"><span>No pudimos consultar los productos.</span><button type="button" class="tw:console-action-secondary" (click)="loadSearchProducts()">Reintentar</button></div> }
+        <div id="console-search-results" role="listbox" aria-label="Resultados de búsqueda" class="tw:grid tw:gap-1">
+          @for (action of searchResults(); track action.id; let i = $index) {
+            @if (i === 0 || action.id.startsWith('product-') !== searchResults()[i - 1].id.startsWith('product-')) { <p class="tw:m-0 tw:px-3 tw:py-2 tw:text-caption tw:font-semibold tw:text-muted" role="presentation">{{ action.id.startsWith('product-') ? 'Productos' : 'Páginas y acciones' }}</p> }
+            <button type="button" role="option" [id]="'search-result-' + i" [attr.aria-selected]="selectedSearchResult()?.id === action.id" tabindex="-1" class="tw:flex tw:min-h-touch tw:w-full tw:min-w-0 tw:cursor-pointer tw:items-center tw:gap-3 tw:rounded-sm tw:border-0 tw:bg-transparent tw:px-3 tw:py-2 tw:text-left tw:text-foreground tw:hover:bg-canvas" [class.tw:bg-canvas!]="selectedSearchResult()?.id === action.id" (click)="runPaletteAction(action)"><ds-icon [name]="action.icon" [size]="1" /><span class="tw:grid tw:min-w-0 tw:flex-1 tw:gap-1"><strong class="tw:truncate tw:text-body tw:font-medium">{{ action.label }}</strong><small class="tw:truncate tw:text-caption tw:text-muted">{{ action.hint }}</small></span><ds-icon name="arrowRight" [size]="0.85" /></button>
+          }
+        </div>
+        @if (!searchResults().length && !paletteLoading()) { <div class="tw:grid tw:min-h-64 tw:place-content-center tw:gap-2 tw:p-4 tw:text-center" role="status"><strong class="tw:text-body">No encontramos coincidencias</strong><p class="tw:m-0 tw:text-caption tw:text-muted">Prueba con otro nombre o SKU, o cambia el filtro.</p></div> }
+      </div>
+      <footer class="tw:flex tw:flex-wrap tw:items-center tw:justify-between tw:gap-2 tw:border-0 tw:border-t tw:border-solid tw:border-border tw:px-4 tw:py-3 tw:text-caption tw:text-muted"><span><kbd>↑ ↓</kbd> Seleccionar · <kbd>Enter</kbd> Abrir</span><span><kbd>Esc</kbd> Cerrar</span></footer>
+    </div>
+  </dialog>
 }

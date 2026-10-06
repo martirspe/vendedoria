@@ -1,6 +1,6 @@
 .shipping {
   display: grid;
-  gap: var(--ds-space-5);
+  gap: var(--ds-space-4);
   max-width: 52rem;
 }
 
@@ -8,21 +8,6 @@
   max-width: 38rem;
   margin: var(--ds-space-2) 0 0;
   color: var(--ds-color-text-secondary);
-}
-
-.shipping__eyebrow {
-  margin: 0 0 var(--ds-space-2) !important;
-  font-size: 0.8rem;
-  font-weight: 700;
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
-}
-
-.shipping__header h1 {
-  margin: 0;
-  font-family: var(--ds-font-display);
-  font-size: clamp(1.75rem, 2vw, 2.1rem);
-  letter-spacing: -0.04em;
 }
 
 .shipping__form {
@@ -38,7 +23,7 @@
 .card {
   display: grid;
   gap: var(--ds-space-4);
-  padding: var(--ds-space-5);
+  padding: var(--ds-space-4);
   border: 1px solid var(--ds-color-border);
   border-radius: var(--ds-radius-lg);
   background: var(--ds-color-surface);
@@ -60,7 +45,7 @@
 .card input,
 .card select {
   min-height: var(--ds-touch-target);
-  padding: var(--ds-space-3) var(--ds-space-4);
+  padding: var(--ds-control-padding-block) var(--ds-control-padding-inline);
   border: 1px solid var(--ds-color-border);
   border-radius: var(--ds-radius-md);
   font: inherit;
@@ -130,28 +115,7 @@ small {
   gap: var(--ds-space-2);
 }
 
-.banner {
-  display: flex;
-  gap: var(--ds-space-3);
-  align-items: center;
-  padding: var(--ds-space-4);
-  border-radius: var(--ds-radius-md);
-}
 
-.banner--danger {
-  background: color-mix(in srgb, var(--ds-color-danger) 12%, white);
-  color: var(--ds-color-danger);
-}
-
-.banner--success {
-  background: color-mix(in srgb, var(--ds-color-success) 14%, white);
-  color: #0b7a45;
-}
-
-.banner--warning {
-  background: color-mix(in srgb, var(--ds-color-warning) 16%, white);
-  color: var(--ds-color-text-primary);
-}
 
 .skeleton {
   padding: var(--ds-space-8);

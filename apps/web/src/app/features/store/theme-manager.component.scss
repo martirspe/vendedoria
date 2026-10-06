@@ -2,11 +2,7 @@
 .themes {
   display: grid;
   gap: var(--ds-space-3);
-  padding: var(--ds-space-5);
-  border: var(--ds-border-width) solid var(--ds-color-border);
-  border-radius: var(--ds-radius-lg);
-  background: var(--ds-color-surface);
-  color: var(--ds-color-text-primary);
+  padding: var(--ds-space-4);
   h2, p { margin: 0; }
   h2 { font-size: var(--ds-type-lg); }
   ul { margin: 0; padding-inline-start: var(--ds-space-5); }

@@ -49,6 +49,7 @@ export class TeamPage {
 
   readonly roleLabels = ROLE_LABELS;
   readonly loading = signal(true);
+  readonly loadFailed = signal(false);
   readonly saving = signal(false);
   readonly copied = signal(false);
   readonly errorMessage = signal<string | null>(null);
@@ -73,11 +74,13 @@ export class TeamPage {
 
   async load(): Promise<void> {
     this.loading.set(true);
+    this.loadFailed.set(false);
     this.errorMessage.set(null);
     try {
       await this.integrations.refresh();
       if (this.active()) this.overview.set(await this.api.overview());
     } catch {
+      this.loadFailed.set(true);
       this.errorMessage.set('No pudimos cargar tu equipo. Inténtalo de nuevo.');
     } finally {
       this.loading.set(false);

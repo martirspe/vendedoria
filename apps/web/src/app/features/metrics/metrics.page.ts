@@ -45,6 +45,7 @@ export class MetricsPage {
     try {
       this.summary.set(await this.api.summary(days));
     } catch {
+      this.summary.set(null);
       this.errorMessage.set('No pudimos cargar las métricas.');
     } finally {
       this.loading.set(false);

@@ -10,9 +10,10 @@ import {
 import { takeUntilDestroyed, toSignal } from '@angular/core/rxjs-interop';
 import { FormBuilder, FormsModule, ReactiveFormsModule, Validators } from '@angular/forms';
 import { HttpErrorResponse } from '@angular/common/http';
+import { NgTemplateOutlet } from '@angular/common';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { map, startWith } from 'rxjs';
-import { DsButtonComponent, DsConfirmService } from '@vendedoria/ui';
+import { DsButtonComponent, DsConfirmService, DsModalDirective } from '@vendedoria/ui';
 import { DsEmptyStateComponent } from '@vendedoria/ui';
 import { DsIconComponent } from '@vendedoria/ui';
 import {
@@ -30,7 +31,9 @@ import { productCompleteness, specificationHint } from './product-completeness';
 
 import { CombinationDraft, VariantAxis, generateCombinations, readOptions, keyOf } from './variant-combinations';
 import { CatalogCategory } from '../../core/api/catalog-api.service';
+import { CatalogListState, catalogCsv, filterCatalog } from './catalog-list';
 type VariantDraft = CombinationDraft;
+type VariantRow = { variant: VariantDraft; index: number; key: string };
 
 type FaqDraft = { question: string; answer: string };
 
@@ -66,18 +69,22 @@ function toCents(amount: number): number {
   selector: 'app-products-page',
   standalone: true,
   imports: [DsSelectComponent,
+    NgTemplateOutlet,
     ReactiveFormsModule,
     FormsModule,
     RouterLink,
     DsButtonComponent,
     DsEmptyStateComponent,
     DsIconComponent,
+    DsModalDirective,
   ],
   templateUrl: './products.page.html',
   styleUrl: './products.page.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class ProductsPage {
+  readonly maxMedia = MAX_MEDIA;
+  readonly variantPageCount = computed(() => Math.max(1, Math.ceil(this.matchingVariants().length / 25)));
   private readonly api = inject(CatalogApiService);
   private readonly fb = inject(FormBuilder);
   private readonly destroyRef = inject(DestroyRef);
@@ -88,15 +95,23 @@ export class ProductsPage {
 
   readonly storeActive = computed(() => this.integrations.isActive('store'));
   readonly products = signal<ProductDto[]>([]);
-  readonly kindFilter = toSignal(
+  readonly listState = toSignal(
     this.route.queryParamMap.pipe(
-      map((params): KindFilter => {
+      map((params): CatalogListState => {
         const value = params.get('tipo') as KindFilter | null;
-        return value && KIND_FILTERS.includes(value) ? value : 'todos';
+        const oneOf = <T extends string>(key: string, values: readonly T[], fallback: T): T => values.includes(params.get(key) as T) ? params.get(key) as T : fallback;
+        const size = Number(params.get('porPagina'));
+        const page = Number(params.get('pagina'));
+        return { kind: value && KIND_FILTERS.includes(value) ? value : 'todos', query: (params.get('q') ?? '').slice(0, 200),
+          status: oneOf('estado', ['todos', 'disponibles', 'pausados'], 'todos'),
+          publication: oneOf('tienda', ['todos', 'visibles', 'ocultos'], 'todos'),
+          sort: oneOf('orden', ['recientes', 'antiguos', 'nombre', 'nombre-desc'], 'recientes'),
+          page: Number.isSafeInteger(page) && page > 0 ? page : 1, pageSize: [25, 50, 100].includes(size) ? size : 25 };
       }),
     ),
-    { initialValue: 'todos' as KindFilter },
+    { initialValue: { kind: 'todos', query: '', status: 'todos', publication: 'todos', sort: 'recientes', page: 1, pageSize: 25 } as CatalogListState },
   );
+  readonly kindFilter = computed(() => this.listState().kind);
   readonly kindOptions: Array<{ id: KindFilter; label: string }> = [
     { id: 'todos', label: 'Todos' },
     { id: 'productos', label: 'Productos' },
@@ -109,14 +124,15 @@ export class ProductsPage {
     const digital = list.filter((product) => product.kind === 'DIGITAL').length;
     return { todos: list.length, productos: list.length - services - digital, servicios: services, digitales: digital };
   });
-  readonly visibleProducts = computed(() => {
-    const filter = this.kindFilter();
-    return this.products().filter(
-      (product) =>
-        filter === 'todos' || product.kind === ({ productos: 'PRODUCT', servicios: 'SERVICE', digitales: 'DIGITAL' } as const)[filter],
-    );
-  });
+  readonly filteredProducts = computed(() => filterCatalog(this.products(), this.listState()));
+  readonly totalPages = computed(() => Math.max(1, Math.ceil(this.filteredProducts().length / this.listState().pageSize)));
+  readonly currentPage = computed(() => Math.min(this.listState().page, this.totalPages()));
+  readonly listStart = computed(() => this.filteredProducts().length ? (this.currentPage() - 1) * this.listState().pageSize + 1 : 0);
+  readonly listEnd = computed(() => Math.min(this.currentPage() * this.listState().pageSize, this.filteredProducts().length));
+  readonly visibleProducts = computed(() => this.filteredProducts().slice(this.listStart() ? this.listStart() - 1 : 0, this.listEnd()));
+  readonly hasListFilters = computed(() => Boolean(this.listState().query || this.kindFilter() !== 'todos' || this.listState().status !== 'todos' || this.listState().publication !== 'todos'));
   readonly loading = signal(true);
+  readonly loadFailed = signal(false);
   readonly saving = signal(false);
   readonly deleting = signal(false);
   readonly editorOpen = signal(false);
@@ -146,16 +162,37 @@ export class ProductsPage {
   readonly variantDrafts = signal<VariantDraft[]>([]);
   readonly axes = signal<VariantAxis[]>([]);
   readonly axesPending = signal(false);
+  readonly variantError = signal<string | null>(null);
+  readonly variantGroupBy = signal('');
+  readonly variantQuery = signal('');
+  readonly variantGroupsClosed = signal<Record<string, boolean>>({});
+  readonly variantPhotoTarget = signal<{ indexes: number[]; label: string } | null>(null);
   readonly variantPage = signal(0);
-  readonly variantRows = computed(() => this.variantDrafts().slice(this.variantPage() * 25, (this.variantPage() + 1) * 25));
+  readonly variantGroupOptions = computed(() => [...new Set(this.variantDrafts().flatMap(v => v.options.map(o => o.name)))]);
+  readonly activeVariantGroup = computed(() => this.variantGroupBy() === '__all' ? '' : this.variantGroupOptions().includes(this.variantGroupBy()) ? this.variantGroupBy() : this.variantGroupOptions()[0] ?? '');
+  readonly matchingVariants = computed<VariantRow[]>(() => {
+    const query = this.variantQuery().trim().toLocaleLowerCase('es');
+    return this.variantDrafts().map((variant, index) => ({ variant, index, key: variant.id || keyOf(variant.options) }))
+      .filter(row => !query || `${this.variantLabel(row.variant)} ${row.variant.sku}`.toLocaleLowerCase('es').includes(query));
+  });
+  readonly variantRows = computed(() => this.matchingVariants().slice(this.variantPage() * 25, (this.variantPage() + 1) * 25));
+  readonly variantGroups = computed(() => {
+    const name = this.activeVariantGroup();
+    const groupKey = (row: VariantRow) => name ? row.variant.options.find(o => o.name === name)?.value ?? 'Sin valor' : 'Todas las variantes';
+    const groups = new Map<string, VariantRow[]>();
+    for (const row of this.variantRows()) { const key = groupKey(row); groups.set(key, [...(groups.get(key) ?? []), row]); }
+    return [...groups].map(([key, rows]) => {
+      const allRows = this.matchingVariants().filter(row => groupKey(row) === key);
+      const photos = new Set(allRows.map(row => row.variant.imageUrl));
+      return { key, rows, indexes: allRows.map(row => row.index), total: allRows.length, image: photos.size === 1 ? allRows[0].variant.imageUrl : null };
+    });
+  });
   readonly categories = signal<CatalogCategory[]>([]);
   readonly classificationError = signal(false);
   readonly categoryId = signal('');
   readonly attributeValues = signal<Record<string, string>>({});
   readonly kindCategories = computed(() => this.categories().filter((category) => category.kind === this.formValues().kind));
   readonly selectedCategory = computed(() => this.categories().find((category) => category.id === this.categoryId()));
-  readonly editorStep = signal('basics');
-  readonly editorSteps = [{ id: 'basics', label: '1. Tipo e información' }, { id: 'configuration', label: '2. Características y variantes' }, { id: 'media', label: '3. Fotos' }, { id: 'publication', label: '4. Precio y revisión' }];
   readonly faqs = signal<FaqDraft[]>([]);
   readonly maxFaqs = MAX_FAQS;
 
@@ -297,10 +334,12 @@ export class ProductsPage {
 
   async load(): Promise<void> {
     this.loading.set(true);
+    this.loadFailed.set(false);
     this.errorMessage.set(null);
     try {
       this.products.set(await this.api.list());
     } catch {
+      this.loadFailed.set(true);
       this.errorMessage.set(
         'No pudimos cargar el catálogo. Revisa tu conexión e inténtalo de nuevo.',
       );
@@ -320,10 +359,10 @@ export class ProductsPage {
     this.variantDrafts.set([]);
     this.axes.set([]);
     this.axesPending.set(false);
+    this.resetVariantView();
     this.categoryId.set('');
     this.attributeValues.set({});
     this.variantPage.set(0);
-    this.editorStep.set('basics');
     this.faqs.set([]);
     this.detailsEnabled.set(false);
     this.setEnabled.set(false);
@@ -477,14 +516,16 @@ export class ProductsPage {
     }
     this.axes.set([...optionValues].map(([name, values]) => ({ name, values: [...values].join(', ') })));
     this.axesPending.set(false);
+    this.resetVariantView();
     this.categoryId.set(product.categoryId ?? '');
     this.attributeValues.set({ ...(product.attributeValues ?? {}) });
     this.variantPage.set(0);
-    this.editorStep.set('basics');
     this.editorOpen.set(true);
   }
 
   closeEditor(): void {
+    if (this.saving()) return;
+    this.variantPhotoTarget.set(null);
     this.editorOpen.set(false);
     this.editingId.set(null);
     this.variantDrafts.set([]);
@@ -573,14 +614,6 @@ export class ProductsPage {
   pieceSelectable(id: string): boolean { return this.pieceOptions().some((piece) => piece.id === id); }
   hasMedia(url: string): boolean { return this.media().some((photo) => photo.url === url); }
   categoryPath(category: CatalogCategory): string { return category.path.map((item) => item.name).join(' → '); }
-  nextStep(): void {
-    const index = this.editorSteps.findIndex((step) => step.id === this.editorStep());
-    this.editorStep.set(this.editorSteps[Math.min(index + 1, this.editorSteps.length - 1)].id);
-  }
-  updateVariantOption(index: number, optionIndex: number, value: string): void {
-    const variant = this.variantDrafts()[index];
-    this.updateVariant(index, { options: variant.options.map((option, i) => i === optionIndex ? { ...option, value } : option) });
-  }
   updateVariantStock(index: number, value: string): void { this.updateVariant(index, { stockQty: value.trim() ? Number(value) : null }); }
 
   onHandleInput(): void {
@@ -625,21 +658,71 @@ export class ProductsPage {
   }
 
   updateAxis(index: number, patch: Partial<VariantAxis>): void {
+    const previous = this.axes()[index];
+    if (patch.name !== undefined && previous) {
+      this.variantDrafts.update(list => list.map(variant => ({ ...variant, options: variant.options.map(option => option.name === previous.name.trim() ? { ...option, name: patch.name!.trim() } : option) })));
+      if (this.variantGroupBy() === previous.name.trim()) this.variantGroupBy.set(patch.name.trim());
+    }
     this.axes.update((axes) => axes.map((axis, i) => i === index ? { ...axis, ...patch } : axis));
     this.axesPending.set(true);
+    this.variantError.set(null);
   }
 
   removeAxis(index: number): void {
     this.axes.update((axes) => axes.filter((_, i) => i !== index));
+    if (!this.axes().length) {
+      this.variantDrafts.set([]); this.variantsEnabled.set(false); this.axesPending.set(false); this.resetVariantView(); return;
+    }
     this.axesPending.set(true);
+    this.generateVariants();
   }
 
   generateVariants(): void {
     try {
       this.variantDrafts.set(generateCombinations(this.axes(), this.variantDrafts(), Number(this.productForm.controls.price.value), this.productForm.controls.sku.value.trim()));
       this.axesPending.set(false);
-      this.variantPage.set(0); this.errorMessage.set(null);
-    } catch (error) { this.errorMessage.set(error instanceof Error ? error.message : 'Revisa los atributos.'); }
+      this.variantPage.set(0); this.variantError.set(null);
+    } catch (error) { this.variantError.set(error instanceof Error ? error.message : 'Revisa las opciones.'); }
+  }
+
+  axisValues(axis: VariantAxis): string[] { return axis.values.split(/[\n,]/); }
+
+  updateAxisValue(axisIndex: number, valueIndex: number, value: string): void {
+    const axis = this.axes()[axisIndex];
+    const values = this.axisValues(axis);
+    const previous = values[valueIndex].trim();
+    if (previous) this.variantDrafts.update(list => list.map(variant => ({ ...variant, options: variant.options.map(option => option.name === axis.name.trim() && option.value === previous ? { ...option, value: value.trim() } : option) })));
+    values[valueIndex] = value;
+    this.updateAxis(axisIndex, { values: values.join('\n') });
+  }
+
+  addAxisValue(index: number): void {
+    const axis = this.axes()[index];
+    if (this.axisValues(axis).length < 50) this.updateAxis(index, { values: `${axis.values}\n` });
+  }
+
+  removeAxisValue(axisIndex: number, valueIndex: number): void {
+    const values = this.axisValues(this.axes()[axisIndex]).filter((_, index) => index !== valueIndex);
+    this.updateAxis(axisIndex, { values: values.join('\n') }); this.generateVariants();
+  }
+
+  variantLabel(variant: VariantDraft): string { return variant.options.map(o => o.value).join(' / '); }
+  variantChildLabel(variant: VariantDraft): string { return variant.options.filter(o => o.name !== this.activeVariantGroup()).map(o => o.value).join(' / ') || this.variantLabel(variant); }
+
+  setVariantGroup(value: string): void { this.variantGroupBy.set(value); this.variantPage.set(0); this.variantGroupsClosed.set({}); }
+  setVariantQuery(value: string): void { this.variantQuery.set(value); this.variantPage.set(0); }
+  toggleVariantGroup(key: string): void { this.variantGroupsClosed.update(state => ({ ...state, [key]: !state[key] })); }
+  selectVariantPhoto(url: string | null): void {
+    const target = this.variantPhotoTarget();
+    if (!target) return;
+    const indexes = new Set(target.indexes);
+    this.variantDrafts.update(list => list.map((variant, index) => indexes.has(index) ? { ...variant, imageUrl: url } : variant));
+    this.variantPhotoTarget.set(null);
+  }
+
+  private resetVariantView(): void {
+    this.variantGroupBy.set(''); this.variantQuery.set(''); this.variantGroupsClosed.set({});
+    this.variantPhotoTarget.set(null); this.variantError.set(null);
   }
 
   addVariant(): void {
@@ -660,11 +743,31 @@ export class ProductsPage {
   }
 
   setKindFilter(filter: KindFilter): void {
+    this.setListFilter('tipo', filter === 'todos' ? '' : filter);
+  }
+
+  setListFilter(key: string, value: string): void {
     void this.router.navigate([], {
       relativeTo: this.route,
-      queryParams: { tipo: filter === 'todos' ? null : filter },
+      queryParams: { [key]: value === 'todos' || !value ? null : value, pagina: null },
       queryParamsHandling: 'merge',
+      replaceUrl: key === 'q',
     });
+  }
+
+  setListPage(page: number): void {
+    void this.router.navigate([], { relativeTo: this.route, queryParams: { pagina: page > 1 ? Math.min(page, this.totalPages()) : null }, queryParamsHandling: 'merge' });
+  }
+
+  clearListFilters(): void {
+    void this.router.navigate([], { relativeTo: this.route, queryParams: { q: null, tipo: null, estado: null, tienda: null, pagina: null }, queryParamsHandling: 'merge' });
+  }
+
+  exportCatalog(): void {
+    const url = URL.createObjectURL(new Blob([catalogCsv(this.filteredProducts())], { type: 'text/csv;charset=utf-8' }));
+    const link = document.createElement('a');
+    link.href = url; link.download = 'catalogo-vendedoria.csv'; link.click();
+    URL.revokeObjectURL(url);
   }
 
   listScore(product: ProductDto): number {
@@ -682,7 +785,7 @@ export class ProductsPage {
 
   removeVariant(index: number): void {
     this.variantDrafts.update((list) => list.filter((_, i) => i !== index));
-    this.variantPage.set(Math.min(this.variantPage(), Math.max(0, Math.ceil(this.variantDrafts().length / 25) - 1)));
+    this.variantPage.set(Math.min(this.variantPage(), Math.max(0, Math.ceil(this.matchingVariants().length / 25) - 1)));
   }
 
   updateVariant(index: number, patch: Partial<VariantDraft>): void {
@@ -766,9 +869,9 @@ export class ProductsPage {
   }
 
   async saveProduct(): Promise<void> {
+    if (this.saving() || this.deleting()) return;
     if (this.variantsEnabled() && !this.setEnabled() && this.axesPending()) {
-      this.editorStep.set('configuration');
-      this.errorMessage.set('Genera las combinaciones para aplicar los cambios de atributos antes de guardar.');
+      this.errorMessage.set('Completa las opciones de variantes antes de guardar.');
       return;
     }
     if (this.productForm.invalid || !this.readinessReady()) {
@@ -828,13 +931,13 @@ export class ProductsPage {
       isAvailable: item.isAvailable, stockQty: stockless ? null : item.stockQty,
     })) : [];
     if (this.variantsEnabled() && !asSet && (!variants.length || new Set(variants.map((item) => keyOf(item.options))).size !== variants.length)) {
-      this.editorStep.set('configuration'); this.errorMessage.set('Genera combinaciones válidas y distintas antes de guardar.'); return;
+      this.errorMessage.set('Genera combinaciones válidas y distintas antes de guardar.'); return;
     }
     if (this.categoryId() && !this.selectedCategory()) {
-      this.editorStep.set('basics'); this.errorMessage.set('Carga la clasificación antes de guardar este producto.'); return;
+      this.errorMessage.set('Carga la clasificación antes de guardar este producto.'); return;
     }
     const missing = this.selectedCategory()?.attributes.find((attribute) => attribute.required && !this.attributeValues()[attribute.key]?.trim() && !(attribute.variant && variants.length && variants.every((variant) => variant.options.some((option) => option.name.trim().toLocaleLowerCase('es') === attribute.name.trim().toLocaleLowerCase('es') && option.value.trim()))));
-    if (missing) { this.editorStep.set('configuration'); this.errorMessage.set('Completa ' + missing.name + '.'); return; }
+    if (missing) { this.errorMessage.set('Completa ' + missing.name + '.'); return; }
 
     this.saving.set(true);
     this.errorMessage.set(null);

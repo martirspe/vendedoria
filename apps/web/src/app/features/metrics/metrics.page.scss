@@ -1,29 +1,13 @@
 .metrics {
   display: grid;
-  gap: var(--ds-space-5);
+  gap: var(--ds-space-4);
 }
 
 .metrics__header {
   display: flex;
   justify-content: space-between;
-  gap: var(--ds-space-6);
+  gap: var(--ds-space-4);
   align-items: start;
-}
-
-.metrics__eyebrow {
-  margin: 0 0 var(--ds-space-2);
-  color: var(--ds-color-text-secondary);
-  font-size: 0.8rem;
-  font-weight: 700;
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
-}
-
-.metrics__header h1 {
-  margin: 0;
-  font-family: var(--ds-font-display);
-  font-size: clamp(1.75rem, 2vw, 2.1rem);
-  letter-spacing: -0.04em;
 }
 
 .metrics__header p {
@@ -65,7 +49,7 @@
 .metrics__grid article {
   display: grid;
   gap: var(--ds-space-2);
-  padding: var(--ds-space-5);
+  padding: var(--ds-space-4);
   border: 1px solid var(--ds-color-border);
   border-radius: var(--ds-radius-md);
   background: var(--ds-color-surface);
@@ -88,19 +72,6 @@
   font-size: 0.85rem;
 }
 
-.banner {
-  display: flex;
-  gap: var(--ds-space-3);
-  align-items: center;
-  padding: var(--ds-space-4);
-  border-radius: var(--ds-radius-md);
-  flex-wrap: wrap;
-}
-
-.banner--danger {
-  background: color-mix(in srgb, var(--ds-color-danger) 12%, white);
-  color: var(--ds-color-danger);
-}
 
 .skeleton {
   padding: var(--ds-space-8);

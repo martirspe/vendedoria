@@ -1,18 +1,17 @@
-<section class="seller">
+<section class="seller tw:mx-auto tw:min-w-0">
   <header class="seller__header">
     <div>
-      <p class="seller__eyebrow">Vendedor IA · {{ activeSection().label }}</p>
-      <h1>{{ currentAgent()?.name ?? 'Tu vendedor' }}</h1>
+      <h1 class="tw:console-title">{{ currentAgent()?.name ?? 'Tu vendedor' }}</h1>
       <p>{{ activeSection().hint }}. Los cambios aplican desde el próximo mensaje.</p>
     </div>
     <div class="seller__header-actions">
-      <ds-button type="button" variant="secondary" (click)="openPlayground()">
+      <ds-button type="button" variant="secondary" [disabled]="loading() || loadFailed() || agentLoading() || agentLoadFailed() || !agentId()" (click)="openPlayground()">
         Probar vendedor
       </ds-button>
-      <div class="seller__status" [class.seller__status--on]="form.controls.isActive.value">
+      @if (!loading() && !loadFailed() && !agentLoading() && !agentLoadFailed() && agentId()) { <div class="seller__status" [class.seller__status--on]="form.controls.isActive.value">
         <span class="seller__status-dot" aria-hidden="true"></span>
         {{ form.controls.isActive.value ? 'Activo' : 'Pausado' }}
-      </div>
+      </div> }
     </div>
   </header>
 
@@ -46,38 +45,6 @@
       </div>
     </div>
 
-    @if (newAgentOpen()) {
-      <form class="agent-new" (submit)="$event.preventDefault(); createAgent()">
-        <label>
-          Nombre del nuevo vendedor
-          <input
-            [value]="newAgentName()"
-            (input)="onNewAgentName($any($event.target).value)"
-            maxlength="80"
-            placeholder="Ej. Sofía, para Instagram"
-            autocomplete="off"
-          />
-        </label>
-        <label class="toggle">
-          <input
-            type="checkbox"
-            [checked]="newAgentCopy()"
-            (change)="onNewAgentCopy($any($event.target).checked)"
-          />
-          <span>
-            <strong>Copiar la configuración de {{ currentAgent()?.name }}</strong>
-            <small>Parte de su personalidad, técnicas y reglas; luego ajústalo.</small>
-          </span>
-        </label>
-        <div class="inline-actions">
-          <ds-button type="submit" [disabled]="agentBusy()">
-            {{ agentBusy() ? 'Creando…' : 'Crear vendedor' }}
-          </ds-button>
-          <ds-button type="button" variant="ghost" (click)="toggleNewAgent()">Cancelar</ds-button>
-        </div>
-      </form>
-    }
-
     <nav class="seller-tabs" aria-label="Secciones del vendedor">
       @for (item of sections; track item.id) {
         <a
@@ -93,15 +60,47 @@
     </nav>
   }
 
+    @if (newAgentOpen()) {
+      <form class="agent-new" (submit)="$event.preventDefault(); createAgent()">
+        <label>
+          Nombre del nuevo vendedor
+          <input
+            [value]="newAgentName()"
+            (input)="onNewAgentName($any($event.target).value)"
+            maxlength="80"
+            placeholder="Ej. Sofía, para Instagram"
+            autocomplete="off"
+          />
+        </label>
+        @if (currentAgent()) { <label class="toggle">
+          <input
+            type="checkbox"
+            [checked]="newAgentCopy()"
+            (change)="onNewAgentCopy($any($event.target).checked)"
+          />
+          <span>
+            <strong>Copiar la configuración de {{ currentAgent()?.name }}</strong>
+            <small>Parte de su personalidad, técnicas y reglas; luego ajústalo.</small>
+          </span>
+        </label> }
+        <div class="inline-actions">
+          <ds-button type="submit" [disabled]="agentBusy()">
+            {{ agentBusy() ? 'Creando…' : 'Crear vendedor' }}
+          </ds-button>
+          <ds-button type="button" variant="ghost" (click)="toggleNewAgent()">Cancelar</ds-button>
+        </div>
+      </form>
+    }
+
   @if (errorMessage(); as error) {
-    <div class="banner banner--danger" role="alert">
+    <div class="tw:feedback tw:feedback-danger" role="alert">
       <ds-icon name="alert" />
       <span>{{ error }}</span>
     </div>
   }
 
   @if (successMessage(); as success) {
-    <div class="banner banner--success" role="status">
+    <div class="tw:feedback tw:feedback-success" role="status">
       <ds-icon name="check" />
       <span>{{ success }}</span>
     </div>
@@ -109,10 +108,16 @@
 
   @if (loading()) {
     <div class="skeleton" aria-busy="true">Cargando vendedor…</div>
-  } @else if (!agents().length) {
+  } @else if (loadFailed() || agentLoadFailed()) {
     <div class="skeleton">
-      <p class="empty-note">No encontramos tu vendedor.</p>
+      <p class="empty-note">No pudimos cargar la configuración del vendedor.</p>
       <ds-button type="button" (click)="init()">Reintentar</ds-button>
+    </div>
+  } @else if (!agents().length) {
+    <div class="ds-empty">
+      <h2 class="ds-empty__title">Crea tu primer vendedor IA</h2>
+      <p class="ds-empty__body">Ponle un nombre y configura cómo atiende a tus clientes.</p>
+      <ds-button type="button" [disabled]="agentBusy()" (click)="toggleNewAgent()">{{ newAgentOpen() ? 'Cerrar formulario' : 'Crear vendedor' }}</ds-button>
     </div>
   } @else {
     <div class="seller__layout" [class.is-loading]="agentLoading()">

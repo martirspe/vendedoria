@@ -1,5 +1,15 @@
-<section class="themes" aria-labelledby="theme-status-title">
-  <h2 id="theme-status-title">Tu plantilla</h2>
+<section class="tw:grid tw:min-w-0 tw:gap-3 tw:overflow-hidden tw:rounded-lg tw:border tw:border-solid tw:border-border tw:bg-surface" aria-labelledby="theme-status-title">
+  @if (!inEditor() && current(); as theme) {
+    <a routerLink="/app/store/editor" class="tw:block tw:aspect-video tw:overflow-hidden tw:bg-canvas tw:lg:aspect-3/1" aria-label="Editar el diseño de mi tienda">
+      @if (!coverFailed()) { <img class="tw:h-full tw:w-full tw:object-cover tw:object-top" [src]="theme.assets.cover" [alt]="'Ejemplo del diseño ' + theme.displayName" width="1440" height="1000" (error)="coverFailed.set(true)" /> }
+      @else { <span class="tw:grid tw:h-full tw:place-content-center tw:text-muted">{{ theme.displayName }}</span> }
+    </a>
+  }
+  <div class="themes">
+  <div class="tw:flex tw:flex-wrap tw:items-center tw:justify-between tw:gap-3">
+    <h2 id="theme-status-title">Diseño actual</h2>
+    @if (!inEditor() && current()) { <a class="tw:console-action-link" routerLink="/app/store/editor"><ds-icon name="pencil" [size]="1" />Editar diseño</a> }
+  </div>
   @if (loading()) {
     <p aria-busy="true">Consultando plantilla…</p>
   } @else if (data(); as d) {
@@ -9,7 +19,7 @@
       <p role="status">Borrador preparado. El diseño activo es {{ activeName() }} {{ d.status.active.version }}.</p>
     }
     @if (d.status.compatibility.status === 'compatible') {
-      <p><ds-icon name="check" /> Compatible con tu tienda y el editor.</p>
+      <p class="hint"><ds-icon name="check" /> Compatible con tu tienda y el editor.</p>
     } @else {
       @for (issue of d.status.compatibility.issues; track issue.path + issue.message) {
         <p role="alert">{{ issue.message }}</p>
@@ -26,19 +36,22 @@
       <ds-button variant="secondary" [disabled]="busy() || (d.status.editing.template === d.status.active.template && d.status.editing.version === update.version)" (click)="prepare('update')">{{ d.status.editing.template === d.status.active.template && d.status.editing.version === update.version ? 'Actualización en borrador' : 'Preparar actualización' }}</ds-button>
     }
     @if (current(); as theme) {
+      @if (!inEditor()) { <p class="hint">La imagen muestra un ejemplo del tema. Abre la vista previa para ver tu contenido.</p> }
       <details>
         <summary>Funciones de esta plantilla</summary>
         <ul>@for (name of functions(); track name) { <li>{{ name }}</li> }</ul>
         <p class="hint">Algunas funciones necesitan que las actives o configures en tu negocio.</p>
       </details>
+      <details><summary>Opciones de la plantilla</summary>
       @for (preset of theme.presets; track preset.id) {
         <ds-button variant="ghost" [disabled]="busy()" (click)="prepare('preset', preset.id)">Importar muestra: {{ preset.label }}</ds-button>
       }
       <p class="hint">La muestra completa campos sin personalizar. Tus productos, precios y pedidos se conservan.</p>
+      </details>
     }
-    @if (!inEditor()) { <a routerLink="/app/store/editor">Revisar y publicar en el editor <ds-icon name="arrowRight" /></a> }
   }
   @if (error(); as message) { <p role="alert">{{ message }}</p><ds-button variant="secondary" [disabled]="busy()" (click)="load()">Recargar</ds-button> }
   @if (notice(); as message) { <p role="status">{{ message }}</p> }
   @if (busy()) { <p role="status" aria-busy="true">Preparando el diseño…</p> }
+  </div>
 </section>

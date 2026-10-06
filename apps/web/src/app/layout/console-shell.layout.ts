@@ -1,31 +1,33 @@
 import {
   ChangeDetectionStrategy,
   Component,
+  ElementRef,
   HostListener,
+  Injector,
+  afterNextRender,
   computed,
+  effect,
   inject,
   signal,
+  untracked,
 } from '@angular/core';
-import {
-  NavigationEnd,
-  Router,
-  RouterLink,
-  RouterLinkActive,
-  RouterOutlet,
-} from '@angular/router';
+import { NavigationEnd, Router, RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
 import { toSignal } from '@angular/core/rxjs-interop';
+import { NgTemplateOutlet } from '@angular/common';
 import { filter, map } from 'rxjs';
 import { AuthApiService } from '../core/auth/auth-api.service';
 import { AccountApiService } from '../core/api/account-api.service';
 import { BillingApiService, IntegrationKey } from '../core/api/billing-api.service';
-import { INTEGRATIONS, IntegrationsStateService } from '../core/integrations/integrations-state.service';
 import {
-  DsIconComponent,
-  DsIconName,
-} from '@vendedoria/ui';
+  INTEGRATIONS,
+  IntegrationsStateService,
+} from '../core/integrations/integrations-state.service';
+import { DsIconComponent, DsIconName, DsMenuComponent, DsModalDirective } from '@vendedoria/ui';
 import { SELLER_SECTIONS } from '../features/seller/seller-config';
 import { initialsOf } from '../features/profile/profile-utils';
 import { environment } from '../../environments/environment';
+import { CONSOLE_CONTEXTS, contextForUrl, isContextLinkActive, normalizeSearch, type ContextLink } from './console-context';
+import { CatalogApiService, type ProductDto } from '../core/api/catalog-api.service';
 
 type ConsoleNavChild = {
   label: string;
@@ -59,9 +61,17 @@ type PaletteAction = {
 @Component({
   selector: 'app-console-shell',
   standalone: true,
-  imports: [RouterOutlet, RouterLink, RouterLinkActive, DsIconComponent],
+  imports: [
+    RouterOutlet,
+    RouterLink,
+    RouterLinkActive,
+    NgTemplateOutlet,
+    DsIconComponent,
+    DsModalDirective,
+    DsMenuComponent,
+  ],
   templateUrl: './console-shell.layout.html',
-  styleUrl: './console-shell.layout.scss',
+  host: { class: 'tw:block tw:min-h-dvh' },
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class ConsoleShellLayout {
@@ -70,9 +80,27 @@ export class ConsoleShellLayout {
   private readonly billing = inject(BillingApiService);
   private readonly integrations = inject(IntegrationsStateService);
   private readonly router = inject(Router);
+  private readonly element = inject<ElementRef<HTMLElement>>(ElementRef);
+  private readonly injector = inject(Injector);
+  private readonly catalog = inject(CatalogApiService);
 
   readonly paletteOpen = signal(false);
+  readonly mobileNavOpen = signal(false);
+  readonly navCollapsed = signal(false);
   readonly paletteQuery = signal('');
+  readonly contextQuery = signal('');
+  readonly paletteFilter = signal<'todos' | 'productos' | 'vendedor' | 'conexiones' | 'ajustes'>('todos');
+  readonly paletteFiltersOpen = signal(false);
+  readonly paletteIndex = signal(0);
+  readonly paletteLoading = signal(false);
+  readonly paletteError = signal(false);
+  readonly paletteProducts = signal<ProductDto[]>([]);
+  readonly paletteRecent = signal<PaletteAction[]>([]);
+  readonly searchFilters = [
+    { id: 'todos', label: 'Todo' }, { id: 'productos', label: 'Productos' },
+    { id: 'vendedor', label: 'Vendedor IA' }, { id: 'conexiones', label: 'Conexiones' },
+    { id: 'ajustes', label: 'Ajustes' },
+  ] as const;
   readonly quotaWarning = signal<string | null>(null);
   /** Early in the trial the banner offers the setup session instead of the plans. */
   readonly quotaAction = signal<'plans' | 'onboarding'>('plans');
@@ -82,7 +110,8 @@ export class ConsoleShellLayout {
     const profile = this.account.profile();
     return profile?.fullName || profile?.email || '';
   });
-  readonly userDetail = computed(() => this.account.profile()?.email ?? 'Tu cuenta');
+  readonly businessName = computed(() => this.account.profile()?.business.name ?? 'Tu negocio');
+  readonly userEmail = computed(() => this.account.profile()?.email ?? '');
   readonly userInitials = computed(() => {
     const profile = this.account.profile();
     return profile ? initialsOf(profile.fullName, profile.email) : '';
@@ -92,11 +121,11 @@ export class ConsoleShellLayout {
     {
       id: 'start',
       label: null,
-      items: [{ label: 'Empezar', path: '/app/get-started', icon: 'rocket' }],
+      items: [{ label: 'Inicio', path: '/app/get-started', icon: 'home' }],
     },
     {
       id: 'sell',
-      label: 'Ventas',
+      label: null,
       items: [
         {
           label: 'Vendedor IA',
@@ -114,11 +143,10 @@ export class ConsoleShellLayout {
     },
     {
       id: 'catalog',
-      label: 'Catálogo',
+      label: null,
       items: [
-        { label: 'Productos', path: '/app/products', icon: 'package' },
-        { label: 'Inventario', path: '/app/inventory', icon: 'list' },
-        { label: 'Cupones', path: '/app/coupons', icon: 'ticket', integration: 'store' },
+        { label: 'Productos', path: '/app/products', icon: 'package', children: [{ label: 'Inventario', path: '/app/inventory' }, { label: 'Importar catálogo', path: '/app/products/import' }] },
+        { label: 'Descuentos', path: '/app/coupons', icon: 'ticketPercent', integration: 'store' },
       ],
     },
     {
@@ -132,15 +160,18 @@ export class ConsoleShellLayout {
     },
     {
       id: 'results',
-      label: 'Resultados',
+      label: null,
       items: [{ label: 'Métricas', path: '/app/metrics', icon: 'chartColumn' }],
     },
   ];
 
   private readonly baseFooterItems: ConsoleNavItem[] = [
-    { label: 'Planes', path: '/app/plans', icon: 'creditCard' },
     { label: 'Ajustes', path: '/app/settings', icon: 'settings' },
-    { label: 'Ayuda', path: '/app/help', icon: 'circleHelp' },
+  ];
+  readonly accountItems: ConsoleNavItem[] = [
+    { label: 'Mi perfil', path: '/app/profile', icon: 'user' },
+    { label: 'Tu plan', path: '/app/plans', icon: 'creditCard' },
+    { label: 'Centro de ayuda', path: '/app/help', icon: 'circleHelp' },
   ];
 
   /** Pages of active integrations, placed right after their closest sibling. */
@@ -152,21 +183,29 @@ export class ConsoleShellLayout {
     this.baseNavGroups.map((group) => ({
       ...group,
       items: [
-        ...group.items.filter((item) => !item.integration || this.integrations.isActive(item.integration)),
+        ...group.items.filter(
+          (item) => !item.integration || this.integrations.isActive(item.integration),
+        ),
         ...this.activeIntegrations()
           .filter((integration) => integration.group === group.id)
-          .map((integration) => ({ label: integration.navLabel, path: integration.path, icon: integration.icon })),
+          .map((integration) => ({
+            label: integration.navLabel,
+            path: integration.path,
+            icon: integration.icon,
+          })),
       ],
     })),
   );
 
   readonly footerItems = computed<ConsoleNavItem[]>(() => {
     const team = this.activeIntegrations().filter((integration) => integration.group === 'footer');
-    const [plans, ...rest] = this.baseFooterItems;
     return [
-      plans,
-      ...team.map((integration) => ({ label: integration.navLabel, path: integration.path, icon: integration.icon })),
-      ...rest,
+      ...team.map((integration) => ({
+        label: integration.navLabel,
+        path: integration.path,
+        icon: integration.icon,
+      })),
+      ...this.baseFooterItems,
     ];
   });
 
@@ -177,13 +216,40 @@ export class ConsoleShellLayout {
     ),
     { initialValue: this.router.url },
   );
+  readonly isHome = computed(() => this.currentUrl().split(/[?#]/)[0] === '/app/get-started');
+  readonly context = computed(() => contextForUrl(this.currentUrl()));
+  readonly contextGroups = computed(() => this.context()?.groups.map(group => ({ ...group, items: group.items.filter(item => normalizeSearch(item.label).includes(normalizeSearch(this.contextQuery()))) })).filter(group => group.items.length) ?? []);
+  readonly contextLocation = computed(() => this.context()?.groups.flatMap(group => group.items).find(item => this.isContextActive(item))?.label);
+  isContextActive(item: ContextLink): boolean { return isContextLinkActive(item, this.currentUrl()); }
+
+  readonly currentLocation = computed(() => {
+    if (this.context()) return { group: this.context()!.label, label: this.contextLocation() ?? this.context()!.label };
+    const path = this.currentUrl().split(/[?#]/)[0];
+    for (const group of this.navGroups()) {
+      for (const item of group.items) {
+        if (path === item.path || path.startsWith(`${item.path}/`) || item.children?.some((entry) => entry.path === path)) {
+          const child = item.children?.find((entry) => entry.path === path);
+          return { group: child ? item.label : group.label, label: child?.label ?? item.label };
+        }
+      }
+    }
+    const item = [...this.footerItems(), ...this.accountItems].find((entry) => entry.path === path);
+    const integration = INTEGRATIONS.find((entry) => entry.path === path);
+    return {
+      group: 'Tu negocio',
+      label:
+        item?.label ?? integration?.name ?? (path === '/app/profile' ? 'Mi perfil' : 'Consola'),
+    };
+  });
+
+  readonly contentHref = computed(() => `${this.currentUrl().split('#')[0]}#console-main`);
 
   /** Parents the user collapsed or expanded by hand; others follow the active route. */
   private readonly toggled = signal<Record<string, boolean>>({});
 
   isInSection(item: ConsoleNavItem): boolean {
-    const path = this.currentUrl().split('?')[0];
-    return path === item.path || path.startsWith(`${item.path}/`);
+    const path = this.currentUrl().split(/[?#]/)[0];
+    return path === item.path || path.startsWith(`${item.path}/`) || Boolean(item.children?.some((entry) => entry.path === path));
   }
 
   isExpanded(item: ConsoleNavItem): boolean {
@@ -195,10 +261,17 @@ export class ConsoleShellLayout {
     this.toggled.update((state) => ({ ...state, [item.path]: next }));
   }
 
+  toggleNavigation(): void {
+    this.navCollapsed.update((collapsed) => !collapsed);
+    afterNextRender(() => {
+      this.element.nativeElement.querySelector<HTMLButtonElement>('#console-navigation [data-nav-toggle]')?.focus();
+    }, { injector: this.injector });
+  }
+
   readonly paletteActions: PaletteAction[] = [
     {
       id: 'start',
-      label: 'Empezar',
+      label: 'Inicio',
       hint: 'Checklist para vender',
       path: '/app/get-started',
       icon: 'rocket',
@@ -213,7 +286,7 @@ export class ConsoleShellLayout {
     {
       id: 'whatsapp',
       label: 'Conectar WhatsApp',
-      hint: 'Canales · Meta Cloud API',
+      hint: 'Conecta el número de tu negocio',
       path: '/app/channels',
       icon: 'whatsapp',
     },
@@ -247,16 +320,16 @@ export class ConsoleShellLayout {
     },
     {
       id: 'coupons',
-      label: 'Cupones',
-      hint: 'Descuentos para tu tienda web',
+      label: 'Descuentos',
+      hint: 'Promociones para tu tienda web',
       path: '/app/coupons',
-      icon: 'ticket',
+      icon: 'ticketPercent',
       integration: 'store',
     },
     {
       id: 'messages',
       label: 'Mensajes',
-      hint: 'Inbox operativo',
+      hint: 'Conversaciones y atención a clientes',
       path: '/app/messages',
       icon: 'message',
     },
@@ -291,7 +364,7 @@ export class ConsoleShellLayout {
     {
       id: 'help',
       label: 'Ayuda',
-      hint: 'Guías in-app',
+      hint: 'Guías para operar tu negocio',
       path: '/app/help',
       icon: 'circleHelp',
     },
@@ -318,15 +391,34 @@ export class ConsoleShellLayout {
         icon: 'plug',
       },
     ];
+    actions.push(...CONSOLE_CONTEXTS.flatMap(context => context.groups.flatMap(group => group.items.map(item => ({ id: `context-${item.label}`, label: item.label, hint: context.label, path: item.path + (item.section && item.section !== 'temas' ? `?seccion=${item.section}` : ''), icon: item.icon })))));
     if (!q) return actions;
     return actions.filter(
-      (action) =>
-        action.label.toLowerCase().includes(q) ||
-        action.hint.toLowerCase().includes(q),
+      (action) => normalizeSearch(q).split(/\s+/).every(token => normalizeSearch(action.label + ' ' + action.hint).includes(token)),
     );
   });
+  readonly searchResults = computed(() => {
+    const filter = this.paletteFilter();
+    const q = normalizeSearch(this.paletteQuery());
+    const sections = this.filteredPalette().filter(action => filter === 'todos' || filter === 'productos' && ['/app/products', '/app/inventory', '/app/coupons'].includes(action.path) || filter === 'vendedor' && action.path.startsWith('/app/seller') || filter === 'conexiones' && ['/app/channels', '/app/payments', '/app/integrations', '/app/instagram', '/app/tiktok-live'].includes(action.path) || filter === 'ajustes' && (action.id.startsWith('context-') || ['/app/profile', '/app/help', '/app/plans'].includes(action.path)));
+    const unique = [...new Map(sections.map(action => [action.path, action])).values()];
+    if (!q && filter === 'todos') return [...new Map([...this.paletteRecent(), ...unique].map(action => [action.path, action])).values()].slice(0, 7);
+    const products: PaletteAction[] = (filter === 'todos' || filter === 'productos') && (q || filter === 'productos') ? this.paletteProducts().filter(product => q.split(/\s+/).every(token => normalizeSearch(product.name + ' ' + (product.sku ?? '') + ' ' + (product.brand ?? '') + ' ' + (product.variants ?? []).map(variant => variant.sku ?? '').join(' ')).includes(token))).slice(0, 12).map(product => ({ id: `product-${product.id}`, label: product.name, hint: `Producto${product.sku ? ' · ' + product.sku : ''} · Ver en el catálogo`, path: '/app/products?q=' + encodeURIComponent(product.name), icon: 'package' })) : [];
+    return [...products, ...unique.slice(0, 15)];
+  });
+  readonly selectedSearchResult = computed(() => this.searchResults()[Math.min(this.paletteIndex(), Math.max(0, this.searchResults().length - 1))]);
 
   constructor() {
+    let previousContext: string | undefined;
+    let previousCollapsed = false;
+    effect(() => {
+      const next = this.context()?.id;
+      if (next === previousContext) return;
+      if (!previousContext && next) previousCollapsed = untracked(this.navCollapsed);
+      this.navCollapsed.set(next ? true : previousCollapsed);
+      this.contextQuery.set('');
+      previousContext = next;
+    });
     void this.loadQuotaWarning();
     void this.integrations.refresh().catch(() => undefined);
     void this.account.load().catch(() => undefined);
@@ -334,15 +426,15 @@ export class ConsoleShellLayout {
 
   @HostListener('document:keydown', ['$event'])
   onKeydown(event: KeyboardEvent): void {
+    if (
+      event.defaultPrevented ||
+      (event.target instanceof Element && event.target.closest('dialog') && !this.paletteOpen())
+    )
+      return;
     if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'k') {
       event.preventDefault();
-      this.paletteOpen.update((open) => !open);
-      if (!this.paletteOpen()) {
-        this.paletteQuery.set('');
-      }
-    }
-    if (event.key === 'Escape' && this.paletteOpen()) {
-      this.closePalette();
+      if (this.paletteOpen()) this.closePalette();
+      else if (!this.mobileNavOpen()) this.openPalette();
     }
   }
 
@@ -372,9 +464,7 @@ export class ConsoleShellLayout {
           'Usaste las respuestas con IA de este mes: tu vendedor sigue atendiendo con respuestas básicas. Suma chats extra o cambia de plan en Planes.',
         );
       } else if (usage.productAtLimit) {
-        this.quotaWarning.set(
-          `Llegaste al máximo de ${usage.productQuota} productos de tu plan.`,
-        );
+        this.quotaWarning.set(`Llegaste al máximo de ${usage.productQuota} productos de tu plan.`);
       } else if (
         usage.conversationQuota &&
         usage.conversationsUsed / usage.conversationQuota >= 0.85
@@ -398,6 +488,34 @@ export class ConsoleShellLayout {
   openPalette(): void {
     this.paletteOpen.set(true);
     this.paletteQuery.set('');
+    this.paletteFilter.set('todos'); this.paletteIndex.set(0); this.paletteFiltersOpen.set(false);
+    void this.loadSearchProducts();
+  }
+  async loadSearchProducts(): Promise<void> {
+    if (this.paletteLoading()) return;
+    this.paletteLoading.set(true); this.paletteError.set(false);
+    try { this.paletteProducts.set(await this.catalog.list()); }
+    catch { this.paletteError.set(true); }
+    finally { this.paletteLoading.set(false); }
+  }
+  setSearchFilter(filter: 'todos' | 'productos' | 'vendedor' | 'conexiones' | 'ajustes'): void {
+    this.paletteFilter.set(filter); this.paletteIndex.set(0); this.paletteFiltersOpen.set(false);
+    this.element.nativeElement.querySelector<HTMLInputElement>('#console-search')?.focus();
+  }
+  onSearchKey(event: KeyboardEvent): void {
+    if (event.key === 'Enter') {
+      event.preventDefault(); const action = this.selectedSearchResult(); if (action) this.runPaletteAction(action); return;
+    }
+    if (!['ArrowDown', 'ArrowUp', 'Home', 'End'].includes(event.key) || !this.searchResults().length) return;
+    if ((event.key === 'Home' || event.key === 'End') && !event.ctrlKey) return;
+    event.preventDefault();
+    const total = this.searchResults().length;
+    this.paletteIndex.set(event.key === 'Home' ? 0 : event.key === 'End' ? total - 1 : (this.paletteIndex() + (event.key === 'ArrowDown' ? 1 : -1) + total) % total);
+    this.element.nativeElement.querySelector('#search-result-' + this.paletteIndex())?.scrollIntoView({ block: 'nearest' });
+  }
+
+  closeNavigation(): void {
+    this.mobileNavOpen.set(false);
   }
 
   closePalette(): void {
@@ -407,9 +525,11 @@ export class ConsoleShellLayout {
 
   onPaletteQuery(value: string): void {
     this.paletteQuery.set(value);
+    this.paletteIndex.set(0);
   }
 
   runPaletteAction(action: PaletteAction): void {
+    this.paletteRecent.update(recent => [action, ...recent.filter(item => item.path !== action.path)].slice(0, 4));
     this.closePalette();
     if (action.id === 'test-seller') {
       void this.router.navigate(['/app/seller/profile'], {

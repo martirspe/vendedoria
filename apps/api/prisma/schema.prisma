@@ -133,6 +133,11 @@ enum CouponKind {
   BUY_X_GET_Y
 }
 
+enum CouponMethod {
+  CODE
+  AUTOMATIC
+}
+
 enum CouponScope {
   ALL
   CATEGORY
@@ -385,6 +390,7 @@ model Coupon {
   id               String      @id @default(cuid())
   tenantId         String
   code             String
+  method           CouponMethod @default(CODE)
   label            String
   note             String?
   kind             CouponKind

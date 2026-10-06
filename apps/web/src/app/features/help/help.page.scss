@@ -1,23 +1,7 @@
 .help {
   display: grid;
-  gap: var(--ds-space-6);
-  max-width: 42rem;
-}
-
-.help__eyebrow {
-  margin: 0 0 var(--ds-space-2);
-  color: var(--ds-color-text-secondary);
-  font-size: 0.8rem;
-  font-weight: 700;
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
-}
-
-.help__header h1 {
-  margin: 0;
-  font-family: var(--ds-font-display);
-  font-size: clamp(1.75rem, 2vw, 2.1rem);
-  letter-spacing: -0.04em;
+  gap: var(--ds-space-4);
+  max-width: var(--ds-console-form-width);
 }
 
 .help__header p {
@@ -36,10 +20,6 @@
 .help__list article {
   display: grid;
   gap: var(--ds-space-2);
-  padding: var(--ds-space-5);
-  border: 1px solid var(--ds-color-border);
-  border-radius: var(--ds-radius-lg);
-  background: var(--ds-color-surface);
 }
 
 .help__list h2 {

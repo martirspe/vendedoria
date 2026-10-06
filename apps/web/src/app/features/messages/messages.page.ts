@@ -1,7 +1,8 @@
-import { DsSelectComponent } from '@vendedoria/ui';
+import { DsModalDirective, DsSelectComponent } from '@vendedoria/ui';
 import {
   ChangeDetectionStrategy,
   Component,
+  DestroyRef,
   ElementRef,
   Injector,
   afterNextRender,
@@ -37,7 +38,7 @@ import {
 @Component({
   selector: 'app-messages-page',
   standalone: true,
-  imports: [DsSelectComponent,
+  imports: [DsModalDirective, DsSelectComponent,
     ReactiveFormsModule,
     DatePipe,
     RouterLink,
@@ -56,15 +57,22 @@ export class MessagesPage {
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
   private readonly injector = inject(Injector);
+  private readonly destroyRef = inject(DestroyRef);
   private readonly inboxStream = inject(InboxStreamService);
   private readonly messageList = viewChild<ElementRef<HTMLElement>>('messageList');
   private threadStale = false;
+  private listRequest = 0;
+  private threadRequest = 0;
 
   readonly conversations = signal<ConversationListItem[]>([]);
   readonly selected = signal<ConversationDetail | null>(null);
   readonly products = signal<ProductOption[]>([]);
   readonly loadingList = signal(true);
   readonly loadingThread = signal(false);
+  readonly openedConversationId = signal<string | null>(null);
+  readonly listError = signal(false);
+  readonly threadError = signal(false);
+  readonly updatingThread = signal(false);
   readonly sending = signal(false);
   readonly creatingOrder = signal(false);
   readonly orderModalOpen = signal(false);
@@ -103,13 +111,13 @@ export class MessagesPage {
   });
 
   constructor() {
-    this.route.queryParamMap.subscribe((params) => {
+    this.route.queryParamMap.pipe(takeUntilDestroyed()).subscribe((params) => {
       this.filterUnattended.set(params.get('unattended') === '1');
       this.filterSales.set(params.get('sale') === '1');
       this.query.set(params.get('q') ?? '');
       void this.loadList();
       const openId = params.get('conversation');
-      if (openId) {
+      if (openId && openId !== this.openedConversationId()) {
         void this.openConversation(openId);
       }
     });
@@ -187,9 +195,11 @@ export class MessagesPage {
 
   /** `silent` refreshes in place (live updates) without the loading or error states. */
   async loadList(silent = false): Promise<void> {
+    if (this.destroyRef.destroyed) return;
+    const request = ++this.listRequest;
     if (!silent) {
       this.loadingList.set(true);
-      this.errorMessage.set(null);
+      this.listError.set(false);
     }
     try {
       const data = await this.api.listConversations({
@@ -197,64 +207,93 @@ export class MessagesPage {
         unattended: this.filterUnattended() || undefined,
         salesOnly: this.filterSales() || undefined,
       });
+      if (request !== this.listRequest || this.destroyRef.destroyed) return;
       this.conversations.set(data);
-      const current = this.selected();
-      if (current) {
-        const stillThere = data.find((item) => item.id === current.id);
-        if (!stillThere) {
-          this.selected.set(null);
-        }
-      }
+      this.listError.set(false);
     } catch {
-      if (!silent) this.errorMessage.set('No pudimos cargar las conversaciones.');
+      if (request === this.listRequest && !silent) this.listError.set(true);
     } finally {
-      if (!silent) this.loadingList.set(false);
+      if (request === this.listRequest) this.loadingList.set(false);
     }
   }
 
   async openConversation(id: string): Promise<void> {
+    if (this.destroyRef.destroyed) return;
+    const request = ++this.threadRequest;
+    this.openedConversationId.set(id);
     this.loadingThread.set(true);
+    this.threadError.set(false);
     this.notice.set(null);
     this.errorMessage.set(null);
     try {
-      this.selected.set(await this.api.getConversation(id));
+      const thread = await this.api.getConversation(id);
+      if (request !== this.threadRequest || this.destroyRef.destroyed) return;
+      this.selected.set(thread);
       this.syncFiltersToUrl(id);
       this.scrollToLatest();
     } catch {
-      this.errorMessage.set('No pudimos abrir la conversación.');
+      if (request === this.threadRequest) {
+        this.threadError.set(true);
+        this.selected.set(null);
+      }
     } finally {
-      this.loadingThread.set(false);
+      if (request === this.threadRequest) this.loadingThread.set(false);
     }
+  }
+
+  closeConversation(): void {
+    this.threadRequest++;
+    this.selected.set(null);
+    this.openedConversationId.set(null);
+    this.loadingThread.set(false);
+    this.threadError.set(false);
+    this.errorMessage.set(null);
+    this.syncFiltersToUrl();
   }
 
   async toggleAgent(): Promise<void> {
     const thread = this.selected();
     if (!thread) return;
-    await this.api.updateConversation(thread.id, {
+    await this.updateThread({
       agentEnabled: !thread.agentEnabled,
     });
-    await this.openConversation(thread.id);
-    await this.loadList();
   }
 
-  async toggleSale(): Promise<void> {
+  async toggleSale(event?: Event): Promise<void> {
     const thread = this.selected();
     if (!thread) return;
-    await this.api.updateConversation(thread.id, {
+    const checkbox = event?.target as HTMLInputElement | null;
+    if (checkbox) checkbox.checked = thread.markedAsSale;
+    await this.updateThread({
       markedAsSale: !thread.markedAsSale,
     });
-    await this.openConversation(thread.id);
-    await this.loadList();
   }
 
-  async toggleUnattended(): Promise<void> {
+  async toggleUnattended(event?: Event): Promise<void> {
     const thread = this.selected();
     if (!thread) return;
-    await this.api.updateConversation(thread.id, {
+    const checkbox = event?.target as HTMLInputElement | null;
+    if (checkbox) checkbox.checked = thread.markedUnattended;
+    await this.updateThread({
       markedUnattended: !thread.markedUnattended,
     });
-    await this.openConversation(thread.id);
-    await this.loadList();
+  }
+
+  private async updateThread(changes: { agentEnabled?: boolean; markedAsSale?: boolean; markedUnattended?: boolean }): Promise<void> {
+    const thread = this.selected();
+    if (!thread || this.updatingThread()) return;
+    this.updatingThread.set(true);
+    this.errorMessage.set(null);
+    try {
+      await this.api.updateConversation(thread.id, changes);
+      if (this.openedConversationId() === thread.id) await this.openConversation(thread.id);
+      await this.loadList(true);
+      this.notice.set('Conversación actualizada.');
+    } catch {
+      this.errorMessage.set('No pudimos actualizar la conversación. Inténtalo de nuevo.');
+    } finally {
+      this.updatingThread.set(false);
+    }
   }
 
   openCreateOrder(): void {
@@ -268,10 +307,12 @@ export class MessagesPage {
   }
 
   closeCreateOrder(): void {
+    if (this.creatingOrder()) return;
     this.orderModalOpen.set(false);
   }
 
   async createOrder(): Promise<void> {
+    if (this.creatingOrder()) return;
     const thread = this.selected();
     if (!thread || this.orderForm.invalid) {
       this.orderForm.markAllAsTouched();
@@ -306,14 +347,12 @@ export class MessagesPage {
         sendLinkToChat: values.sendLinkToChat,
       });
       this.lastOrderId.set(order.id);
-      this.notice.set(
-        values.createPaymentLink
-          ? 'Pedido creado y link de pago enviado al chat.'
-          : 'Pedido creado desde la conversación.',
-      );
       this.orderModalOpen.set(false);
-      await this.openConversation(thread.id);
+      if (this.openedConversationId() === thread.id) await this.openConversation(thread.id);
       await this.loadList();
+      this.notice.set(values.createPaymentLink
+        ? (values.sendLinkToChat ? 'Pedido creado y enlace de pago enviado al chat.' : 'Pedido creado con enlace de pago.')
+        : 'Pedido creado desde la conversación.');
     } catch {
       this.errorMessage.set('No se pudo crear el pedido desde el chat.');
     } finally {
@@ -329,6 +368,7 @@ export class MessagesPage {
   }
 
   async send(): Promise<void> {
+    if (this.sending()) return;
     const thread = this.selected();
     if (!thread || this.composer.invalid || !this.canSend()) {
       this.composer.markAllAsTouched();
@@ -342,9 +382,9 @@ export class MessagesPage {
         this.composer.controls.text.value.trim(),
       );
       this.composer.reset({ text: '' });
-      this.notice.set(result.notice);
-      await this.openConversation(thread.id);
+      if (this.openedConversationId() === thread.id) await this.openConversation(thread.id);
       await this.loadList();
+      this.notice.set(result.notice);
     } catch {
       this.errorMessage.set(
         'No se pudo enviar. Revisa la ventana de 24h de Meta o el estado del canal.',
@@ -359,6 +399,7 @@ export class MessagesPage {
   }
 
   async sendTemplate(): Promise<void> {
+    if (this.sending()) return;
     const thread = this.selected();
     const templateId = this.selectedTemplateId();
     if (!thread || !templateId) return;
@@ -369,9 +410,9 @@ export class MessagesPage {
         templateId,
         variables: [thread.contactName || 'cliente'],
       });
-      this.notice.set(result.notice);
-      await this.openConversation(thread.id);
+      if (this.openedConversationId() === thread.id) await this.openConversation(thread.id);
       await this.loadList();
+      this.notice.set(result.notice);
     } catch {
       this.errorMessage.set(
         'No se pudo enviar la plantilla. Revisa el canal WhatsApp.',
@@ -397,6 +438,15 @@ export class MessagesPage {
     this.filterSales.update((value) => !value);
     this.syncFiltersToUrl(this.selected()?.id);
     void this.loadList();
+  }
+
+  channelLabel(type: string): string {
+    switch (type) {
+      case 'WHATSAPP': return 'WhatsApp';
+      case 'INSTAGRAM': return 'Instagram';
+      case 'TIKTOK_LIVE': return 'TikTok LIVE';
+      default: return 'Canal';
+    }
   }
 
   orderStatusLabel(status: string): string {

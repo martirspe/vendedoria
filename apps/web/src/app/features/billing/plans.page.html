@@ -1,8 +1,7 @@
-<section class="plans">
+<section class="plans tw:mx-auto tw:min-w-0">
   <header class="plans__header">
     <div>
-      <p class="plans__eyebrow">Tu plan en VendedorIA</p>
-      <h1>Planes</h1>
+      <h1 class="tw:console-title">Planes</h1>
       <p>
         Revisa cuánto usaste este mes y elige el plan que va con el tamaño de
         tu negocio. Sin contratos: pagas por mes o por adelantado con descuento.
@@ -11,26 +10,27 @@
   </header>
 
   @if (errorMessage(); as error) {
-    <div class="banner banner--danger" role="alert">
+    <div class="tw:feedback tw:feedback-danger" role="alert">
       <ds-icon name="alert" />
       <span>{{ error }}</span>
+      <ds-button variant="secondary" (click)="load()" [disabled]="loading()">Reintentar</ds-button>
     </div>
   }
   @if (successMessage(); as success) {
-    <div class="banner banner--success" role="status">
+    <div class="tw:feedback tw:feedback-success" role="status">
       <ds-icon name="check" />
       <span>{{ success }}</span>
     </div>
   }
   @if (infoMessage(); as info) {
-    <div class="banner banner--info" role="status">
+    <div class="tw:feedback tw:feedback-info" role="status">
       <ds-icon name="wallet" />
       <span>{{ info }}</span>
       @if (pendingSimulation()) {
         <ds-button
           type="button"
           variant="primary"
-          [disabled]="saving()"
+          [disabled]="saving() || !canManage()"
           (click)="confirmSimulation()"
         >
           {{ saving() ? 'Confirmando…' : 'Confirmar pago de prueba' }}
@@ -50,8 +50,9 @@
   @if (loading()) {
     <div class="skeleton" aria-busy="true">Cargando planes…</div>
   } @else if (overview(); as data) {
+    @if (!canManage()) { <div class="tw:feedback tw:feedback-info" role="status">Puedes consultar el plan y el uso. El propietario o un administrador puede gestionar las compras.</div> }
     @if (data.planStatus === 'EXPIRED') {
-      <div class="banner banner--danger" role="alert">
+      <div class="tw:feedback tw:feedback-danger" role="alert">
         <ds-icon name="alert" />
         <span>
           Tu plan venció. Tu vendedor IA no atiende chats nuevos, no puedes
@@ -122,7 +123,7 @@
       </div>
       @if (data.usage.couponQuota !== 0) {
         <div>
-          <span>Cupones activos</span>
+          <span>Descuentos activos</span>
           <strong>
             {{ usageLabel(data, data.usage.couponsActive, data.usage.couponQuota) }}
           </strong>
@@ -236,7 +237,7 @@
               <ds-button
                 type="button"
                 variant="secondary"
-                [disabled]="saving() || !data.chatPacksAvailable || !data.checkoutEnabled"
+                [disabled]="!canManage() || saving() || !data.chatPacksAvailable || !data.checkoutEnabled"
                 (click)="buyChatPack(pack)"
               >
                 Sumar {{ pack.chats }} chats

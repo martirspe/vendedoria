@@ -1,4 +1,4 @@
-import { DsSelectComponent } from '@vendedoria/ui';
+import { DsModalDirective, DsSelectComponent } from '@vendedoria/ui';
 import {
   ChangeDetectionStrategy,
   Component,
@@ -36,7 +36,7 @@ const KANBAN_COLUMNS: Array<{ id: OrderStatus; label: string }> = [
 @Component({
   selector: 'app-orders-page',
   standalone: true,
-  imports: [DsSelectComponent,
+  imports: [DsModalDirective, DsSelectComponent,
     DatePipe,
     ReactiveFormsModule,
     RouterLink,
@@ -52,11 +52,13 @@ export class OrdersPage {
   private readonly api = inject(OrdersApiService);
   private readonly fb = inject(FormBuilder);
   private readonly route = inject(ActivatedRoute);
+  private listRequest = 0;
 
   readonly orders = signal<OrderDto[]>([]);
   readonly products = signal<ProductOption[]>([]);
   readonly selected = signal<OrderDto | null>(null);
   readonly loading = signal(true);
+  readonly loadFailed = signal(false);
   readonly saving = signal(false);
   readonly view = signal<ViewMode>('kanban');
   readonly tab = signal<TabMode>('new');
@@ -102,6 +104,8 @@ export class OrdersPage {
 
   async bootstrap(): Promise<void> {
     this.loading.set(true);
+    this.loadFailed.set(false);
+    this.errorMessage.set(null);
     try {
       const provider = await this.api.getPaymentProvider();
       this.mockMode.set(provider.mockMode);
@@ -111,6 +115,7 @@ export class OrdersPage {
         await this.openOrder(orderId);
       }
     } catch {
+      this.loadFailed.set(true);
       this.errorMessage.set('No pudimos cargar pedidos.');
     } finally {
       this.loading.set(false);
@@ -118,20 +123,24 @@ export class OrdersPage {
   }
 
   async load(): Promise<void> {
+    const request = ++this.listRequest;
+    this.loading.set(true);
+    this.loadFailed.set(false);
     this.errorMessage.set(null);
     try {
-      this.orders.set(
-        await this.api.list({
+      const orders = await this.api.list({
           tab: this.tab(),
           q: this.query() || undefined,
           status:
             this.tab() === 'all' && this.statusFilter() !== 'ALL'
               ? (this.statusFilter() as OrderStatus)
               : undefined,
-        }),
-      );
+        });
+      if (request === this.listRequest) this.orders.set(orders);
     } catch {
-      this.errorMessage.set('No pudimos cargar pedidos.');
+      if (request === this.listRequest) this.loadFailed.set(true);
+    } finally {
+      if (request === this.listRequest) this.loading.set(false);
     }
   }
 
@@ -178,10 +187,12 @@ export class OrdersPage {
   }
 
   closeCreate(): void {
+    if (this.saving()) return;
     this.createOpen.set(false);
   }
 
   async createOrder(): Promise<void> {
+    if (this.saving()) return;
     if (this.createForm.invalid) {
       this.createForm.markAllAsTouched();
       return;

@@ -1,8 +1,7 @@
-<section class="store">
+<section class="store tw:mx-auto tw:min-w-0">
   <header class="store__header">
     <div>
-      <p class="store__eyebrow">Negocio</p>
-      <h1>Cobros</h1>
+      <h1 class="tw:console-title">Cobros</h1>
       <p>
         Conecta tu propia cuenta de Mercado Pago. Lo que pagan tus clientes en la tienda
         y en los links del vendedor llega directo a tu cuenta.
@@ -10,14 +9,14 @@
     </div>
   </header>
 
-  @if (errorMessage(); as error) {
-    <div class="banner banner--danger" role="alert">
+  @if (errorMessage() && !loadFailed(); as error) {
+    <div class="tw:feedback tw:feedback-danger" role="alert">
       <ds-icon name="alert" />
       <span>{{ error }}</span>
     </div>
   }
   @if (successMessage(); as success) {
-    <div class="banner banner--success" role="status">
+    <div class="tw:feedback tw:feedback-success" role="status">
       <ds-icon name="check" />
       <span>{{ success }}</span>
     </div>
@@ -25,7 +24,11 @@
 
   @if (loading()) {
     <div class="skeleton" aria-busy="true">Cargando tus cobros…</div>
-  } @else if (view(); as v) {
+  } @else if (loadFailed()) {
+      <ds-empty-state title="No pudimos cargar esta sección" body="Revisa tu conexión e inténtalo de nuevo.">
+        <ds-button variant="secondary" (click)="load()">Reintentar</ds-button>
+      </ds-empty-state>
+    } @else if (view(); as v) {
     <div class="status-card" [class.status-card--live]="v.connected">
       <span class="pill" [class.pill--ok]="v.connected">
         {{ v.connected ? (v.liveMode ? 'Producción' : 'Pruebas') : 'Sin conectar' }}
@@ -45,21 +48,27 @@
         </span>
       </div>
       @if (v.connected) {
-        <ds-button variant="ghost" [disabled]="saving()" (click)="disconnect()">Desconectar</ds-button>
+        <ds-button variant="ghost" [disabled]="!canManage() || saving()" (click)="disconnect()">Desconectar</ds-button>
       }
     </div>
 
     @if (!v.encryptionConfigured) {
-      <div class="banner banner--danger" role="alert">
+      <div class="tw:feedback tw:feedback-danger" role="alert">
         <ds-icon name="alert" />
-        <span>El servidor no tiene configurada la clave de cifrado de credenciales. Avisa a soporte.</span>
+        <span>No podemos guardar las credenciales de forma segura en este momento. Contacta a soporte antes de conectar tu cuenta.</span>
       </div>
     }
 
+    @if (!canManage()) { <div class="tw:feedback tw:feedback-info" role="status">Puedes consultar el estado de los cobros. El propietario o un administrador puede conectar y gestionar la cuenta.</div> }
     <div class="store__grid">
       <form class="store__form" [formGroup]="form" (ngSubmit)="save()">
+        <div class="tw:console-save-bar">
+          <span class="tw:px-2">{{ v.connected ? 'Cambios de cobros' : 'Nueva conexión' }}</span>
+          <ds-button type="submit" [disabled]="!canManage() || saving() || !v.encryptionConfigured">{{ saving() ? 'Verificando…' : v.connected ? 'Guardar y verificar' : 'Conectar cuenta' }}</ds-button>
+        </div>
         <section class="card">
           <h2>Credenciales</h2>
+          <fieldset class="tw:contents" [disabled]="!canManage() || saving() || !v.encryptionConfigured">
           <fieldset class="mode">
             <legend>Tipo de credenciales</legend>
             <label class="mode__option">
@@ -90,12 +99,8 @@
             </span>
             <input formControlName="webhookSecret" type="password" autocomplete="off" spellcheck="false" />
           </label>
+          </fieldset>
         </section>
-        <footer>
-          <ds-button type="submit" [disabled]="saving() || !v.encryptionConfigured">
-            {{ saving() ? 'Verificando…' : v.connected ? 'Guardar y verificar' : 'Conectar cuenta' }}
-          </ds-button>
-        </footer>
       </form>
 
       <aside class="store__rail">

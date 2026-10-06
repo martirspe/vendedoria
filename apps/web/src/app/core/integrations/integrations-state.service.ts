@@ -17,8 +17,8 @@ export type IntegrationInfo = {
 
 export const INTEGRATIONS: IntegrationInfo[] = [
   {
-    key: 'tiktok_live', name: 'TikTok LIVE · AI Seller',
-    summary: 'Organiza tus ventas LIVE con ofertas, reservas y checkout. La lectura y respuesta de comentarios depende de los permisos oficiales de TikTok; hoy operas desde el panel con aprobación humana.',
+    key: 'tiktok_live', name: 'TikTok LIVE',
+    summary: 'Organiza tus ventas en vivo con ofertas, reservas y pagos. Registra los mensajes y comparte las respuestas manualmente desde el panel; esta conexión no lee ni responde comentarios automáticamente.',
     path: '/app/tiktok-live', navLabel: 'TikTok LIVE', icon: 'radio', group: 'connect',
   },
   {

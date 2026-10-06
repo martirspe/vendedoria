@@ -75,6 +75,8 @@ export class SellerPage {
   readonly customPromptMax = CUSTOM_PROMPT_MAX;
 
   readonly loading = signal(true);
+  readonly loadFailed = signal(false);
+  readonly agentLoadFailed = signal(false);
   readonly agentLoading = signal(false);
   readonly saving = signal(false);
   readonly dirty = signal(false);
@@ -222,7 +224,7 @@ export class SellerPage {
     this.route.queryParamMap
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe((params) => {
-        if (params.get('playground') === '1' && !this.playgroundOpen()) {
+        if (!this.loading() && this.agentId() && params.get('playground') === '1' && !this.playgroundOpen()) {
           void this.openPlayground();
         }
         const requested = params.get('agent');
@@ -234,6 +236,7 @@ export class SellerPage {
 
   async init(): Promise<void> {
     this.loading.set(true);
+    this.loadFailed.set(false);
     this.errorMessage.set(null);
     try {
       const [agents, faqs, journeys, channels] = await Promise.all([
@@ -252,22 +255,26 @@ export class SellerPage {
         await this.loadAgent(target.id);
       }
     } catch {
+      this.loadFailed.set(true);
       this.errorMessage.set(
         'No pudimos cargar tu vendedor IA. Revisa tu conexión e inténtalo de nuevo.',
       );
     } finally {
       this.loading.set(false);
+      if (this.route.snapshot.queryParamMap.get('playground') === '1' && this.agentId()) void this.openPlayground();
     }
   }
 
   async loadAgent(id: string): Promise<void> {
     this.agentLoading.set(true);
+    this.agentLoadFailed.set(false);
     this.errorMessage.set(null);
     try {
       const agent = await this.api.get(id);
       this.applyAgent(agent);
       this.prompt.set(null);
     } catch {
+      this.agentLoadFailed.set(true);
       this.errorMessage.set('No pudimos cargar este vendedor. Inténtalo de nuevo.');
     } finally {
       this.agentLoading.set(false);
@@ -320,6 +327,7 @@ export class SellerPage {
   }
 
   async createAgent(): Promise<void> {
+    if (this.agentBusy()) return;
     const name = this.newAgentName().trim();
     if (name.length < 2) {
       this.errorMessage.set('Ponle un nombre de al menos 2 letras al nuevo vendedor.');
@@ -485,8 +493,10 @@ export class SellerPage {
   }
 
   async openPlayground(): Promise<void> {
+    if (this.loading() || this.loadFailed() || this.agentLoading() || this.agentLoadFailed() || !this.agentId()) return;
     if (this.dirty()) {
       await this.save(true);
+      if (this.dirty()) return;
     }
     this.playgroundOpen.set(true);
   }

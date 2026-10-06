@@ -1,42 +1,40 @@
-<section class="orders">
+<section class="orders tw:mx-auto tw:min-w-0">
   <header class="orders__header">
     <div>
-      <p class="orders__eyebrow">Commerce</p>
-      <h1>Pedidos</h1>
+      <h1 class="tw:console-title">Pedidos</h1>
       <p>
         Del chat al cobro: crea pedidos, genera el link de pago y sigue el
         estado hasta completar.
       </p>
     </div>
     <div class="orders__header-actions">
-      @if (mockMode()) {
+      @if (!loading() && !loadFailed()) { @if (mockMode()) {
         <span class="provider-pill">Pagos en modo de prueba</span>
       } @else {
         <span class="provider-pill provider-pill--live">Mercado Pago</span>
-      }
-      <ds-button type="button" (click)="openCreate()">Nuevo pedido</ds-button>
+      } }
+      <ds-button type="button" [disabled]="loading() || loadFailed()" (click)="openCreate()">Nuevo pedido</ds-button>
     </div>
   </header>
 
-  @if (errorMessage(); as error) {
-    <div class="banner banner--danger" role="alert">
+  @if (errorMessage() && !loadFailed() && !createOpen() && !selected(); as error) {
+    <div class="tw:feedback tw:feedback-danger" role="alert">
       <ds-icon name="alert" />
       <span>{{ error }}</span>
     </div>
   }
   @if (successMessage(); as success) {
-    <div class="banner banner--success" role="status">
+    <div class="tw:feedback tw:feedback-success" role="status">
       <ds-icon name="check" />
       <span>{{ success }}</span>
     </div>
   }
 
   <div class="orders__toolbar">
-    <div class="tabs" role="tablist" aria-label="Vista de pedidos">
+    <div class="tabs" role="group" aria-label="Vista de pedidos">
       <button
         type="button"
-        role="tab"
-        [attr.aria-selected]="tab() === 'new'"
+        [attr.aria-pressed]="tab() === 'new'"
         [class.is-active]="tab() === 'new'"
         (click)="setTab('new')"
       >
@@ -44,8 +42,7 @@
       </button>
       <button
         type="button"
-        role="tab"
-        [attr.aria-selected]="tab() === 'all'"
+        [attr.aria-pressed]="tab() === 'all'"
         [class.is-active]="tab() === 'all'"
         (click)="setTab('all')"
       >
@@ -57,6 +54,7 @@
       <ds-icon name="search" />
       <input
         type="search"
+        aria-label="Buscar pedidos"
         placeholder="Buscar por cliente, teléfono o ID…"
         [value]="query()"
         (input)="onSearch($any($event.target).value)"
@@ -81,6 +79,7 @@
       <button
         type="button"
         [class.is-active]="view() === 'kanban'"
+        [attr.aria-pressed]="view() === 'kanban'"
         (click)="setView('kanban')"
       >
         <ds-icon name="kanban" />
@@ -89,6 +88,7 @@
       <button
         type="button"
         [class.is-active]="view() === 'table'"
+        [attr.aria-pressed]="view() === 'table'"
         (click)="setView('table')"
       >
         <ds-icon name="list" />
@@ -99,6 +99,8 @@
 
   @if (loading()) {
     <div class="skeleton" aria-busy="true">Cargando pedidos…</div>
+  } @else if (loadFailed()) {
+    <ds-empty-state title="No pudimos cargar los pedidos" body="Revisa tu conexión y vuelve a intentarlo."><ds-button variant="secondary" (click)="bootstrap()">Reintentar</ds-button></ds-empty-state>
   } @else if (filteredOrders().length === 0) {
     <ds-empty-state
       title="No hay pedidos"
@@ -154,7 +156,7 @@
         <tbody>
           @for (order of filteredOrders(); track order.id) {
             <tr (click)="openOrder(order.id)">
-              <td>#{{ order.id.slice(-6).toUpperCase() }}</td>
+              <td><button type="button" class="tw:console-nav-link tw:cursor-pointer tw:border-0 tw:bg-transparent tw:text-foreground" (click)="$event.stopPropagation(); openOrder(order.id)" [attr.aria-label]="'Ver pedido ' + order.id.slice(-6).toUpperCase()">#{{ order.id.slice(-6).toUpperCase() }}</button></td>
               <td>
                 {{ order.customerName || order.customerPhone || '—' }}
               </td>
@@ -180,7 +182,7 @@
   }
 
   @if (selected(); as order) {
-    <aside class="drawer" role="dialog" aria-label="Detalle del pedido">
+    <dialog dsModal (dsModalClose)="closeDetail()" class="drawer tw:m-0 tw:ml-auto tw:max-h-none tw:max-w-full tw:border-0 tw:p-0 tw:backdrop:bg-overlay" aria-label="Detalle del pedido">
       <header class="drawer__head">
         <div>
           <p class="orders__eyebrow">Pedido</p>
@@ -192,6 +194,8 @@
       </header>
 
       <div class="drawer__body">
+        @if (errorMessage(); as error) { <div class="tw:feedback tw:feedback-danger" role="alert">{{ error }}</div> }
+        @if (successMessage(); as success) { <div class="tw:feedback tw:feedback-success" role="status">{{ success }}</div> }
         <div class="status-row">
           <span class="status" [attr.data-status]="order.status">
             {{ statusLabel(order.status, order) }}
@@ -212,7 +216,7 @@
             <dt>Conversación</dt>
             <dd>
               @if (order.conversationId) {
-                <a [routerLink]="['/app/messages']">Ver en Mensajes</a>
+                <a [routerLink]="['/app/messages']" [queryParams]="{ conversation: order.conversationId }">Ver en Mensajes</a>
               } @else {
                 —
               }
@@ -378,12 +382,11 @@
           </section>
         }
       </div>
-    </aside>
-    <button type="button" class="backdrop" aria-label="Cerrar" (click)="closeDetail()"></button>
+    </dialog>
   }
 
   @if (emailPreview(); as preview) {
-    <div class="modal" role="dialog" aria-modal="true" aria-label="Vista previa del correo">
+    <dialog dsModal (dsModalClose)="closeEmailPreview()" class="tw:modal-frame" aria-label="Vista previa del correo" (click)="$event.target === $event.currentTarget && closeEmailPreview()">
       <div class="modal__panel modal__panel--wide">
         <header>
           <h2>{{ preview.subject }}</h2>
@@ -394,16 +397,19 @@
           <ds-button type="button" variant="secondary" (click)="closeEmailPreview()">Cerrar</ds-button>
         </footer>
       </div>
-    </div>
+    </dialog>
   }
 
   @if (createOpen()) {
-    <div class="modal" role="dialog" aria-modal="true" aria-label="Nuevo pedido">
+    <dialog dsModal (dsModalClose)="closeCreate()" class="tw:modal-frame" aria-label="Nuevo pedido" (click)="$event.target === $event.currentTarget && closeCreate()">
       <form class="modal__panel" [formGroup]="createForm" (ngSubmit)="createOrder()">
         <header>
           <h2>Nuevo pedido</h2>
           <p>Elige un producto del catálogo y opcionalmente genera el link de pago.</p>
         </header>
+
+        @if (errorMessage(); as error) { <div class="tw:feedback tw:feedback-danger" role="alert">{{ error }}</div> }
+        @if (!products().length) { <p class="tw:text-muted">Necesitas un producto disponible. <a routerLink="/app/products" class="tw:font-semibold tw:underline">Ir a Productos</a></p> }
 
         <label>
           Producto
@@ -434,7 +440,7 @@
         </label>
 
         <footer>
-          <ds-button type="button" variant="ghost" (click)="closeCreate()">
+          <ds-button type="button" variant="ghost" [disabled]="saving()" (click)="closeCreate()">
             Cancelar
           </ds-button>
           <ds-button type="submit" [disabled]="saving() || products().length === 0">
@@ -442,6 +448,6 @@
           </ds-button>
         </footer>
       </form>
-    </div>
+    </dialog>
   }
 </section>

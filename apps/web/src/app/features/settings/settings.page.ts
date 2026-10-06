@@ -1,3 +1,4 @@
+import { DsEmptyStateComponent } from '@vendedoria/ui';
 import { DsSelectComponent } from '@vendedoria/ui';
 import {
   ChangeDetectionStrategy,
@@ -13,7 +14,7 @@ import { TenantsApiService } from '../../core/api/tenants-api.service';
 @Component({
   selector: 'app-settings-page',
   standalone: true,
-  imports: [DsSelectComponent, ReactiveFormsModule, DsButtonComponent, DsIconComponent],
+  imports: [DsEmptyStateComponent, DsSelectComponent, ReactiveFormsModule, DsButtonComponent, DsIconComponent],
   templateUrl: './settings.page.html',
   styleUrl: './settings.page.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -23,14 +24,15 @@ export class SettingsPage {
   private readonly fb = inject(FormBuilder);
 
   readonly loading = signal(true);
+  readonly loadFailed = signal(false);
   readonly saving = signal(false);
   readonly errorMessage = signal<string | null>(null);
   readonly successMessage = signal<string | null>(null);
 
   readonly form = this.fb.nonNullable.group({
-    name: ['', [Validators.required, Validators.minLength(2)]],
-    country: ['PE', [Validators.required, Validators.minLength(2), Validators.maxLength(2)]],
-    currency: ['PEN', [Validators.required, Validators.minLength(3), Validators.maxLength(3)]],
+    name: ['', [Validators.required, Validators.minLength(2), Validators.pattern(/\S/)]],
+    country: ['PE', [Validators.required, Validators.pattern(/^[A-Za-z]{2}$/)]],
+    currency: ['PEN', [Validators.required, Validators.pattern(/^[A-Za-z]{3}$/)]],
   });
 
   constructor() {
@@ -39,6 +41,7 @@ export class SettingsPage {
 
   async load(): Promise<void> {
     this.loading.set(true);
+    this.loadFailed.set(false);
     this.errorMessage.set(null);
     try {
       const tenant = await this.api.getMe();
@@ -48,6 +51,7 @@ export class SettingsPage {
         currency: tenant.currency,
       });
     } catch {
+      this.loadFailed.set(true);
       this.errorMessage.set('No pudimos cargar los ajustes del negocio.');
     } finally {
       this.loading.set(false);
@@ -55,6 +59,7 @@ export class SettingsPage {
   }
 
   async save(): Promise<void> {
+    if (this.loading() || this.loadFailed() || this.saving()) return;
     if (this.form.invalid) {
       this.form.markAllAsTouched();
       return;

@@ -1,8 +1,7 @@
-<section class="settings">
+<section class="settings tw:mx-auto tw:min-w-0">
   <header class="settings__header">
     <div>
-      <p class="settings__eyebrow">Negocio</p>
-      <h1>Ajustes</h1>
+      <h1 class="tw:console-title">Ajustes</h1>
       <p>
         Nombre, país y moneda de tu negocio. El catálogo y los pedidos usan esta
         moneda por defecto.
@@ -10,14 +9,14 @@
     </div>
   </header>
 
-  @if (errorMessage(); as error) {
-    <div class="banner banner--danger" role="alert">
+  @if (errorMessage() && !loadFailed(); as error) {
+    <div class="tw:feedback tw:feedback-danger" role="alert">
       <ds-icon name="alert" />
       <span>{{ error }}</span>
     </div>
   }
   @if (successMessage(); as success) {
-    <div class="banner banner--success" role="status">
+    <div class="tw:feedback tw:feedback-success" role="status">
       <ds-icon name="check" />
       <span>{{ success }}</span>
     </div>
@@ -25,34 +24,40 @@
 
   @if (loading()) {
     <div class="skeleton" aria-busy="true">Cargando ajustes…</div>
-  } @else {
+  } @else if (loadFailed()) {
+      <ds-empty-state title="No pudimos cargar esta sección" body="Revisa tu conexión e inténtalo de nuevo.">
+        <ds-button variant="secondary" (click)="load()">Reintentar</ds-button>
+      </ds-empty-state>
+    } @else {
     <form class="settings__form" [formGroup]="form" (ngSubmit)="save()">
+      <div class="tw:console-save-bar">
+        <span class="tw:px-2">Cambios de ajustes</span>
+        <ds-button type="submit" [disabled]="saving() || form.pristine">{{ saving() ? 'Guardando…' : 'Guardar cambios' }}</ds-button>
+      </div>
       <label>
         Nombre del negocio
-        <input formControlName="name" maxlength="120" autocomplete="organization" />
+        <input formControlName="name" maxlength="120" autocomplete="organization" [attr.aria-invalid]="form.controls.name.touched && form.controls.name.invalid" aria-describedby="settings-name-error" />
+        <span id="settings-name-error" class="tw:text-caption tw:text-danger-text">@if (form.controls.name.touched && form.controls.name.invalid) { Escribe el nombre del negocio con al menos 2 caracteres. }</span>
       </label>
       <div class="settings__row">
         <label>
-          País (ISO)
-          <input formControlName="country" maxlength="2" placeholder="PE" />
+          País
+          <input formControlName="country" maxlength="2" placeholder="PE" [attr.aria-invalid]="form.controls.country.touched && form.controls.country.invalid" aria-describedby="settings-country-hint settings-country-error" />
+          <small id="settings-country-hint" class="tw:text-muted">Código de 2 letras. Por ejemplo, PE para Perú.</small>
+          <span id="settings-country-error" class="tw:text-caption tw:text-danger-text">@if (form.controls.country.touched && form.controls.country.invalid) { Escribe un código de país de 2 letras. }</span>
         </label>
         <label>
           Moneda
           <ds-select><select formControlName="currency">
-            <option value="PEN">PEN</option>
-            <option value="USD">USD</option>
-            <option value="MXN">MXN</option>
-            <option value="COP">COP</option>
-            <option value="CLP">CLP</option>
-            <option value="ARS">ARS</option>
+            <option value="PEN">Sol peruano (PEN)</option>
+            <option value="USD">Dólar estadounidense (USD)</option>
+            <option value="MXN">Peso mexicano (MXN)</option>
+            <option value="COP">Peso colombiano (COP)</option>
+            <option value="CLP">Peso chileno (CLP)</option>
+            <option value="ARS">Peso argentino (ARS)</option>
           </select></ds-select>
         </label>
       </div>
-      <footer>
-        <ds-button type="submit" [disabled]="saving() || form.pristine">
-          {{ saving() ? 'Guardando…' : 'Guardar cambios' }}
-        </ds-button>
-      </footer>
     </form>
   }
 </section>

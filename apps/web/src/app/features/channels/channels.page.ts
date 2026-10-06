@@ -34,6 +34,7 @@ export class ChannelsPage {
 
   readonly channels = signal<ChannelDto[]>([]);
   readonly loading = signal(true);
+  readonly loadFailed = signal(false);
   readonly saving = signal(false);
   readonly errorMessage = signal<string | null>(null);
   readonly successMessage = signal<string | null>(null);
@@ -67,11 +68,13 @@ export class ChannelsPage {
 
   async load(): Promise<void> {
     this.loading.set(true);
+    this.loadFailed.set(false);
     this.errorMessage.set(null);
     try {
       this.channels.set(await this.api.listChannels());
       await this.loadDiagnostics();
     } catch {
+      this.loadFailed.set(true);
       this.errorMessage.set('No pudimos cargar los canales.');
     } finally {
       this.loading.set(false);

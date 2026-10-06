@@ -1,3 +1,4 @@
+import { DsEmptyStateComponent } from '@vendedoria/ui';
 import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { DsButtonComponent, DsIconComponent } from '@vendedoria/ui';
@@ -13,7 +14,7 @@ const GA4_ID = /^G-[A-Z0-9]{4,12}$/;
 @Component({
   selector: 'app-tracking-page',
   standalone: true,
-  imports: [ReactiveFormsModule, DsButtonComponent, DsIconComponent, IntegrationGateComponent],
+  imports: [DsEmptyStateComponent, ReactiveFormsModule, DsButtonComponent, DsIconComponent, IntegrationGateComponent],
   templateUrl: './tracking.page.html',
   styleUrls: ['../store/store.page.scss', '../payments/payments.page.scss'],
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -25,6 +26,7 @@ export class TrackingPage {
   readonly canManage = inject(AuthApiService).isManager();
 
   readonly loading = signal(true);
+  readonly loadFailed = signal(false);
   readonly saving = signal(false);
   readonly errorMessage = signal<string | null>(null);
   readonly successMessage = signal<string | null>(null);
@@ -46,11 +48,13 @@ export class TrackingPage {
 
   async load(): Promise<void> {
     this.loading.set(true);
+    this.loadFailed.set(false);
     this.errorMessage.set(null);
     try {
       await this.integrations.refresh();
       if (this.active()) this.apply(await this.api.getTracking());
     } catch {
+      this.loadFailed.set(true);
       this.errorMessage.set('No pudimos cargar tu configuración de analítica. Inténtalo de nuevo.');
     } finally {
       this.loading.set(false);
