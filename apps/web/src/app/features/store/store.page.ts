@@ -1,4 +1,6 @@
+import { latestThemes } from '@vendedoria/themes/catalog';
 import { ConversionSettingsComponent } from './conversion-settings.component';
+import { ThemeManagerComponent } from './theme-manager.component';
 import { DsSelectComponent } from '@vendedoria/ui';
 import {
   ChangeDetectionStrategy,
@@ -41,42 +43,15 @@ export const INDUSTRY_OPTIONS: { value: StoreIndustry; label: string }[] = [
   { value: 'otros', label: 'Otro rubro' },
 ];
 
-/** Mirrors `apps/api/src/storefront/store-templates.ts`. */
-export const TEMPLATE_OPTIONS: {
-  value: StoreTemplate;
-  label: string;
-  description: string;
-  cover: string;
-  industries: StoreIndustry[] | 'all';
-}[] = [
-  {
-    value: 'stride',
-    cover: '/template-previews/stride.webp',
-    label: 'Impulso',
-    description: 'Moda y calzado con portada editorial, categorías visuales y productos protagonistas. Una compra clara desde el primer vistazo.',
-    industries: ['moda'],
-  },
-  {
-    value: 'classic',
-    cover: '/template-previews/classic.webp',
-    label: 'Clásica',
-    description: 'Catálogo limpio con tus colores. Sirve para cualquier rubro.',
-    industries: 'all',
-  },
-  {
-    value: 'selecta',
-    cover: '/template-previews/selecta.webp',
-    label: 'Selecta',
-    description:
-      'Editorial y elegante, pensada para belleza: sets con ahorro, complementos en el carrito y fichas con notas, beneficios y modo de uso.',
-    industries: ['belleza'],
-  },
-];
+export const TEMPLATE_OPTIONS = latestThemes().map(theme => ({
+  value: theme.slug, label: theme.displayName, description: theme.description,
+  cover: theme.assets.cover, industries: theme.industries,
+}));
 
 @Component({
   selector: 'app-store-page',
   standalone: true,
-  imports: [ConversionSettingsComponent, DsSelectComponent, ReactiveFormsModule, RouterLink, DsButtonComponent, DsIconComponent, IntegrationGateComponent],
+  imports: [ThemeManagerComponent, ConversionSettingsComponent, DsSelectComponent, ReactiveFormsModule, RouterLink, DsButtonComponent, DsIconComponent, IntegrationGateComponent],
   templateUrl: './store.page.html',
   styleUrl: './store.page.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -346,7 +321,7 @@ export class StorePage {
     this.form.reset({
       sellerType: store.sellerType,
       industry: store.industry,
-      template: store.template,
+      template: view.themeStatus.editing.template,
       displayName: store.displayName,
       tagline: store.tagline ?? '',
       whatsappPhone: store.whatsappPhone ?? '',

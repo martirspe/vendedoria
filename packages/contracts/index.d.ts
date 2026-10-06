@@ -45,13 +45,26 @@ export type StorefrontView = {
   checkout: StorefrontCheckout;
   industry: string;
   template: StoreTemplate;
+  /** Platform-resolved presentation of the installed or previewed theme release. */
+  themeRelease?: StoreThemeRelease;
   /** Texts and images edited by the merchant: the published version, or the draft in a preview. */
   templateContent: StoreTemplateContent;
   /** Null when the plan or the merchant has no analytics on. */
   tracking: StoreTracking | null;
 };
 
-export type StoreTemplate = 'classic' | 'selecta' | 'stride';
+/** Stable registry slug. Renderer names are a separate platform contract. */
+export type StoreTemplate = string;
+
+export type StoreThemeRelease = {
+  id: string;
+  slug: string;
+  version: string;
+  renderer: 'classic' | 'selecta' | 'stride';
+  defaultLayout: StoreLayoutItem[];
+  tokens: StoreTemplateTheme;
+  safeMode: boolean;
+};
 
 export type StoreTemplateFaq = { question: string; answer: string };
 
@@ -84,6 +97,16 @@ export type StoreTemplateTheme = {
   corners?: StoreThemeCorners;
   /** Logo image URL; '' shows the store name. */
   logo?: string;
+  /** Tenant-owned raster upload; empty resets to the platform favicon. */
+  favicon?: string;
+  background?: string;
+  surface?: string;
+  text?: string;
+  muted?: string;
+  border?: string;
+  container?: 'compact' | 'standard' | 'wide';
+  spacing?: 'compact' | 'standard' | 'airy';
+  typeScale?: 'standard' | 'large';
 };
 
 export type StoreThemeOption = keyof StoreTemplateTheme;
@@ -110,7 +133,7 @@ export type StoreEditorSectionRole = 'builtin' | 'block' | 'fixed';
 /** Store page the editor preview can show. */
 export type StoreEditorPage = 'home' | 'product';
 
-export type StoreEditorFieldKind = 'text' | 'multiline' | 'image' | 'choice';
+export type StoreEditorFieldKind = 'text' | 'multiline' | 'image' | 'choice' | 'url';
 
 export type StoreEditorChoice = { value: string; label: string };
 

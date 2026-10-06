@@ -1,4 +1,4 @@
-import type { StoreTemplate, StoreTemplateContent } from '@vendedoria/contracts';
+import type { StoreTemplate, StoreTemplateContent, StorefrontView } from '@vendedoria/contracts';
 
 export type HomeSection = { id: string; type: string };
 
@@ -56,6 +56,15 @@ export function homeSections(
     sections.push({ id, type });
   }
   return sections;
+}
+
+/** The release supplies its default composition; schemas remain platform-owned. */
+export function storeHomeSections(store: StorefrontView, builtins: readonly string[]): HomeSection[] {
+  const defaults = store.themeRelease?.defaultLayout;
+  const content = (store.themeRelease?.safeMode || !store.templateContent.layouts?.[store.template]) && defaults
+    ? { ...store.templateContent, layouts: { ...store.templateContent.layouts, [store.template]: defaults } }
+    : store.templateContent;
+  return homeSections(content, store.template, builtins);
 }
 
 /** Texts of a library block; '' when the merchant left a field empty. */

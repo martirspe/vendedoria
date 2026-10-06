@@ -11,12 +11,16 @@ import { RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
 import { DsIconComponent } from '@vendedoria/ui';
 import { STORE_EDITOR } from '../../core/store-editor';
 import { StoreStateService } from '../../core/store-state.service';
-import { readableTextOn } from '../../core/theme';
+import { readableTextOn, storeTheme } from '../../core/theme';
 import { StoreShellLayout } from '../../layout/store-shell.layout';
+import { StoreThemeTokens } from '../../core/theme-tokens.directive';
+import { ThemeSocialLinksComponent } from '../../components/theme-social-links.component';
 
 @Component({
   selector: 'stride-shell',
   imports: [
+    ThemeSocialLinksComponent,
+    StoreThemeTokens,
     RouterLink,
     RouterLinkActive,
     RouterOutlet,
@@ -27,16 +31,20 @@ import { StoreShellLayout } from '../../layout/store-shell.layout';
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class StrideShell extends StoreShellLayout {
+  readonly strideFooterCopy = computed(() => {
+    const store = this.store();
+    return { ...this.footerCopy(), closing: store?.templateContent.sections['footer']?.['closing'] ?? (store?.tagline || 'Tu estilo. Tu siguiente paso.') };
+  });
   readonly hasAnnouncementOverride = computed(
     () =>
       this.store()?.templateContent.sections['announcement']?.['text'] !==
       undefined,
   );
   readonly primary = computed(
-    () => this.store()?.templateContent.theme?.primary ?? '#181a18',
+    () => this.store() ? storeTheme(this.store()!).primary ?? '#181a18' : '#181a18',
   );
   readonly accent = computed(
-    () => this.store()?.templateContent.theme?.accent ?? '#c8f542',
+    () => this.store() ? storeTheme(this.store()!).accent ?? '#c8f542' : '#c8f542',
   );
   readonly onPrimary = computed(() => readableTextOn(this.primary()));
   readonly onAccent = computed(() => readableTextOn(this.accent()));

@@ -6,6 +6,7 @@
       </a>
       <div class="editor__heading">
         <h1>Diseño de tu tienda</h1>
+        @if (view(); as v) { <p class="editor__status">Versión {{ v.themeVersion }} · {{ hasUnpublished() ? 'Borrador' : 'Diseño guardado' }}</p> }
         <p class="editor__status" [class.is-error]="saveState() === 'error'" role="status" aria-live="polite">
           @if (saveState() === 'error') {
             <ds-icon name="alert" [size]="0.9" /> {{ saveLabel() }} ·
@@ -52,7 +53,7 @@
             {{ busy() === 'discard' ? 'Descartando…' : 'Descartar' }}
           </ds-button>
         }
-        <ds-button [disabled]="busy() !== null || (!hasUnpublished() && saveState() === 'saved')" (click)="publish()">
+        <ds-button [disabled]="busy() !== null || view()?.themeStatus?.compatibility?.status === 'incompatible' || view()?.themeStatus?.compatibility?.status === 'update_required' || (!hasUnpublished() && saveState() === 'saved')" (click)="publish()">
           <ds-icon name="rocket" />
           {{ busy() === 'publish' ? 'Publicando…' : 'Publicar cambios' }}
         </ds-button>
@@ -394,6 +395,30 @@
   <ng-template #stylePanel>
     @if (theme(); as t) {
       <div class="style">
+        @if (hasThemeOption('favicon')) {
+          <div class="field">
+            <div class="field__head"><span class="field__label">Ícono del navegador</span></div>
+            @if (t.favicon) { <img [src]="t.favicon" alt="Ícono de tu tienda" width="32" height="32" /> }
+            <ds-button variant="secondary" [disabled]="uploading() !== null" (click)="chooseFavicon()">{{ uploading() === '@theme.favicon' ? 'Subiendo…' : 'Cambiar ícono' }}</ds-button>
+            @if (themeChanged('favicon')) { <button type="button" class="link" (click)="setTheme('favicon', undefined)">Restablecer</button> }
+            <p class="hint">Usa una imagen cuadrada en PNG o WebP.</p>
+          </div>
+        }
+        @for (choice of styleChoices; track choice.id) {
+          @if (hasThemeOption(choice.id)) {
+            <fieldset class="field choice">
+              <legend class="field__label">{{ choice.label }}</legend>
+              <div class="choice__row">
+                @for (option of choice.options; track option.value) {
+                  <label class="choice__item" [class.is-selected]="t[choice.id] === option.value">
+                    <input type="radio" [name]="'theme-' + choice.id" [checked]="t[choice.id] === option.value" (change)="setStyleChoice(choice.id, option.value)" />{{ option.label }}
+                  </label>
+                }
+              </div>
+              @if (themeChanged(choice.id)) { <button type="button" class="link" (click)="setTheme(choice.id, undefined)">Restablecer</button> }
+            </fieldset>
+          }
+        }
         @if (hasThemeOption('logo')) {
           <div class="field">
             <div class="field__head">

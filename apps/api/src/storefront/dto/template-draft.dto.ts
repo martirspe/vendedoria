@@ -10,7 +10,14 @@ import {
 } from 'class-validator';
 import { TEXT_AI_ACTIONS, type TextAiAction } from '../store-ai-text';
 
-export class SaveTemplateDraftDto {
+export class EditorRevisionDto {
+  @ApiPropertyOptional({ description: 'Revision returned by the editor; prevents concurrent overwrites.' })
+  @IsOptional()
+  @IsISO8601({ strict: true })
+  savedAt?: string;
+}
+
+export class SaveTemplateDraftDto extends EditorRevisionDto {
   @ApiProperty({
     description:
       'StoreTemplateContent: { version: 1, sections: { [section]: { [field]: string } }, faq?: { question, answer }[] }. ' +
@@ -22,7 +29,30 @@ export class SaveTemplateDraftDto {
   content!: Record<string, unknown>;
 }
 
-export class ScheduleTemplateDraftDto {
+export class StageThemeDto {
+  @ApiProperty({ description: 'Immutable catalog slug.' })
+  @IsString()
+  @Matches(/^[a-z][a-z0-9-]{1,39}$/)
+  template!: string;
+
+  @ApiProperty({ description: 'Exact available release (SemVer).' })
+  @IsString()
+  @Matches(/^(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$/)
+  @MaxLength(32)
+  version!: string;
+
+  @ApiPropertyOptional({ description: 'Editorial preset to import without replacing customizations or inventory.' })
+  @IsOptional()
+  @IsString()
+  @Matches(/^[a-z][a-z0-9-]{1,39}$/)
+  preset?: string;
+
+  @ApiProperty({ description: 'Current editor revision.' })
+  @IsISO8601({ strict: true })
+  savedAt!: string;
+}
+
+export class ScheduleTemplateDraftDto extends EditorRevisionDto {
   @ApiProperty({
     description:
       'When the draft is published (ISO 8601), between 5 minutes and 90 days from now.',

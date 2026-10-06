@@ -1,0 +1,12 @@
+import type { StoreEditorSection, StoreTemplateContent } from '@vendedoria/contracts';
+import type { ThemeEnvironment, ThemeManifest } from './catalog';
+export * from './catalog';
+export const RENDERER_SECTIONS: Record<string, StoreEditorSection[]>;
+export type ThemeIssue = { code: string; path: string; message: string };
+export type ThemeCompatibility = { status: 'compatible' | 'warnings' | 'update_required' | 'incompatible'; issues: ThemeIssue[] };
+export function validateManifest(value: unknown): ThemeIssue[];
+export function compatibility(value: unknown, environment?: ThemeEnvironment): ThemeCompatibility;
+export function validateCatalog(themes?: readonly ThemeManifest[]): ThemeIssue[];
+export function migrationPath(slug: string, from: string, to: string, themes?: readonly ThemeManifest[]): ThemeManifest['migrations'];
+export function migrateContent(content: StoreTemplateContent, slug: string, from: string, to: string, themes?: readonly ThemeManifest[]): StoreTemplateContent;
+export function importPreset(content: StoreTemplateContent, theme: ThemeManifest, presetId: string): StoreTemplateContent;

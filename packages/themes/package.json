@@ -1,0 +1,14 @@
+{
+  "name": "@vendedoria/themes",
+  "version": "1.0.0",
+  "private": true,
+  "main": "index.js",
+  "types": "index.d.ts",
+  "exports": {
+    ".": { "types": "./index.d.ts", "default": "./index.js" },
+    "./catalog": { "types": "./catalog.d.ts", "import": "./catalog.mjs", "require": "./catalog.js" },
+    "./demo-index": { "types": "./demo-index.d.ts", "default": "./demo-index.mjs" },
+    "./manifest.schema.json": "./manifest.schema.json"
+  },
+  "scripts": { "test": "node --test test/*.test.js" }
+}

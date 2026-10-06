@@ -1,6 +1,7 @@
 @if (store(); as s) {
 <div
   class="stride-shell"
+  storeThemeTokens
   [class.stride-shell--checkout]="inCheckout()"
   [style.--store-brand]="primary()"
   [style.--store-on-brand]="onPrimary()"
@@ -43,6 +44,9 @@
         }
       </a>
       <nav class="stride-nav" aria-label="Principal">
+        @if (navigation(); as links) {
+          @for (link of links; track $index) { <a [routerLink]="link.to">{{ link.label }}</a> }
+        } @else {
         <a
           routerLink="/productos"
           routerLinkActive="is-active"
@@ -57,6 +61,7 @@
         <a routerLink="/productos" [queryParams]="{ orden: 'newest' }"
           >Novedades <span aria-hidden="true">↗</span></a
         >
+        }
       </nav>
       <a
         class="stride-bag"
@@ -142,11 +147,13 @@
       ></a
     >
   </aside>
-  <footer class="stride-footer">
+  <footer class="stride-footer" storeSection="footer">
     <div class="store-container stride-footer__grid">
       <div class="stride-footer__brand">
         <a class="stride-brand" routerLink="/">{{ s.displayName }}.</a>
-        <p>{{ s.tagline || 'Tu estilo. Tu siguiente paso.' }}</p>
+        <p storeEditText="footer.closing" [editValue]="strideFooterCopy().closing"></p>
+        @if (strideFooterCopy().note; as note) { <p storeEditText="footer.note" editKind="multiline" [editValue]="note"></p> }
+        <store-social-links />
       </div>
       <nav aria-label="Colecciones">
         <strong>ENCUENTRA TU ESTILO</strong

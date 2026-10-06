@@ -16,13 +16,16 @@ import { markNotFound } from '../core/not-found-status';
 import { announcementText } from '../core/page-copy';
 import { STORE_EDITOR, StoreEditorBridge } from '../core/store-editor';
 import { StoreStateService } from '../core/store-state.service';
-import { THEME_CORNERS, THEME_FONTS, readableTextOn, storeBrand } from '../core/theme';
+import { THEME_CORNERS, THEME_FONTS, readableTextOn, storeBrand, storeTheme } from '../core/theme';
 import { whatsappUrl } from '../core/whatsapp';
+import { StoreThemeTokens } from '../core/theme-tokens.directive';
+import { themeNavigation } from '../core/theme-navigation';
+import { ThemeSocialLinksComponent } from '../components/theme-social-links.component';
 import { LEGAL_LINKS } from '../features/legal/legal-slugs';
 
 @Component({
   selector: 'store-shell',
-  imports: [RouterOutlet, RouterLink, RouterLinkActive, DsIconComponent, STORE_EDITOR],
+  imports: [ThemeSocialLinksComponent, StoreThemeTokens, RouterOutlet, RouterLink, RouterLinkActive, DsIconComponent, STORE_EDITOR],
   templateUrl: './store-shell.layout.html',
   styleUrl: './store-shell.layout.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -36,6 +39,14 @@ export class StoreShellLayout {
   readonly inCheckout = computed(() => ['/checkout', '/live-checkout'].includes(this.currentUrl().split(/[?#]/)[0]));
 
   readonly store = this.state.store;
+  readonly navigation = computed(() => {
+    const store = this.store();
+    return store ? themeNavigation(store.templateContent) : null;
+  });
+  readonly footerCopy = computed(() => {
+    const store = this.store();
+    return { closing: store?.templateContent.sections['footer']?.['closing'] ?? store?.tagline ?? '', note: store?.templateContent.sections['footer']?.['note'] ?? '' };
+  });
   readonly year = new Date().getFullYear();
   readonly legalLinks = LEGAL_LINKS;
   readonly brand = computed(() => {
@@ -44,7 +55,8 @@ export class StoreShellLayout {
   });
   readonly onBrand = computed(() => readableTextOn(this.brand()?.primary ?? ''));
   readonly font = computed(() => {
-    const font = this.store()?.templateContent.theme?.font;
+    const store = this.store();
+    const font = store ? storeTheme(store).font : undefined;
     return font ? THEME_FONTS[font] : null;
   });
   readonly announcement = computed(() => {
@@ -53,7 +65,7 @@ export class StoreShellLayout {
   });
   readonly kindTabs = computed(() => visibleKindTabs(this.store()?.kinds));
   readonly catalogNoun = computed(() => catalogNoun(this.store()?.kinds));
-  readonly corners = computed(() => THEME_CORNERS[this.store()?.templateContent.theme?.corners ?? 'soft']);
+  readonly corners = computed(() => THEME_CORNERS[this.store() ? storeTheme(this.store()!).corners ?? 'soft' : 'soft']);
   readonly whatsappHref = computed(() => {
     const store = this.store();
     return store?.whatsappPhone

@@ -15,7 +15,7 @@ import { SeoService } from '../../core/seo.service';
 import { MoneyPipe } from '../../core/money.pipe';
 import { STORE_EDITOR, StoreEditorBridge } from '../../core/store-editor';
 import { defaultFaq } from '../../core/store-faq';
-import { HomeBlock, homeBlock, homeSections } from '../../core/store-layout';
+import { HomeBlock, homeBlock, storeHomeSections } from '../../core/store-layout';
 import { StoreStateService } from '../../core/store-state.service';
 import { storeBrand } from '../../core/theme';
 import { whatsappUrl } from '../../core/whatsapp';
@@ -90,7 +90,7 @@ export class HomePage {
 
   readonly sections = computed(() => {
     const store = this.store();
-    return store ? homeSections(store.templateContent, 'classic', BUILTINS) : [];
+    return store ? storeHomeSections(store, BUILTINS) : [];
   });
   readonly editing = inject(StoreEditorBridge).active;
   readonly sharedType = sharedBlockType;

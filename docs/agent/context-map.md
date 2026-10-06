@@ -23,7 +23,7 @@ Jump table from domain to paths. API paths are under `apps/api/src/`, console pa
 | Plan integrations (web store add-on, custom domain, pixel/GA4, Instagram, team; dependencies in `INTEGRATION_REQUIRES` pause, never turn off, the dependent) | `integrations/` (state, custom domain + Cloudflare for SaaS), `team/`, `channels/` (Instagram); store gate in `storefront/storefront-public.service.ts` and `storefront.service.ts` | `features/integrations/` (activation + `integration-gate`), `features/{domain,tracking,instagram,team}/`, `features/auth/invite.page`, sidebar from `core/integrations/`; store `core/analytics.service.ts`, `components/consent-banner` | security |
 | Metrics | `metrics/` | `features/metrics/` | implement |
 | Tenant store | `storefront/` | console `features/store/`; app `apps/store/`; types `packages/contracts/` | implement |
-| Store templates by industry | `storefront/` (`industry`, `template`, `templateContent`, editable fields in `store-templates.ts`) | `apps/store/src/app/templates/<template>/`; picker in console `features/store/` | ui |
+| Store themes, release compatibility and updates | `storefront/{theme-release,store-templates,storefront-editor.service}.ts`; registry/contracts/schemas `packages/themes/`; guide `docs/THEMES.md`, audit/report `docs/THEMES-{AUDIT,REPORT}.md` | compiled renderers `apps/store/src/app/templates/`; picker/manager/editor `features/store/`; SDK `scripts/{create-theme,theme-check,seal-theme-releases,build-theme-catalog}.mjs` | implement, ui, data, security |
 | Visual store editor (draft/publish) | `storefront/storefront-editor.service.ts` (`templateDraft`) | console `features/store/store-editor.page.*`; store `core/store-editor.ts` (postMessage bridge + directives) | ui, security |
 | Design system | — | `packages/ui/`, `packages/design-tokens/`, `apps/web/src/styles.scss` | ui |
 | Schema / migrations | `apps/api/prisma/` | — | data |
@@ -43,6 +43,7 @@ Jump table from domain to paths. API paths are under `apps/api/src/`, console pa
 - Buyer payments (flow B) use per-tenant encrypted Mercado Pago credentials (`payments/merchant-accounts.service.ts`); without them the store runs in simulator mode.
 - `docs/plan-tienda-web.md` is a proposal written before `apps/store` existed; when it disagrees with the code, the code wins.
 - Shipping settings are business-wide (`/shipping`, used by the agent and the store) but their columns still live on the `Storefront` row, created on first use by `storefront/storefront-row.ts`.
-- CI builds api and web only; store build and tests are not in CI.
+- CI now builds API, web and store and runs theme/schema/runtime and console tests. API unit/e2e remains local Docker verification on the isolated test database.
+- Themes v1 are declarative packages over reviewed compiled platform renderers, with pinned ABI/releases and additive migration; no arbitrary plugin execution or free-form page builder. Legacy built-in content keys remain shared across presentations; snapshots without identity cannot reconstruct their original template. See `docs/THEMES.md`.
 
 - Conversion uses Redis/BullMQ for recovery and optional Qdrant for catalog affinity; PostgreSQL remains authoritative. PostGIS is not used: neither recovery nor recommendations needs geolocation. Webhook ingestion remains synchronous.

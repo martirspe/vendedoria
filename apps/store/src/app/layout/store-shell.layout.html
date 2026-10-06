@@ -1,6 +1,7 @@
 @if (store(); as s) {
   <div
     class="shell"
+    storeThemeTokens
     [class.shell--checkout]="inCheckout()"
     [style.--store-brand]="brand()?.primary"
     [style.--store-on-brand]="onBrand()"
@@ -45,6 +46,9 @@
         </a>
 
         <nav class="nav" aria-label="Principal">
+          @if (navigation(); as links) {
+            @for (link of links; track $index) { <a [routerLink]="link.to">{{ link.label }}</a> }
+          } @else {
           <a routerLink="/" routerLinkActive="is-active" [routerLinkActiveOptions]="{ exact: true }">Inicio</a>
           @if (kindTabs().length) {
             @for (tab of kindTabs(); track tab.param) {
@@ -52,6 +56,7 @@
             }
           } @else {
             <a routerLink="/productos" routerLinkActive="is-active">{{ catalogNoun().label }}</a>
+          }
           }
         </nav>
 
@@ -74,13 +79,15 @@
       <router-outlet />
     </main>
 
-    <footer class="footer">
+    <footer class="footer" storeSection="footer">
       <div class="store-container footer__inner">
         <div class="footer__brand">
           <strong>{{ s.displayName }}</strong>
-          @if (s.tagline) {
-            <p>{{ s.tagline }}</p>
+          @if (footerCopy().closing; as closing) {
+            <p storeEditText="footer.closing" [editValue]="closing"></p>
           }
+          @if (footerCopy().note; as note) { <p storeEditText="footer.note" editKind="multiline" [editValue]="note"></p> }
+          <store-social-links />
         </div>
         <ul class="footer__contact" aria-label="Contacto">
           @if (whatsappHref(); as href) {

@@ -5,11 +5,13 @@ import type { AuthUserPayload } from '../common/types/auth-user';
 import { RateLimit } from '../rate-limit/rate-limit.decorator';
 import {
   SaveTemplateDraftDto,
+  EditorRevisionDto,
   ScheduleTemplateDraftDto,
   SuggestTemplateImageDto,
   SuggestTemplatePageDto,
   SuggestTemplateSectionDto,
   SuggestTemplateTextDto,
+  StageThemeDto,
 } from './dto/template-draft.dto';
 import { UpdateStorefrontDto } from './dto/update-storefront.dto';
 import { UpdateSubdomainDto } from './dto/update-subdomain.dto';
@@ -34,27 +36,37 @@ export class StorefrontController {
 
   @Put('editor/draft')
   saveDraft(@CurrentUser() user: AuthUserPayload, @Body() dto: SaveTemplateDraftDto) {
-    return this.editor.saveDraft(user.tenantId, dto.content);
+    return this.editor.saveDraft(user.tenantId, dto.content, dto.savedAt);
+  }
+
+  @Get('themes')
+  themes(@CurrentUser() user: AuthUserPayload) {
+    return this.editor.themes(user.tenantId);
+  }
+
+  @Post('themes/draft')
+  stageTheme(@CurrentUser() user: AuthUserPayload, @Body() dto: StageThemeDto) {
+    return this.editor.stageTheme(user.tenantId, dto.template, dto.version, dto.preset, dto.savedAt);
   }
 
   @Post('editor/publish')
-  publishDraft(@CurrentUser() user: AuthUserPayload) {
-    return this.editor.publish(user.tenantId);
+  publishDraft(@CurrentUser() user: AuthUserPayload, @Body() dto: EditorRevisionDto) {
+    return this.editor.publish(user.tenantId, dto.savedAt);
   }
 
   @Post('editor/discard')
-  discardDraft(@CurrentUser() user: AuthUserPayload) {
-    return this.editor.discard(user.tenantId);
+  discardDraft(@CurrentUser() user: AuthUserPayload, @Body() dto: EditorRevisionDto) {
+    return this.editor.discard(user.tenantId, dto.savedAt);
   }
 
   @Put('editor/schedule')
   scheduleDraft(@CurrentUser() user: AuthUserPayload, @Body() dto: ScheduleTemplateDraftDto) {
-    return this.editor.schedule(user.tenantId, new Date(dto.publishAt));
+    return this.editor.schedule(user.tenantId, new Date(dto.publishAt), dto.savedAt);
   }
 
   @Delete('editor/schedule')
-  cancelSchedule(@CurrentUser() user: AuthUserPayload) {
-    return this.editor.cancelSchedule(user.tenantId);
+  cancelSchedule(@CurrentUser() user: AuthUserPayload, @Body() dto: EditorRevisionDto) {
+    return this.editor.cancelSchedule(user.tenantId, dto.savedAt);
   }
 
   @Get('editor/versions')
@@ -63,8 +75,8 @@ export class StorefrontController {
   }
 
   @Post('editor/versions/:id/restore')
-  restoreVersion(@CurrentUser() user: AuthUserPayload, @Param('id') id: string) {
-    return this.editor.restore(user.tenantId, id);
+  restoreVersion(@CurrentUser() user: AuthUserPayload, @Param('id') id: string, @Body() dto: EditorRevisionDto) {
+    return this.editor.restore(user.tenantId, id, dto.savedAt);
   }
 
   @Post('editor/ai/text')

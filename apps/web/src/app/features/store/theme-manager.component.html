@@ -1,0 +1,44 @@
+<section class="themes" aria-labelledby="theme-status-title">
+  <h2 id="theme-status-title">Tu plantilla</h2>
+  @if (loading()) {
+    <p aria-busy="true">Consultando plantilla…</p>
+  } @else if (data(); as d) {
+    <p><strong>{{ current()?.displayName || 'Plantilla no disponible' }}</strong> · Versión {{ d.status.editing.version }}</p>
+    <p class="hint">Por {{ current()?.author || 'Autor no disponible' }}</p>
+    @if (pending()) {
+      <p role="status">Borrador preparado. El diseño activo es {{ activeName() }} {{ d.status.active.version }}.</p>
+    }
+    @if (d.status.compatibility.status === 'compatible') {
+      <p><ds-icon name="check" /> Compatible con tu tienda y el editor.</p>
+    } @else {
+      @for (issue of d.status.compatibility.issues; track issue.path + issue.message) {
+        <p role="alert">{{ issue.message }}</p>
+      }
+    }
+    @if (d.status.activeCompatibility.status === 'incompatible' || d.status.activeCompatibility.status === 'update_required') {
+      <p role="alert">El diseño publicado necesita una versión compatible. Tu catálogo se muestra con el diseño de recuperación.</p>
+      @for (issue of d.status.activeCompatibility.issues; track issue.path + issue.message) { <p class="hint">{{ issue.message }}</p> }
+      <ds-button variant="secondary" [disabled]="busy()" (click)="prepare('recover')">Preparar Clásica para recuperar la tienda</ds-button>
+    }
+    @if (d.status.update; as update) {
+      <p>{{ update.required ? 'Actualización necesaria' : 'Actualización disponible' }} · {{ update.version }}</p>
+      <ul>@for (entry of update.changelog; track entry) { <li>{{ entry }}</li> }</ul>
+      <ds-button variant="secondary" [disabled]="busy() || (d.status.editing.template === d.status.active.template && d.status.editing.version === update.version)" (click)="prepare('update')">{{ d.status.editing.template === d.status.active.template && d.status.editing.version === update.version ? 'Actualización en borrador' : 'Preparar actualización' }}</ds-button>
+    }
+    @if (current(); as theme) {
+      <details>
+        <summary>Funciones de esta plantilla</summary>
+        <ul>@for (name of functions(); track name) { <li>{{ name }}</li> }</ul>
+        <p class="hint">Algunas funciones necesitan que las actives o configures en tu negocio.</p>
+      </details>
+      @for (preset of theme.presets; track preset.id) {
+        <ds-button variant="ghost" [disabled]="busy()" (click)="prepare('preset', preset.id)">Importar muestra: {{ preset.label }}</ds-button>
+      }
+      <p class="hint">La muestra completa campos sin personalizar. Tus productos, precios y pedidos se conservan.</p>
+    }
+    @if (!inEditor()) { <a routerLink="/app/store/editor">Revisar y publicar en el editor <ds-icon name="arrowRight" /></a> }
+  }
+  @if (error(); as message) { <p role="alert">{{ message }}</p><ds-button variant="secondary" [disabled]="busy()" (click)="load()">Recargar</ds-button> }
+  @if (notice(); as message) { <p role="status">{{ message }}</p> }
+  @if (busy()) { <p role="status" aria-busy="true">Preparando el diseño…</p> }
+</section>

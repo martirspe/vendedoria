@@ -1,6 +1,25 @@
 // Applied after the original template so each refined layout has one owner.
 @mixin refinements {
   body.tpl-selecta {
+    selecta-shell[data-theme-container] :is(.wrap, .hero, .header) {
+      max-width: var(--store-max-width);
+    }
+    selecta-shell[data-theme-surface] :is(input, select, textarea, .order-summary, .included, .search, .segmented, .select-field, .pills button:not(.active)) {
+      background-color: var(--store-surface);
+    }
+    selecta-shell[data-theme-corners] :is(.button, input:not([type=checkbox]):not([type=radio]), select, textarea, .notice, .search, .select-field) {
+      border-radius: var(--store-radius-control);
+    }
+    selecta-shell[data-theme-corners] :is(.card-image, .ritual-banner, .included, .order-summary, .catalog-tools) {
+      border-radius: var(--store-radius-card);
+    }
+    .announcement, .button:not(.secondary), .cart-link b, .pills button.active, .segmented button.active, .faq-help-icon {
+      color: var(--sel-on-wine, #ffffff);
+    }
+    .button:not(.secondary):hover {
+      background: color-mix(in srgb, var(--wine) 90%, var(--ink));
+      color: var(--sel-on-wine, #ffffff);
+    }
     h3 { font-size: var(--store-type-product); line-height: 1.3; }
     h4 { font-size: var(--store-type-subheading); line-height: 1.4; }
     .summary-product h3, .cart-row h3 { font-size: var(--store-type-body); line-height: 1.4; }

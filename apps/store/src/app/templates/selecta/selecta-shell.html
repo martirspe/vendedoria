@@ -32,7 +32,10 @@
       }
     </a>
     <nav aria-label="Principal">
-      @if (!inCheckout()) { <a routerLink="/productos">Catálogo</a> }
+      @if (!inCheckout()) {
+        @if (navigation(); as links) { @for (link of links; track $index) { <a [routerLink]="link.to">{{ link.label }}</a> } }
+        @else { <a routerLink="/productos">Catálogo</a> }
+      }
       <a routerLink="/carrito" class="cart-link">
         <app-icon name="bag" />
         <span>Mi bolsa</span>
@@ -42,6 +45,7 @@
   </header>
   <main id="main"><router-outlet /></main>
   <footer storeSection="footer" [class.is-checkout]="inCheckout()">
+    <store-social-links />
     <a routerLink="/" class="brand" [attr.aria-label]="s.displayName + ', ir al inicio'">
       @if (logo(); as src) {
         <img class="brand-logo" [src]="src" [alt]="s.displayName" height="44" />

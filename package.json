@@ -8,6 +8,12 @@
     "packages/*"
   ],
   "scripts": {
+    "theme:create": "node scripts/create-theme.mjs",
+    "theme:build": "node scripts/build-theme-catalog.mjs",
+    "theme:check": "node scripts/theme-check.mjs",
+    "theme:seal": "node scripts/seal-theme-releases.mjs",
+    "theme:test": "node --test packages/themes/test/*.test.js",
+    "theme:test:store": "node --experimental-strip-types --test apps/store/test/theme-runtime.test.mjs",
     "dev": "node scripts/docker.mjs dev",
     "docker:up": "node scripts/docker.mjs dev",
     "docker:down": "node scripts/docker.mjs down",

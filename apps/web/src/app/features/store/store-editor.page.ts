@@ -46,6 +46,8 @@ import {
   THEME_COLORS,
   THEME_CORNERS,
   THEME_FONTS,
+  THEME_CHOICES,
+  type ThemeColorOption,
   addBlock,
   applyPage,
   canGenerateImage,
@@ -142,6 +144,7 @@ export class StoreEditorPage {
   private noticeTimer: ReturnType<typeof setTimeout> | null = null;
   private saving: Promise<void> | null = null;
   private dirty = false;
+  private savedAt: string | undefined;
   private imageTarget: { section: string; field: string } | null = null;
   private aiRequest = 0;
 
@@ -193,6 +196,7 @@ export class StoreEditorPage {
   readonly formatDate = formatDate;
   readonly fonts = THEME_FONTS;
   readonly colors = THEME_COLORS;
+  readonly styleChoices = THEME_CHOICES;
   readonly cornerStyles = THEME_CORNERS;
   /** Style the store shows: merchant choices over the template defaults. */
   readonly theme = computed<Required<StoreTemplateTheme> | null>(() => {
@@ -207,7 +211,7 @@ export class StoreEditorPage {
   /** Home order being edited (merchant layout of the current template). */
   readonly layout = computed<StoreLayoutItem[]>(() => {
     const view = this.view();
-    return view ? layoutOf(this.content(), view.template, view.sections) : [];
+    return view ? layoutOf(this.content(), view.template, view.sections, view.defaultLayout) : [];
   });
   /** Home sections in page order; repeated blocks are numbered. */
   readonly bodySections = computed<PanelSection[]>(() => {
@@ -262,7 +266,7 @@ export class StoreEditorPage {
       if (this.saveTimer) clearTimeout(this.saveTimer);
       if (this.frameTimer) clearTimeout(this.frameTimer);
       if (this.noticeTimer) clearTimeout(this.noticeTimer);
-      if (this.dirty) void this.api.saveDraft(this.content()).catch(() => undefined);
+      if (this.dirty) void this.api.saveDraft(this.content(), this.savedAt).catch(() => undefined);
     });
   }
 
@@ -592,7 +596,7 @@ export class StoreEditorPage {
       const image = await resizeImage(file, logo ? 800 : 2000);
       const { url } = await this.catalog.uploadMedia(image.contentType, image.data);
       if (logo) {
-        this.setTheme('logo', url);
+        this.setTheme(target.field === 'favicon' ? 'favicon' : 'logo', url);
       } else {
         this.change(withField(this.content(), target.section, target.field, url), null);
         this.push();
@@ -622,7 +626,7 @@ export class StoreEditorPage {
   }
 
   /** Hex typed by hand: applied when valid, otherwise the field shows the current color again. */
-  typeColor(option: 'primary' | 'accent', input: HTMLInputElement): void {
+  typeColor(option: ThemeColorOption, input: HTMLInputElement): void {
     const raw = input.value.trim().toLowerCase();
     const hex = raw.startsWith('#') ? raw : `#${raw}`;
     if (HEX_COLOR.test(hex)) this.setTheme(option, hex);
@@ -632,6 +636,16 @@ export class StoreEditorPage {
   chooseLogo(): void {
     this.imageTarget = { section: THEME_TARGET, field: 'logo' };
     this.filePicker()?.nativeElement.click();
+  }
+
+  chooseFavicon(): void {
+    this.imageTarget = { section: THEME_TARGET, field: 'favicon' };
+    this.filePicker()?.nativeElement.click();
+  }
+
+  setStyleChoice(option: 'container' | 'spacing' | 'typeScale', value: string): void {
+    const allowed = this.styleChoices.find(choice => choice.id === option)?.options;
+    if (allowed?.some(choice => choice.value === value)) this.setTheme(option, value as StoreTemplateTheme[typeof option]);
   }
 
   customizeFaq(): void {
@@ -695,7 +709,7 @@ export class StoreEditorPage {
     try {
       await this.flush();
       if (this.saveState() === 'error') throw new Error('save');
-      const state = await this.api.publishDraft();
+      const state = await this.api.publishDraft(this.savedAt);
       this.applyState(state);
       this.versions.set(null);
       if (this.panelTab() === 'versions') void this.loadVersions();
@@ -723,12 +737,13 @@ export class StoreEditorPage {
     this.notice.set(null);
     try {
       await this.stopSaving();
-      const state = await this.api.discardDraft();
+      const state = await this.api.discardDraft(this.savedAt);
       this.content.set(state.content);
       this.applyState(state);
       this.saveState.set('saved');
       this.push();
       this.success('Cambios descartados.');
+      if (state.template !== this.view()?.template || state.themeVersion !== this.view()?.themeVersion) await this.load();
     } catch (error) {
       this.notice.set({ tone: 'danger', text: this.messageFrom(error, 'No pudimos descartar los cambios.') });
     } finally {
@@ -764,7 +779,7 @@ export class StoreEditorPage {
     try {
       await this.flush();
       if (this.saveState() === 'error') throw new Error('save');
-      const state = await this.api.scheduleDraft(date.toISOString());
+      const state = await this.api.scheduleDraft(date.toISOString(), this.savedAt);
       this.applyState(state);
       this.success(`Listo: el ${formatDate(date.toISOString())} se publicarán tus cambios.`);
     } catch (error) {
@@ -778,7 +793,7 @@ export class StoreEditorPage {
     this.busy.set('schedule');
     this.notice.set(null);
     try {
-      this.applyState(await this.api.cancelSchedule());
+      this.applyState(await this.api.cancelSchedule(this.savedAt));
       this.success('Programación cancelada. Tus cambios siguen guardados como borrador.');
     } catch (error) {
       this.notice.set({ tone: 'danger', text: this.messageFrom(error, 'No pudimos cancelar la programación.') });
@@ -787,7 +802,7 @@ export class StoreEditorPage {
     }
   }
 
-  /** Loads a previous design into the draft; Ctrl+Z brings back the draft it replaced. */
+  /** Restores content and release together, then reloads the matching editor schema. */
   async restoreVersion(version: StoreEditorVersion): Promise<void> {
     const confirmed = await this.confirmDialog.confirm({
       title: '¿Restaurar esta versión?',
@@ -799,7 +814,7 @@ export class StoreEditorPage {
     this.notice.set(null);
     try {
       await this.stopSaving();
-      const state = await this.api.restoreVersion(version.id);
+      const state = await this.api.restoreVersion(version.id, this.savedAt);
       this.history.record(this.content(), null);
       this.content.set(state.content);
       this.syncHistory();
@@ -807,6 +822,7 @@ export class StoreEditorPage {
       this.saveState.set('saved');
       this.push();
       this.success('Versión restaurada en tu borrador. Revísala y publícala cuando quieras.');
+      await this.load();
     } catch (error) {
       this.notice.set({ tone: 'danger', text: this.messageFrom(error, 'No pudimos restaurar esa versión.') });
     } finally {
@@ -815,6 +831,7 @@ export class StoreEditorPage {
   }
 
   private applyState(state: StoreEditorState): void {
+    this.savedAt = state.savedAt;
     this.hasUnpublished.set(state.hasUnpublishedChanges);
     this.scheduledAt.set(state.scheduledAt);
   }
@@ -889,14 +906,15 @@ export class StoreEditorPage {
     this.dirty = false;
     this.saveState.set('saving');
     this.saving = this.api
-      .saveDraft(this.content())
+      .saveDraft(this.content(), this.savedAt)
       .then((state) => {
         this.applyState(state);
         this.saveState.set(this.dirty ? 'pending' : 'saved');
       })
-      .catch(() => {
+      .catch((error: unknown) => {
         this.dirty = true;
         this.saveState.set('error');
+        this.notice.set({ tone: 'danger', text: this.messageFrom(error, 'No pudimos guardar. Revisa tu conexión y vuelve a intentarlo.') });
       })
       .finally(() => {
         this.saving = null;

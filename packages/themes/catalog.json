@@ -1,0 +1,734 @@
+[
+  {
+    "schemaVersion": 1,
+    "id": "vendedoria/stride",
+    "namespace": "vendedoria",
+    "slug": "stride",
+    "displayName": "Impulso",
+    "version": "1.0.0",
+    "author": "VendedorIA",
+    "license": "UNLICENSED",
+    "description": "Moda y calzado con portada editorial, categorías visuales y productos protagonistas.",
+    "renderer": "stride@1",
+    "contracts": {
+      "engine": 1,
+      "editor": 1,
+      "storefront": 1,
+      "content": 1
+    },
+    "capabilities": {
+      "requires": [
+        "catalog",
+        "cart",
+        "checkout",
+        "seo"
+      ],
+      "supports": [
+        "variants",
+        "search",
+        "filters",
+        "coupons",
+        "services",
+        "digitalProducts",
+        "recommendations",
+        "whatsapp"
+      ],
+      "optional": []
+    },
+    "industries": [
+      "moda"
+    ],
+    "sections": [
+      "hero",
+      "featured",
+      "editorial",
+      "categories",
+      "spotlight",
+      "stories",
+      "voices",
+      "faq",
+      "closing",
+      "imageText",
+      "text",
+      "benefits",
+      "testimonials",
+      "whatsapp",
+      "gallery",
+      "cta",
+      "announcement",
+      "product"
+    ],
+    "settings": [
+      "logo",
+      "primary",
+      "accent",
+      "font",
+      "corners"
+    ],
+    "tokens": {
+      "primary": "#181a18",
+      "accent": "#c8f542",
+      "font": "modern",
+      "corners": "square"
+    },
+    "assets": {
+      "cover": "/template-previews/stride.webp",
+      "styles": [
+        "/stride.css"
+      ]
+    },
+    "presets": [
+      {
+        "id": "original",
+        "label": "Diseño original",
+        "sections": {},
+        "layout": [
+          {
+            "id": "hero",
+            "type": "hero"
+          },
+          {
+            "id": "featured",
+            "type": "featured"
+          },
+          {
+            "id": "editorial",
+            "type": "editorial"
+          },
+          {
+            "id": "categories",
+            "type": "categories"
+          },
+          {
+            "id": "spotlight",
+            "type": "spotlight"
+          },
+          {
+            "id": "stories",
+            "type": "stories"
+          },
+          {
+            "id": "voices",
+            "type": "voices"
+          },
+          {
+            "id": "faq",
+            "type": "faq"
+          },
+          {
+            "id": "closing",
+            "type": "closing"
+          }
+        ]
+      }
+    ],
+    "migrations": [],
+    "changelog": [
+      "Diseño original y editor de secciones."
+    ]
+  },
+  {
+    "schemaVersion": 1,
+    "id": "vendedoria/stride",
+    "namespace": "vendedoria",
+    "slug": "stride",
+    "displayName": "Impulso",
+    "version": "1.1.0",
+    "author": "VendedorIA",
+    "license": "UNLICENSED",
+    "description": "Moda y calzado con portada editorial, categorías visuales y productos protagonistas.",
+    "renderer": "stride@1",
+    "contracts": {
+      "engine": 1,
+      "editor": 1,
+      "storefront": 1,
+      "content": 1
+    },
+    "capabilities": {
+      "requires": [
+        "catalog",
+        "cart",
+        "checkout",
+        "seo"
+      ],
+      "supports": [
+        "variants",
+        "search",
+        "filters",
+        "coupons",
+        "services",
+        "digitalProducts",
+        "recommendations",
+        "whatsapp"
+      ],
+      "optional": []
+    },
+    "industries": [
+      "moda"
+    ],
+    "sections": [
+      "hero",
+      "featured",
+      "editorial",
+      "categories",
+      "spotlight",
+      "stories",
+      "voices",
+      "faq",
+      "closing",
+      "imageText",
+      "text",
+      "benefits",
+      "testimonials",
+      "whatsapp",
+      "gallery",
+      "cta",
+      "announcement",
+      "product",
+      "footer",
+      "navigation",
+      "social"
+    ],
+    "settings": [
+      "logo",
+      "primary",
+      "accent",
+      "font",
+      "corners",
+      "favicon",
+      "background",
+      "surface",
+      "text",
+      "muted",
+      "border",
+      "container",
+      "spacing",
+      "typeScale"
+    ],
+    "tokens": {
+      "primary": "#181a18",
+      "accent": "#c8f542",
+      "font": "modern",
+      "corners": "square"
+    },
+    "assets": {
+      "cover": "/template-previews/stride.webp",
+      "styles": [
+        "/stride.css"
+      ]
+    },
+    "presets": [
+      {
+        "id": "original",
+        "label": "Diseño original",
+        "sections": {
+          "hero": {
+            "title": "Descubre tu próximo favorito",
+            "text": "Explora el catálogo y elige con toda la información.",
+            "cta": "Ver catálogo"
+          }
+        },
+        "layout": [
+          {
+            "id": "hero",
+            "type": "hero"
+          },
+          {
+            "id": "featured",
+            "type": "featured"
+          },
+          {
+            "id": "editorial",
+            "type": "editorial"
+          },
+          {
+            "id": "categories",
+            "type": "categories"
+          },
+          {
+            "id": "spotlight",
+            "type": "spotlight"
+          },
+          {
+            "id": "stories",
+            "type": "stories"
+          },
+          {
+            "id": "voices",
+            "type": "voices"
+          },
+          {
+            "id": "faq",
+            "type": "faq"
+          },
+          {
+            "id": "closing",
+            "type": "closing"
+          }
+        ]
+      }
+    ],
+    "migrations": [
+      {
+        "from": "1.0.0",
+        "to": "1.1.0",
+        "renameFields": []
+      }
+    ],
+    "changelog": [
+      "Más opciones de color, favicon, navegación, redes sociales, ancho, espaciado y tamaño de letra.",
+      "Actualización que conserva tus textos, fotos y configuración."
+    ]
+  },
+  {
+    "schemaVersion": 1,
+    "id": "vendedoria/classic",
+    "namespace": "vendedoria",
+    "slug": "classic",
+    "displayName": "Clásica",
+    "version": "1.0.0",
+    "author": "VendedorIA",
+    "license": "UNLICENSED",
+    "description": "Catálogo limpio con tus colores. Sirve para cualquier rubro.",
+    "renderer": "classic@1",
+    "contracts": {
+      "engine": 1,
+      "editor": 1,
+      "storefront": 1,
+      "content": 1
+    },
+    "capabilities": {
+      "requires": [
+        "catalog",
+        "cart",
+        "checkout",
+        "seo"
+      ],
+      "supports": [
+        "variants",
+        "search",
+        "filters",
+        "coupons",
+        "services",
+        "digitalProducts",
+        "recommendations",
+        "whatsapp"
+      ],
+      "optional": []
+    },
+    "industries": "all",
+    "sections": [
+      "hero",
+      "featured",
+      "how",
+      "faq",
+      "closing",
+      "imageText",
+      "text",
+      "benefits",
+      "testimonials",
+      "whatsapp",
+      "gallery",
+      "cta",
+      "questions",
+      "announcement",
+      "product"
+    ],
+    "settings": [
+      "logo",
+      "primary",
+      "accent",
+      "font",
+      "corners"
+    ],
+    "tokens": {},
+    "assets": {
+      "cover": "/template-previews/classic.webp",
+      "styles": []
+    },
+    "presets": [
+      {
+        "id": "original",
+        "label": "Diseño original",
+        "sections": {},
+        "layout": [
+          {
+            "id": "hero",
+            "type": "hero"
+          },
+          {
+            "id": "featured",
+            "type": "featured"
+          },
+          {
+            "id": "how",
+            "type": "how"
+          },
+          {
+            "id": "faq",
+            "type": "faq"
+          },
+          {
+            "id": "closing",
+            "type": "closing"
+          }
+        ]
+      }
+    ],
+    "migrations": [],
+    "changelog": [
+      "Diseño original y editor de secciones."
+    ]
+  },
+  {
+    "schemaVersion": 1,
+    "id": "vendedoria/classic",
+    "namespace": "vendedoria",
+    "slug": "classic",
+    "displayName": "Clásica",
+    "version": "1.1.0",
+    "author": "VendedorIA",
+    "license": "UNLICENSED",
+    "description": "Catálogo limpio con tus colores. Sirve para cualquier rubro.",
+    "renderer": "classic@1",
+    "contracts": {
+      "engine": 1,
+      "editor": 1,
+      "storefront": 1,
+      "content": 1
+    },
+    "capabilities": {
+      "requires": [
+        "catalog",
+        "cart",
+        "checkout",
+        "seo"
+      ],
+      "supports": [
+        "variants",
+        "search",
+        "filters",
+        "coupons",
+        "services",
+        "digitalProducts",
+        "recommendations",
+        "whatsapp"
+      ],
+      "optional": []
+    },
+    "industries": "all",
+    "sections": [
+      "hero",
+      "featured",
+      "how",
+      "faq",
+      "closing",
+      "imageText",
+      "text",
+      "benefits",
+      "testimonials",
+      "whatsapp",
+      "gallery",
+      "cta",
+      "questions",
+      "announcement",
+      "product",
+      "footer",
+      "navigation",
+      "social"
+    ],
+    "settings": [
+      "logo",
+      "primary",
+      "accent",
+      "font",
+      "corners",
+      "favicon",
+      "background",
+      "surface",
+      "text",
+      "muted",
+      "border",
+      "container",
+      "spacing",
+      "typeScale"
+    ],
+    "tokens": {},
+    "assets": {
+      "cover": "/template-previews/classic.webp",
+      "styles": []
+    },
+    "presets": [
+      {
+        "id": "original",
+        "label": "Diseño original",
+        "sections": {
+          "hero": {
+            "title": "Descubre tu próximo favorito",
+            "text": "Explora el catálogo y elige con toda la información.",
+            "cta": "Ver catálogo"
+          }
+        },
+        "layout": [
+          {
+            "id": "hero",
+            "type": "hero"
+          },
+          {
+            "id": "featured",
+            "type": "featured"
+          },
+          {
+            "id": "how",
+            "type": "how"
+          },
+          {
+            "id": "faq",
+            "type": "faq"
+          },
+          {
+            "id": "closing",
+            "type": "closing"
+          }
+        ]
+      }
+    ],
+    "migrations": [
+      {
+        "from": "1.0.0",
+        "to": "1.1.0",
+        "renameFields": []
+      }
+    ],
+    "changelog": [
+      "Más opciones de color, favicon, navegación, redes sociales, ancho, espaciado y tamaño de letra.",
+      "Actualización que conserva tus textos, fotos y configuración."
+    ]
+  },
+  {
+    "schemaVersion": 1,
+    "id": "vendedoria/selecta",
+    "namespace": "vendedoria",
+    "slug": "selecta",
+    "displayName": "Selecta",
+    "version": "1.0.0",
+    "author": "VendedorIA",
+    "license": "UNLICENSED",
+    "description": "Una presentación editorial para belleza, con fichas detalladas y una compra clara.",
+    "renderer": "selecta@1",
+    "contracts": {
+      "engine": 1,
+      "editor": 1,
+      "storefront": 1,
+      "content": 1
+    },
+    "capabilities": {
+      "requires": [
+        "catalog",
+        "cart",
+        "checkout",
+        "seo"
+      ],
+      "supports": [
+        "variants",
+        "search",
+        "filters",
+        "coupons",
+        "services",
+        "digitalProducts",
+        "recommendations",
+        "whatsapp"
+      ],
+      "optional": []
+    },
+    "industries": [
+      "belleza"
+    ],
+    "sections": [
+      "hero",
+      "collection",
+      "banner",
+      "faq",
+      "imageText",
+      "text",
+      "benefits",
+      "testimonials",
+      "whatsapp",
+      "gallery",
+      "cta",
+      "announcement",
+      "footer",
+      "product"
+    ],
+    "settings": [
+      "logo",
+      "primary",
+      "font"
+    ],
+    "tokens": {
+      "primary": "#4a1429",
+      "font": "editorial"
+    },
+    "assets": {
+      "cover": "/template-previews/selecta.webp",
+      "styles": [
+        "/selecta.css"
+      ]
+    },
+    "presets": [
+      {
+        "id": "original",
+        "label": "Diseño original",
+        "sections": {},
+        "layout": [
+          {
+            "id": "hero",
+            "type": "hero"
+          },
+          {
+            "id": "collection",
+            "type": "collection"
+          },
+          {
+            "id": "banner",
+            "type": "banner"
+          },
+          {
+            "id": "faq",
+            "type": "faq"
+          }
+        ]
+      }
+    ],
+    "migrations": [],
+    "changelog": [
+      "Diseño original y editor de secciones."
+    ]
+  },
+  {
+    "schemaVersion": 1,
+    "id": "vendedoria/selecta",
+    "namespace": "vendedoria",
+    "slug": "selecta",
+    "displayName": "Selecta",
+    "version": "1.1.0",
+    "author": "VendedorIA",
+    "license": "UNLICENSED",
+    "description": "Una presentación editorial para belleza, con fichas detalladas y una compra clara.",
+    "renderer": "selecta@1",
+    "contracts": {
+      "engine": 1,
+      "editor": 1,
+      "storefront": 1,
+      "content": 1
+    },
+    "capabilities": {
+      "requires": [
+        "catalog",
+        "cart",
+        "checkout",
+        "seo"
+      ],
+      "supports": [
+        "variants",
+        "search",
+        "filters",
+        "coupons",
+        "services",
+        "digitalProducts",
+        "recommendations",
+        "whatsapp"
+      ],
+      "optional": []
+    },
+    "industries": [
+      "belleza"
+    ],
+    "sections": [
+      "hero",
+      "collection",
+      "banner",
+      "faq",
+      "imageText",
+      "text",
+      "benefits",
+      "testimonials",
+      "whatsapp",
+      "gallery",
+      "cta",
+      "announcement",
+      "footer",
+      "product",
+      "navigation",
+      "social"
+    ],
+    "settings": [
+      "logo",
+      "primary",
+      "font",
+      "favicon",
+      "background",
+      "surface",
+      "text",
+      "muted",
+      "border",
+      "container",
+      "spacing",
+      "typeScale",
+      "accent",
+      "corners"
+    ],
+    "tokens": {
+      "primary": "#4a1429",
+      "font": "editorial"
+    },
+    "assets": {
+      "cover": "/template-previews/selecta.webp",
+      "styles": [
+        "/selecta.css"
+      ]
+    },
+    "presets": [
+      {
+        "id": "original",
+        "label": "Diseño original",
+        "sections": {
+          "hero": {
+            "title": "Descubre tu próximo favorito",
+            "text": "Explora el catálogo y elige con toda la información.",
+            "cta": "Ver catálogo"
+          }
+        },
+        "layout": [
+          {
+            "id": "hero",
+            "type": "hero"
+          },
+          {
+            "id": "collection",
+            "type": "collection"
+          },
+          {
+            "id": "banner",
+            "type": "banner"
+          },
+          {
+            "id": "faq",
+            "type": "faq"
+          }
+        ]
+      }
+    ],
+    "migrations": [
+      {
+        "from": "1.0.0",
+        "to": "1.1.0",
+        "renameFields": []
+      }
+    ],
+    "changelog": [
+      "Más opciones de color, favicon, navegación, redes sociales, ancho, espaciado y tamaño de letra.",
+      "Actualización que conserva tus textos, fotos y configuración."
+    ]
+  }
+]

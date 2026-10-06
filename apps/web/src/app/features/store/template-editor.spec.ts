@@ -141,12 +141,12 @@ describe('home layout', () => {
     const id = newBlockId('text', () => 0);
     expect(id).toBe('text-aaaaaa');
     const added = addBlock(empty, 'selecta', layout, schema[2], id, 'hero');
-    expect(added.layouts?.selecta?.map((i) => i.id)).toEqual(['hero', id, 'faq']);
+    expect(added.layouts?.['selecta']?.map((i) => i.id)).toEqual(['hero', id, 'faq']);
     expect(added.sections[id]).toEqual({ title: 'Título inicial' });
-    expect(addBlock(empty, 'selecta', layout, schema[2], id, null).layouts?.selecta?.at(-1)?.id).toBe(id);
+    expect(addBlock(empty, 'selecta', layout, schema[2], id, null).layouts?.['selecta']?.at(-1)?.id).toBe(id);
     const removed = removeBlock(added, 'selecta', layoutOf(added, 'selecta', schema), id);
     expect(removed.sections[id]).toBeUndefined();
-    expect(removed.layouts?.selecta?.map((i) => i.id)).toEqual(['hero', 'faq']);
+    expect(removed.layouts?.['selecta']?.map((i) => i.id)).toEqual(['hero', 'faq']);
     expect(typeOf(id)).toBe('text');
     expect(typeOf('hero')).toBe('hero');
   });
@@ -177,7 +177,7 @@ describe('home layout', () => {
       },
       () => ids.shift() ?? 'x',
     );
-    expect(page.layouts?.selecta).toEqual([
+    expect(page.layouts?.['selecta']).toEqual([
       { id: 'hero', type: 'hero', hidden: true },
       { id: 'text-aaaaaa', type: 'text' },
       { id: 'cta-bbbbbb', type: 'cta' },
@@ -189,7 +189,7 @@ describe('home layout', () => {
       'cta-bbbbbb': { title: 'Mira todo' },
     });
     const textsOnly = applyPage(start, 'selecta', pageSchema, { sections: { hero: { title: 'Hola' } }, blocks: [] });
-    expect(textsOnly.layouts?.selecta?.map((i) => i.id)).toEqual(['hero', 'faq', 'text-zzzzzz']);
+    expect(textsOnly.layouts?.['selecta']?.map((i) => i.id)).toEqual(['hero', 'faq', 'text-zzzzzz']);
     const withProducts = applyPage(
       empty,
       'classic',
@@ -197,6 +197,6 @@ describe('home layout', () => {
       { sections: {}, blocks: [{ type: 'cta', texts: { title: 'Mira todo' } }] },
       () => 'cta-cccccc',
     );
-    expect(withProducts.layouts?.classic?.map((i) => i.id)).toEqual(['hero', 'faq', 'featured', 'cta-cccccc']);
+    expect(withProducts.layouts?.['classic']?.map((i) => i.id)).toEqual(['hero', 'faq', 'featured', 'cta-cccccc']);
   });
 });

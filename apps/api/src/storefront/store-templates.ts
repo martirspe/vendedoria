@@ -1,6 +1,6 @@
+import { getTheme, latestThemes, RENDERER_SECTIONS } from '@vendedoria/themes';
 import type { Prisma } from '@prisma/client';
 import type {
-  StoreEditorChoice,
   StoreEditorField,
   StoreEditorSection,
   StoreLayoutItem,
@@ -27,465 +27,32 @@ export const INDUSTRIES = [
 
 export type Industry = (typeof INDUSTRIES)[number];
 
-/** Templates each industry can use. `classic` works for every business. */
-export const TEMPLATES: Record<StoreTemplate, { industries: readonly Industry[] | 'all' }> = {
-  classic: { industries: 'all' },
-  selecta: { industries: ['belleza'] },
-  stride: { industries: ['moda'] },
-};
-
-export function templateAllowed(template: string, industry: string): template is StoreTemplate {
-  const rule = TEMPLATES[template as StoreTemplate];
-  return Boolean(rule) && (rule.industries === 'all' || rule.industries.includes(industry as Industry));
+/** Catalog and controls share the platform renderer contract. */
+export const TEMPLATES = Object.fromEntries(latestThemes().map(theme => [theme.slug, { industries: theme.industries }]));
+export const TEMPLATE_SECTIONS: Record<StoreTemplate, StoreEditorSection[]> = Object.fromEntries(
+  latestThemes().map(theme => [theme.slug, sectionsFor(theme.slug, theme.version)]),
+);
+export function sectionsFor(slug: string, version?: string): StoreEditorSection[] {
+  const theme = getTheme(slug, version);
+  if (!theme) return [];
+  const order = new Map(theme.presets[0].layout.map((item, index) => [item.type, index]));
+  return RENDERER_SECTIONS[theme.renderer.split('@')[0]].filter(section => theme.sections.includes(section.id))
+    .sort((a, b) => (order.get(a.id) ?? 100) - (order.get(b.id) ?? 100));
 }
-
-/** A template that stopped matching the industry falls back to classic. */
+export function templateAllowed(template: string, industry: string): template is StoreTemplate {
+  const theme = getTheme(template);
+  return Boolean(theme && (theme.industries === 'all' || theme.industries.includes(industry)));
+}
 export function effectiveTemplate(template: string, industry: string): StoreTemplate {
   return templateAllowed(template, industry) ? template : 'classic';
 }
-
 export const MAX_TEMPLATE_FAQ = 12;
+export const MAX_LAYOUT_BLOCKS = 8;
+const MAX_LAYOUT_ITEMS = 40;
 const MAX_IMAGE_URL = 500;
-
-const text = (id: string, label: string, maxLength: number): StoreEditorField => ({ id, label, kind: 'text', maxLength });
-const lines = (id: string, label: string, maxLength: number): StoreEditorField => ({
-  id,
-  label,
-  kind: 'multiline',
-  maxLength,
-});
-const image = (id: string, label: string): StoreEditorField => ({ id, label, kind: 'image', maxLength: 0 });
-const choice = (id: string, label: string, options: StoreEditorChoice[]): StoreEditorField => ({
-  id,
-  label,
-  kind: 'choice',
-  maxLength: 0,
-  options,
-});
-/** Background of a block, rendered with the theme colors of each template. */
-const tone = choice('tone', 'Fondo', [
-  { value: '', label: 'Sin fondo' },
-  { value: 'soft', label: 'Suave' },
-  { value: 'brand', label: 'Color de tu marca' },
-]);
-
-/** Fields the merchant (or the writing assistant) fills with words. */
 export function isTextField(field: StoreEditorField): boolean {
   return field.kind === 'text' || field.kind === 'multiline';
 }
-
-export const MAX_LAYOUT_BLOCKS = 8;
-const MAX_LAYOUT_ITEMS = 40;
-
-/** Library blocks; every template renders them in its own style. */
-const BLOCKS: StoreEditorSection[] = [
-  {
-    id: 'imageText',
-    label: 'Imagen con texto',
-    role: 'block',
-    canHide: true,
-    faq: false,
-    description: 'Una foto junto a un título y un texto: novedades, promociones o la historia de tu marca.',
-    fields: [
-      text('eyebrow', 'Antetítulo', 60),
-      lines('title', 'Título', 100),
-      lines('text', 'Texto', 400),
-      text('cta', 'Botón hacia tus productos', 30),
-      image('image', 'Imagen'),
-      choice('layout', 'Posición de la imagen', [
-        { value: 'start', label: 'Izquierda' },
-        { value: 'end', label: 'Derecha' },
-      ]),
-    ],
-    defaults: {
-      eyebrow: 'Novedad',
-      title: 'Descubre tu próximo favorito',
-      text: 'Explora el catálogo y encuentra una opción para ti.',
-      cta: 'Ver productos',
-      image: '',
-    },
-  },
-  {
-    id: 'text',
-    label: 'Texto destacado',
-    role: 'block',
-    canHide: true,
-    faq: false,
-    description: 'Un mensaje breve y centrado: tu propuesta, una garantía o un aviso importante.',
-    fields: [text('eyebrow', 'Antetítulo', 60), lines('title', 'Título', 120), lines('text', 'Texto', 600), tone],
-    defaults: {
-      eyebrow: 'Sobre nosotros',
-      title: 'Elige con toda la información',
-      text: 'Revisa los detalles de cada producto y consulta nuestras políticas antes de comprar.',
-    },
-  },
-  {
-    id: 'benefits',
-    label: 'Beneficios',
-    role: 'block',
-    canHide: true,
-    faq: false,
-    description: 'Tres razones para comprarte: atención, calidad, entrega o lo que te distinga.',
-    fields: [
-      text('eyebrow', 'Antetítulo', 60),
-      lines('title', 'Título', 100),
-      ...[1, 2, 3].flatMap((n) => [text(`item${n}Title`, `Beneficio ${n}`, 50), lines(`item${n}Text`, `Detalle ${n}`, 160)]),
-      tone,
-    ],
-    defaults: {
-      eyebrow: 'Por qué elegirnos',
-      title: 'Comprar aquí es fácil',
-      item1Title: 'Información a la mano',
-      item1Text: 'Revisa las características y el precio antes de elegir.',
-      item2Title: 'Productos elegidos',
-      item2Text: 'Explora el catálogo y compara las opciones disponibles.',
-      item3Title: 'Compra sin cuenta',
-      item3Text: 'Haz tu pedido sin crear una cuenta.',
-    },
-  },
-  {
-    id: 'testimonials',
-    label: 'Opiniones de clientes',
-    role: 'block',
-    canHide: true,
-    faq: false,
-    description: 'Hasta tres comentarios reales de tus clientes con su nombre.',
-    fields: [
-      text('eyebrow', 'Antetítulo', 60),
-      lines('title', 'Título', 100),
-      ...[1, 2, 3].flatMap((n) => [lines(`quote${n}`, `Opinión ${n}`, 300), text(`author${n}`, `Cliente ${n}`, 60)]),
-      tone,
-    ],
-    defaults: {
-      eyebrow: 'Lo que dicen',
-      title: 'Opiniones de nuestros clientes',
-      quote1: '',
-      author1: '',
-      quote2: '',
-      author2: '',
-      quote3: '',
-      author3: '',
-    },
-  },
-  {
-    id: 'whatsapp',
-    label: 'Botón de WhatsApp',
-    role: 'block',
-    canHide: true,
-    faq: false,
-    description: 'Una invitación a escribirte; abre tu WhatsApp de ventas configurado en Tienda web.',
-    fields: [lines('title', 'Título', 100), lines('text', 'Texto', 240), text('cta', 'Botón', 30)],
-    defaults: {
-      title: '¿Tienes dudas? Te ayudamos a elegir',
-      text: 'Escríbenos y te respondemos con gusto.',
-      cta: 'Escríbenos por WhatsApp',
-    },
-  },
-  {
-    id: 'gallery',
-    label: 'Galería de fotos',
-    role: 'block',
-    canHide: true,
-    faq: false,
-    description: 'Hasta tres fotos de tus productos, tu local o tu equipo.',
-    fields: [text('eyebrow', 'Antetítulo', 60), lines('title', 'Título', 100), ...[1, 2, 3].map((n) => image(`image${n}`, `Foto ${n}`))],
-    defaults: { eyebrow: 'Conócenos', title: 'Así trabajamos', image1: '', image2: '', image3: '' },
-  },
-  {
-    id: 'cta',
-    label: 'Llamado a la acción',
-    role: 'block',
-    canHide: true,
-    faq: false,
-    description: 'Una franja con un mensaje y un botón hacia tus productos: lanzamientos, temporadas o colecciones.',
-    fields: [
-      text('eyebrow', 'Antetítulo', 60),
-      lines('title', 'Título', 100),
-      lines('text', 'Texto', 240),
-      text('cta', 'Botón hacia tus productos', 30),
-      tone,
-    ],
-    defaults: {
-      eyebrow: '',
-      title: 'Encuentra tu próximo favorito',
-      text: 'Explora el catálogo y elige lo que va contigo.',
-      cta: 'Ver productos',
-      tone: 'brand',
-    },
-  },
-  {
-    id: 'questions',
-    label: 'Preguntas frecuentes',
-    role: 'block',
-    canHide: true,
-    faq: true,
-    description: 'Respuestas sobre pagos, envíos y cambios armadas con tu configuración; puedes personalizarlas.',
-    fields: [text('eyebrow', 'Antetítulo', 60), lines('title', 'Título', 100), tone],
-    defaults: { eyebrow: 'Compra con confianza', title: 'Preguntas frecuentes' },
-  },
-];
-
-/**
- * Library of a template: Selecta already has its own FAQ section and shows the image of an
- * image-and-text block on the right.
- */
-function libraryOf(template: StoreTemplate): StoreEditorSection[] {
-  return BLOCKS.filter((block) => template === 'classic' || block.id !== 'questions').map((block) =>
-    block.id === 'imageText'
-      ? { ...block, defaults: { ...block.defaults, layout: template === 'selecta' ? 'end' : 'start' } }
-      : block,
-  );
-}
-
-/** Fixed sections every template renders outside the home body. */
-const ANNOUNCEMENT: StoreEditorSection = {
-  id: 'announcement',
-  label: 'Anuncio superior',
-  role: 'fixed',
-  canHide: false,
-  faq: false,
-  description: 'Franja arriba de todas las páginas: envíos, promociones o avisos. Déjala vacía para ocultarla.',
-  fields: [text('text', 'Texto del anuncio', 120)],
-};
-const PRODUCT_PAGE: StoreEditorSection = {
-  id: 'product',
-  label: 'Página de producto',
-  role: 'fixed',
-  canHide: false,
-  faq: false,
-  page: 'product',
-  description: 'Textos de la página de cada producto. La vista previa abre uno de tus productos.',
-  fields: [text('whatsapp', 'Botón de WhatsApp', 30), lines('note', 'Mensaje junto al botón de compra', 240)],
-};
-
-/**
- * What the merchant can edit on each template, home sections in default page order; the store
- * renders the same `section.field` keys and the same section types.
- */
-export const TEMPLATE_SECTIONS: Record<StoreTemplate, StoreEditorSection[]> = {
-  stride: [
-    {
-      id: 'hero',
-      label: 'Portada',
-      role: 'builtin',
-      canHide: true,
-      faq: false,
-      fields: [
-        text('eyebrow', 'Antetítulo', 60),
-        lines('title', 'Título', 80),
-        text('emphasis', 'Frase destacada', 80),
-        lines('text', 'Texto', 300),
-        text('cta', 'Botón al catálogo', 30),
-        image('image', 'Imagen de portada'),
-      ],
-    },
-    {
-      id: 'featured',
-      label: 'Selección de productos',
-      role: 'builtin',
-      canHide: false,
-      faq: false,
-      fields: [text('eyebrow', 'Antetítulo', 60), text('title', 'Título', 80)],
-    },
-    {
-      id: 'editorial',
-      label: 'Inspiración para vestir',
-      role: 'builtin',
-      canHide: true,
-      faq: false,
-      fields: [1, 2].flatMap((n) => [
-        text(`eyebrow${n}`, `Antetítulo ${n}`, 60),
-        lines(`title${n}`, `Título ${n}`, 80),
-        lines(`text${n}`, `Texto ${n}`, 240),
-        text(`cta${n}`, `Botón ${n}`, 30),
-        image(`image${n}`, `Imagen ${n}`),
-      ]),
-    },
-    {
-      id: 'categories',
-      label: 'Categorías del catálogo',
-      role: 'builtin',
-      canHide: true,
-      faq: false,
-      fields: [text('title', 'Título', 80)],
-    },
-    {
-      id: 'spotlight',
-      label: 'Producto protagonista',
-      role: 'builtin',
-      canHide: true,
-      faq: false,
-      description:
-        'Destaca un producto disponible de tu selección, priorizando calzado. El precio y el enlace vienen del catálogo.',
-      fields: [
-        text('eyebrow', 'Antetítulo', 60),
-        lines('title', 'Título', 100),
-        lines('text', 'Texto', 240),
-        text('cta', 'Botón al producto', 30),
-        image('image', 'Imagen de campaña'),
-      ],
-    },
-    {
-      id: 'stories',
-      label: 'Colecciones para descubrir',
-      role: 'builtin',
-      canHide: true,
-      faq: false,
-      fields: [
-        text('title', 'Título de sección', 80),
-        ...[1, 2].flatMap((n) => [
-          text(`eyebrow${n}`, `Antetítulo ${n}`, 60),
-          lines(`title${n}`, `Título ${n}`, 80),
-          text(`cta${n}`, `Botón ${n}`, 30),
-          image(`image${n}`, `Imagen ${n}`),
-        ]),
-      ],
-    },
-    {
-      id: 'voices',
-      label: 'Opiniones reales',
-      role: 'builtin',
-      canHide: true,
-      faq: false,
-      description: 'Publica solo testimonios reales con autorización. Sin opiniones, esta sección se oculta.',
-      fields: [
-        text('eyebrow', 'Antetítulo', 60),
-        text('title', 'Título', 80),
-        ...[1, 2, 3].flatMap((n) => [lines(`quote${n}`, `Opinión ${n}`, 300), text(`author${n}`, `Cliente ${n}`, 60)]),
-      ],
-    },
-    {
-      id: 'faq',
-      label: 'Preguntas frecuentes',
-      role: 'builtin',
-      canHide: true,
-      faq: true,
-      fields: [text('title', 'Título', 80)],
-    },
-    {
-      id: 'closing',
-      label: 'Invitación final',
-      role: 'builtin',
-      canHide: true,
-      faq: false,
-      fields: [text('title', 'Título', 80), lines('text', 'Texto', 240), text('cta', 'Botón al catálogo', 30)],
-    },
-    ...libraryOf('stride'),
-    ANNOUNCEMENT,
-    PRODUCT_PAGE,
-  ],
-  classic: [
-    {
-      id: 'hero',
-      label: 'Portada',
-      role: 'builtin',
-      canHide: true,
-      faq: false,
-      fields: [
-        text('eyebrow', 'Antetítulo', 60),
-        text('title', 'Título', 80),
-        lines('text', 'Texto', 300),
-        text('cta', 'Botón principal', 30),
-        image('image', 'Imagen de portada'),
-      ],
-    },
-    {
-      id: 'featured',
-      label: 'Destacados',
-      role: 'builtin',
-      canHide: false,
-      faq: false,
-      fields: [text('title', 'Título', 60)],
-    },
-    {
-      id: 'how',
-      label: 'Cómo comprar',
-      role: 'builtin',
-      canHide: true,
-      faq: false,
-      fields: [
-        text('title', 'Título', 60),
-        text('step1Title', 'Paso 1', 60),
-        lines('step1Text', 'Detalle del paso 1', 200),
-        text('step2Title', 'Paso 2', 60),
-        lines('step2Text', 'Detalle del paso 2', 200),
-        text('step3Title', 'Paso 3', 60),
-        lines('step3Text', 'Detalle del paso 3', 200),
-      ],
-    },
-    {
-      id: 'faq', label: 'Preguntas frecuentes', role: 'builtin', canHide: true, faq: true,
-      fields: [text('title', 'Título', 80)],
-    },
-    {
-      id: 'closing', label: 'Cierre de compra', role: 'builtin', canHide: true, faq: false,
-      fields: [text('title', 'Título', 80), lines('text', 'Texto', 240), text('cta', 'Botón hacia el catálogo', 30)],
-    },
-    ...libraryOf('classic'),
-    ANNOUNCEMENT,
-    PRODUCT_PAGE,
-  ],
-  selecta: [
-    {
-      id: 'hero',
-      label: 'Portada',
-      role: 'builtin',
-      canHide: true,
-      faq: false,
-      fields: [
-        text('eyebrow', 'Antetítulo', 60),
-        lines('title', 'Título', 80),
-        text('emphasis', 'Frase destacada', 80),
-        lines('text', 'Texto', 300),
-        text('cta', 'Botón', 30),
-        text('note', 'Nota', 80),
-        image('image', 'Imagen'),
-        text('photoNote', 'Texto sobre la imagen', 40),
-      ],
-    },
-    {
-      id: 'collection',
-      label: 'Colección',
-      role: 'builtin',
-      canHide: false,
-      faq: false,
-      fields: [text('eyebrow', 'Antetítulo', 60), text('title', 'Título', 80), lines('text', 'Texto', 120)],
-    },
-    {
-      id: 'banner',
-      label: 'Banner',
-      role: 'builtin',
-      canHide: true,
-      faq: false,
-      fields: [
-        text('eyebrow', 'Antetítulo', 60),
-        lines('title', 'Título', 100),
-        text('emphasis', 'Frase destacada', 80),
-        lines('text', 'Texto', 400),
-        image('image', 'Imagen'),
-      ],
-    },
-    {
-      id: 'faq',
-      label: 'Preguntas frecuentes',
-      role: 'builtin',
-      canHide: true,
-      faq: true,
-      fields: [text('eyebrow', 'Antetítulo', 60), lines('title', 'Título', 80), text('emphasis', 'Frase destacada', 80)],
-    },
-    ...libraryOf('selecta'),
-    ANNOUNCEMENT,
-    {
-      id: 'footer',
-      label: 'Pie de página',
-      role: 'fixed',
-      canHide: false,
-      faq: false,
-      fields: [text('closing', 'Frase de cierre', 60), lines('note', 'Nota', 400)],
-    },
-    PRODUCT_PAGE,
-  ],
-};
 
 /**
  * Fields of every section type across templates. Content is validated against all of them so
@@ -493,7 +60,7 @@ export const TEMPLATE_SECTIONS: Record<StoreTemplate, StoreEditorSection[]> = {
  */
 const TYPE_FIELDS: Map<string, StoreEditorField[]> = (() => {
   const known = new Map<string, Map<string, StoreEditorField>>();
-  for (const sections of Object.values(TEMPLATE_SECTIONS)) {
+  for (const sections of Object.values(RENDERER_SECTIONS)) {
     for (const section of sections) {
       const fields = known.get(section.id) ?? new Map<string, StoreEditorField>();
       known.set(section.id, fields);
@@ -516,7 +83,7 @@ const TYPE_FIELDS: Map<string, StoreEditorField[]> = (() => {
   return new Map([...known].map(([type, fields]) => [type, [...fields.values()]]));
 })();
 
-const BLOCK_TYPES = new Set(BLOCKS.map((block) => block.id));
+const BLOCK_TYPES = new Set(Object.values(RENDERER_SECTIONS).flat().filter(section => section.role === 'block').map(section => section.id));
 const BLOCK_ID = /^([a-zA-Z]+)-([a-z0-9]{6})$/;
 
 /** Section type of a content key: built-in ids are their type, blocks are `type-xxxxxx`. */
@@ -527,7 +94,7 @@ export function sectionType(id: string): string | null {
 }
 
 export function defaultLayout(template: StoreTemplate): StoreLayoutItem[] {
-  return TEMPLATE_SECTIONS[template].filter((s) => s.role === 'builtin').map((s) => ({ id: s.id, type: s.id }));
+  return getTheme(template)!.presets[0].layout.map(item => ({ ...item }));
 }
 
 /**
@@ -563,8 +130,11 @@ function readLayouts(value: unknown): StoreTemplateContent['layouts'] {
     const items = raw[template];
     if (!Array.isArray(items)) continue;
     const layout = normalizeLayout(template, items);
-    // The template order itself is not stored, so a future default order still applies.
-    if (JSON.stringify(layout) !== JSON.stringify(defaultLayout(template))) layouts[template] = layout;
+    // An explicitly selected composition belongs to the merchant, even if it equals defaults.
+    if (items.some(entry => {
+      const item = asRecord(entry);
+      return typeof item['type'] === 'string' && TEMPLATE_SECTIONS[template].some(section => section.id === item['type'] && section.role !== 'fixed');
+    })) layouts[template] = layout;
   }
   return Object.keys(layouts).length ? layouts : undefined;
 }
@@ -592,11 +162,9 @@ export const THEME_CORNERS: readonly StoreThemeCorners[] = ['square', 'soft', 'r
 const HEX_COLOR = /^#[0-9a-f]{6}$/i;
 
 /** Style options each template renders; the editor only offers these. */
-export const TEMPLATE_THEME_OPTIONS: Record<StoreTemplate, StoreThemeOption[]> = {
-  classic: ['logo', 'primary', 'accent', 'font', 'corners'],
-  selecta: ['logo', 'primary', 'font'],
-  stride: ['logo', 'primary', 'accent', 'font', 'corners'],
-};
+export const TEMPLATE_THEME_OPTIONS: Record<StoreTemplate, StoreThemeOption[]> = Object.fromEntries(
+  latestThemes().map(theme => [theme.slug, theme.settings]),
+);
 
 /**
  * Values a template uses when the merchant sets none: Classic follows the store settings,
@@ -605,32 +173,34 @@ export const TEMPLATE_THEME_OPTIONS: Record<StoreTemplate, StoreThemeOption[]> =
 export function themeDefaults(
   template: StoreTemplate,
   storefront: { brandColor: string; accentColor: string; logoUrl: string | null },
+  version?: string,
 ): Required<StoreTemplateTheme> {
-  if (template === 'stride') {
-    return { primary: '#181a18', accent: '#c8f542', font: 'modern', corners: 'square', logo: storefront.logoUrl ?? '' };
-  }
-  return template === 'selecta'
-    ? { primary: '#4a1429', accent: '#23604a', font: 'editorial', corners: 'soft', logo: '' }
-    : {
-        primary: storefront.brandColor,
-        accent: storefront.accentColor,
-        font: 'modern',
-        corners: 'soft',
-        logo: storefront.logoUrl ?? '',
-      };
+  return {
+    primary: storefront.brandColor, accent: storefront.accentColor, font: 'modern', corners: 'soft',
+    logo: storefront.logoUrl ?? '', favicon: '', background: '#ffffff', surface: '#f6f7f9',
+    text: '#111318', muted: '#5b6472', border: '#e4e7ec', container: 'standard', spacing: 'standard', typeScale: 'standard',
+    ...(getTheme(template, version)?.renderer === 'selecta@1' ? { logo: '', background: '#fffaf6', surface: '#ffffff', text: '#301824', muted: '#77676c', border: '#e4d8d5' } : {}),
+    ...getTheme(template, version)?.tokens,
+  };
 }
 
 function readTheme(value: unknown, allowImage: (url: string) => boolean): StoreTemplateTheme | undefined {
   const raw = asRecord(value);
   const theme: StoreTemplateTheme = {};
-  for (const key of ['primary', 'accent'] as const) {
+  for (const key of ['primary', 'accent', 'background', 'surface', 'text', 'muted', 'border'] as const) {
     const color = raw[key];
     if (typeof color === 'string' && HEX_COLOR.test(color)) theme[key] = color.toLowerCase();
   }
   if (THEME_FONTS.includes(raw['font'] as StoreThemeFont)) theme.font = raw['font'] as StoreThemeFont;
   if (THEME_CORNERS.includes(raw['corners'] as StoreThemeCorners)) theme.corners = raw['corners'] as StoreThemeCorners;
-  const logo = typeof raw['logo'] === 'string' ? raw['logo'].trim() : null;
-  if (logo === '' || (logo && logo.length <= MAX_IMAGE_URL && isHttpUrl(logo) && allowImage(logo))) theme.logo = logo;
+  for (const key of ['logo', 'favicon'] as const) {
+    const url = typeof raw[key] === 'string' ? raw[key].trim() : null;
+    if (url === '' || (url && url.length <= MAX_IMAGE_URL && isHttpUrl(url) && allowImage(url))) theme[key] = url;
+  }
+  for (const key of ['container', 'spacing', 'typeScale'] as const) {
+    const allowed = key === 'container' ? ['compact', 'standard', 'wide'] : key === 'spacing' ? ['compact', 'standard', 'airy'] : ['standard', 'large'];
+    if (typeof raw[key] === 'string' && allowed.includes(raw[key])) Object.assign(theme, { [key]: raw[key] });
+  }
   return Object.keys(theme).length ? theme : undefined;
 }
 
@@ -647,7 +217,7 @@ export function sanitizeContent(
   // Texts of removed blocks are dropped; built-in sections keep theirs even when hidden.
   const blockIds = new Set(
     Object.values(layouts ?? {})
-      .flat()
+      .flatMap(items => items ?? [])
       .filter((item) => BLOCK_TYPES.has(item.type))
       .map((item) => item.id),
   );
@@ -667,6 +237,9 @@ export function sanitizeContent(
       } else if (field.kind === 'choice') {
         clean = value;
         if (clean && !field.options?.some((option) => option.value === clean)) continue;
+      } else if (field.kind === 'url') {
+        clean = value.trim();
+        if (clean && (!isSocialUrl(clean, field.id) || clean.length > field.maxLength)) continue;
       } else {
         clean = cleanText(value, field);
       }
@@ -684,9 +257,22 @@ export function sanitizeContent(
 
 /** Image URLs of a content, to keep accepting the ones the merchant already had. */
 export function contentImages(content: StoreTemplateContent): string[] {
-  return [...Object.values(content.sections).flatMap(Object.values), content.theme?.logo ?? ''].filter((value) =>
-    isHttpUrl(value),
-  );
+  const images = [content.theme?.logo ?? '', content.theme?.favicon ?? ''];
+  for (const [id, fields] of Object.entries(content.sections)) {
+    const type = sectionType(id);
+    if (!type) continue;
+    for (const field of TYPE_FIELDS.get(type) ?? []) if (field.kind === 'image') images.push(fields[field.id] ?? '');
+  }
+  return images.filter(isHttpUrl);
+}
+
+/** Social links are destinations, never fetched or executed by the API. */
+function isSocialUrl(value: string, platform: string): boolean {
+  try {
+    const url = new URL(value);
+    return url.protocol === 'https:' && !url.username && !url.password && !url.port &&
+      ['instagram', 'facebook', 'tiktok'].includes(platform) && [`${platform}.com`, `www.${platform}.com`].includes(url.hostname);
+  } catch { return false; }
 }
 
 export function sameContent(a: StoreTemplateContent, b: StoreTemplateContent): boolean {

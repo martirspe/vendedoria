@@ -10,6 +10,16 @@ import {
 } from './store-templates';
 
 describe('template content', () => {
+  it('validates semantic tokens, favicon ownership, bounded navigation and platform-specific social destinations', () => {
+    const content = sanitizeContent({ version: 1, sections: {
+      navigation: { label1: 'Catálogo', destination1: '/productos', destination2: 'javascript:alert(1)' },
+      social: { instagram: 'https://www.instagram.com/shop', facebook: 'https://facebook.com.evil.test/a', tiktok: 'https://user@tiktok.com/a' },
+    }, theme: { favicon: 'https://own.test/media/icon.webp', background: '#102030', text: 'red', container: 'wide', spacing: 'airy', typeScale: 'huge', customCss: 'evil' } }, url => url.startsWith('https://own.test/media/'));
+    expect(content.sections['navigation']).toEqual({ label1: 'Catálogo', destination1: '/productos' });
+    expect(content.sections['social']).toEqual({ instagram: 'https://www.instagram.com/shop' });
+    expect(content.theme).toEqual({ favicon: 'https://own.test/media/icon.webp', background: '#102030', container: 'wide', spacing: 'airy' });
+    expect(sanitizeContent({ sections: { social: { instagram: 'https://facebook.com/shop' } }, theme: { favicon: 'https://other.test/icon.svg' } }, () => false)).toEqual({ version: 1, sections: {} });
+  });
   it('allows the fashion template only for fashion and retains its editable layout', () => {
     expect(templateAllowed('stride', 'moda')).toBe(true);
     expect(effectiveTemplate('stride', 'belleza')).toBe('classic');
@@ -22,7 +32,7 @@ describe('template content', () => {
     expect(content.layouts?.stride?.[0]).toEqual({ id: 'voices', type: 'voices', hidden: true });
     expect(content.layouts?.stride?.[1]).toEqual({ id: 'featured', type: 'featured' });
     expect(content.layouts?.stride).toContainEqual({ id: 'cta-a1b2c3', type: 'cta' });
-    expect(themeDefaults('stride', { brandColor: '#ffffff', accentColor: '#000000', logoUrl: null })).toEqual({ primary: '#181a18', accent: '#c8f542', font: 'modern', corners: 'square', logo: '' });
+    expect(themeDefaults('stride', { brandColor: '#ffffff', accentColor: '#000000', logoUrl: null })).toMatchObject({ primary: '#181a18', accent: '#c8f542', font: 'modern', corners: 'square', logo: '' });
   });
 
   it('keeps known fields only and drops anything else', () => {
@@ -135,12 +145,12 @@ describe('template content', () => {
     });
   });
 
-  it('omits the default order and caps library blocks', () => {
+  it('preserves an explicit default order across future updates and caps library blocks', () => {
     const defaults = sanitizeContent({
       sections: {},
       layouts: { classic: [{ id: 'hero', type: 'hero' }, { id: 'featured', type: 'featured' }, { id: 'how', type: 'how' }, { id: 'faq', type: 'faq' }, { id: 'closing', type: 'closing' }] },
     });
-    expect(defaults.layouts).toBeUndefined();
+    expect(defaults.layouts?.classic?.map(item => item.id)).toEqual(['hero', 'featured', 'how', 'faq', 'closing']);
     const many = Array.from({ length: 12 }, (_, i) => ({ id: `text-blk00${i.toString(36)}`, type: 'text' }));
     const layout = sanitizeContent({ sections: {}, layouts: { classic: many } }).layouts?.classic ?? [];
     expect(layout.filter((item) => item.type === 'text')).toHaveLength(8);

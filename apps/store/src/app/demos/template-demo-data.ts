@@ -8,6 +8,7 @@ import type {
   StorefrontView,
   StoreTemplate,
 } from "@vendedoria/contracts";
+import { getTheme } from '@vendedoria/themes/catalog';
 
 const media = (file: string) => `/template-demos/media/${file}.webp`;
 const DETAILS: PublicProductDetails = {
@@ -90,6 +91,7 @@ function product(
 }
 
 export function demoProducts(template: StoreTemplate): StoreCatalogProduct[] {
+  const renderer = getTheme(template)?.renderer.split('@')[0] ?? 'classic';
   const beauty = [
     product(
       "set-icono",
@@ -200,39 +202,37 @@ export function demoProducts(template: StoreTemplate): StoreCatalogProduct[] {
       ["S", "M", "L"],
     ),
   ];
-  return template === "selecta"
+  return renderer === "selecta"
     ? beauty
-    : template === "stride"
+    : renderer === "stride"
       ? fashion
       : [fashion[2], beauty[1], fashion[1], beauty[2]];
 }
 
 export function demoStore(template: StoreTemplate): StorefrontView {
+  const manifest = getTheme(template)!;
+  const renderer = manifest.renderer.split('@')[0] as 'classic' | 'selecta' | 'stride';
   const products = demoProducts(template);
   const hero =
-    template === "stride"
+    renderer === "stride"
       ? "fashion-hero"
-      : template === "selecta"
+      : renderer === "selecta"
         ? "icono-ritual"
         : "tote";
   return {
     slug: `template-demo-${template}`,
     displayName:
-      template === "stride"
-        ? "Impulso"
-        : template === "selecta"
-          ? "Selecta"
-          : "Casa Clara",
+      template === "classic" ? "Casa Clara" : manifest.displayName,
     tagline: "Una selección para tus momentos favoritos.",
     logoUrl: null,
     heroImageUrl: media(hero),
     brandColor:
-      template === "stride"
+      renderer === "stride"
         ? "#c8ff31"
-        : template === "selecta"
+        : renderer === "selecta"
           ? "#4a1429"
           : "#2f3b38",
-    accentColor: template === "stride" ? "#171717" : "#c9a779",
+    accentColor: renderer === "stride" ? "#171717" : "#c9a779",
     whatsappPhone: null,
     contactEmail: null,
     seoTitle: null,
@@ -276,20 +276,24 @@ export function demoStore(template: StoreTemplate): StorefrontView {
       turnstileSiteKey: null,
     },
     industry:
-      template === "stride"
+      renderer === "stride"
         ? "moda"
-        : template === "selecta"
+        : renderer === "selecta"
           ? "belleza"
           : "general",
     template,
+    themeRelease: {
+      id: manifest.id, slug: manifest.slug, version: manifest.version, renderer, tokens: manifest.tokens,
+      defaultLayout: manifest.presets[0].layout, safeMode: false,
+    },
     templateContent: {
       version: 1,
       sections: {
         hero: { image: media(hero) },
-        ...(template === "selecta"
+        ...(renderer === "selecta"
           ? { banner: { image: media("osadia-ritual") } }
           : {}),
-        ...(template === "stride"
+        ...(renderer === "stride"
           ? {
               editorial: { image1: media("tote"), image2: media("sneakers") },
               stories: { image1: media("fashion-hero"), image2: media("tote") },

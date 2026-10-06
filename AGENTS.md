@@ -44,7 +44,7 @@ Multi-tenant SaaS: AI sales agents on WhatsApp/Instagram ("del hola al pago") pl
 
 ## Verification
 - Build every affected app and run the narrowest relevant test first. Run everything only for cross-surface, contract, config or build changes.
-- CI (`.github/workflows/ci.yml`) only runs prisma generate + build api + build web: verify store and tests locally when touched.
+- CI (`.github/workflows/ci.yml`) runs Prisma generation, all three builds, theme validation/tests, store runtime tests and console tests. Run API unit/e2e locally in the isolated Docker test DB when touched.
 - Product-relevant changes get an entry in `CHANGELOG.md` → `[Unreleased]`.
 
 ## Documentation

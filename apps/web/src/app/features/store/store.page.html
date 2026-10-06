@@ -28,6 +28,9 @@
     }
   </header>
 
+  @if (view() && active() && !saving()) {
+    <app-theme-manager (staged)="load()" />
+  }
   @if (errorMessage(); as error) {
     <div class="banner banner--danger" role="alert">
       <ds-icon name="alert" />
@@ -137,7 +140,7 @@
               </article>
             }
           </div>
-          <p class="templates-note">Explora el diseño original con productos de ejemplo. Tu tienda cambia al guardar; las fotos de la demo no reemplazan tu catálogo.</p>
+          <p class="templates-note">Explora el diseño con productos de ejemplo. Al guardar, la plantilla queda en borrador: revísala en el editor antes de publicarla.</p>
 
           <div class="design-link">
             <div>

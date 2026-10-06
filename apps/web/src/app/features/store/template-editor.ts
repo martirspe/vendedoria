@@ -36,10 +36,11 @@ export function layoutOf(
   content: StoreTemplateContent,
   template: StoreTemplate,
   sections: StoreEditorSection[],
+  defaults: StoreLayoutItem[] = [],
 ): StoreLayoutItem[] {
   const seen = new Set<string>();
   const layout: StoreLayoutItem[] = [];
-  for (const item of content.layouts?.[template] ?? []) {
+  for (const item of content.layouts?.[template] ?? defaults) {
     const schema = sectionSchema(sections, item.type);
     if (!schema || schema.role === 'fixed' || seen.has(item.id)) continue;
     seen.add(item.id);
@@ -225,9 +226,21 @@ export function withFaq(content: StoreTemplateContent, faq: StoreTemplateFaq[] |
   return faq ? { ...rest, faq: faq.slice(0, MAX_FAQ) } : rest;
 }
 
-export const THEME_COLORS: readonly { id: 'primary' | 'accent'; label: string; hint: string }[] = [
+export type ThemeColorOption = 'primary' | 'accent' | 'background' | 'surface' | 'text' | 'muted' | 'border';
+export const THEME_COLORS: readonly { id: ThemeColorOption; label: string; hint: string }[] = [
   { id: 'primary', label: 'Color principal', hint: 'Botones, enlaces y detalles destacados.' },
   { id: 'accent', label: 'Color de acento', hint: 'Etiquetas y detalles secundarios.' },
+  { id: 'background', label: 'Fondo', hint: 'Fondo general de tu tienda.' },
+  { id: 'surface', label: 'Superficies', hint: 'Tarjetas y áreas secundarias.' },
+  { id: 'text', label: 'Texto principal', hint: 'Debe contrastar con el fondo.' },
+  { id: 'muted', label: 'Texto secundario', hint: 'Información de apoyo, siempre legible.' },
+  { id: 'border', label: 'Bordes', hint: 'Separadores y límites de los controles.' },
+];
+
+export const THEME_CHOICES = [
+  { id: 'container' as const, label: 'Ancho del contenido', options: [{ value: 'compact', label: 'Compacto' }, { value: 'standard', label: 'Estándar' }, { value: 'wide', label: 'Amplio' }] },
+  { id: 'spacing' as const, label: 'Espacio entre secciones', options: [{ value: 'compact', label: 'Compacto' }, { value: 'standard', label: 'Estándar' }, { value: 'airy', label: 'Espacioso' }] },
+  { id: 'typeScale' as const, label: 'Tamaño de lectura', options: [{ value: 'standard', label: 'Estándar' }, { value: 'large', label: 'Grande' }] },
 ];
 
 export const THEME_FONTS: readonly { id: StoreThemeFont; label: string; hint: string }[] = [

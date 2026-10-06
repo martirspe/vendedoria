@@ -1,0 +1,118 @@
+{
+  "schemaVersion": 1,
+  "id": "audit/starter-check",
+  "namespace": "audit",
+  "slug": "starter-check",
+  "displayName": "starter-check",
+  "version": "1.0.0",
+  "author": "audit",
+  "license": "UNLICENSED",
+  "description": "Catálogo limpio con tus colores. Sirve para cualquier rubro.",
+  "renderer": "classic@1",
+  "contracts": {
+    "engine": 1,
+    "editor": 1,
+    "storefront": 1,
+    "content": 1
+  },
+  "capabilities": {
+    "requires": [
+      "catalog",
+      "cart",
+      "checkout",
+      "seo"
+    ],
+    "supports": [
+      "variants",
+      "search",
+      "filters",
+      "coupons",
+      "services",
+      "digitalProducts",
+      "recommendations",
+      "whatsapp"
+    ],
+    "optional": []
+  },
+  "industries": "all",
+  "sections": [
+    "hero",
+    "featured",
+    "how",
+    "faq",
+    "closing",
+    "imageText",
+    "text",
+    "benefits",
+    "testimonials",
+    "whatsapp",
+    "gallery",
+    "cta",
+    "questions",
+    "announcement",
+    "product",
+    "footer",
+    "navigation",
+    "social"
+  ],
+  "settings": [
+    "logo",
+    "primary",
+    "accent",
+    "font",
+    "corners",
+    "favicon",
+    "background",
+    "surface",
+    "text",
+    "muted",
+    "border",
+    "container",
+    "spacing",
+    "typeScale"
+  ],
+  "tokens": {},
+  "assets": {
+    "cover": "/template-previews/classic.webp",
+    "styles": []
+  },
+  "presets": [
+    {
+      "id": "original",
+      "label": "Diseño original",
+      "sections": {
+        "hero": {
+          "title": "Descubre tu próximo favorito",
+          "text": "Explora el catálogo y elige con toda la información.",
+          "cta": "Ver catálogo"
+        }
+      },
+      "layout": [
+        {
+          "id": "hero",
+          "type": "hero"
+        },
+        {
+          "id": "featured",
+          "type": "featured"
+        },
+        {
+          "id": "how",
+          "type": "how"
+        },
+        {
+          "id": "faq",
+          "type": "faq"
+        },
+        {
+          "id": "closing",
+          "type": "closing"
+        }
+      ]
+    }
+  ],
+  "migrations": [],
+  "changelog": [
+    "Primera versión."
+  ]
+}

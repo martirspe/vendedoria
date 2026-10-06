@@ -1,5 +1,6 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
+import { publicTheme } from './theme-release';
 import { Prisma } from '@prisma/client';
 import { catalogSearchWhere } from '../catalog/catalog-search';
 import type {
@@ -30,7 +31,7 @@ import {
 import { toCatalogProduct, toCatalogCard, toProductDetail } from './storefront-mapper';
 import { catalogFilterSql, catalogPriceSql, loadCatalogFacets, parseCatalogFilters } from './catalog-filters';
 import { verifyPreviewToken } from './storefront-preview';
-import { effectiveTemplate, readTemplateContent } from './store-templates';
+import { readTemplateContent } from './store-templates';
 import { findUbigeo } from '../ubigeo/ubigeo';
 import { storeAvailability } from './storefront-availability';
 
@@ -185,6 +186,7 @@ export class StorefrontPublicService {
       throw new NotFoundException('Store not found');
     }
     const { categories, kinds } = await this.catalogFacets(access.tenantId);
+    const release = publicTheme(storefront, access.isPreview);
     return {
       slug: tenant.slug,
       displayName: storefront.displayName,
@@ -219,7 +221,8 @@ export class StorefrontPublicService {
       },
       checkout: await this.checkout(access.tenantId),
       industry: storefront.industry,
-      template: effectiveTemplate(storefront.template, storefront.industry),
+      template: release.slug,
+      themeRelease: release,
       templateContent: readTemplateContent(
         access.isPreview && storefront.templateDraft ? storefront.templateDraft : storefront.templateContent,
       ),

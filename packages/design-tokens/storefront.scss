@@ -4,6 +4,20 @@
  */
 
 :root {
+  --store-theme-width-compact: 64rem;
+  --store-theme-width-standard: 75rem;
+  --store-theme-width-wide: 90rem;
+  --store-theme-space-compact: clamp(2rem, 5vw, 3rem);
+  --store-theme-space-standard: clamp(3rem, 7vw, 5rem);
+  --store-theme-space-airy: clamp(4rem, 9vw, 7rem);
+  --store-theme-body-large: 1.125rem;
+  --store-theme-caption-large: 1rem;
+  --store-theme-control-square: 2px;
+  --store-theme-card-square: 4px;
+  --store-theme-control-soft: var(--ds-radius-md);
+  --store-theme-card-soft: var(--ds-radius-lg);
+  --store-theme-control-round: 999px;
+  --store-theme-card-round: 1.5rem;
   --store-brand: #0b0d12;
   --store-on-brand: #ffffff;
   --store-accent: #5b8cff;

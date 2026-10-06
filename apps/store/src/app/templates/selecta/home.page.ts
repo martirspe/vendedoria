@@ -5,7 +5,7 @@ import { HomeBlockComponent, sharedBlockType } from '../../components/home-block
 import { MoneyPipe } from '../../core/money.pipe';
 import { SeoService } from '../../core/seo.service';
 import { STORE_EDITOR, StoreEditorBridge } from '../../core/store-editor';
-import { HomeBlock, homeBlock, homeSections } from '../../core/store-layout';
+import { HomeBlock, homeBlock, storeHomeSections } from '../../core/store-layout';
 import { StoreStateService } from '../../core/store-state.service';
 import { whatsappUrl } from '../../core/whatsapp';
 import { Product, SelectaCatalog, category, photos, scarcity, setSaving } from './selecta-catalog';
@@ -37,7 +37,7 @@ export class SelectaHomePage {
   });
   readonly sections = computed(() => {
     const store = this.store();
-    return store ? homeSections(store.templateContent, 'selecta', BUILTINS) : [];
+    return store ? storeHomeSections(store, BUILTINS) : [];
   });
   readonly editing = inject(StoreEditorBridge).active;
   readonly sharedType = sharedBlockType;

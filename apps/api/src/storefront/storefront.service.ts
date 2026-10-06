@@ -7,6 +7,9 @@ import { sellerIdentityComplete } from './seller-identity';
 import { shippingOptions } from './shipping';
 import { ensureStorefront } from './storefront-row';
 import { readTemplateContent, templateAllowed } from './store-templates';
+import { getTheme } from '@vendedoria/themes';
+import { assertTheme, themeStatus, type ThemeStatus } from './theme-release';
+import { StorefrontEditorService } from './storefront-editor.service';
 import {
   customDomainUrl,
   DEFAULT_STOREFRONT_URL_TEMPLATE,
@@ -39,6 +42,7 @@ export type StorefrontChecklistItem = {
 };
 
 export type StorefrontSettingsView = {
+  themeStatus: ThemeStatus;
   availability: StoreAvailability;
   storefront: Storefront;
   url: string;
@@ -56,6 +60,7 @@ export class StorefrontService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly config: ConfigService,
+    private readonly editor: StorefrontEditorService,
   ) {}
 
   async get(tenantId: string): Promise<StorefrontSettingsView> {
@@ -70,18 +75,27 @@ export class StorefrontService {
     await this.assertEnabled(tenantId);
     const current = await this.ensure(tenantId);
     const industry = dto.industry ?? current.industry;
-    let template = dto.template ?? current.template;
+    let template = dto.template ?? current.themeDraftTemplate ?? current.template;
     if (!templateAllowed(template, industry)) {
       if (dto.template !== undefined) {
         throw new BadRequestException('Esa plantilla no está disponible para el rubro de tu negocio.');
       }
       template = 'classic';
     }
+    const version = template === current.themeDraftTemplate && current.themeDraftVersion
+      ? current.themeDraftVersion
+      : template === current.template ? current.themeVersion : getTheme(template)!.version;
+    assertTheme(template, version, industry);
+    const stageSelection = dto.template !== undefined || template !== (current.themeDraftTemplate ?? current.template);
     const storefront = await this.prisma.storefront.update({
       where: { tenantId },
       data: {
         industry,
-        template,
+        ...(stageSelection ? {
+          themeDraftTemplate: template === current.template && version === current.themeVersion ? null : template,
+          themeDraftVersion: template === current.template && version === current.themeVersion ? null : version,
+          templatePublishAt: null,
+        } : {}),
         displayName: dto.displayName?.trim(),
         tagline: this.optionalText(dto.tagline),
         logoUrl: this.optionalText(dto.logoUrl),
@@ -164,6 +178,7 @@ export class StorefrontService {
         `Completa antes de publicar: ${missing.join(', ')}`,
       );
     }
+    await this.editor.publish(tenantId);
     const storefront = await this.prisma.storefront.update({
       where: { tenantId },
       data: {
@@ -309,6 +324,7 @@ export class StorefrontService {
     ];
     const domain = await activeCustomDomain(this.prisma, tenantId);
     return {
+      themeStatus: themeStatus(storefront),
       storefront,
       availability: await storeAvailability(this.prisma, tenantId, storefront.status),
       url: domain ? customDomainUrl(this.urlTemplate(), domain) : storefrontUrl(this.urlTemplate(), tenant.slug),

@@ -65,6 +65,17 @@ export class SeoService {
     this.canonical(url);
     this.jsonLd(input.jsonLd ?? null);
     this.preconnect(image);
+    this.favicon(store?.templateContent.theme?.favicon ?? store?.themeRelease?.tokens.favicon);
+  }
+
+  private favicon(url: string | undefined): void {
+    let link = this.document.head.querySelector<HTMLLinkElement>('link[rel="icon"]');
+    if (!link) {
+      link = this.document.createElement('link');
+      link.rel = 'icon';
+      this.document.head.appendChild(link);
+    }
+    link.href = url || '/favicon.ico';
   }
 
   /** Photos come from the media CDN (CloudFront): open that connection before the hero image is parsed. */

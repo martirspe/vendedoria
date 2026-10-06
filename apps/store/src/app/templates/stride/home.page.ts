@@ -19,7 +19,7 @@ import { SeoService } from '../../core/seo.service';
 import { StoreApiService } from '../../core/store-api.service';
 import { STORE_EDITOR, StoreEditorBridge } from '../../core/store-editor';
 import { defaultFaq } from '../../core/store-faq';
-import { homeBlock, homeSections } from '../../core/store-layout';
+import { homeBlock, storeHomeSections } from '../../core/store-layout';
 import { StoreStateService } from '../../core/store-state.service';
 import { whatsappUrl } from '../../core/whatsapp';
 import { strideCopy } from './stride-copy';
@@ -68,11 +68,7 @@ export class StrideHomePage {
   );
   readonly copy = computed(() => strideCopy(this.store()));
   readonly sections = computed(() =>
-    homeSections(
-      this.store()?.templateContent ?? { version: 1, sections: {} },
-      'stride',
-      BUILTINS,
-    ),
+    this.store() ? storeHomeSections(this.store()!, BUILTINS) : [],
   );
   readonly editing = inject(StoreEditorBridge).active;
   readonly sharedType = sharedBlockType;

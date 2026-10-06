@@ -1,0 +1,15 @@
+:host { display: block; }
+.themes {
+  display: grid;
+  gap: var(--ds-space-3);
+  padding: var(--ds-space-5);
+  border: var(--ds-border-width) solid var(--ds-color-border);
+  border-radius: var(--ds-radius-lg);
+  background: var(--ds-color-surface);
+  color: var(--ds-color-text-primary);
+  h2, p { margin: 0; }
+  h2 { font-size: var(--ds-type-lg); }
+  ul { margin: 0; padding-inline-start: var(--ds-space-5); }
+  .hint { color: var(--ds-color-text-secondary); font-size: var(--ds-type-sm); }
+  a { color: var(--ds-color-text-primary); display: inline-flex; align-items: center; gap: var(--ds-space-2); }
+}

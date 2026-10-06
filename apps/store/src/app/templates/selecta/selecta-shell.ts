@@ -16,12 +16,15 @@ import { CartService } from '../../core/cart.service';
 import { announcementText } from '../../core/page-copy';
 import { STORE_EDITOR, StoreEditorBridge } from '../../core/store-editor';
 import { StoreStateService } from '../../core/store-state.service';
-import { readableTextOn, THEME_FONTS } from '../../core/theme';
+import { readableTextOn, storeTheme, THEME_FONTS } from '../../core/theme';
 import { productReference, whatsappUrl } from '../../core/whatsapp';
 import { SelectaCatalog } from './selecta-catalog';
 import { wholeMoney } from '../../core/store-faq';
 import { selectaCopy } from './selecta-copy';
 import { SelectaIcon } from './selecta-icon';
+import { StoreThemeTokens } from '../../core/theme-tokens.directive';
+import { themeNavigation } from '../../core/theme-navigation';
+import { ThemeSocialLinksComponent } from '../../components/theme-social-links.component';
 
 const BODY_CLASS = 'tpl-selecta';
 /** Non-injected `styles` bundle in angular.json: only Selecta stores download it. */
@@ -29,7 +32,8 @@ const STYLESHEET = '/selecta.css';
 
 @Component({
   selector: 'selecta-shell',
-  imports: [RouterOutlet, RouterLink, SelectaIcon, STORE_EDITOR],
+  imports: [ThemeSocialLinksComponent, RouterOutlet, RouterLink, SelectaIcon, STORE_EDITOR],
+  hostDirectives: [StoreThemeTokens],
   templateUrl: './selecta-shell.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
   host: {
@@ -49,6 +53,10 @@ export class SelectaShell {
   readonly editor = inject(StoreEditorBridge);
 
   readonly store = this.state.store;
+  readonly navigation = computed(() => {
+    const store = this.store();
+    return store ? themeNavigation(store.templateContent) : null;
+  });
   readonly copy = computed(() => {
     const store = this.store();
     return store ? selectaCopy(store) : null;
@@ -73,7 +81,7 @@ export class SelectaShell {
     }
     return store?.tagline || 'Una selección para regalar. Un ritual para ti.';
   });
-  readonly theme = computed(() => this.store()?.templateContent.theme);
+  readonly theme = computed(() => this.store() ? storeTheme(this.store()!) : undefined);
   readonly onBrand = computed(() => {
     const primary = this.theme()?.primary;
     return primary ? readableTextOn(primary) : null;

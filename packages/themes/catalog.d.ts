@@ -1,0 +1,31 @@
+import type { StoreLayoutItem, StoreTemplateContent, StoreTemplateTheme, StoreThemeOption } from '@vendedoria/contracts';
+
+export type ThemeContracts = { engine: number; editor: number; storefront: number; content: number };
+export type ThemeManifest = {
+  schemaVersion: 1;
+  id: string;
+  namespace: string;
+  slug: string;
+  displayName: string;
+  version: string;
+  author: string;
+  license: string;
+  description: string;
+  renderer: string;
+  contracts: ThemeContracts;
+  capabilities: { requires: string[]; supports: string[]; optional: string[] };
+  industries: string[] | 'all';
+  sections: string[];
+  settings: StoreThemeOption[];
+  tokens: StoreTemplateTheme;
+  assets: { cover: string; styles: string[] };
+  presets: { id: string; label: string; sections: Record<string, Record<string, string>>; layout: StoreLayoutItem[] }[];
+  migrations: { from: string; to: string; renameFields: { from: string; to: string }[] }[];
+  changelog: string[];
+};
+export type ThemeEnvironment = { contracts: ThemeContracts; capabilities: readonly string[]; renderers: readonly string[] };
+export const THEME_CATALOG: readonly ThemeManifest[];
+export const THEME_ENVIRONMENT: ThemeEnvironment;
+export function compareVersions(a: string, b: string): number;
+export function getTheme(slug: string, version?: string): ThemeManifest | undefined;
+export function latestThemes(): ThemeManifest[];

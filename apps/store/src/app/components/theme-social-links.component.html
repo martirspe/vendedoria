@@ -1,0 +1,5 @@
+@if (links().length) {
+  <nav aria-label="Redes sociales">
+    @for (link of links(); track link.label) { <a [href]="link.url" target="_blank" rel="noopener noreferrer">{{ link.label }}<span class="visually-hidden"> (abre en otra pestaña)</span></a> }
+  </nav>
+}

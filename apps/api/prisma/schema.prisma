@@ -481,8 +481,12 @@ model Storefront {
 
   /// Business type; it decides which templates the merchant can choose.
   industry     String @default("general")
-  /// classic | selecta
+  /// Stable theme catalog slug. Existing stores remain pinned to their original release.
   template     String @default("classic")
+  themeVersion String @default("1.0.0")
+  /// Pending theme selection/update; published atomically with templateDraft.
+  themeDraftTemplate String?
+  themeDraftVersion String?
   /// Legacy flat template texts, copied into `templateContent` by migration 0004; no longer read.
   templateCopy    Json?
   /// Published template content (StoreTemplateContent); null uses the template defaults.
@@ -514,6 +518,9 @@ model StorefrontVersion {
   tenantId   String
   /// StoreTemplateContent
   content    Json
+  /// Null only for historical content snapshots created before theme identity was tracked.
+  template String?
+  themeVersion String?
   replacedAt DateTime @default(now())
 
   tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)

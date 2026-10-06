@@ -189,7 +189,7 @@ export class StoreEditorBridge {
 
 function isContent(value: unknown): value is StoreTemplateContent {
   const content = value as StoreTemplateContent | null;
-  return Boolean(content && typeof content === 'object' && content.sections && typeof content.sections === 'object');
+  return Boolean(content && typeof content === 'object' && content.version === 1 && content.sections && typeof content.sections === 'object' && !Array.isArray(content.sections));
 }
 
 /**

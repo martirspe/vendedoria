@@ -9,6 +9,16 @@ import type {
   StorefrontStatus,
 } from '@vendedoria/contracts';
 import { environment } from '../../../environments/environment';
+import type { ThemeManifest, ThemeCompatibility } from '@vendedoria/themes';
+
+export type StoreThemeStatus = {
+  active: { template: string; version: string };
+  editing: { template: string; version: string };
+  activeCompatibility: ThemeCompatibility;
+  compatibility: ThemeCompatibility;
+  update: { version: string; required: boolean; changelog: string[] } | null;
+};
+export type StoreThemeCatalog = { status: StoreThemeStatus; savedAt: string; themes: ThemeManifest[] };
 
 /** BUSINESS has RUC; INDIVIDUAL sells without RUC and its DNI is never shown in the store. */
 export type SellerType = 'BUSINESS' | 'INDIVIDUAL';
@@ -41,6 +51,8 @@ export type StorefrontDto = {
 };
 
 export type StoreEditorState = {
+  template: string;
+  themeVersion: string;
   /** Draft being edited, or the published content when there are no pending changes. */
   content: StoreTemplateContent;
   hasUnpublishedChanges: boolean;
@@ -50,11 +62,13 @@ export type StoreEditorState = {
 };
 
 /** Design that was published until `replacedAt`. */
-export type StoreEditorVersion = { id: string; replacedAt: string };
+export type StoreEditorVersion = { id: string; replacedAt: string; template: string | null; themeVersion: string | null };
 
 export type StoreEditorView = StoreEditorState & {
+  themeStatus: StoreThemeStatus;
   template: StoreTemplate;
   sections: StoreEditorSection[];
+  defaultLayout: import('@vendedoria/contracts').StoreLayoutItem[];
   theme: StoreEditorTheme;
   storeStatus: StorefrontStatus;
   /** Store home in edit mode; valid until `frameExpiresAt`. */
@@ -109,6 +123,7 @@ export type StoreChecklistItem = {
 };
 
 export type StoreSettingsView = {
+  themeStatus: StoreThemeStatus;
   availability: { public: boolean; previewAllowed: boolean; reason: 'published' | 'draft' | 'suspended' | 'integration_inactive' };
   storefront: StorefrontDto;
   url: string;
@@ -186,33 +201,41 @@ export class StoreApiService {
     return firstValueFrom(this.http.get<StoreEditorView>(`${this.base}/editor`));
   }
 
-  saveDraft(content: StoreTemplateContent): Promise<StoreEditorState> {
-    return firstValueFrom(this.http.put<StoreEditorState>(`${this.base}/editor/draft`, { content }));
+  saveDraft(content: StoreTemplateContent, savedAt?: string): Promise<StoreEditorState> {
+    return firstValueFrom(this.http.put<StoreEditorState>(`${this.base}/editor/draft`, { content, savedAt }));
   }
 
-  publishDraft(): Promise<StoreEditorState> {
-    return firstValueFrom(this.http.post<StoreEditorState>(`${this.base}/editor/publish`, {}));
+  themes(): Promise<StoreThemeCatalog> {
+    return firstValueFrom(this.http.get<StoreThemeCatalog>(`${this.base}/themes`));
   }
 
-  discardDraft(): Promise<StoreEditorState> {
-    return firstValueFrom(this.http.post<StoreEditorState>(`${this.base}/editor/discard`, {}));
+  stageTheme(template: string, version: string, savedAt: string, preset?: string): Promise<StoreEditorState> {
+    return firstValueFrom(this.http.post<StoreEditorState>(`${this.base}/themes/draft`, { template, version, savedAt, preset }));
   }
 
-  scheduleDraft(publishAt: string): Promise<StoreEditorState> {
-    return firstValueFrom(this.http.put<StoreEditorState>(`${this.base}/editor/schedule`, { publishAt }));
+  publishDraft(savedAt?: string): Promise<StoreEditorState> {
+    return firstValueFrom(this.http.post<StoreEditorState>(`${this.base}/editor/publish`, { savedAt }));
   }
 
-  cancelSchedule(): Promise<StoreEditorState> {
-    return firstValueFrom(this.http.delete<StoreEditorState>(`${this.base}/editor/schedule`));
+  discardDraft(savedAt?: string): Promise<StoreEditorState> {
+    return firstValueFrom(this.http.post<StoreEditorState>(`${this.base}/editor/discard`, { savedAt }));
+  }
+
+  scheduleDraft(publishAt: string, savedAt?: string): Promise<StoreEditorState> {
+    return firstValueFrom(this.http.put<StoreEditorState>(`${this.base}/editor/schedule`, { publishAt, savedAt }));
+  }
+
+  cancelSchedule(savedAt?: string): Promise<StoreEditorState> {
+    return firstValueFrom(this.http.delete<StoreEditorState>(`${this.base}/editor/schedule`, { body: { savedAt } }));
   }
 
   editorVersions(): Promise<StoreEditorVersion[]> {
     return firstValueFrom(this.http.get<StoreEditorVersion[]>(`${this.base}/editor/versions`));
   }
 
-  restoreVersion(id: string): Promise<StoreEditorState> {
+  restoreVersion(id: string, savedAt?: string): Promise<StoreEditorState> {
     return firstValueFrom(
-      this.http.post<StoreEditorState>(`${this.base}/editor/versions/${encodeURIComponent(id)}/restore`, {}),
+      this.http.post<StoreEditorState>(`${this.base}/editor/versions/${encodeURIComponent(id)}/restore`, { savedAt }),
     );
   }
 

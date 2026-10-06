@@ -34,8 +34,10 @@ export const storeResolver: ResolveFn<StorefrontView | null> = () => loadStore()
 /** Routes of a store template match only when the store uses that template. */
 export const templateMatch =
   (template: StoreTemplate): CanMatchFn =>
-  async () =>
-    (await loadStore())?.template === template;
+  async () => {
+    const store = await loadStore();
+    return (store?.themeRelease?.renderer ?? store?.template) === template;
+  };
 
 export const featuredResolver: ResolveFn<PublicProductList> = () =>
   inject(StoreApiService).products({ sort: 'featured', pageSize: 8 });
