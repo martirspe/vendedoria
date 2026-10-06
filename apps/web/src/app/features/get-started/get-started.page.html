@@ -25,7 +25,7 @@
     @if (readyToSell()) { <div class="tw:feedback tw:feedback-success" role="status"><ds-icon name="check" /><span>Tu vendedor, catálogo y WhatsApp están configurados. Sigue tus conversaciones y pedidos desde la consola.</span></div> }
     <ol class="tw:m-0 tw:grid tw:list-none tw:grid-cols-1 tw:gap-4 tw:p-0 tw:md:grid-cols-6">
       @for (item of items(); track item.id; let index = $index) {
-        <li class="tw:flex tw:min-w-0 tw:flex-col tw:rounded-card tw:border tw:border-solid tw:border-border tw:bg-surface tw:p-4 tw:shadow-sm" [class.tw:md:col-span-3]="index < 2" [class.tw:md:col-span-2]="index >= 2">
+        <li class="setup-card tw:flex tw:min-w-0 tw:flex-col tw:rounded-card tw:border tw:border-solid tw:border-border tw:bg-surface tw:p-4 tw:shadow-sm tw:transition tw:duration-200 tw:ease-out tw:hover:shadow-md tw:focus-within:shadow-md" [class.tw:md:col-span-3]="index < 2" [class.tw:md:col-span-2]="index >= 2">
           <div class="tw:flex tw:items-start tw:justify-between tw:gap-2"><h2 class="tw:m-0 tw:text-section tw:font-medium tw:leading-snug">{{ item.title }}</h2>@if (item.done) { <span class="tw:text-success-text" aria-label="Paso completado"><ds-icon name="circleCheck" [size]="1" /></span> }</div>
           <p class="tw:mt-2 tw:mb-0 tw:min-h-12 tw:text-body tw:leading-relaxed tw:text-muted">{{ item.body }}</p>
           <ds-setup-visual [kind]="item.id" [complete]="item.done" />
