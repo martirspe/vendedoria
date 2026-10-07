@@ -31,7 +31,9 @@
           <span>{{ currentLocation().label }}</span>
         </p>
       </div>
-      <a routerLink="/app/plans" class="tw:inline-flex tw:min-h-touch tw:shrink-0 tw:items-center tw:gap-3 tw:rounded-full tw:bg-ink tw:px-4 tw:text-caption tw:font-semibold tw:text-surface! tw:shadow-sm"><span class="tw:size-2 tw:rounded-full tw:bg-primary" aria-hidden="true"></span>Tu plan<ds-icon name="chevronRight" [size]="0.85" /></a>
+      @if (isHome()) {
+        <a routerLink="/app/plans" class="tw:inline-flex tw:min-h-touch tw:shrink-0 tw:items-center tw:gap-3 tw:rounded-full tw:bg-ink tw:px-4 tw:text-caption tw:font-semibold tw:text-surface! tw:shadow-sm"><span class="tw:size-2 tw:rounded-full tw:bg-primary" aria-hidden="true"></span>Tu plan<ds-icon name="chevronRight" [size]="0.85" /></a>
+      }
     </header>
     @if (quotaWarning(); as warning) {
       <div class="tw:mx-gutter tw:feedback tw:feedback-warning" role="status"><span>{{ warning }}</span>
