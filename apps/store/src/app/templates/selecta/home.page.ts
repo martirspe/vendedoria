@@ -1,6 +1,7 @@
 import { DsSelectComponent } from '@vendedoria/ui';
 import { ChangeDetectionStrategy, Component, computed, effect, inject, signal } from '@angular/core';
-import { RouterLink } from '@angular/router';
+import { Router, RouterLink } from '@angular/router';
+import { CartService } from '../../core/cart.service';
 import { HomeBlockComponent, sharedBlockType } from '../../components/home-block.component';
 import { MoneyPipe } from '../../core/money.pipe';
 import { SeoService } from '../../core/seo.service';
@@ -8,7 +9,7 @@ import { STORE_EDITOR, StoreEditorBridge } from '../../core/store-editor';
 import { HomeBlock, homeBlock, storeHomeSections } from '../../core/store-layout';
 import { StoreStateService } from '../../core/store-state.service';
 import { whatsappUrl } from '../../core/whatsapp';
-import { Product, SelectaCatalog, category, photos, scarcity, setSaving } from './selecta-catalog';
+import { Product, SelectaCatalog, bagLine, maxUnits, category, photos, scarcity, setSaving } from './selecta-catalog';
 import { wholeMoney } from '../../core/store-faq';
 import { selectaCopy } from './selecta-copy';
 import { SelectaIcon } from './selecta-icon';
@@ -26,6 +27,21 @@ const BUILTINS = ['hero', 'collection', 'banner', 'faq'];
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class SelectaHomePage {
+  private readonly cart = inject(CartService);
+  private readonly router = inject(Router);
+  readonly buying = signal(false);
+
+  async buyNow(product: Product): Promise<void> {
+    if (!this.directBuy(product) || this.buying()) return;
+    this.buying.set(true);
+    try {
+      await this.cart.add(bagLine(product), 1, maxUnits(product));
+      await this.router.navigate(['/checkout']);
+    } finally {
+      this.buying.set(false);
+    }
+  }
+
   private readonly catalog = inject(SelectaCatalog);
   readonly store = inject(StoreStateService).store;
   readonly products = this.catalog.products;

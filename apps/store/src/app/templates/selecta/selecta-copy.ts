@@ -3,7 +3,7 @@ import { defaultFaq } from '../../core/store-faq';
 
 const SELECTA_CART = {
   online:
-    'No. Usa Comprar ahora para finalizar tu compra directamente o reúne varios favoritos en Mi bolsa. Completas tus datos, la entrega y el pago en una sola página, como invitado.',
+    'No. Comprar ahora agrega el producto a Mi bolsa y abre el pago con todos tus favoritos. Completas tus datos, la entrega y el pago en una sola página, como invitado.',
   whatsapp:
     'No. Reúne tus favoritos en Mi bolsa y envíanos el pedido por WhatsApp. Te confirmamos el stock, la entrega y el pago antes de preparar tu pedido.',
 };

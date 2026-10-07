@@ -8,7 +8,7 @@ import {
   inject,
   signal,
 } from '@angular/core';
-import { ActivatedRoute, RouterLink } from '@angular/router';
+import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import type { PublicVariant } from '@vendedoria/contracts';
 import { ProductFactsComponent } from '../../components/product-facts.component';
@@ -56,6 +56,7 @@ import { SelectaPhoto, SelectaProductImage } from './selecta-photo';
 })
 export class SelectaProductPage {
   private readonly route = inject(ActivatedRoute);
+  private readonly router = inject(Router);
   private readonly seo = inject(SeoService);
   private readonly state = inject(StoreStateService);
   private readonly catalog = inject(SelectaCatalog);
@@ -122,12 +123,19 @@ export class SelectaProductPage {
     const p = this.product();
     return p?.format === 'set' ? piecesOf(p, this.catalog.products()) : [];
   });
-  readonly buyParams = computed(() => {
-    const p = this.product();
-    return p
-      ? { producto: p.handle, cantidad: Math.min(this.qty(), this.variant()?.stockLeft ?? maxUnits(p), 10), ...(this.variant() ? { variante: this.variant()!.id } : {}) }
-      : {};
-  });
+  readonly buying = signal(false);
+
+  async buyNow(): Promise<void> {
+    const product = this.product();
+    if (!product || !this.canBuy() || this.buying()) return;
+    this.buying.set(true);
+    try {
+      await this.cart.add(bagLine(product, this.variant()), this.qty(), Math.min(this.variant()?.stockLeft ?? maxUnits(product), 10));
+      await this.router.navigate(['/checkout']);
+    } finally {
+      this.buying.set(false);
+    }
+  }
   readonly whatsapp = computed(() => {
     const store = this.store();
     const p = this.product();

@@ -43,6 +43,14 @@
     "prisma:generate": "npm run prisma:generate -w @vendedoria/api",
     "prisma:migrate": "npm run prisma:migrate -w @vendedoria/api"
   },
+  "overrides": {
+    "@nestjs/platform-fastify": {
+      "fastify": "5.12.5"
+    },
+    "@nestjs/swagger": {
+      "js-yaml": "5.4.1"
+    }
+  },
   "engines": {
     "node": ">=22"
   }

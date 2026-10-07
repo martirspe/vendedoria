@@ -123,7 +123,7 @@
               }
             </div>
             @if (directBuy(p)) {
-              <a [routerLink]="['/checkout']" [queryParams]="{ producto: p.handle }" class="card-cta">Comprar ahora <app-icon name="arrow" /></a>
+              <button type="button" [disabled]="buying()" (click)="buyNow(p)" class="card-cta">Comprar ahora <app-icon name="arrow" /></button>
             } @else {
               <a [routerLink]="['/producto', p.handle]" class="card-cta secondary">Ver detalle <app-icon name="arrow" /></a>
             }

@@ -14,7 +14,7 @@ jobs:
         with:
           node-version: '22'
           cache: npm
-      - run: npm install
+      - run: npm ci
       - run: npm run prisma:generate
         env:
           DATABASE_URL: postgresql://postgres:postgres@localhost:5432/vendedoria?schema=public
@@ -24,9 +24,11 @@ jobs:
           JWT_ACCESS_SECRET: ci-access-secret-must-be-at-least-32-chars
           JWT_REFRESH_SECRET: ci-refresh-secret-must-be-at-least-32-chars
       - run: npm run theme:build
+      - run: npm run test -w @vendedoria/api -- --runInBand
       - run: npm run theme:check
       - run: npm run theme:test
       - run: npm run theme:test:store
+      - run: npm run test -w @vendedoria/store -- --watch=false
       - run: npm run test -w @vendedoria/web -- --watch=false
       - run: npm run build:web
       - run: npm run build:store

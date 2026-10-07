@@ -116,7 +116,7 @@
           </button>
         </div>
         @if (online()) {
-          <button type="button" class="store-btn store-btn--primary store-btn--block" [disabled]="!canAdd()" (click)="buyNow()"><ds-icon name="lock" [size]="1.1" /> {{ isService() ? 'Solicitar servicio' : 'Comprar ahora' }}</button>
+          <button type="button" class="store-btn store-btn--primary store-btn--block" [disabled]="!canAdd() || buying()" (click)="buyNow()"><ds-icon name="lock" [size]="1.1" /> {{ buying() ? 'Abriendo compra…' : isService() ? 'Solicitar servicio' : 'Comprar ahora' }}</button>
           <p class="service-note">Compra sin crear cuenta. Datos, entrega y pago en una sola página.</p>
         }
 

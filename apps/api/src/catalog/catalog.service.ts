@@ -233,8 +233,6 @@ export class CatalogService {
         const variantCount = dto.variants
           ? dto.variants.length
           : await tx.productVariant.count({ where: { productId } });
-        if (variantCount && (dto.components ?? current.components).length) throw new BadRequestException('Un set no puede tener variantes.');
-        if (variantCount && await tx.productComponent.count({ where: { componentId: productId } })) throw new BadRequestException('Este producto es pieza de un set; quítalo del set antes de agregar variantes.');
         if (stockless) {
           await this.assertStocklessShape(
             tx,
@@ -244,6 +242,8 @@ export class CatalogService {
             before.components.length,
           );
         }
+        if (variantCount && (dto.components ?? current.components).length) throw new BadRequestException('Un set no puede tener variantes.');
+        if (variantCount && await tx.productComponent.count({ where: { componentId: productId } })) throw new BadRequestException('Este producto es pieza de un set; quítalo del set antes de agregar variantes.');
         await this.writeComponents(
           tx,
           tenantId,

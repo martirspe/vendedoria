@@ -120,11 +120,17 @@ export class ProductPage {
   readonly added = signal(false);
   readonly online = computed(() => this.store()?.checkout.mode === 'online');
 
-  buyNow(): void {
-    const product = this.product();
-    if (product && this.canAdd()) void this.router.navigate(['/checkout'], { queryParams: {
-      producto: product.handle, variante: this.selectedVariant()?.id ?? null, cantidad: Math.min(this.quantity(), this.maxQuantity()),
-    } });
+  readonly buying = signal(false);
+
+  async buyNow(): Promise<void> {
+    if (!this.product() || !this.canAdd() || this.buying()) return;
+    this.buying.set(true);
+    try {
+      await this.addToCart();
+      await this.router.navigate(['/checkout']);
+    } finally {
+      this.buying.set(false);
+    }
   }
 
   readonly whatsappHref = computed(() => {
@@ -190,11 +196,11 @@ export class ProductPage {
     this.quantity.update((value) => Math.min(Math.max(value + delta, 1), Math.max(1, this.maxQuantity())));
   }
 
-  addToCart(): void {
+  async addToCart(): Promise<void> {
     const product = this.product();
     if (!product || !this.canAdd()) return;
     const variant = this.selectedVariant();
-    this.cart.add(
+    await this.cart.add(
       {
         handle: product.handle,
         name: product.name,

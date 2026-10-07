@@ -25,6 +25,8 @@ describe('LIVE sales (isolated PostgreSQL)', () => {
   const run = randomBytes(5).toString('hex');
   const tenantIds: string[] = [];
   const users: AuthUserPayload[] = [];
+  const userIds: string[] = [];
+  let agent: AuthUserPayload;
   const slugs: string[] = [];
   let config: ConfigService;
   let jwt: JwtService;
@@ -80,13 +82,24 @@ describe('LIVE sales (isolated PostgreSQL)', () => {
       });
       tenantIds.push(tenant.id);
       slugs.push(slug);
+      const user = await prisma.user.create({ data: {
+        email: `${slug}@example.test`, passwordHash: 'unused-test-hash',
+        memberships: { create: { tenantId: tenant.id, role: 'OWNER' } },
+      } });
+      userIds.push(user.id);
       users.push({
-        userId: 'fixture-operator',
-        email: 'fixture@example.test',
+        userId: user.id,
+        email: user.email,
         tenantId: tenant.id,
         membershipRole: 'OWNER',
       });
     }
+    const agentUser = await prisma.user.create({ data: {
+      email: `live-agent-${run}@example.test`, passwordHash: 'unused-test-hash',
+      memberships: { create: { tenantId: tenantIds[0], role: 'AGENT' } },
+    } });
+    userIds.push(agentUser.id);
+    agent = { userId: agentUser.id, email: agentUser.email, tenantId: tenantIds[0], membershipRole: 'AGENT' };
     const product = await prisma.product.create({
       data: {
         tenantId: tenantIds[0],
@@ -112,6 +125,9 @@ describe('LIVE sales (isolated PostgreSQL)', () => {
         where: { tenantId: { in: tenantIds } },
       });
       await prisma.tenant.deleteMany({ where: { id: { in: tenantIds } } });
+    }
+    if (prisma && userIds.length) {
+      await prisma.user.deleteMany({ where: { id: { in: userIds } } });
     }
     await app?.close();
   });
@@ -397,7 +413,7 @@ describe('LIVE sales (isolated PostgreSQL)', () => {
       (
         await request(
           'integrations/tiktok-live',
-          { ...users[0], membershipRole: 'AGENT' },
+          agent,
           'PUT',
           settings,
         )

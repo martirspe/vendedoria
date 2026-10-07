@@ -3,6 +3,7 @@ import { FastifyAdapter, NestFastifyApplication } from '@nestjs/platform-fastify
 import { Test } from '@nestjs/testing';
 import { randomBytes } from 'node:crypto';
 import { AppModule } from '../src/app.module';
+import { AuthService } from '../src/auth/auth.service';
 import type { AuthUserPayload } from '../src/common/types/auth-user';
 import { IntegrationsService } from '../src/integrations/integrations.service';
 import { PrismaService } from '../src/prisma/prisma.service';
@@ -87,5 +88,28 @@ describe('Team invites (e2e)', () => {
     await expect(team.updateRole(otherOwner, asesor.id, 'ADMIN')).rejects.toThrow(NotFoundException);
     await team.removeMember(owner, asesor.id);
     expect(await prisma.membership.count({ where: { id: asesor.id } })).toBe(0);
+  });
+
+  it('AUTH-005 enforces role changes and removal through HTTP with the original access token', async () => {
+    const email = `revocation-${run}@example.test`;
+    emails.push(email);
+    const user = await prisma.user.create({ data: { email, passwordHash: 'unused' } });
+    const membership = await prisma.membership.create({
+      data: { userId: user.id, tenantId: owner.tenantId, role: 'ADMIN' },
+    });
+    const { accessToken } = await app.get(AuthService).issueTokens({
+      userId: user.id, email, tenantId: owner.tenantId, membershipRole: 'ADMIN',
+    });
+    const headers = { authorization: `Bearer ${accessToken}` };
+    expect((await app.inject({ method: 'GET', url: '/team', headers })).statusCode).toBe(200);
+
+    await team.updateRole(owner, membership.id, 'AGENT');
+    const demoted = await app.inject({ method: 'GET', url: '/team', headers });
+    expect(demoted.statusCode).toBe(200);
+    expect(demoted.json().canManage).toBe(false);
+    expect((await app.inject({ method: 'DELETE', url: '/team/invites/nonexistent', headers })).statusCode).toBe(403);
+
+    await team.removeMember(owner, membership.id);
+    expect((await app.inject({ method: 'GET', url: '/team', headers })).statusCode).toBe(401);
   });
 });

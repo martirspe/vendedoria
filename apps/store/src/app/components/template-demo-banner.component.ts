@@ -30,7 +30,7 @@ export class TemplateDemoBannerComponent {
       const { demoProducts } = await import("../demos/template-demo-data");
       const p = demoProducts(this.demo.template)[0];
       const variant = p.variants[0];
-      this.cart.add(
+      await this.cart.add(
         {
           handle: p.handle,
           name: p.name,

@@ -50,7 +50,12 @@ const isolated = process.env.RUN_ISOLATED_COMMERCE_TESTS === '1';
       orders: { create: { status: 'PAID', totalCents: 12000, subtotalCents: 12000, customerName: 'Cliente de prueba', customerEmail: 'buyer@example.invalid', items: { create: { title: 'Compra anterior', unitCents: 12000, totalCents: 12000 } } } },
     } });
     tenantIds.push(tenant.id);
-    const token = await app.get(JwtService).signAsync({ sub: `test-${run}`, email: 'theme-test@example.invalid', tenantId: tenant.id, membershipRole: 'OWNER' }, { expiresIn: '5m', secret: app.get(ConfigService).getOrThrow<string>('JWT_ACCESS_SECRET') });
+    const user = await prisma.user.create({ data: {
+      email: `${slug}@example.invalid`, passwordHash: 'unused-test-hash',
+      memberships: { create: { tenantId: tenant.id, role: 'OWNER' } },
+    } });
+    userIds.push(user.id);
+    const token = await app.get(JwtService).signAsync({ sub: user.id, email: user.email, tenantId: tenant.id, membershipRole: 'OWNER' }, { expiresIn: '5m', secret: app.get(ConfigService).getOrThrow<string>('JWT_ACCESS_SECRET') });
     const headers = { authorization: `Bearer ${token}` };
     const request = (method: 'GET' | 'POST' | 'PUT' | 'PATCH', url: string, payload?: object) => app.inject({ method, url, headers, payload });
     return { tenantId: tenant.id, slug, request };

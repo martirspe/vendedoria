@@ -23,5 +23,5 @@ Global rules live in the root `AGENTS.md`. Angular conventions are the same as `
 - This is a buyer-facing surface: no console patterns, no auth, no JWT code.
 
 ## Verify
-- `npm run build:store` and `npm run theme:test:store` (pure Node runtime contract tests); both covered by CI. Angular component tests are not configured for this app.
+- `npm run build:store`, `npm run theme:test:store` (pure Node runtime contract tests), and `npm run test -w @vendedoria/store -- --watch=false` (Angular/Vitest cart and purchase regressions); all covered by CI.
 - Manual: `http://{slug}.localhost:4300` with the dev stack up.

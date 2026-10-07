@@ -84,10 +84,10 @@ export class CartService {
   }
 
   /** `max` caps the line (stock or per-order limit); the bag never exceeds what can be bought. */
-  add(line: Omit<CartLine, 'key' | 'quantity'>, quantity: number, max = MAX_QUANTITY): void {
+  async add(line: Omit<CartLine, 'key' | 'quantity'>, quantity: number, max = MAX_QUANTITY): Promise<void> {
     const key = `${line.handle}::${line.variantId ?? ''}`;
     const cap = (n: number) => Math.min(clamp(n), Math.max(max, 1));
-    this.update((lines) => {
+    await this.update((lines) => {
       const existing = lines.find((item) => item.key === key);
       if (existing) {
         return lines.map((item) =>
@@ -154,16 +154,16 @@ export class CartService {
     this.ready.set(true);
   }
 
-  private update(change: (lines: CartLine[]) => CartLine[]): void {
+  private update(change: (lines: CartLine[]) => CartLine[]): Promise<void> {
     const key = this.storageKey;
     if (key && typeof navigator !== 'undefined' && navigator.locks) {
       // Cross-tab mutations read and write under one origin/store lock.
-      void navigator.locks.request(key, () => {
+      return navigator.locks.request(key, () => {
         if (this.storageKey === key) this.applyChange(change);
       });
-      return;
     }
     this.applyChange(change);
+    return Promise.resolve();
   }
 
   private applyChange(change: (lines: CartLine[]) => CartLine[]): void {
