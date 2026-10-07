@@ -5,7 +5,7 @@
       <p>{{ sectionDescription() }}</p>
     </div>
     @if (view(); as v) {
-      <div class="store__actions">
+      <div class="store__actions tw:console-save-bar">
         <ds-button variant="secondary" [disabled]="busyAction() !== null || !v.availability.previewAllowed" (click)="openPreview()">
           <ds-icon name="eye" />
           {{ busyAction() === 'preview' ? 'Abriendo…' : 'Vista previa de mi tienda' }}

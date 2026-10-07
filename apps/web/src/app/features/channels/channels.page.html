@@ -112,6 +112,10 @@
         }
 
         <form class="form" [formGroup]="connectForm" (ngSubmit)="connect()">
+          <div class="tw:console-save-bar">
+            <span class="tw:px-2">{{ whatsapp ? 'Cambios de conexión' : 'Nueva conexión' }}</span>
+            <ds-button type="submit" [disabled]="saving()">{{ saving() ? 'Guardando…' : 'Guardar conexión' }}</ds-button>
+          </div>
           <h3>{{ whatsapp ? 'Actualizar conexión' : 'Conectar WhatsApp' }}</h3>
           <label>
             Phone Number ID
@@ -136,9 +140,6 @@
               <option value="NEW_WABA_NUMBER">Número API / WABA nuevo</option>
             </select></ds-select>
           </label>
-          <ds-button type="submit" [disabled]="saving()">
-            {{ saving() ? 'Guardando…' : 'Guardar conexión' }}
-          </ds-button>
         </form>
 
         @if (webhookInfo(); as webhook) {

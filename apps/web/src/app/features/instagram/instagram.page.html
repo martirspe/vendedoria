@@ -61,6 +61,10 @@
     <div class="store__grid">
       @if (canManage) {
         <form class="store__form" [formGroup]="form" (ngSubmit)="connect()">
+          <div class="tw:console-save-bar">
+            <span class="tw:px-2">{{ connected() ? 'Cambios de Instagram' : 'Nueva conexión' }}</span>
+            <ds-button type="submit" [disabled]="saving()">{{ saving() ? 'Conectando…' : connected() ? 'Guardar y verificar' : 'Conectar Instagram' }}</ds-button>
+          </div>
           <section class="card">
             <h2>{{ connected() ? 'Cambiar de cuenta' : 'Conectar cuenta' }}</h2>
             <label>
@@ -74,11 +78,6 @@
               <small>Lo detectamos con el token; complétalo solo si te lo pedimos.</small>
             </label>
           </section>
-          <footer>
-            <ds-button type="submit" [disabled]="saving()">
-              {{ saving() ? 'Conectando…' : connected() ? 'Guardar y verificar' : 'Conectar Instagram' }}
-            </ds-button>
-          </footer>
         </form>
       } @else {
         <p class="hint">Solo el dueño o un administrador puede conectar Instagram.</p>
