@@ -4,6 +4,7 @@ import {
   Component,
   computed,
   DestroyRef,
+  ElementRef,
   inject,
   signal,
 } from '@angular/core';
@@ -31,7 +32,7 @@ import { productCompleteness, specificationHint } from './product-completeness';
 
 import { CombinationDraft, VariantAxis, generateCombinations, readOptions, keyOf } from './variant-combinations';
 import { CatalogCategory } from '../../core/api/catalog-api.service';
-import { CatalogListState, catalogCsv, filterCatalog } from './catalog-list';
+import { CatalogListState, catalogCsv, catalogStock, filterCatalog } from './catalog-list';
 type VariantDraft = CombinationDraft;
 type VariantRow = { variant: VariantDraft; index: number; key: string };
 
@@ -83,6 +84,7 @@ function toCents(amount: number): number {
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class ProductsPage {
+  private readonly host = inject<ElementRef<HTMLElement>>(ElementRef);
   readonly maxMedia = MAX_MEDIA;
   readonly variantPageCount = computed(() => Math.max(1, Math.ceil(this.matchingVariants().length / 25)));
   private readonly api = inject(CatalogApiService);
@@ -105,6 +107,7 @@ export class ProductsPage {
         return { kind: value && KIND_FILTERS.includes(value) ? value : 'todos', query: (params.get('q') ?? '').slice(0, 200),
           status: oneOf('estado', ['todos', 'disponibles', 'pausados'], 'todos'),
           publication: oneOf('tienda', ['todos', 'visibles', 'ocultos'], 'todos'),
+          inventory: oneOf('inventario', ['todos', 'agotados'] as const, 'todos'),
           sort: oneOf('orden', ['recientes', 'antiguos', 'nombre', 'nombre-desc'], 'recientes'),
           page: Number.isSafeInteger(page) && page > 0 ? page : 1, pageSize: [25, 50, 100].includes(size) ? size : 25 };
       }),
@@ -125,12 +128,27 @@ export class ProductsPage {
     return { todos: list.length, productos: list.length - services - digital, servicios: services, digitales: digital };
   });
   readonly filteredProducts = computed(() => filterCatalog(this.products(), this.listState()));
+  readonly catalogSummary = computed(() => ({
+    total: this.products().length,
+    paused: this.products().filter(product => !product.isAvailable).length,
+    soldOut: this.products().filter(product => catalogStock(product) === 0).length,
+    hidden: this.products().filter(product => !product.isPublishedOnStore).length,
+  }));
+  readonly activeListFilters = computed(() => {
+    const state = this.listState();
+    const filters: Array<{ key: string; label: string }> = [];
+    if (state.query) filters.push({ key: 'q', label: `Búsqueda: ${state.query}` });
+    if (state.status !== 'todos') filters.push({ key: 'estado', label: state.status === 'disponibles' ? 'Habilitados para vender' : 'No disponibles' });
+    if (state.publication !== 'todos') filters.push({ key: 'tienda', label: state.publication === 'visibles' ? 'Visibles en tienda' : 'Ocultos en tienda' });
+    if (state.inventory === 'agotados') filters.push({ key: 'inventario', label: 'Sin stock' });
+    return filters;
+  });
   readonly totalPages = computed(() => Math.max(1, Math.ceil(this.filteredProducts().length / this.listState().pageSize)));
   readonly currentPage = computed(() => Math.min(this.listState().page, this.totalPages()));
   readonly listStart = computed(() => this.filteredProducts().length ? (this.currentPage() - 1) * this.listState().pageSize + 1 : 0);
   readonly listEnd = computed(() => Math.min(this.currentPage() * this.listState().pageSize, this.filteredProducts().length));
   readonly visibleProducts = computed(() => this.filteredProducts().slice(this.listStart() ? this.listStart() - 1 : 0, this.listEnd()));
-  readonly hasListFilters = computed(() => Boolean(this.listState().query || this.kindFilter() !== 'todos' || this.listState().status !== 'todos' || this.listState().publication !== 'todos'));
+  readonly hasListFilters = computed(() => Boolean(this.activeListFilters().length || this.kindFilter() !== 'todos'));
   readonly loading = signal(true);
   readonly loadFailed = signal(false);
   readonly saving = signal(false);
@@ -276,6 +294,7 @@ export class ProductsPage {
         done: hasDescription,
         required: true,
       },
+      { id: 'handle', label: 'Dirección del producto', done: slugify(values.handle).length >= 2, required: true },
       { id: 'price', label: 'Precio', done: hasPrice, required: true },
     ];
     if (values.kind === 'DIGITAL') items.push({ id: 'access', label: 'Enlace de acceso seguro', done: /^https:\/\/[^\s]+$/.test(values.digitalAccessUrl.trim()), required: true });
@@ -302,12 +321,46 @@ export class ProductsPage {
       .every((item) => item.done),
   );
 
+  readonly pendingFields = computed(() => this.readiness().filter(item => !item.done).length);
+  readonly editorPreview = computed(() => ({
+    name: this.formValues().name.trim() || 'Nombre del producto',
+    description: this.formValues().descriptionShort.trim(),
+    price: this.formatPrice(Math.round(Number(this.formValues().price || 0) * 100), this.formValues().currency),
+    image: this.media().find(item => item.kind === 'image')?.url,
+  }));
+
+  focusEditorField(id: string): void {
+    const names: Record<string, string> = { name: 'name', description: 'descriptionShort', handle: 'handle', price: 'price', access: 'digitalAccessUrl' };
+    const field = this.host.nativeElement.querySelector<HTMLElement>(`[formControlName="${names[id] ?? id}"]`);
+    field?.focus({ preventScroll: true });
+    field?.scrollIntoView?.({ block: 'center' });
+  }
+
+  editorFieldError(id: string): string | null {
+    const controls = this.productForm.controls;
+    const field = id === 'description' ? controls.descriptionShort : id === 'access' ? controls.digitalAccessUrl : id === 'name' ? controls.name : id === 'handle' ? controls.handle : controls.price;
+    if (!field.touched) return null;
+    if (field.hasError('maxlength')) return 'Reduce el texto al máximo indicado.';
+    if (this.readiness().find(item => item.id === id)?.done && !field.invalid) return null;
+    const messages: Record<string, string> = {
+      name: 'Escribe un nombre de al menos 2 caracteres.',
+      description: 'Describe el producto con al menos 8 caracteres.',
+      handle: 'Usa una dirección con al menos 2 letras o números.',
+      price: 'Ingresa un precio mayor que cero.',
+      access: 'Ingresa un enlace HTTPS válido para entregar el contenido.',
+    };
+    return messages[id] ?? null;
+  }
+
   readonly nameCount = computed(() => this.formValues().name.length);
   readonly descriptionCount = computed(
     () => this.formValues().descriptionShort.length,
   );
 
   constructor() {
+    this.productForm.valueChanges.pipe(takeUntilDestroyed(this.destroyRef)).subscribe(() => {
+      if (this.errorMessage() === 'Revisa los datos marcados antes de guardar el producto.' && this.productForm.valid && this.readinessReady()) this.errorMessage.set(null);
+    });
     this.productForm.controls.name.valueChanges
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe((name) => {
@@ -760,7 +813,14 @@ export class ProductsPage {
   }
 
   clearListFilters(): void {
-    void this.router.navigate([], { relativeTo: this.route, queryParams: { q: null, tipo: null, estado: null, tienda: null, pagina: null }, queryParamsHandling: 'merge' });
+    void this.router.navigate([], { relativeTo: this.route, queryParams: { q: null, tipo: null, estado: null, tienda: null, inventario: null, pagina: null }, queryParamsHandling: 'merge' });
+  }
+
+  showCatalogAttention(key: 'estado' | 'inventario' | 'tienda', value: string): void {
+    void this.router.navigate([], { relativeTo: this.route,
+      queryParams: { q: null, tipo: null, estado: null, tienda: null, inventario: null, pagina: null, [key]: value },
+      queryParamsHandling: 'merge',
+    });
   }
 
   exportCatalog(): void {
@@ -877,8 +937,11 @@ export class ProductsPage {
     if (this.productForm.invalid || !this.readinessReady()) {
       this.productForm.markAllAsTouched();
       this.errorMessage.set(
-        'Completa nombre, descripción y precio para publicar.',
+        'Revisa los datos marcados antes de guardar el producto.',
       );
+      const missing = this.readiness().find(item => !item.done);
+      const invalid = Object.entries(this.productForm.controls).find(([, control]) => control.invalid);
+      this.focusEditorField(missing?.id ?? invalid?.[0] ?? 'name');
       return;
     }
 
@@ -1040,11 +1103,17 @@ export class ProductsPage {
     }
     const pieces = product.components?.length ?? 0;
     if (pieces) return `Set · ${pieces} ${pieces === 1 ? 'pieza' : 'piezas'}`;
-    if (product.stockUnlimited) return 'Stock ilimitado';
-    const qty = product.stockQty ?? 0;
+    const stock = catalogStock(product);
+    if (stock === null) return 'Stock ilimitado';
+    const qty = stock;
     const base = qty === 1 ? '1 unidad' : `${qty} unidades`;
     const variants = product.variants?.length ?? 0;
     return variants ? `${base} · ${variants} var.` : base;
+  }
+
+  availabilityLabel(product: ProductDto): string {
+    if (!product.isAvailable) return 'No disponible';
+    return catalogStock(product) === 0 ? 'Sin stock' : 'Disponible';
   }
 
   thumb(product: ProductDto): string | null {

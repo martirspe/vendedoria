@@ -5,11 +5,22 @@ export type CatalogListState = {
   query: string;
   status: 'todos' | 'disponibles' | 'pausados';
   publication: 'todos' | 'visibles' | 'ocultos';
+  inventory?: 'todos' | 'agotados';
   sort: 'recientes' | 'antiguos' | 'nombre' | 'nombre-desc';
   page: number;
   pageSize: number;
 };
 const normalize = (value: string) => value.normalize('NFKD').replace(/[\u0300-\u036f]/g, '').toLocaleLowerCase('es');
+
+/** Sets require component availability; do not infer it from their parent stock. */
+export function catalogStock(product: ProductDto): number | null {
+  if (product.kind !== 'PRODUCT' || product.components?.length) return null;
+  if (product.variants?.length) {
+    return product.variants.filter(variant => variant.isAvailable)
+      .reduce((total, variant) => total + Math.max(variant.stockQty ?? 0, 0), 0);
+  }
+  return product.stockUnlimited ? null : Math.max(product.stockQty ?? 0, 0);
+}
 
 export function filterCatalog(products: ProductDto[], state: CatalogListState): ProductDto[] {
   const words = normalize(state.query.trim()).split(/\s+/).filter(Boolean);
@@ -18,6 +29,7 @@ export function filterCatalog(products: ProductDto[], state: CatalogListState): 
     if (kind && product.kind !== kind) return false;
     if (state.status !== 'todos' && product.isAvailable !== (state.status === 'disponibles')) return false;
     if (state.publication !== 'todos' && product.isPublishedOnStore !== (state.publication === 'visibles')) return false;
+    if (state.inventory === 'agotados' && catalogStock(product) !== 0) return false;
     const text = normalize([product.name, product.handle, product.sku, product.brand, product.line, ...product.categories, ...(product.variants ?? []).map(v => v.sku)].filter(Boolean).join(' '));
     return words.every(word => text.includes(word));
   }).sort((a, b) => {

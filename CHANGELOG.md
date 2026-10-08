@@ -2,6 +2,10 @@
 
 ## [Unreleased]
 
+- Console product editor and order detail: live product summary with actionable readiness checks, inline required-field errors and focus on the next missing value. Orders have a wider structured detail with persistent actions, loading/retry states and protection against stale detail responses. New orders show the product subtotal and reject invalid quantities. Removing a redundant dialog click handler restores submission from the actual create button; validation alerts clear when corrected.
+
+- Console catalog and orders: visible operational summaries, stock-aware availability and sold-out quick view, removable catalog filters, list-shaped loading, distinct no-results recovery, and a unified list toolbar. Orders open as a readable list with mobile cards, URL-persisted search/status/view and debounced search; cancelled orders remain visible in the board. The detail offers payment-link actions only for draft or pending-payment orders.
+
 - Seguridad del equipo: cada petición autenticada verifica la membresía y el rol vigentes; eliminar un miembro o reducir sus permisos deja de depender de la caducidad del token de acceso.
 - Dependencias: parches de seguridad para Fastify, proxy-addr y js-yaml, conservando NestJS 11; CI instala el archivo de bloqueo y ejecuta también las pruebas unitarias de API.
 - Tienda: «Comprar ahora» agrega la selección al carrito existente y espera su persistencia antes de abrir el checkout, conservando productos y variantes anteriores. Regresiones del carrito ejecutadas también en CI.

@@ -3,7 +3,7 @@
     <header class="catalog__header">
       <div>
         <h1 class="tw:console-title">Productos</h1>
-        <p>Tu catálogo para vender por chat y en tu tienda.</p>
+        <p>Precios, disponibilidad e inventario para vender por chat y en tu tienda.</p>
       </div>
       <div class="catalog__actions">
         <a routerLink="/app/inventory" class="tw:console-action-secondary"><ds-icon name="list" [size]="0.95" />Inventario</a>
@@ -27,7 +27,9 @@
     }
 
     @if (loading()) {
-      <p class="catalog__muted">Cargando catálogo…</p>
+      <div class="tw:console-list-panel" role="status" aria-busy="true" aria-label="Cargando catálogo">
+        <div class="tw:console-list-skeleton" aria-hidden="true">@for (row of [1, 2, 3, 4, 5]; track row) { <div></div> }</div>
+      </div>
     } @else if (loadFailed()) {
       <ds-empty-state title="No pudimos cargar esta sección" body="Revisa tu conexión e inténtalo de nuevo.">
         <ds-button variant="secondary" (click)="load()">Reintentar</ds-button>
@@ -43,7 +45,25 @@
         </a>
       </ds-empty-state>
     } @else {
-      <div class="tw:overflow-hidden tw:rounded-lg tw:border tw:border-solid tw:border-border tw:bg-surface tw:shadow-sm">
+      <section class="tw:grid tw:grid-cols-2 tw:gap-3 tw:lg:grid-cols-4" aria-label="Resumen del catálogo">
+        <button type="button" class="tw:console-metric" [attr.aria-pressed]="!hasListFilters()" (click)="clearListFilters()">
+          <span>Todo el catálogo<small>Todos los tipos</small></span><strong>{{ catalogSummary().total }}</strong>
+        </button>
+        <button type="button" class="tw:console-metric" [attr.aria-pressed]="listState().inventory === 'agotados'" (click)="showCatalogAttention('inventario', 'agotados')">
+          <span>Sin stock<small>Revisa el inventario</small></span><strong class="tw:text-warning-text">{{ catalogSummary().soldOut }}</strong>
+        </button>
+        <button type="button" class="tw:console-metric" [attr.aria-pressed]="listState().status === 'pausados'" (click)="showCatalogAttention('estado', 'pausados')">
+          <span>No disponibles<small>Venta deshabilitada</small></span><strong>{{ catalogSummary().paused }}</strong>
+        </button>
+        @if (storeActive()) {
+          <button type="button" class="tw:console-metric" [attr.aria-pressed]="listState().publication === 'ocultos'" (click)="showCatalogAttention('tienda', 'ocultos')">
+            <span>Ocultos en tienda<small>Revisa la publicación</small></span><strong>{{ catalogSummary().hidden }}</strong>
+          </button>
+        } @else {
+          <a routerLink="/app/inventory" class="tw:console-metric tw:no-underline"><span>Inventario<small>Gestionar unidades</small></span><ds-icon name="chevronRight" /></a>
+        }
+      </section>
+      <div class="tw:console-list-panel">
         <div class="kind-filter tw:border-0 tw:border-b tw:border-solid tw:border-divider tw:p-3" role="group" aria-label="Filtrar por tipo">
           @for (option of kindOptions; track option.id) {
             <button
@@ -56,31 +76,38 @@
             </button>
           }
         </div>
-        <div class="tw:grid tw:gap-3 tw:border-0 tw:border-b tw:border-solid tw:border-divider tw:p-3 tw:lg:grid-cols-2">
+        <div class="tw:grid tw:gap-3 tw:border-0 tw:border-b tw:border-solid tw:border-divider tw:p-4 tw:lg:grid-cols-3">
           <label class="tw:grid tw:min-w-0 tw:gap-1 tw:text-caption tw:font-medium">Buscar productos
-            <input type="search" class="tw:console-field" placeholder="Nombre, SKU, marca o colección" maxlength="200" [value]="listState().query" (input)="setListFilter('q', $any($event.target).value)" />
+            <span class="tw:flex tw:min-w-0 tw:items-center tw:gap-2 tw:rounded-sm tw:border tw:border-solid tw:border-border tw:px-3 tw:focus-within:border-focus"><ds-icon name="search" class="tw:text-muted" /><input type="search" class="tw:console-field tw:border-0! tw:px-0!" placeholder="Nombre, SKU, marca o colección" maxlength="200" [value]="listState().query" (input)="setListFilter('q', $any($event.target).value)" /></span>
           </label>
-          <div class="tw:grid tw:min-w-0 tw:grid-cols-2 tw:gap-3 tw:sm:grid-cols-3">
-            <label class="tw:grid tw:min-w-0 tw:gap-1 tw:text-caption tw:font-medium">Disponibilidad<ds-select><select [value]="listState().status" (change)="setListFilter('estado', $any($event.target).value)"><option value="todos">Todas</option><option value="disponibles">Disponibles</option><option value="pausados">No disponibles</option></select></ds-select></label>
+          <div class="tw:grid tw:min-w-0 tw:grid-cols-2 tw:gap-3 tw:lg:col-span-2 tw:xl:grid-cols-4">
+            <label class="tw:grid tw:min-w-0 tw:gap-1 tw:text-caption tw:font-medium">Disponibilidad<ds-select><select [value]="listState().status" (change)="setListFilter('estado', $any($event.target).value)"><option value="todos">Todas</option><option value="disponibles">Habilitados</option><option value="pausados">No disponibles</option></select></ds-select></label>
+            <label class="tw:grid tw:min-w-0 tw:gap-1 tw:text-caption tw:font-medium">Inventario<ds-select><select [value]="listState().inventory || 'todos'" (change)="setListFilter('inventario', $any($event.target).value)"><option value="todos">Todo el inventario</option><option value="agotados">Sin stock</option></select></ds-select></label>
             @if (storeActive()) { <label class="tw:grid tw:min-w-0 tw:gap-1 tw:text-caption tw:font-medium">Tienda web<ds-select><select [value]="listState().publication" (change)="setListFilter('tienda', $any($event.target).value)"><option value="todos">Todos</option><option value="visibles">Visibles</option><option value="ocultos">Ocultos</option></select></ds-select></label> }
             <label class="tw:grid tw:min-w-0 tw:gap-1 tw:text-caption tw:font-medium">Ordenar por<ds-select><select [value]="listState().sort" (change)="setListFilter('orden', $any($event.target).value)"><option value="recientes">Más recientes</option><option value="antiguos">Más antiguos</option><option value="nombre">Nombre, A–Z</option><option value="nombre-desc">Nombre, Z–A</option></select></ds-select></label>
           </div>
         </div>
-        @if (hasListFilters()) { <div class="tw:flex tw:items-center tw:justify-between tw:gap-2 tw:px-3 tw:py-2 tw:text-caption"><span role="status">{{ filteredProducts().length }} {{ filteredProducts().length === 1 ? 'resultado' : 'resultados' }} de {{ products().length }}</span><button type="button" class="tw:console-action-secondary" (click)="clearListFilters()">Limpiar filtros</button></div> }
+        <div class="tw:flex tw:flex-wrap tw:items-center tw:justify-between tw:gap-3 tw:border-0 tw:border-b tw:border-solid tw:border-divider tw:px-4 tw:py-3">
+          <span class="tw:text-caption tw:text-muted" role="status">{{ filteredProducts().length }} {{ filteredProducts().length === 1 ? 'resultado' : 'resultados' }} de {{ products().length }}</span>
+          @if (hasListFilters()) { <button type="button" class="tw:console-action-secondary" (click)="clearListFilters()">Limpiar filtros</button> }
+          @if (activeListFilters().length) {
+            <div class="tw:flex tw:w-full tw:flex-wrap tw:gap-2" aria-label="Filtros aplicados">
+              @for (filter of activeListFilters(); track filter.key) { <button type="button" class="tw:console-filter-chip" [attr.aria-label]="'Quitar filtro: ' + filter.label" (click)="setListFilter(filter.key, '')"><span class="tw:wrap-anywhere">{{ filter.label }}</span><ds-icon name="x" [size]="0.85" /></button> }
+            </div>
+          }
+        </div>
       @if (!visibleProducts().length) {
-        <p class="catalog__muted tw:m-0 tw:p-4">
-          No hay productos que coincidan. Prueba otra búsqueda o limpia los filtros.
-        </p>
-      }
+        <ds-empty-state title="No hay coincidencias" body="Prueba otro nombre, SKU o combinación de filtros."><ds-button variant="secondary" (click)="clearListFilters()">Ver todo el catálogo</ds-button></ds-empty-state>
+      } @else {
       <div class="tw:hidden tw:grid-cols-12 tw:gap-4 tw:bg-canvas/50 tw:px-4 tw:py-3 tw:text-caption tw:font-medium tw:text-muted tw:md:grid" aria-hidden="true">
-        <span class="tw:col-span-5">Producto</span><span class="tw:col-span-2">Estado</span><span class="tw:col-span-3">Inventario</span><span class="tw:col-span-2 tw:text-right">Precio</span>
+        <span class="tw:col-span-5">Producto</span><span class="tw:col-span-2">Disponibilidad</span><span class="tw:col-span-3">Inventario y ficha</span><span class="tw:col-span-2 tw:text-right">Precio</span>
       </div>
       <ul class="tw:m-0 tw:grid tw:list-none tw:p-0">
         @for (product of visibleProducts(); track product.id) {
           <li class="tw:border-0 tw:border-t tw:border-solid tw:border-divider">
-            <button type="button" class="tw:grid tw:w-full tw:cursor-pointer tw:grid-cols-2 tw:items-center tw:gap-x-4 tw:gap-y-2 tw:border-0 tw:bg-transparent tw:px-3 tw:py-2 tw:text-left tw:text-body tw:text-foreground tw:hover:bg-canvas/50 tw:md:grid-cols-12" (click)="openEdit(product)" [attr.aria-label]="'Editar ' + product.name">
+            <button type="button" class="tw:grid tw:w-full tw:cursor-pointer tw:grid-cols-2 tw:items-center tw:gap-x-4 tw:gap-y-2 tw:border-0 tw:bg-transparent tw:px-4 tw:py-3 tw:text-left tw:text-body tw:text-foreground tw:hover:bg-canvas/50 tw:md:grid-cols-12" (click)="openEdit(product)" [attr.aria-label]="'Editar ' + product.name">
               <span class="tw:col-span-2 tw:flex tw:min-w-0 tw:items-center tw:gap-3 tw:md:col-span-5">
-                <span class="tw:grid tw:size-10 tw:shrink-0 tw:place-items-center tw:overflow-hidden tw:rounded-sm tw:border tw:border-solid tw:border-border tw:bg-canvas">
+                <span class="tw:grid tw:size-12 tw:shrink-0 tw:place-items-center tw:overflow-hidden tw:rounded-sm tw:border tw:border-solid tw:border-border tw:bg-canvas">
                 @if (thumb(product); as url) {
                   <img [src]="url" alt="" class="tw:h-full tw:w-full tw:object-cover" loading="lazy" />
                 } @else {
@@ -91,11 +118,11 @@
                   <span class="tw:font-semibold tw:wrap-anywhere">{{ product.name }}</span>
                   <span class="tw:text-caption tw:text-muted">{{ product.sku || (product.kind === 'SERVICE' ? 'Servicio' : product.kind === 'DIGITAL' ? 'Producto digital' : 'Producto físico') }}</span>
                   <span class="tw:text-caption tw:text-muted tw:md:hidden">{{ stockLabel(product) }}</span>
-                  @if (storeActive() && product.isPublishedOnStore) { <span class="tw:text-caption tw:text-success-text">Visible en tienda</span> }
+                  @if (storeActive()) { <span class="tw:inline-flex tw:items-center tw:gap-1 tw:text-caption tw:text-muted"><ds-icon name="eye" [size]="0.8" />{{ product.isPublishedOnStore ? 'Visible en tienda' : 'Oculto en tienda' }}</span> }
                 </span>
               </span>
-              <span class="tw:md:col-span-2"><span class="tw:inline-flex tw:rounded-full tw:bg-canvas tw:px-2 tw:py-1 tw:text-caption" [class.tw:bg-success/10]="product.isAvailable" [class.tw:text-success-text]="product.isAvailable">{{ product.isAvailable ? 'Disponible' : 'No disponible' }}</span></span>
-              <span class="tw:hidden tw:text-caption tw:text-muted tw:md:col-span-3 tw:md:grid tw:md:gap-1"><span>{{ stockLabel(product) }}</span><span>Información: {{ listScore(product) }}%</span></span>
+              <span class="tw:md:col-span-2"><span class="tw:inline-flex tw:rounded-sm tw:bg-canvas tw:px-2 tw:py-1 tw:text-caption" [class.tw:bg-success/10]="availabilityLabel(product) === 'Disponible'" [class.tw:text-success-text]="availabilityLabel(product) === 'Disponible'" [class.tw:bg-warning/10]="availabilityLabel(product) === 'Sin stock'" [class.tw:text-warning-text]="availabilityLabel(product) === 'Sin stock'">{{ availabilityLabel(product) }}</span></span>
+              <span class="tw:hidden tw:text-caption tw:text-muted tw:md:col-span-3 tw:md:grid tw:md:gap-2"><span>{{ stockLabel(product) }}</span><span class="tw:flex tw:items-center tw:gap-2"><progress class="tw:setup-progress tw:max-w-20" [value]="listScore(product)" max="100" [attr.aria-label]="'Ficha de ' + product.name + ' completada'">{{ listScore(product) }}%</progress><span>Ficha {{ listScore(product) }}%</span></span></span>
               <span class="tw:text-right tw:font-medium tw:tabular-nums tw:md:col-span-2">{{ formatPrice(product.basePriceCents, product.currency) }}</span>
             </button>
           </li>
@@ -104,20 +131,21 @@
       <nav aria-label="Páginas del catálogo" class="tw:flex tw:flex-wrap tw:items-center tw:justify-between tw:gap-3 tw:border-0 tw:border-t tw:border-solid tw:border-divider tw:p-3 tw:text-caption">
         <span role="status">{{ listStart() }}–{{ listEnd() }} de {{ filteredProducts().length }}</span>
         <div class="tw:flex tw:flex-wrap tw:items-center tw:gap-2">
-          <label class="tw:flex tw:items-center tw:gap-2">Por página<select class="tw:console-field" [value]="listState().pageSize" (change)="setListFilter('porPagina', $any($event.target).value)"><option value="25">25</option><option value="50">50</option><option value="100">100</option></select></label>
+          <label class="tw:flex tw:items-center tw:gap-2">Por página<ds-select><select [value]="listState().pageSize" (change)="setListFilter('porPagina', $any($event.target).value)"><option value="25">25</option><option value="50">50</option><option value="100">100</option></select></ds-select></label>
           <ds-button type="button" variant="secondary" [label]="'Página anterior'" [disabled]="currentPage() <= 1" (click)="setListPage(currentPage() - 1)"><ds-icon name="chevronLeft" [size]="0.9" /></ds-button>
           <span>Página {{ currentPage() }} de {{ totalPages() }}</span>
           <ds-button type="button" variant="secondary" [label]="'Página siguiente'" [disabled]="currentPage() >= totalPages()" (click)="setListPage(currentPage() + 1)"><ds-icon name="chevronRight" [size]="0.9" /></ds-button>
         </div>
       </nav>
+      }
       </div>
     }
   } @else {
     <form class="publish tw:mx-auto tw:grid tw:w-full tw:max-w-form tw:gap-5" [formGroup]="productForm" (ngSubmit)="saveProduct()">
       <div class="tw:console-save-bar">
-        <span class="tw:px-2">{{ isEditing() ? 'Editar producto' : 'Nuevo producto' }}</span>
+        <span class="tw:px-2">{{ pendingFields() === 1 ? '1 dato pendiente' : pendingFields() ? pendingFields() + ' datos pendientes' : 'Datos completos' }}</span>
         <ds-button type="button" variant="ghost" class="tw:[&_.ds-button]:text-surface! tw:[&_.ds-button:hover]:bg-navigation-hover!" [disabled]="saving() || deleting()" (click)="closeEditor()">Cancelar</ds-button>
-        <ds-button type="submit" [disabled]="saving() || deleting() || !readinessReady()">{{ saving() ? 'Guardando…' : 'Guardar' }}</ds-button>
+        <ds-button type="submit" [disabled]="saving() || deleting()">{{ saving() ? 'Guardando…' : 'Guardar' }}</ds-button>
       </div>
       <header class="publish__top">
         <div>
@@ -164,7 +192,8 @@
               <p class="field__hint">Sin stock ni envío. El enlace se entrega al confirmarse el pago.</p>
               <label class="field">
                 <span>Enlace privado de acceso <em>*</em></span>
-                <input formControlName="digitalAccessUrl" type="url" maxlength="500" placeholder="https://..." />
+                <input formControlName="digitalAccessUrl" type="url" maxlength="500" placeholder="https://..." aria-label="Enlace privado de acceso" [attr.aria-invalid]="!!editorFieldError('access')" aria-describedby="product-access-error" />
+                @if (editorFieldError('access'); as error) { <span id="product-access-error" class="tw:text-caption tw:text-danger-text">{{ error }}</span> }
                 <span class="field__hint">Usa un enlace HTTPS que permita acceder al contenido. Se comparte solo con compradores que hayan pagado.</span>
               </label>
               <label class="field">
@@ -197,10 +226,14 @@
               <span>{{ isService() ? 'Nombre del servicio' : 'Nombre del producto' }} <em>*</em></span>
               <input
                 formControlName="name"
+                [attr.aria-label]="isService() ? 'Nombre del servicio' : 'Nombre del producto'"
+                [attr.aria-invalid]="!!editorFieldError('name')"
+                aria-describedby="product-name-error"
                 maxlength="250"
                 autocomplete="off"
                 placeholder="Ej. Botín Puro Cuero 1153"
               />
+              @if (editorFieldError('name'); as error) { <span id="product-name-error" class="tw:text-caption tw:text-danger-text">{{ error }}</span> }
               <span class="field__meta">
                 <span class="field__hint">Claro y corto: así lo busca el comprador.</span>
                 <span class="field__count">{{ nameCount() }}/250</span>
@@ -211,9 +244,13 @@
               <span>Dirección del producto <em>*</em></span>
               <input
                 formControlName="handle"
+                aria-label="Dirección del producto"
+                [attr.aria-invalid]="!!editorFieldError('handle')"
+                aria-describedby="product-handle-error"
                 autocomplete="off"
                 (input)="onHandleInput()"
               />
+              @if (editorFieldError('handle'); as error) { <span id="product-handle-error" class="tw:text-caption tw:text-danger-text">{{ error }}</span> }
               <span class="field__hint">Se genera a partir del nombre. Puedes editarla antes de guardar.</span>
             </label>
 
@@ -221,10 +258,14 @@
               <span>Descripción del producto <em>*</em></span>
               <textarea
                 formControlName="descriptionShort"
+                aria-label="Descripción del producto"
+                [attr.aria-invalid]="!!editorFieldError('description')"
+                aria-describedby="product-description-error"
                 rows="4"
                 maxlength="1000"
                 placeholder="Qué es, para quién, materiales o beneficios. Ideal para WhatsApp."
               ></textarea>
+              @if (editorFieldError('description'); as error) { <span id="product-description-error" class="tw:text-caption tw:text-danger-text">{{ error }}</span> }
               <span class="field__meta">
                 <span class="field__hint">Tu vendedor usará esta info para vender tu producto.</span>
                 <span class="field__count">{{ descriptionCount() }}/1000</span>
@@ -331,9 +372,13 @@
                   min="0"
                   step="0.01"
                   formControlName="price"
+                  aria-label="Precio"
+                  [attr.aria-invalid]="!!editorFieldError('price')"
+                  aria-describedby="product-price-error"
                   placeholder="0,00"
                 />
               </div>
+              @if (editorFieldError('price'); as error) { <span id="product-price-error" class="tw:text-caption tw:text-danger-text">{{ error }}</span> }
             </label>
 
             <label class="field">
@@ -789,11 +834,28 @@
         </div>
 
         <aside class="publish__rail tw:grid tw:min-w-0 tw:content-start tw:gap-4">
+          <section class="tw:console-card tw:grid tw:gap-3" aria-label="Resumen del producto">
+            <h2 class="tw:m-0 tw:text-section">Resumen del producto</h2>
+            <p class="tw:m-0 tw:text-caption tw:text-muted">Vista de los datos que estás editando.</p>
+            @if (editorPreview().image; as image) { <img [src]="image" alt="" class="tw:aspect-square tw:w-full tw:rounded-md tw:object-cover" /> }
+            <strong class="tw:wrap-anywhere">{{ editorPreview().name }}</strong>
+            <span class="tw:text-section tw:font-semibold">{{ editorPreview().price }}</span>
+            @if (editorPreview().description) { <p class="tw:m-0 tw:line-clamp-3 tw:wrap-anywhere tw:text-body tw:text-muted">{{ editorPreview().description }}</p> }
+            <p class="tw:m-0 tw:text-caption tw:text-muted">{{ pendingFields() ? 'Completa los datos pendientes para guardar.' : 'Los datos obligatorios están completos.' }}</p>
+            <ul class="tw:m-0 tw:grid tw:list-none tw:gap-1 tw:p-0">
+              @for (item of readiness(); track item.id) {
+                <li><button type="button" class="tw:flex tw:min-h-touch tw:w-full tw:cursor-pointer tw:items-center tw:gap-2 tw:rounded-sm tw:border-0 tw:bg-transparent tw:px-2 tw:text-left tw:text-body tw:hover:bg-canvas" [attr.aria-label]="(item.done ? 'Revisar ' : 'Completar ') + item.label" (click)="focusEditorField(item.id)">
+                  <ds-icon [name]="item.done ? 'check' : 'chevronRight'" [class.tw:text-success-text]="item.done" />
+                  <span class="tw:flex-1">{{ item.label }}</span><span class="tw:text-caption tw:text-muted">{{ item.done ? 'Listo' : 'Pendiente' }}</span>
+                </button></li>
+              }
+            </ul>
+          </section>
 <section class="pub-card tw:console-card tw:grid tw:gap-4">
             <header class="pub-card__head pub-card__head--inline">
               <div>
                 <h2>Disponibilidad</h2>
-                <p>Tus clientes pueden ver y pedir este producto.</p>
+                <p>Habilita la venta por chat. El stock y la publicación en tienda se gestionan por separado.</p>
               </div>
             </header>
             <div class="avail-row">
@@ -809,8 +871,8 @@
               >
                 {{
                   productForm.controls.isAvailable.value
-                    ? 'Disponible'
-                    : 'No disponible'
+                    ? 'Venta habilitada'
+                    : 'Venta deshabilitada'
                 }}
               </span>
             </div>
@@ -921,21 +983,6 @@
             <input type="hidden" formControlName="categoriesText" />
           </section>
 
-        <section class="pub-card tw:console-card tw:grid tw:gap-4">
-            <h2>¿Listo para guardar?</h2>
-            <ul class="ready-list">
-              @for (item of readiness(); track item.id) {
-                <li [class.ready-list__item--done]="item.done">
-                  <span class="ready-list__dot" aria-hidden="true">
-                    @if (item.done) {
-                      <ds-icon name="check" />
-                    }
-                  </span>
-                  {{ item.label }}
-                </li>
-              }
-            </ul>
-          </section>
 <details class="pub-card tw:console-card">
             <summary class="tw:min-h-touch tw:cursor-pointer tw:content-center tw:text-body tw:font-semibold">Información para recomendar: {{ completeness().score }}%</summary><div class="tw:grid tw:gap-4 tw:pt-3">
             <p class="field__hint">Revisa los datos que ayudan al comprador a elegir. El porcentaje mide información registrada, no su exactitud.</p>

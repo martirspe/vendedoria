@@ -98,6 +98,32 @@
   @apply tw:m-0 tw:font-ui tw:text-page tw:font-medium tw:leading-tight tw:tracking-tight tw:wrap-anywhere;
 }
 
+@utility console-list-panel {
+  @apply tw:min-w-0 tw:overflow-hidden tw:rounded-lg tw:border tw:border-solid tw:border-border tw:bg-surface tw:shadow-sm;
+}
+
+@utility console-metric {
+  @apply tw:flex tw:min-w-0 tw:items-center tw:justify-between tw:gap-3 tw:rounded-md tw:border tw:border-solid tw:border-border tw:bg-surface tw:p-4 tw:text-left tw:text-foreground;
+  & strong { @apply tw:text-page tw:font-semibold tw:leading-tight tw:tabular-nums; }
+  & span { @apply tw:text-body; }
+  & small { @apply tw:block tw:text-caption tw:text-muted; }
+  &:is(button) {
+    @apply tw:cursor-pointer;
+    &:hover { @apply tw:border-ink tw:bg-canvas; }
+    &[aria-pressed='true'] { @apply tw:border-ink tw:bg-primary/10; }
+  }
+}
+
+@utility console-filter-chip {
+  @apply tw:inline-flex tw:min-w-0 tw:items-center tw:gap-2 tw:rounded-sm tw:border tw:border-solid tw:border-border tw:bg-canvas tw:px-2 tw:py-1 tw:text-caption tw:text-foreground;
+  &:is(button) { @apply tw:cursor-pointer tw:hover:border-ink; }
+}
+
+@utility console-list-skeleton {
+  @apply tw:grid tw:gap-4 tw:p-4;
+  & div { @apply tw:h-10 tw:rounded-sm tw:bg-canvas; }
+}
+
 @utility console-nav-link {
   @apply tw:flex tw:min-h-touch tw:min-w-0 tw:items-center tw:gap-3 tw:rounded-sm tw:px-3 tw:py-2 tw:text-body tw:font-medium tw:text-muted tw:no-underline;
   transition:

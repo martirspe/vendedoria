@@ -4,6 +4,34 @@ Fecha: 2026-10-06. Alcance: las rutas operativas bajo `/app`, incluido el editor
 
 ## Resultado
 
+### Seguimiento: catálogo y pedidos (2026-10-07)
+
+Esta pasada añade cambios visibles a las dos superficies solicitadas. Conserva los formularios de producto, los contratos de API y los datos del negocio.
+
+- **Catálogo:** resumen accionable del catálogo completo, sin stock, no disponibles y ocultos en tienda; búsqueda con icono, filtro de inventario y chips que se pueden quitar individualmente. Las filas separan publicación, disponibilidad, unidades, progreso de ficha y precio. Un producto físico con cero unidades deja de aparecer como «Disponible». El cálculo de variantes suma únicamente opciones habilitadas; los servicios, digitales y sets no se clasifican como agotados a partir del stock del padre.
+- **Pedidos:** panel de lista con resumen de los resultados actuales, pestañas de pendientes/historial y acciones Lista/Tablero. La lista es la vista inicial; en móvil se convierte en tarjetas con referencia, importe, cliente, producto y estado. Búsqueda, estado, pestaña y vista persisten en la URL; la búsqueda espera una pausa breve antes de consultar. El tablero incluye cancelados y muestra únicamente la columna elegida cuando se aplica un estado.
+- **Recuperación:** cargas con estructura de filas; ausencia de coincidencias diferenciada de ausencia de pedidos; limpiar filtros y volver al historial son acciones directas. El detalle omite nuevos enlaces de cobro en pedidos cancelados o ya pagados, y explica el cierre cuando no existe un pago.
+
+Verificación de esta pasada: build de web y 84 tests de consola, incluidos siete nuevos casos de inventario, restauración de filtros, búsqueda, pedidos cancelados y acciones de cobro. El build conserva un warning de presupuesto SCSS de Vendedor IA, fuera de estos cambios.
+
+Se ejercitaron ambas rutas en el navegador autenticado: sin stock → recarga → quitar chip; no coincidencias → ver todo; pedidos → historial → búsqueda → recarga → limpiar; tablero → cancelados → lista móvil → abrir detalle. No se guardaron productos, crearon pedidos ni ejecutaron cobros. Los resúmenes de pedidos indican «En esta vista» porque se calculan sobre la consulta actual, no como métricas globales.
+
+Viewport solicitado: 1440×900 y 390×844. El navegador integrado reportó anchos CSS efectivos de 1531 y 414; documento de 1515 y 398, respectivamente, sin desbordamiento horizontal en las rutas comprobadas. Los controles móviles observados conservan `min-height: 44px` (las medidas fraccionarias de layout pueden quedar en 43.999 px). La captura funcionó en la inspección inicial, pero dejó de estar disponible en las vistas actualizadas; la evidencia final de esta pasada es DOM, estilos computados e interacciones. No se declara una auditoría visual completa ni cobertura de todos los estados posibles.
+
+### Continuación: editor de productos y detalle de pedidos (2026-10-07)
+
+- **Editor:** resumen de foto principal, nombre, descripción y precio que se actualiza con el formulario. La revisión de datos obligatorios incluye la dirección del producto y el acceso HTTPS de productos digitales; cada fila lleva el foco al campo correspondiente. Guardar permite mostrar errores junto al campo y enfoca el primer dato pendiente. La barra indica cuántos datos faltan; los errores de validación desaparecen al corregirse. La disponibilidad se presenta como habilitación de venta, separada de inventario y publicación.
+- **Detalle de pedidos:** panel ampliado, total y fecha destacados, tarjetas para cliente, entrega, productos y pago, y acciones persistentes al pie. La apertura muestra carga y permite reintentar un fallo. Una respuesta atrasada no sustituye una selección posterior ni reabre un detalle cerrado; el código de seguimiento existente se recupera al abrir. El cierre permanece bloqueado durante una operación en curso.
+- **Nuevo pedido:** subtotal de los productos según la cantidad, explicación de borrador o pago pendiente, errores junto a la cantidad y rechazo de cantidades fraccionarias o fuera del rango entero seguro. Se retiró el manejador redundante de clic del diálogo: devolver `false` al burbujear el clic de Crear pedido cancelaba el envío nativo. El comportamiento de fondo, Escape y foco sigue a cargo de `DsModalDirective`.
+
+Verificación final: **90 tests de consola en 21 archivos**, seis casos adicionales respecto de la pasada de listas; **build web correcto**, 13 rutas prerenderizadas. Se mantiene el warning previo de presupuesto SCSS de Vendedor IA. `git diff --check` correcto.
+
+En navegador se comprobaron editor vacío → Guardar → errores y foco; edición temporal sin guardar → resumen actualizado → acceso al precio; producto existente con foto en escritorio y móvil; detalle enviado → acciones al pie → Escape y restauración del foco; nuevo pedido → subtotal para varias unidades → cantidad fraccionaria → error/foco → corrección → limpieza de alerta. Se conservaron los datos del negocio: no se guardaron productos, crearon pedidos ni ejecutaron pagos o cambios de estado en el navegador. El envío válido se verificó con la API sustituida en la prueba de componente, pulsando el botón real del diálogo.
+
+Los anchos CSS efectivos continuaron en 1531 y 414 px (documento 1515 y 398). Editor y diálogos comprobados sin desbordamiento horizontal; detalle en dos columnas en escritorio y una en móvil, con pie fuera del área desplazable. Los botones móviles de guardar/crear y gestión midieron aproximadamente 44 px; escritorio utiliza los tamaños compactos del diseño existente. Las capturas siguen sin estar disponibles, por lo que esta continuación aporta evidencia DOM, estilos e interacciones y no una aprobación visual mediante imágenes.
+
+La revisión anterior de 146 observaciones se conserva a continuación como evidencia histórica, no como una nueva ejecución de toda la matriz.
+
 La consola comparte navegación, jerarquía tipográfica, superficies semánticas, feedback y comportamiento de diálogos. Se corrigieron estados que presentaban una carga fallida como ausencia de datos, preparación para vender basada en conexiones pendientes y carreras de selección en Mensajes. El cambio conserva los contratos de API, el aislamiento del negocio y los flujos separados de pago del plan y del comprador.
 
 La evidencia visual cubre los estados disponibles en la cuenta local de revisión. No equivale a una certificación de todos los estados del producto ni a una aprobación de lanzamiento.

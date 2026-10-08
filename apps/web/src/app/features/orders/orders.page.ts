@@ -3,6 +3,8 @@ import {
   ChangeDetectionStrategy,
   Component,
   computed,
+  DestroyRef,
+  ElementRef,
   inject,
   signal,
 } from '@angular/core';
@@ -10,7 +12,9 @@ import { DatePipe } from '@angular/common';
 import { HttpErrorResponse } from '@angular/common/http';
 import { DomSanitizer, SafeHtml } from '@angular/platform-browser';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
-import { ActivatedRoute, RouterLink } from '@angular/router';
+import { ActivatedRoute, Router, RouterLink } from '@angular/router';
+import { takeUntilDestroyed, toSignal } from '@angular/core/rxjs-interop';
+import { map, startWith } from 'rxjs';
 import { DsButtonComponent } from '@vendedoria/ui';
 import { DsEmptyStateComponent } from '@vendedoria/ui';
 import { DsIconComponent } from '@vendedoria/ui';
@@ -20,6 +24,7 @@ import {
   OrdersApiService,
   ProductOption,
 } from '../../core/api/orders-api.service';
+import { readOrderList } from './order-list';
 
 type ViewMode = 'table' | 'kanban';
 type TabMode = 'new' | 'all';
@@ -52,15 +57,23 @@ export class OrdersPage {
   private readonly api = inject(OrdersApiService);
   private readonly fb = inject(FormBuilder);
   private readonly route = inject(ActivatedRoute);
+  private readonly router = inject(Router);
+  private readonly destroyRef = inject(DestroyRef);
+  private readonly host = inject<ElementRef<HTMLElement>>(ElementRef);
+  private searchTimer: ReturnType<typeof setTimeout> | undefined;
   private listRequest = 0;
+  private detailRequest = 0;
 
   readonly orders = signal<OrderDto[]>([]);
   readonly products = signal<ProductOption[]>([]);
   readonly selected = signal<OrderDto | null>(null);
+  readonly detailLoading = signal(false);
+  readonly detailFailed = signal(false);
+  readonly detailId = signal('');
   readonly loading = signal(true);
   readonly loadFailed = signal(false);
   readonly saving = signal(false);
-  readonly view = signal<ViewMode>('kanban');
+  readonly view = signal<ViewMode>('table');
   readonly tab = signal<TabMode>('new');
   readonly query = signal('');
   readonly statusFilter = signal<OrderStatus | 'ALL'>('ALL');
@@ -74,13 +87,35 @@ export class OrdersPage {
   private readonly sanitizer = inject(DomSanitizer);
 
   readonly columns = KANBAN_COLUMNS;
+  readonly hasFilters = computed(() => Boolean(this.query().trim() || this.statusFilter() !== 'ALL'));
+  readonly statusFilterLabel = computed(() => {
+    const status = this.statusFilter();
+    return status === 'ALL' ? '' : this.statusLabel(status);
+  });
+  readonly summary = computed(() => ({
+    total: this.filteredOrders().length,
+    awaitingPayment: this.filteredOrders().filter(order => order.status === 'PENDING_PAYMENT').length,
+    awaitingFulfillment: this.filteredOrders().filter(order => order.status === 'PAID').length,
+  }));
 
   readonly createForm = this.fb.nonNullable.group({
     productId: ['', Validators.required],
-    quantity: [1, [Validators.required, Validators.min(1)]],
+    quantity: [1, [Validators.required, control => Number.isSafeInteger(control.value) && control.value > 0 ? null : { quantity: true }]],
     customerName: [''],
     customerPhone: [''],
     createPaymentLink: [true],
+  });
+
+  private readonly createValues = toSignal(this.createForm.valueChanges.pipe(
+    startWith(this.createForm.getRawValue()), map(() => this.createForm.getRawValue()),
+  ), { initialValue: this.createForm.getRawValue() });
+  readonly createSummary = computed(() => {
+    const values = this.createValues();
+    const product = this.products().find(item => item.id === values.productId);
+    const quantity = Number(values.quantity);
+    return product && Number.isSafeInteger(quantity) && quantity > 0
+      ? { name: product.name, quantity, unitCents: product.basePriceCents, totalCents: product.basePriceCents * quantity, currency: product.currency }
+      : null;
   });
 
   readonly filteredOrders = computed(() => {
@@ -92,13 +127,34 @@ export class OrdersPage {
 
   readonly kanbanBoard = computed(() => {
     const list = this.filteredOrders();
-    return this.columns.map((column) => ({
+    const allColumns = [...this.columns, { id: 'CANCELLED' as const, label: 'Cancelado' }];
+    const visibleColumns = this.statusFilter() !== 'ALL'
+      ? allColumns.filter(column => column.id === this.statusFilter())
+      : allColumns.filter(column => column.id !== 'CANCELLED' || list.some(order => order.status === 'CANCELLED'));
+    return visibleColumns.map((column) => ({
       ...column,
       orders: list.filter((order) => order.status === column.id),
     }));
   });
 
   constructor() {
+    this.createForm.valueChanges.pipe(takeUntilDestroyed()).subscribe(() => {
+      if (this.errorMessage() === 'Revisa el producto y la cantidad antes de crear el pedido.' && this.createForm.valid) this.errorMessage.set(null);
+    });
+    let initialized = false;
+    let previousFilters = '';
+    this.route.queryParamMap.pipe(takeUntilDestroyed()).subscribe(params => {
+      const state = readOrderList(params);
+      this.tab.set(state.tab);
+      this.view.set(state.view);
+      this.query.set(state.query);
+      this.statusFilter.set(state.status);
+      const filters = JSON.stringify([state.tab, state.query, state.status]);
+      if (initialized && filters !== previousFilters) void this.load();
+      previousFilters = filters;
+      initialized = true;
+    });
+    this.destroyRef.onDestroy(() => clearTimeout(this.searchTimer));
     void this.bootstrap();
   }
 
@@ -155,27 +211,42 @@ export class OrdersPage {
   }
 
   setTab(tab: TabMode): void {
-    this.tab.set(tab);
-    void this.load();
+    this.cancelSearch();
+    this.updateList({ pestana: tab === 'all' ? 'todos' : null, estado: null, q: this.query() || null });
   }
 
   setView(view: ViewMode): void {
-    this.view.set(view);
+    this.cancelSearch();
+    this.updateList({ vista: view === 'table' ? null : view, q: this.query() || null });
   }
 
   onSearch(value: string): void {
-    this.query.set(value);
-    void this.load();
+    this.query.set(value.slice(0, 200));
+    this.cancelSearch();
+    this.searchTimer = setTimeout(() => this.updateList({ q: this.query() || null }, true), 300);
   }
 
   onStatusFilter(value: string): void {
-    this.statusFilter.set(value as OrderStatus | 'ALL');
-    if (this.tab() === 'all') {
-      void this.load();
-    }
+    this.cancelSearch();
+    this.updateList({ pestana: 'todos', estado: value === 'ALL' ? null : value, q: this.query() || null });
+  }
+
+  clearFilters(): void {
+    this.cancelSearch();
+    this.updateList({ q: null, estado: null });
+  }
+
+  private cancelSearch(): void {
+    clearTimeout(this.searchTimer);
+  }
+
+  private updateList(queryParams: Record<string, string | null>, replaceUrl = false): void {
+    void this.router.navigate([], { relativeTo: this.route, queryParams, queryParamsHandling: 'merge', replaceUrl });
   }
 
   openCreate(): void {
+    this.errorMessage.set(null);
+    this.successMessage.set(null);
     this.createOpen.set(true);
     this.createForm.reset({
       productId: this.products()[0]?.id ?? '',
@@ -195,6 +266,8 @@ export class OrdersPage {
     if (this.saving()) return;
     if (this.createForm.invalid) {
       this.createForm.markAllAsTouched();
+      this.errorMessage.set('Revisa el producto y la cantidad antes de crear el pedido.');
+      this.host.nativeElement.querySelector<HTMLElement>('[formControlName="quantity"].ng-invalid')?.focus();
       return;
     }
     const product = this.products().find(
@@ -225,7 +298,7 @@ export class OrdersPage {
       });
       this.successMessage.set(
         values.createPaymentLink
-          ? 'Pedido creado con link de pago.'
+          ? 'Pedido creado con enlace de pago.'
           : 'Pedido creado.',
       );
       this.createOpen.set(false);
@@ -239,20 +312,38 @@ export class OrdersPage {
   }
 
   async openOrder(orderId: string): Promise<void> {
+    const request = ++this.detailRequest;
+    this.detailId.set(orderId);
+    this.selected.set(null);
+    this.detailLoading.set(true);
+    this.detailFailed.set(false);
+    this.errorMessage.set(null);
+    this.successMessage.set(null);
     this.trackingDraft.set('');
     this.reconcileDraft.set('');
     try {
-      this.selected.set(await this.api.get(orderId));
+      const order = await this.api.get(orderId);
+      if (request === this.detailRequest) {
+        this.selected.set(order);
+        this.trackingDraft.set(order.trackingCode ?? '');
+      }
     } catch {
-      this.errorMessage.set('No pudimos abrir el pedido.');
+      if (request === this.detailRequest) this.detailFailed.set(true);
+    } finally {
+      if (request === this.detailRequest) this.detailLoading.set(false);
     }
   }
 
   closeDetail(): void {
+    if (this.saving()) return;
+    ++this.detailRequest;
     this.selected.set(null);
+    this.detailLoading.set(false);
+    this.detailFailed.set(false);
   }
 
   async createLink(order: OrderDto): Promise<void> {
+    if (this.saving() || !this.canCollect(order)) return;
     this.saving.set(true);
     try {
       const updated = await this.api.createPaymentLink(
@@ -267,6 +358,10 @@ export class OrdersPage {
     } finally {
       this.saving.set(false);
     }
+  }
+
+  canCollect(order: OrderDto): boolean {
+    return order.status === 'DRAFT' || order.status === 'PENDING_PAYMENT';
   }
 
   async simulatePay(order: OrderDto): Promise<void> {

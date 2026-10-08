@@ -6,7 +6,7 @@ import { DsConfirmService } from '@vendedoria/ui';
 import { CatalogApiService, type CreateProductPayload, type ProductDto, type UpdateProductPayload } from '../../core/api/catalog-api.service';
 import { IntegrationsStateService } from '../../core/integrations/integrations-state.service';
 import { ProductsPage } from './products.page';
-import { catalogCsv, filterCatalog, type CatalogListState } from './catalog-list';
+import { catalogCsv, catalogStock, filterCatalog, type CatalogListState } from './catalog-list';
 
 const product = (id: string): ProductDto => ({
   id, handle: id, name: `Producto ${id}`, descriptionShort: 'Descripción para comprar este producto', descriptionFull: null, categories: [],
@@ -81,6 +81,35 @@ describe('catalog management', () => {
   afterEach(() => TestBed.resetTestingModule());
   const state: CatalogListState = { kind: 'todos', query: '', status: 'todos', publication: 'todos', sort: 'nombre', page: 1, pageSize: 25 };
 
+  it('finds sold-out physical items from their enabled variants without misclassifying services or sets', () => {
+    const soldOut = { ...product('empty'), stockUnlimited: false, stockQty: 0 };
+    const variantProduct = { ...product('variants'), stockQty: 0, variants: [
+      { priceCents: 10000, stockQty: 3, isAvailable: true },
+      { priceCents: 10000, stockQty: 20, isAvailable: false },
+    ] };
+    const set = { ...soldOut, id: 'set', components: [{ id: 'recipe', componentId: 'empty', quantity: 1, component: { id: 'empty', name: 'Piece', handle: 'empty', sku: null } }] };
+    const service = { ...soldOut, id: 'service', kind: 'SERVICE' as const };
+    expect(catalogStock(variantProduct)).toBe(3);
+    expect(catalogStock(set)).toBeNull();
+    expect(catalogStock(service)).toBeNull();
+    expect(filterCatalog([soldOut, variantProduct, set, service], { ...state, inventory: 'agotados' }).map(item => item.id)).toEqual(['empty']);
+  });
+
+  it('opens the sold-out quick view and clears inventory filters without retaining a stale page or query', async () => {
+    const { page, params, navigate, fixture } = await setup();
+    page.products.set([{ ...product('empty'), stockUnlimited: false, stockQty: 0 }, product('unlimited')]);
+    expect(page.catalogSummary().soldOut).toBe(1);
+    page.showCatalogAttention('inventario', 'agotados');
+    expect(navigate).toHaveBeenLastCalledWith([], expect.objectContaining({ queryParams: expect.objectContaining({ inventario: 'agotados', pagina: null, q: null, tipo: null }) }));
+    params.next(convertToParamMap({ inventario: 'agotados', pagina: '99' }));
+    fixture.detectChanges();
+    expect(page.visibleProducts().map(item => item.id)).toEqual(['empty']);
+    expect(fixture.nativeElement.textContent).toContain('Sin stock');
+    expect(page.availabilityLabel(page.visibleProducts()[0])).toBe('Sin stock');
+    page.clearListFilters();
+    expect(navigate).toHaveBeenLastCalledWith([], expect.objectContaining({ queryParams: expect.objectContaining({ inventario: null, pagina: null }) }));
+  });
+
   it('searches accented names and variant SKUs across the complete catalog, then combines filters and ordering', () => {
     const first = { ...product('a'), name: 'Botín Ámbar', brand: 'Cuero', isPublishedOnStore: true };
     const second = { ...product('b'), name: 'Botín 2', isAvailable: false, variants: [{ sku: 'TALLA-38', priceCents: 10000, isAvailable: true, stockQty: 1 }] };
@@ -112,6 +141,43 @@ describe('catalog management', () => {
     const fixture = TestBed.createComponent(ProductsPage); fixture.detectChanges(); await fixture.whenStable();
     return { page: fixture.componentInstance, fixture, params, navigate };
   }
+
+  it('explains invalid required fields and focuses the next missing value, including the generated address', async () => {
+    const { page, fixture } = await setup();
+    page.openCreate(); fixture.detectChanges();
+    (fixture.nativeElement.querySelector('ds-button[type="submit"] button') as HTMLButtonElement).click();
+    await fixture.whenStable(); fixture.detectChanges();
+    expect(page.errorMessage()).toContain('Revisa los datos');
+    expect(fixture.nativeElement.querySelector('#product-name-error').textContent).toContain('2 caracteres');
+    expect(document.activeElement?.getAttribute('formControlName')).toBe('name');
+    page.productForm.patchValue({ name: 'Producto válido', descriptionShort: 'Descripción suficiente', price: 10, handle: '---' });
+    fixture.detectChanges();
+    await page.saveProduct(); fixture.detectChanges();
+    expect(page.readinessReady()).toBe(false);
+    expect(page.editorFieldError('handle')).toContain('2 letras o números');
+    expect(document.activeElement?.getAttribute('formControlName')).toBe('handle');
+    page.productForm.controls.handle.setValue('producto-valido'); fixture.detectChanges();
+    expect(page.readinessReady()).toBe(true);
+    expect(page.pendingFields()).toBe(0);
+    expect(page.errorMessage()).toBeNull();
+    expect(page.editorFieldError('handle')).toBeNull();
+    expect(fixture.nativeElement.querySelector('[aria-label="Resumen del producto"]').textContent).toContain('Producto válido');
+  });
+
+  it('requires a secure digital access link and makes its readiness action focus the access field', async () => {
+    const { page, fixture } = await setup();
+    page.openCreate();
+    page.productForm.patchValue({ kind: 'DIGITAL', name: 'Guía digital', handle: 'guia', descriptionShort: 'Guía para descargar', price: 20, digitalAccessUrl: 'http://example.test/guia' });
+    fixture.detectChanges();
+    await page.saveProduct(); fixture.detectChanges();
+    expect(page.editorFieldError('access')).toContain('HTTPS');
+    expect(document.activeElement?.getAttribute('formControlName')).toBe('digitalAccessUrl');
+    page.productForm.controls.digitalAccessUrl.setValue('https://example.test/guia'); fixture.detectChanges();
+    expect(page.readinessReady()).toBe(true);
+    expect(page.editorFieldError('access')).toBeNull();
+    (fixture.nativeElement.querySelector('button[aria-label="Revisar Enlace de acceso seguro"]') as HTMLButtonElement).click();
+    expect(document.activeElement?.getAttribute('formControlName')).toBe('digitalAccessUrl');
+  });
 
   it('clamps a stale page after filtering or removal, and resets paging when editing a filter', async () => {
     const { page, params, navigate } = await setup();
