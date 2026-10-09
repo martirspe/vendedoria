@@ -55,6 +55,37 @@ describe('order list UX', () => {
     return { fixture, page: fixture.componentInstance, api, params, navigate };
   }
 
+
+  it('removes either URL filter while preserving the other and the view', async () => {
+    const { fixture, navigate } = await setup({ pestana: 'todos', vista: 'kanban', estado: 'PAID', q: 'prueba' });
+    (fixture.nativeElement.querySelector('[aria-label="Quitar filtro de búsqueda"]') as HTMLButtonElement).click();
+    expect(navigate).toHaveBeenLastCalledWith([], expect.objectContaining({ queryParams: { q: null }, queryParamsHandling: 'merge' }));
+    (fixture.nativeElement.querySelector('[aria-label="Quitar filtro de estado"]') as HTMLButtonElement).click();
+    expect(navigate).toHaveBeenLastCalledWith([], expect.objectContaining({ queryParams: { estado: null, q: 'prueba' }, queryParamsHandling: 'merge' }));
+  });
+
+  it('shows payment status in mobile cards and the board without inferring it from order status', async () => {
+    const paid = { ...order('PAID'), payments: [{ id: 'payment', status: 'SUCCEEDED' as const, provider: 'test', amountCents: 1000, currency: 'PEN', checkoutUrl: null, externalId: null, createdAt: '2026-10-07T12:00:00Z' }] };
+    const { fixture, params } = await setup({ pestana: 'todos' }, [paid, { ...order('CANCELLED'), id: 'no-payment' }]);
+    const mobile = fixture.nativeElement.querySelector('[aria-label="Lista de pedidos"]');
+    expect(mobile.textContent).toContain('Pago: Pagado');
+    expect(mobile.textContent).toContain('Pago: Sin registro');
+    params.next(convertToParamMap({ pestana: 'todos', vista: 'kanban' }));
+    await fixture.whenStable(); fixture.detectChanges();
+    const board = fixture.nativeElement.querySelector('[aria-label="Pedidos por estado"]');
+    expect(board.textContent).toContain('Pago: Pagado');
+    expect(board.textContent).toContain('Pago: Sin registro');
+    expect(board.getAttribute('tabindex')).toBe('0');
+  });
+
+  it('does not claim a connected payment provider merely because test mode is off', async () => {
+    const { page, fixture } = await setup();
+    page.mockMode.set(false); fixture.detectChanges();
+    expect(fixture.nativeElement.querySelector('.orders__header-actions').textContent).not.toContain('Mercado Pago');
+    page.mockMode.set(true); fixture.detectChanges();
+    expect(fixture.nativeElement.querySelector('.orders__header-actions').textContent).toContain('Pagos en modo de prueba');
+  });
+
   it('restores search, status and board from the URL and keeps cancelled orders visible', async () => {
     const { page, fixture, api } = await setup({ pestana: 'todos', vista: 'kanban', estado: 'CANCELLED', q: 'prueba' }, [order('CANCELLED')]);
     expect(api.list).toHaveBeenCalledWith({ tab: 'all', status: 'CANCELLED', q: 'prueba' });

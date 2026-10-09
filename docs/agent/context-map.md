@@ -31,6 +31,7 @@ Jump table from domain to paths. API paths are under `apps/api/src/`, console pa
 | Docker / deploy | `Dockerfile`, `docker-compose.yml` (prod), `docker-compose.dev.yml`, `docker/nginx/`, `scripts/docker.mjs`, `scripts/{deploy,bootstrap-host,backup,restore-backup}.sh`, `.env.production.example`, guide `docs/DEPLOY.md` | — | — |
 
 ## Discrepancies (code wins; constitution items marked PLANNED)
+- Billing overview currentPlan has no prepay array; only plans contains period prices. The console contract now reflects this and resolves current-plan renewal prices from the catalog.
 - The user's compact-sidebar refinement sets 30 px navigation rows for desktop fine pointers; mobile/coarse-pointer navigation retains the 44 px DS touch floor. The density value lives in `packages/design-tokens`, with a single Tailwind composition for expanded and collapsed navigation.
 - Console information architecture uses a 200 px global operations sidebar and 224 px contextual sidebars for Store and Settings. Business administration and team remain under Settings; Shipping, payments, channels and integrations are direct operational destinations, while plan access belongs to the account menu/header.
 - The product editor now uses the user's requested continuous main/aside composition rather than the previous four-step presentation; catalog contracts and variant/set validation are unchanged. Console chrome follows the supplied visual references with VendedorIA tokens; `docs/CONSOLE-UX-AUDIT.md` records rendered coverage.

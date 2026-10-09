@@ -7,11 +7,9 @@
       </p>
     </div>
     <div class="orders__header-actions">
-      @if (!loading() && !loadFailed()) { @if (mockMode()) {
+      @if (!loading() && !loadFailed() && mockMode()) {
         <span class="tw:console-filter-chip tw:bg-warning/10 tw:text-warning-text">Pagos en modo de prueba</span>
-      } @else {
-        <span class="tw:console-filter-chip tw:bg-success/10 tw:text-success-text">Mercado Pago</span>
-      } }
+      }
       <ds-button type="button" [disabled]="loading() || loadFailed()" (click)="openCreate()">Nuevo pedido</ds-button>
     </div>
   </header>
@@ -99,8 +97,8 @@
   @if (hasFilters()) {
     <div class="tw:flex tw:flex-wrap tw:items-center tw:justify-between tw:gap-2 tw:border-0 tw:border-b tw:border-solid tw:border-divider tw:px-4 tw:py-3" aria-label="Filtros de pedidos aplicados">
       <div class="tw:flex tw:min-w-0 tw:flex-wrap tw:gap-2">
-        @if (query()) { <span class="tw:console-filter-chip tw:wrap-anywhere">Búsqueda: {{ query() }}</span> }
-        @if (statusFilter() !== 'ALL') { <span class="tw:console-filter-chip">{{ statusFilterLabel() }}</span> }
+        @if (query()) { <button type="button" class="tw:console-filter-chip tw:min-h-touch tw:wrap-anywhere tw:cursor-pointer" (click)="removeSearch()" aria-label="Quitar filtro de búsqueda">Búsqueda: {{ query() }}<ds-icon name="x" /></button> }
+        @if (statusFilter() !== 'ALL') { <button type="button" class="tw:console-filter-chip tw:min-h-touch tw:cursor-pointer" (click)="removeStatusFilter()" aria-label="Quitar filtro de estado">{{ statusFilterLabel() }}<ds-icon name="x" /></button> }
       </div>
       <button type="button" class="tw:console-action-secondary" (click)="clearFilters()">Limpiar filtros</button>
     </div>
@@ -123,9 +121,9 @@
     </ds-empty-state>
     }
   } @else if (view() === 'kanban') {
-    <div class="kanban tw:m-4" role="list" aria-label="Pedidos por estado">
+    <div class="kanban tw:m-4" tabindex="0" role="region" aria-label="Pedidos por estado">
       @for (column of kanbanBoard(); track column.id) {
-        <section class="kanban__column" role="listitem">
+        <section class="kanban__column">
           <header>
             <h2>{{ column.label }}</h2>
             <span>{{ column.orders.length }}</span>
@@ -143,10 +141,11 @@
                   }}</strong>
                   <span>{{ formatMoney(order.totalCents, order.currency) }}</span>
                 </div>
-                <p>{{ order.items[0]?.title || 'Sin ítems' }}</p>
+                <p class="tw:wrap-anywhere">{{ order.items[0]?.title || 'Sin productos' }}</p>
+                <span class="tw:console-filter-chip" [class.tw:text-success-text]="latestPayment(order)?.status === 'SUCCEEDED'" [class.tw:text-warning-text]="latestPayment(order)?.status === 'PENDING'" [class.tw:text-danger-text]="latestPayment(order)?.status === 'FAILED' || latestPayment(order)?.status === 'CANCELLED'">Pago: {{ latestPayment(order) ? paymentLabel(latestPayment(order)!.status) : 'Sin registro' }}</span>
                 <footer>
                   <span>#{{ order.id.slice(-6).toUpperCase() }}</span>
-                  <time>{{ order.createdAt | date: 'dd/MM HH:mm' }}</time>
+                  <time [attr.datetime]="order.createdAt">{{ order.createdAt | date: 'dd/MM HH:mm' }}</time>
                 </footer>
               </button>
             } @empty {
@@ -181,7 +180,7 @@
                   {{ statusLabel(order.status, order) }}
                 </span>
               </td>
-              <td><span class="tw:console-filter-chip" [class.tw:text-success-text]="latestPayment(order)?.status === 'SUCCEEDED'" [class.tw:text-warning-text]="latestPayment(order)?.status === 'PENDING'">{{ latestPayment(order) ? paymentLabel(latestPayment(order)!.status) : 'Sin enlace' }}</span></td>
+              <td><span class="tw:console-filter-chip" [class.tw:text-success-text]="latestPayment(order)?.status === 'SUCCEEDED'" [class.tw:text-warning-text]="latestPayment(order)?.status === 'PENDING'" [class.tw:text-danger-text]="latestPayment(order)?.status === 'FAILED' || latestPayment(order)?.status === 'CANCELLED'">{{ latestPayment(order) ? paymentLabel(latestPayment(order)!.status) : 'Sin registro de pago' }}</span></td>
               <td class="tw:font-semibold tw:tabular-nums tw:whitespace-nowrap">{{ formatMoney(order.totalCents, order.currency) }}</td>
               <td>{{ order.createdAt | date: 'dd/MM/yyyy HH:mm' }}</td>
             </tr>
@@ -196,7 +195,7 @@
             <span class="tw:flex tw:items-start tw:justify-between tw:gap-3"><strong>#{{ order.id.slice(-6).toUpperCase() }}</strong><strong class="tw:tabular-nums tw:whitespace-nowrap">{{ formatMoney(order.totalCents, order.currency) }}</strong></span>
             <span class="tw:wrap-anywhere">{{ order.customerName || order.customerPhone || 'Cliente sin nombre' }}</span>
             <span class="tw:wrap-anywhere tw:text-caption tw:text-muted">{{ order.items[0]?.title || 'Sin productos' }}{{ order.items.length > 1 ? ' · +' + (order.items.length - 1) : '' }}</span>
-            <span class="tw:flex tw:flex-wrap tw:items-center tw:justify-between tw:gap-2"><span class="status" [attr.data-status]="order.status">{{ statusLabel(order.status, order) }}</span><time class="tw:text-caption tw:text-muted">{{ order.createdAt | date: 'dd/MM HH:mm' }}</time></span>
+            <span class="tw:flex tw:flex-wrap tw:items-center tw:justify-between tw:gap-2"><span class="status" [attr.data-status]="order.status">{{ statusLabel(order.status, order) }}</span><span class="tw:console-filter-chip" [class.tw:text-success-text]="latestPayment(order)?.status === 'SUCCEEDED'" [class.tw:text-warning-text]="latestPayment(order)?.status === 'PENDING'" [class.tw:text-danger-text]="latestPayment(order)?.status === 'FAILED' || latestPayment(order)?.status === 'CANCELLED'">Pago: {{ latestPayment(order) ? paymentLabel(latestPayment(order)!.status) : 'Sin registro' }}</span><time [attr.datetime]="order.createdAt" class="tw:text-caption tw:text-muted">{{ order.createdAt | date: 'dd/MM HH:mm' }}</time></span>
           </button>
         </li>
       }
@@ -230,7 +229,7 @@
         @if (errorMessage(); as error) { <div class="tw:feedback tw:feedback-danger" role="alert">{{ error }}</div> }
         @if (successMessage(); as success) { <div class="tw:feedback tw:feedback-success" role="status">{{ success }}</div> }
         <div class="tw:console-card tw:flex tw:flex-wrap tw:items-center tw:justify-between tw:gap-4 tw:lg:col-span-2">
-          <div class="tw:grid tw:gap-2"><span class="status" [attr.data-status]="order.status">{{ statusLabel(order.status, order) }}</span><time class="tw:text-caption tw:text-muted">Creado el {{ order.createdAt | date: 'dd/MM/yyyy HH:mm' }}</time></div>
+          <div class="tw:grid tw:gap-2"><span class="status" [attr.data-status]="order.status">{{ statusLabel(order.status, order) }}</span><time [attr.datetime]="order.createdAt" class="tw:text-caption tw:text-muted">Creado el {{ order.createdAt | date: 'dd/MM/yyyy HH:mm' }}</time></div>
           <div class="tw:grid tw:gap-1 tw:text-right"><span class="tw:text-caption tw:text-muted">Total del pedido</span><strong class="tw:text-page">{{ formatMoney(order.totalCents, order.currency) }}</strong></div>
         </div>
 
@@ -488,7 +487,7 @@
           } @else { <p class="tw:m-0 tw:text-body tw:text-muted">Selecciona un producto y una cantidad válida para ver el importe.</p> }
           <p class="tw:m-0 tw:text-caption tw:text-muted">{{ createForm.controls.createPaymentLink.value ? 'El enlace se genera al crear el pedido. El pago quedará pendiente hasta su confirmación.' : 'El pedido se guardará como borrador, sin enlace de pago.' }}</p>
         </aside></div>
-        <footer>
+        <footer class="modal__actions">
           <ds-button type="button" variant="ghost" [disabled]="saving()" (click)="closeCreate()">
             Cancelar
           </ds-button>

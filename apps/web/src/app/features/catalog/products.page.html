@@ -8,7 +8,7 @@
       <div class="catalog__actions">
         <a routerLink="/app/inventory" class="tw:console-action-secondary"><ds-icon name="list" [size]="0.95" />Inventario</a>
         <ds-button type="button" variant="secondary" [disabled]="loading() || loadFailed() || !filteredProducts().length" (click)="exportCatalog()">Exportar resultados</ds-button>
-        <a routerLink="/app/products/import" class="catalog__import">
+        <a routerLink="/app/products/import" class="tw:console-action-secondary">
           <ds-icon name="upload" [size]="0.95" /> Importar catálogo
         </a>
         <ds-button type="button" (click)="openCreate()">Agregar producto</ds-button>
@@ -16,12 +16,12 @@
     </header>
 
     @if (errorMessage() && !editorOpen() && !loadFailed()) {
-      <p class="catalog__banner catalog__banner--error" role="alert">
+      <p class="tw:feedback tw:feedback-danger tw:m-0" role="alert">
         {{ errorMessage() }}
       </p>
     }
     @if (successMessage()) {
-      <p class="catalog__banner catalog__banner--ok" role="status">
+      <p class="tw:feedback tw:feedback-success tw:m-0" role="status">
         {{ successMessage() }}
       </p>
     }
@@ -40,7 +40,7 @@
         body="Publica el primero: nombre corto, descripción para chat, precio y una foto. ¿Ya tienes tu catálogo en un archivo? Impórtalo completo."
       >
         <ds-button type="button" (click)="openCreate()">Publicar producto</ds-button>
-        <a routerLink="/app/products/import" class="catalog__import">
+        <a routerLink="/app/products/import" class="tw:console-action-secondary">
           <ds-icon name="upload" [size]="0.95" /> Importar catálogo
         </a>
       </ds-empty-state>
@@ -64,11 +64,11 @@
         }
       </section>
       <div class="tw:console-list-panel">
-        <div class="kind-filter tw:border-0 tw:border-b tw:border-solid tw:border-divider tw:p-3" role="group" aria-label="Filtrar por tipo">
+        <div class="tw:flex tw:flex-wrap tw:gap-2 tw:border-0 tw:border-b tw:border-solid tw:border-divider tw:p-3" role="group" aria-label="Filtrar por tipo">
           @for (option of kindOptions; track option.id) {
             <button
               type="button"
-              [class.is-active]="kindFilter() === option.id"
+              class="tw:console-filter-chip tw:font-semibold"
               [attr.aria-pressed]="kindFilter() === option.id"
               (click)="setKindFilter(option.id)"
             >
@@ -78,7 +78,7 @@
         </div>
         <div class="tw:grid tw:gap-3 tw:border-0 tw:border-b tw:border-solid tw:border-divider tw:p-4 tw:lg:grid-cols-3">
           <label class="tw:grid tw:min-w-0 tw:gap-1 tw:text-caption tw:font-medium">Buscar productos
-            <span class="tw:flex tw:min-w-0 tw:items-center tw:gap-2 tw:rounded-sm tw:border tw:border-solid tw:border-border tw:px-3 tw:focus-within:border-focus"><ds-icon name="search" class="tw:text-muted" /><input type="search" class="tw:console-field tw:border-0! tw:px-0!" placeholder="Nombre, SKU, marca o colección" maxlength="200" [value]="listState().query" (input)="setListFilter('q', $any($event.target).value)" /></span>
+            <span class="tw:flex tw:min-w-0 tw:items-center tw:gap-2 tw:rounded-sm tw:border tw:border-solid tw:border-border tw:px-3 tw:focus-within:border-focus"><ds-icon name="search" class="tw:text-muted" /><input type="search" class="tw:console-field tw:console-field tw:border-0! tw:px-0!" placeholder="Nombre, SKU, marca o colección" maxlength="200" [value]="listState().query" (input)="setListFilter('q', $any($event.target).value)" /></span>
           </label>
           <div class="tw:grid tw:min-w-0 tw:grid-cols-2 tw:gap-3 tw:lg:col-span-2 tw:xl:grid-cols-4">
             <label class="tw:grid tw:min-w-0 tw:gap-1 tw:text-caption tw:font-medium">Disponibilidad<ds-select><select [value]="listState().status" (change)="setListFilter('estado', $any($event.target).value)"><option value="todos">Todas</option><option value="disponibles">Habilitados</option><option value="pausados">No disponibles</option></select></ds-select></label>
@@ -142,14 +142,14 @@
     }
   } @else {
     <form class="publish tw:mx-auto tw:grid tw:w-full tw:max-w-form tw:gap-5" [formGroup]="productForm" (ngSubmit)="saveProduct()">
-      <div class="tw:console-save-bar">
-        <span class="tw:px-2">{{ pendingFields() === 1 ? '1 dato pendiente' : pendingFields() ? pendingFields() + ' datos pendientes' : 'Datos completos' }}</span>
-        <ds-button type="button" variant="ghost" class="tw:[&_.ds-button]:text-surface! tw:[&_.ds-button:hover]:bg-navigation-hover!" [disabled]="saving() || deleting()" (click)="closeEditor()">Cancelar</ds-button>
-        <ds-button type="submit" [disabled]="saving() || deleting()">{{ saving() ? 'Guardando…' : 'Guardar' }}</ds-button>
-      </div>
+      <ds-action-bar label="Acciones de producto">
+        <span dsActionStatus class="tw:px-2">{{ pendingFields() === 1 ? '1 dato pendiente' : pendingFields() ? pendingFields() + ' datos pendientes' : 'Datos completos' }}</span>
+        <ds-button type="button" variant="ghost" [disabled]="saving() || deleting() || uploading()" (click)="closeEditor()">Cancelar</ds-button>
+        <ds-button type="submit" [disabled]="saving() || deleting() || uploading()">{{ saving() ? 'Guardando…' : 'Guardar' }}</ds-button>
+      </ds-action-bar>
       <header class="publish__top">
         <div>
-          <button type="button" class="publish__back" [disabled]="saving() || deleting()" (click)="closeEditor()">
+          <button type="button" class="publish__back" [disabled]="saving() || deleting() || uploading()" (click)="closeEditor()">
             ← Volver al catálogo
           </button>
           <h1 class="tw:console-title">{{ isEditing() ? 'Editar producto' : 'Agregar producto' }}</h1>
@@ -159,7 +159,7 @@
             <ds-button
               type="button"
               variant="ghost"
-              [disabled]="saving() || deleting()"
+              [disabled]="saving() || deleting() || uploading()"
               (click)="deleteProduct()"
             >
               <ds-icon name="trash" [size]="1" />
@@ -170,11 +170,12 @@
       </header>
 
       @if (errorMessage()) {
-        <p class="catalog__banner catalog__banner--error" role="alert">
+        <p class="tw:feedback tw:feedback-danger tw:m-0" role="alert">
           {{ errorMessage() }}
         </p>
       }
 
+      <fieldset class="tw:m-0 tw:min-w-0 tw:border-0 tw:p-0" [disabled]="saving() || deleting()"><legend class="tw:sr-only">Datos del producto</legend>
       <div class="publish__layout tw:grid tw:items-start tw:gap-5 tw:lg:grid-cols-3">
         <div class="publish__main tw:grid tw:min-w-0 tw:gap-4 tw:lg:col-span-2">
 
@@ -192,13 +193,13 @@
               <p class="field__hint">Sin stock ni envío. El enlace se entrega al confirmarse el pago.</p>
               <label class="field">
                 <span>Enlace privado de acceso <em>*</em></span>
-                <input formControlName="digitalAccessUrl" type="url" maxlength="500" placeholder="https://..." aria-label="Enlace privado de acceso" [attr.aria-invalid]="!!editorFieldError('access')" aria-describedby="product-access-error" />
+                <input class="tw:console-field" formControlName="digitalAccessUrl" type="url" maxlength="500" placeholder="https://..." aria-label="Enlace privado de acceso" [attr.aria-invalid]="!!editorFieldError('access')" aria-describedby="product-access-error" />
                 @if (editorFieldError('access'); as error) { <span id="product-access-error" class="tw:text-caption tw:text-danger-text">{{ error }}</span> }
                 <span class="field__hint">Usa un enlace HTTPS que permita acceder al contenido. Se comparte solo con compradores que hayan pagado.</span>
               </label>
               <label class="field">
                 <span>Instrucciones para el comprador</span>
-                <textarea formControlName="digitalInstructions" maxlength="600" rows="2"></textarea>
+                <textarea class="tw:console-field" formControlName="digitalInstructions" maxlength="600" rows="2"></textarea>
               </label>
             }
             @if (isService()) {
@@ -208,7 +209,7 @@
               <div class="field-grid field-grid--two">
                 <label class="field">
                   <span>Duración aproximada (minutos)</span>
-                  <input type="number" min="5" max="1440" step="5" formControlName="durationMinutes" placeholder="60" />
+                  <input class="tw:console-field" type="number" min="5" max="1440" step="5" formControlName="durationMinutes" placeholder="60" />
                 </label>
                 <label class="field">
                   <span>Dónde se realiza</span>
@@ -224,7 +225,7 @@
 
             <label class="field">
               <span>{{ isService() ? 'Nombre del servicio' : 'Nombre del producto' }} <em>*</em></span>
-              <input
+              <input class="tw:console-field"
                 formControlName="name"
                 [attr.aria-label]="isService() ? 'Nombre del servicio' : 'Nombre del producto'"
                 [attr.aria-invalid]="!!editorFieldError('name')"
@@ -242,7 +243,7 @@
 
             <label class="field">
               <span>Dirección del producto <em>*</em></span>
-              <input
+              <input class="tw:console-field"
                 formControlName="handle"
                 aria-label="Dirección del producto"
                 [attr.aria-invalid]="!!editorFieldError('handle')"
@@ -256,7 +257,7 @@
 
             <label class="field">
               <span>Descripción del producto <em>*</em></span>
-              <textarea
+              <textarea class="tw:console-field"
                 formControlName="descriptionShort"
                 aria-label="Descripción del producto"
                 [attr.aria-invalid]="!!editorFieldError('description')"
@@ -297,7 +298,7 @@
               </label>
               <p class="field__hint">O pega la URL pública de una imagen:</p>
               <div class="media-drop__row">
-                <input
+                <input class="tw:console-field"
                   type="url"
                   [value]="mediaDraft()"
                   (input)="onMediaDraftInput($any($event.target).value)"
@@ -316,28 +317,28 @@
                   <li>
                     <img [src]="item.url" [alt]="item.alt" loading="lazy" />
                     <div class="media-list__fields">
-                      <input
+                      <input class="tw:console-field"
                         [value]="item.alt"
                         maxlength="160"
                         placeholder="Texto alternativo (qué se ve)"
                         aria-label="Texto alternativo"
                         (input)="updateMedia(i, { alt: $any($event.target).value })"
                       />
-                      <input
+                      <input class="tw:console-field"
                         [value]="item.caption"
                         maxlength="200"
                         placeholder="Leyenda (opcional)"
                         aria-label="Leyenda"
                         (input)="updateMedia(i, { caption: $any($event.target).value })"
                       />
-                      <label class="check-row">
+                      <ds-checkbox variant="inline">
                         <input
                           type="checkbox"
                           [checked]="item.kind === 'related'"
                           (change)="updateMedia(i, { kind: $any($event.target).checked ? 'related' : 'image' })"
                         />
                         <span>Foto de ambiente (no va en la galería principal)</span>
-                      </label>
+                      </ds-checkbox>
                     </div>
                     <div class="media-list__actions">
                       @if (i === 0) {
@@ -367,7 +368,7 @@
               <span>Precio <em>*</em></span>
               <div class="price-row">
                 <span class="price-row__currency">{{ productForm.controls.currency.value }}</span>
-                <input
+                <input class="tw:console-field"
                   type="number"
                   min="0"
                   step="0.01"
@@ -386,7 +387,7 @@
                 SKU
                 <span class="pill pill--soft">Opcional</span>
               </span>
-              <input formControlName="sku" maxlength="60" autocomplete="off" placeholder="PER-50" />
+              <input class="tw:console-field" formControlName="sku" maxlength="60" autocomplete="off" placeholder="PER-50" />
             </label>
 
             @if (!isPhysical()) {
@@ -394,34 +395,34 @@
             } @else if (setEnabled()) {
               <p class="field__hint">El stock del set sale de sus piezas: se vende mientras todas tengan unidades.</p>
             } @else {
-            <label class="field">
+            <div class="field">
               <span class="field__label-row">
                 Stock
                 <span class="pill pill--soft">Opcional</span>
               </span>
               <div class="stock-row">
-                <input
+                <input class="tw:console-field"
                   type="number"
                   min="0"
                   step="1"
-                  formControlName="stockQty"
+                  id="product-stock" aria-label="Unidades disponibles" formControlName="stockQty"
                   [placeholder]="
                     productForm.controls.stockUnlimited.value
                       ? 'uds. Ilimitado'
                       : 'Cantidad'
                   "
                 />
-                <label class="switch switch--compact">
+                <ds-checkbox variant="inline">
                   <input type="checkbox" formControlName="stockUnlimited" />
-                  <span class="switch__track" aria-hidden="true"></span>
-                  <span class="visually-hidden">Stock ilimitado</span>
-                </label>
+
+                  <span >Stock ilimitado</span>
+                </ds-checkbox>
               </div>
               <span class="field__hint">
                 Se descuenta con cada pedido. Si el pedido se cancela, las unidades
                 vuelven.
               </span>
-            </label>
+            </div>
             }
 
             <input type="hidden" formControlName="currency" />
@@ -434,7 +435,7 @@
                 <label class="field"><span>{{ attribute.name }}{{ attribute.required ? ' *' : '' }}</span>
                   @if (attribute.values?.length) {
                     <ds-select><select [ngModel]="attributeValues()[attribute.key] ?? ''" [ngModelOptions]="{ standalone: true }" (ngModelChange)="setAttribute(attribute.key, $event)"><option value="">Sin indicar</option>@for (value of attribute.values; track value) { <option [value]="value">{{ value }}</option> }</select></ds-select>
-                  } @else { <input [value]="attributeValues()[attribute.key] ?? ''" [maxLength]="attribute.maxLength ?? 200" (input)="setAttribute(attribute.key, $any($event.target).value)" /> }
+                  } @else { <input class="tw:console-field" [value]="attributeValues()[attribute.key] ?? ''" [maxLength]="attribute.maxLength ?? 200" (input)="setAttribute(attribute.key, $any($event.target).value)" /> }
                   @if (attribute.variant) { <span class="field__hint">Puedes definirlo por combinación en Variantes.</span> }
                 </label>
               }
@@ -447,22 +448,22 @@
                 Información adicional que se muestra en la tienda y que tu vendedor usa para responder consultas.
               </p>
             </div>
-            <label class="switch">
+            <ds-checkbox variant="inline">
               <input
                 type="checkbox"
                 [checked]="sellerHelpEnabled()"
                 (change)="toggleSellerHelp($any($event.target).checked)"
               />
-              <span class="switch__track" aria-hidden="true"></span>
-              <span class="visually-hidden">Activar ayuda al vendedor</span>
-            </label>
+
+              <span >Activar ayuda al vendedor</span>
+            </ds-checkbox>
           </section>
 
           @if (sellerHelpEnabled()) {
             <section class="pub-card tw:console-card tw:grid tw:gap-4">
               <label class="field">
                 <span>Descripción completa</span>
-                <textarea
+                <textarea class="tw:console-field"
                   formControlName="descriptionFull"
                   rows="5"
                   maxlength="5000"
@@ -480,15 +481,15 @@
               <h2>Detalles de fragancia</h2>
               <p>Familia, intensidad, notas y pirámide olfativa para perfumes y cosmética.</p>
             </div>
-            <label class="switch">
+            <ds-checkbox variant="inline">
               <input
                 type="checkbox"
                 [checked]="detailsEnabled()"
                 (change)="toggleDetails($any($event.target).checked)"
               />
-              <span class="switch__track" aria-hidden="true"></span>
-              <span class="visually-hidden">Activar detalles de belleza y fragancia</span>
-            </label>
+
+              <span >Activar detalles de belleza y fragancia</span>
+            </ds-checkbox>
           </section>
 
           @if (detailsEnabled()) {
@@ -496,30 +497,30 @@
               <div class="field-grid field-grid--two">
                 <label class="field">
                   <span>Familia</span>
-                  <input formControlName="family" maxlength="80" placeholder="Floral" />
+                  <input class="tw:console-field" formControlName="family" maxlength="80" placeholder="Floral" />
                 </label>
                 <label class="field">
                   <span>Intensidad</span>
-                  <input formControlName="intensity" maxlength="80" placeholder="Intensa" />
+                  <input class="tw:console-field" formControlName="intensity" maxlength="80" placeholder="Intensa" />
                 </label>
               </div>
               <label class="field">
                 <span>Notas e ingredientes</span>
-                <textarea formControlName="notesText" rows="3" placeholder="Uno por línea"></textarea>
+                <textarea class="tw:console-field" formControlName="notesText" rows="3" placeholder="Uno por línea"></textarea>
               </label>
               <label class="field">
                 <span>Contenido destacado</span>
-                <textarea formControlName="highlightsText" rows="2" placeholder="Uno por línea. Se muestra cuando esta pieza va dentro de un set."></textarea>
+                <textarea class="tw:console-field" formControlName="highlightsText" rows="2" placeholder="Uno por línea. Se muestra cuando esta pieza va dentro de un set."></textarea>
               </label>
               <label class="field">
                 <span>Pirámide olfativa</span>
-                <textarea formControlName="scentText" rows="3" placeholder="Salida: bergamota y pimienta rosa"></textarea>
+                <textarea class="tw:console-field" formControlName="scentText" rows="3" placeholder="Salida: bergamota y pimienta rosa"></textarea>
                 <span class="field__hint">Una nota por línea con el formato «Nota: descripción». Máximo 6.</span>
               </label>
-              <label class="check-row">
+              <ds-checkbox variant="inline">
                 <input type="checkbox" formControlName="montage" />
                 <span>Mostrar las fotos juntas como una composición</span>
-              </label>
+              </ds-checkbox>
             </section>
           }
 
@@ -531,15 +532,15 @@
               <h2>Se vende como set</h2>
               <p>Arma un set con productos de tu catálogo. Su stock sale de las piezas.</p>
             </div>
-            <label class="switch">
+            <ds-checkbox variant="inline">
               <input
                 type="checkbox"
                 [checked]="setEnabled()"
                 (change)="toggleSet($any($event.target).checked)"
               />
-              <span class="switch__track" aria-hidden="true"></span>
-              <span class="visually-hidden">Vender como set</span>
-            </label>
+
+              <span >Vender como set</span>
+            </ds-checkbox>
           </section>
           }
 
@@ -581,7 +582,7 @@
                     </label>
                     <label class="field">
                       <span>Unidades</span>
-                      <input
+                      <input class="tw:console-field"
                         type="number"
                         min="1"
                         max="20"
@@ -607,15 +608,15 @@
                 {{ isPhysical() ? 'Colores, tallas o tamaños: cada opción con su propio precio y stock.' : 'Modalidades o versiones: cada opción con su propio precio, sin stock físico.' }}
               </p>
             </div>
-            <label class="switch">
+            <ds-checkbox variant="inline">
               <input
                 type="checkbox"
                 [checked]="variantsEnabled()"
                 (change)="toggleVariants($any($event.target).checked)"
               />
-              <span class="switch__track" aria-hidden="true"></span>
-              <span class="visually-hidden">Activar variantes</span>
-            </label>
+
+              <span >Activar variantes</span>
+            </ds-checkbox>
           </section>
 
           @if (variantsEnabled()) {
@@ -623,11 +624,11 @@
               <header class="pub-card__head"><h2>Opciones de variantes</h2><p>Define las opciones. Las combinaciones se actualizan al terminar de editar un campo.</p></header>
               @for (axis of axes(); track $index; let axisIndex = $index) {
                 <div class="tw:grid tw:gap-2 tw:rounded-sm tw:border tw:border-solid tw:border-border tw:p-3">
-                  <label class="field"><span>Nombre de la opción {{ axisIndex + 1 }}</span><input [value]="axis.name" maxlength="60" (input)="updateAxis(axisIndex, { name: $any($event.target).value })" (blur)="generateVariants()" placeholder="Color o talla" /></label>
+                  <label class="field"><span>Nombre de la opción {{ axisIndex + 1 }}</span><input class="tw:console-field" [value]="axis.name" maxlength="60" (input)="updateAxis(axisIndex, { name: $any($event.target).value })" (blur)="generateVariants()" placeholder="Color o talla" /></label>
                   <span class="tw:text-caption tw:font-medium">Valores de {{ axis.name || 'la opción' }}</span>
                   @for (value of axisValues(axis); track $index; let valueIndex = $index) {
                     <div class="tw:flex tw:min-w-0 tw:items-center tw:gap-2">
-                      <input class="tw:console-field" [attr.aria-label]="'Valor ' + (valueIndex + 1) + ' de ' + (axis.name || 'la opción ' + (axisIndex + 1))" [value]="value" maxlength="200" (input)="updateAxisValue(axisIndex, valueIndex, $any($event.target).value)" (blur)="generateVariants()" placeholder="Ej. Negro" />
+                      <input class="tw:console-field tw:console-field" [attr.aria-label]="'Valor ' + (valueIndex + 1) + ' de ' + (axis.name || 'la opción ' + (axisIndex + 1))" [value]="value" maxlength="200" (input)="updateAxisValue(axisIndex, valueIndex, $any($event.target).value)" (blur)="generateVariants()" placeholder="Ej. Negro" />
                       <button type="button" class="tw:console-icon-button" [attr.aria-label]="'Quitar valor ' + (value || valueIndex + 1) + ' de ' + (axis.name || 'la opción')" (click)="removeAxisValue(axisIndex, valueIndex)"><ds-icon name="trash" [size]="0.9" /></button>
                     </div>
                   }
@@ -646,7 +647,7 @@
               @if (variantDrafts().length) {
                 <div class="tw:grid tw:gap-3 tw:border-0 tw:border-t tw:border-solid tw:border-divider tw:pt-3 tw:sm:grid-cols-2">
                   <label class="field"><span>Agrupar por</span><ds-select><select [value]="activeVariantGroup() || '__all'" (change)="setVariantGroup($any($event.target).value)">@for (name of variantGroupOptions(); track name) { <option [value]="name">{{ name }}</option> }<option value="__all">Sin agrupar</option></select></ds-select></label>
-                  <label class="field"><span>Buscar variantes</span><input type="search" [value]="variantQuery()" maxlength="100" (input)="setVariantQuery($any($event.target).value)" placeholder="Valor de opción o SKU" /></label>
+                  <label class="field"><span>Buscar variantes</span><input class="tw:console-field" type="search" [value]="variantQuery()" maxlength="100" (input)="setVariantQuery($any($event.target).value)" placeholder="Valor de opción o SKU" /></label>
                 </div>
                 <div class="tw:grid tw:gap-3">
                   @for (group of variantGroups(); track group.key; let groupIndex = $index) {
@@ -665,16 +666,16 @@
                                   <button type="button" class="tw:grid tw:size-touch tw:shrink-0 tw:cursor-pointer tw:place-items-center tw:overflow-hidden tw:rounded-sm tw:border tw:border-dashed tw:border-border tw:bg-surface" [attr.aria-label]="'Asignar foto a ' + variantLabel(variant)" (click)="variantPhotoTarget.set({ indexes: [row.index], label: variantLabel(variant) })">@if (variant.imageUrl) { <img [src]="variant.imageUrl" alt="" class="tw:size-full tw:object-cover" /> } @else { <ds-icon name="image" [size]="0.9" /> }</button>
                                   <span class="tw:grid tw:min-w-0 tw:gap-1"><strong class="tw:text-body tw:font-medium tw:wrap-anywhere">{{ variantChildLabel(variant) }}</strong><span class="tw:text-caption tw:text-muted tw:wrap-anywhere">{{ variant.sku || 'Sin SKU' }}</span></span>
                                 </div>
-                                <label class="tw:grid tw:min-w-0 tw:gap-1 tw:text-caption tw:text-muted tw:md:col-span-3">Precio · {{ productForm.controls.currency.value }}<input class="tw:console-field" type="number" min="0" step="0.01" [attr.aria-label]="'Precio de ' + variantLabel(variant)" [value]="variant.priceInherited ? productForm.controls.price.value : variant.price" (input)="onVariantPriceInput(row.index, $any($event.target).value)" /></label>
-                                @if (isPhysical()) { <label class="tw:grid tw:min-w-0 tw:gap-1 tw:text-caption tw:text-muted tw:md:col-span-3">Stock<input class="tw:console-field" type="number" min="0" step="1" [attr.aria-label]="'Stock de ' + variantLabel(variant)" [value]="variant.stockQty ?? ''" placeholder="Del producto" (input)="updateVariantStock(row.index, $any($event.target).value)" /></label> }
+                                <label class="tw:grid tw:min-w-0 tw:gap-1 tw:text-caption tw:text-muted tw:md:col-span-3">Precio · {{ productForm.controls.currency.value }}<input class="tw:console-field tw:console-field" type="number" min="0" step="0.01" [attr.aria-label]="'Precio de ' + variantLabel(variant)" [value]="variant.priceInherited ? productForm.controls.price.value : variant.price" (input)="onVariantPriceInput(row.index, $any($event.target).value)" /></label>
+                                @if (isPhysical()) { <label class="tw:grid tw:min-w-0 tw:gap-1 tw:text-caption tw:text-muted tw:md:col-span-3">Stock<input class="tw:console-field tw:console-field" type="number" min="0" step="1" [attr.aria-label]="'Stock de ' + variantLabel(variant)" [value]="variant.stockQty ?? ''" placeholder="Del producto" (input)="updateVariantStock(row.index, $any($event.target).value)" /></label> }
                                 <span class="tw:col-span-2 tw:text-caption tw:md:col-span-2" [class.tw:text-success-text]="variant.isAvailable">{{ variant.isAvailable ? 'Disponible' : 'No disponible' }}</span>
                               </div>
                               <details class="tw:text-caption">
                                 <summary class="tw:cursor-pointer tw:content-center tw:text-muted">Detalles de {{ variantLabel(variant) }}</summary>
                                 <div class="tw:grid tw:gap-2 tw:pt-2">
-                                  <label class="field"><span>SKU de {{ variantLabel(variant) }}</span><input [value]="variant.sku" maxlength="60" (input)="updateVariant(row.index, { sku: $any($event.target).value })" /></label>
-                                  <label class="check-row"><input type="checkbox" [checked]="variant.priceInherited" (change)="updateVariant(row.index, { priceInherited: $any($event.target).checked })" /><span>Usar el precio del producto</span></label>
-                                  <label class="check-row"><input type="checkbox" [checked]="variant.isAvailable" (change)="updateVariant(row.index, { isAvailable: $any($event.target).checked })" /><span>Ofrecer {{ variantLabel(variant) }}</span></label>
+                                  <label class="field"><span>SKU de {{ variantLabel(variant) }}</span><input class="tw:console-field" [value]="variant.sku" maxlength="60" (input)="updateVariant(row.index, { sku: $any($event.target).value })" /></label>
+                                  <ds-checkbox variant="inline"><input type="checkbox" [checked]="variant.priceInherited" (change)="updateVariant(row.index, { priceInherited: $any($event.target).checked })" /><span>Usar el precio del producto</span></ds-checkbox>
+                                  <ds-checkbox variant="inline"><input type="checkbox" [checked]="variant.isAvailable" (change)="updateVariant(row.index, { isAvailable: $any($event.target).checked })" /><span>Ofrecer {{ variantLabel(variant) }}</span></ds-checkbox>
                                   @if (isPhysical()) { <span class="tw:text-muted">Stock vacío usa el del producto; cero significa agotado.</span> }
                                   <button type="button" class="tw:console-action-secondary tw:justify-self-start tw:text-danger-text" (click)="removeVariant(row.index)">Eliminar {{ variantLabel(variant) }}</button>
                                 </div>
@@ -707,7 +708,7 @@
             </header>
             <label class="field">
               <span>Ideal para</span>
-              <input
+              <input class="tw:console-field"
                 formControlName="audience"
                 maxlength="200"
                 [placeholder]="isService() ? 'Ej. Quienes buscan relajarse después del trabajo' : 'Ej. Piel seca o sensible, uso diario'"
@@ -715,39 +716,39 @@
             </label>
             <label class="field">
               <span>Necesidades y ocasiones de uso</span>
-              <textarea formControlName="useCasesText" rows="2" placeholder="Una por línea. Ej. Uso diario, regalo de cumpleaños"></textarea>
+              <textarea class="tw:console-field" formControlName="useCasesText" rows="2" placeholder="Una por línea. Ej. Uso diario, regalo de cumpleaños"></textarea>
             </label>
             <label class="field">
               <span>Qué no incluye o cuándo no es adecuado</span>
-              <textarea formControlName="exclusionsText" rows="2" placeholder="Una condición por línea"></textarea>
+              <textarea class="tw:console-field" formControlName="exclusionsText" rows="2" placeholder="Una condición por línea"></textarea>
             </label>
             <div class="field-grid field-grid--two">
               <label class="field">
                 <span>Tamaño o presentación</span>
-                <input formControlName="size" maxlength="60" [placeholder]="isService() ? 'Ej. Sesión individual' : 'Ej. 50 ml'" />
+                <input class="tw:console-field" formControlName="size" maxlength="60" [placeholder]="isService() ? 'Ej. Sesión individual' : 'Ej. 50 ml'" />
               </label>
               <label class="field">
                 <span>Palabras con las que te buscan</span>
-                <input formControlName="keywordsText" maxlength="600" placeholder="Ej. polera, camiseta, t-shirt" />
+                <input class="tw:console-field" formControlName="keywordsText" maxlength="600" placeholder="Ej. polera, camiseta, t-shirt" />
                 <span class="field__hint">Separadas por comas. No se muestran en la tienda.</span>
               </label>
             </div>
             @if (!isService()) {
               <label class="field">
                 <span>Características</span>
-                <textarea formControlName="attributesText" rows="3" [placeholder]="specificationHint()"></textarea>
+                <textarea class="tw:console-field" formControlName="attributesText" rows="3" [placeholder]="specificationHint()"></textarea>
                 <span class="field__hint">Una por línea con el formato «Nombre: valor». Máximo 20.</span>
               </label>
             }
             @if (!isService()) {
               <label class="field">
                 <span>Compatibilidad</span>
-                <textarea formControlName="compatibilityText" rows="2" placeholder="Equipos, programas o condiciones compatibles, una por línea"></textarea>
+                <textarea class="tw:console-field" formControlName="compatibilityText" rows="2" placeholder="Equipos, programas o condiciones compatibles, una por línea"></textarea>
               </label>
             }
             <label class="field">
               <span>{{ isService() ? 'Qué incluye el servicio' : 'Qué incluye' }}</span>
-              <textarea
+              <textarea class="tw:console-field"
                 formControlName="contentsText"
                 rows="2"
                 [placeholder]="isService() ? 'Uno por línea. Ej. Limpieza facial profunda' : 'Uno por línea. Ej. Estuche de regalo'"
@@ -755,43 +756,43 @@
             </label>
             <label class="field">
               <span>Beneficios</span>
-              <textarea formControlName="benefitsText" rows="3" placeholder="Uno por línea"></textarea>
+              <textarea class="tw:console-field" formControlName="benefitsText" rows="3" placeholder="Uno por línea"></textarea>
             </label>
             @if (isService() || isDigital()) {
               <label class="field">
                 <span>{{ isDigital() ? 'Requisitos para acceder o usarlo' : 'Antes del servicio' }}</span>
-                <textarea formControlName="requirementsText" rows="2" [placeholder]="isDigital() ? 'Ej. Excel 2021 o posterior' : 'Ej. Llegar 10 minutos antes'"></textarea>
+                <textarea class="tw:console-field" formControlName="requirementsText" rows="2" [placeholder]="isDigital() ? 'Ej. Excel 2021 o posterior' : 'Ej. Llegar 10 minutos antes'"></textarea>
               </label>
             }
             @if (isService()) {
               <div class="field-grid field-grid--two">
                 <label class="field">
                   <span>Zona de atención</span>
-                  <input formControlName="coverage" maxlength="200" placeholder="Ej. Miraflores, San Isidro y Surco" />
+                  <input class="tw:console-field" formControlName="coverage" maxlength="200" placeholder="Ej. Miraflores, San Isidro y Surco" />
                 </label>
                 <label class="field">
                   <span>Cambios de fecha y cancelación</span>
-                  <input formControlName="cancellation" maxlength="300" placeholder="Ej. Reprograma gratis con 24 h de aviso" />
+                  <input class="tw:console-field" formControlName="cancellation" maxlength="300" placeholder="Ej. Reprograma gratis con 24 h de aviso" />
                 </label>
               </div>
             } @else {
               <label class="field">
                 <span>Modo de uso o cuidados</span>
-                <textarea formControlName="usageText" rows="3" placeholder="Un paso por línea"></textarea>
+                <textarea class="tw:console-field" formControlName="usageText" rows="3" placeholder="Un paso por línea"></textarea>
               </label>
               <label class="field">
                 <span>Garantía</span>
-                <input formControlName="warranty" maxlength="300" placeholder="Ej. 6 meses por defectos de fábrica" />
+                <input class="tw:console-field" formControlName="warranty" maxlength="300" placeholder="Ej. 6 meses por defectos de fábrica" />
               </label>
             }
             <label class="field">
               <span>Condiciones de cambios y devoluciones</span>
-              <textarea formControlName="returns" rows="2" maxlength="300" placeholder="Indica las condiciones aplicables o la política del negocio"></textarea>
+              <textarea class="tw:console-field" formControlName="returns" rows="2" maxlength="300" placeholder="Indica las condiciones aplicables o la política del negocio"></textarea>
             </label>
             @if (isDigital()) {
-              <label class="field"><span>Formato o plataforma</span><input formControlName="digitalFormat" maxlength="80" placeholder="Ej. PDF, plantilla de Excel o curso en línea" /></label>
-              <label class="field"><span>Licencia y derechos de uso</span><textarea formControlName="license" maxlength="300" rows="2" placeholder="Ej. Uso personal; no incluye reventa"></textarea></label>
-              <label class="field"><span>Duración del acceso y actualizaciones</span><input formControlName="accessDuration" maxlength="200" placeholder="Ej. Acceso permanente a esta versión" /></label>
+              <label class="field"><span>Formato o plataforma</span><input class="tw:console-field" formControlName="digitalFormat" maxlength="80" placeholder="Ej. PDF, plantilla de Excel o curso en línea" /></label>
+              <label class="field"><span>Licencia y derechos de uso</span><textarea class="tw:console-field" formControlName="license" maxlength="300" rows="2" placeholder="Ej. Uso personal; no incluye reventa"></textarea></label>
+              <label class="field"><span>Duración del acceso y actualizaciones</span><input class="tw:console-field" formControlName="accessDuration" maxlength="200" placeholder="Ej. Acceso permanente a esta versión" /></label>
             }
 
             <div class="faq-head">
@@ -808,7 +809,7 @@
                 <li class="faq-row">
                   <label class="field">
                     <span>Pregunta</span>
-                    <input
+                    <input class="tw:console-field"
                       [value]="faq.question"
                       maxlength="200"
                       placeholder="¿Destiñe al lavarlo?"
@@ -817,7 +818,7 @@
                   </label>
                   <label class="field">
                     <span>Respuesta</span>
-                    <textarea
+                    <textarea class="tw:console-field"
                       rows="2"
                       maxlength="600"
                       [value]="faq.answer"
@@ -859,11 +860,11 @@
               </div>
             </header>
             <div class="avail-row">
-              <label class="switch">
+              <ds-checkbox variant="inline">
                 <input type="checkbox" formControlName="isAvailable" />
-                <span class="switch__track" aria-hidden="true"></span>
-                <span class="visually-hidden">Producto disponible</span>
-              </label>
+
+                <span >Producto disponible</span>
+              </ds-checkbox>
               <span
                 class="pill"
                 [class.pill--ok]="productForm.controls.isAvailable.value"
@@ -904,11 +905,11 @@
             </header>
             @if (storeActive()) {
             <div class="avail-row">
-              <label class="switch">
+              <ds-checkbox variant="inline">
                 <input type="checkbox" formControlName="isPublishedOnStore" />
-                <span class="switch__track" aria-hidden="true"></span>
-                <span class="visually-hidden">Visible en la tienda web</span>
-              </label>
+
+                <span >Visible en la tienda web</span>
+              </ds-checkbox>
               <span
                 class="pill"
                 [class.pill--ok]="productForm.controls.isPublishedOnStore.value"
@@ -925,7 +926,7 @@
               </span>
               <div class="price-row">
                 <span class="price-row__currency">{{ productForm.controls.currency.value }}</span>
-                <input type="number" min="0" step="0.01" formControlName="compareAtPrice" placeholder="0,00" />
+                <input class="tw:console-field" type="number" min="0" step="0.01" formControlName="compareAtPrice" placeholder="0,00" />
               </div>
               <span class="field__hint">Solo se muestra si es mayor que el precio actual.</span>
             </label>
@@ -934,14 +935,14 @@
                 Marca
                 <span class="pill pill--soft">Opcional</span>
               </span>
-              <input formControlName="brand" maxlength="60" autocomplete="off" />
+              <input class="tw:console-field" formControlName="brand" maxlength="60" autocomplete="off" />
             </label>
             <label class="field">
               <span class="field__label-row">
                 Línea o colección
                 <span class="pill pill--soft">Opcional</span>
               </span>
-              <input formControlName="line" maxlength="80" autocomplete="off" placeholder="Ej. Ccori" />
+              <input class="tw:console-field" formControlName="line" maxlength="80" autocomplete="off" placeholder="Ej. Ccori" />
               <span class="field__hint">Agrupa productos para sugerir complementos y cupones por línea.</span>
             </label>
           </section>
@@ -962,7 +963,7 @@
               }
             </div>
             <div class="media-drop__row">
-              <input
+              <input class="tw:console-field"
                 type="text"
                 [value]="categoryDraft()"
                 (input)="onCategoryDraftInput($any($event.target).value)"
@@ -1001,6 +1002,7 @@
           </div></details>
         </aside>
       </div>
+    </fieldset>
     </form>
   }
 </section>

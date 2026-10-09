@@ -54,12 +54,20 @@
   --ds-radius-sm: 0.5rem;
   --ds-radius-md: 0.75rem;
   --ds-radius-lg: 1rem;
+  --ds-radius-pill: 999px;
+  --ds-action-bg: var(--ds-color-ink);
+  --ds-action-text: var(--ds-color-surface);
+  --ds-action-control-height: 2.75rem;
+  --ds-action-gap: var(--ds-space-2);
+  --ds-action-padding: var(--ds-space-1);
+  --ds-action-offset: var(--ds-space-2);
+  --ds-z-sticky: 20;
   --ds-touch-target: 2.75rem;
   --ds-gutter: clamp(1rem, 3vw, 2rem);
   /* Global navigation follows the compact admin rhythm; contextual settings need longer labels. */
   --ds-console-sidebar-width: 12.5rem;
   --ds-console-context-sidebar-width: 14rem;
-  --ds-console-rail-width: 3.75rem;
+  --ds-console-rail-width: 3.25rem;
   --ds-console-nav-row-height: 1.875rem;
   --ds-console-control-height: 2rem;
   --ds-menu-width: 18rem;

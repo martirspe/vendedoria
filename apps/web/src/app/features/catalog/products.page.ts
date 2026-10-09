@@ -1,3 +1,4 @@
+import { DsActionBarComponent, DsCheckboxComponent } from '@vendedoria/ui';
 import { DsSelectComponent } from '@vendedoria/ui';
 import {
   ChangeDetectionStrategy,
@@ -69,7 +70,7 @@ function toCents(amount: number): number {
 @Component({
   selector: 'app-products-page',
   standalone: true,
-  imports: [DsSelectComponent,
+  imports: [DsActionBarComponent, DsCheckboxComponent, DsSelectComponent,
     NgTemplateOutlet,
     ReactiveFormsModule,
     FormsModule,
@@ -577,7 +578,7 @@ export class ProductsPage {
   }
 
   closeEditor(): void {
-    if (this.saving()) return;
+    if (this.saving() || this.uploading()) return;
     this.variantPhotoTarget.set(null);
     this.editorOpen.set(false);
     this.editingId.set(null);
@@ -633,6 +634,7 @@ export class ProductsPage {
   }
 
   async onFiles(input: HTMLInputElement): Promise<void> {
+    if (this.saving() || this.deleting() || this.uploading()) return;
     const files = Array.from(input.files ?? []);
     input.value = '';
     if (!files.length) return;
@@ -929,7 +931,7 @@ export class ProductsPage {
   }
 
   async saveProduct(): Promise<void> {
-    if (this.saving() || this.deleting()) return;
+    if (this.saving() || this.deleting() || this.uploading()) return;
     if (this.variantsEnabled() && !this.setEnabled() && this.axesPending()) {
       this.errorMessage.set('Completa las opciones de variantes antes de guardar.');
       return;
@@ -1049,7 +1051,7 @@ export class ProductsPage {
       this.successMessage.set(
         editingId
           ? `"${saved.name}" actualizado.`
-          : `"${saved.name}" publicado y listo para el vendedor.`,
+          : `"${saved.name}" agregado al catálogo.`,
       );
       await this.load();
     } catch (error) {

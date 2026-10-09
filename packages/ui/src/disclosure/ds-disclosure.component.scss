@@ -1,0 +1,10 @@
+:host { display: block; min-width: 0; }
+details { border-bottom: var(--ds-border-width) solid var(--ds-color-divider); }
+summary { display: flex; align-items: center; justify-content: space-between; gap: var(--ds-space-3); min-height: var(--ds-touch-target); padding-block: var(--ds-space-3); cursor: pointer; list-style: none; font-size: var(--ds-type-sm); font-weight: 600; color: var(--ds-color-text-primary); }
+summary::-webkit-details-marker { display: none; }
+summary span { min-width: 0; overflow-wrap: anywhere; }
+summary ds-icon { flex-shrink: 0; transition: transform var(--ds-motion-fast) var(--ds-ease-out); }
+details[open] summary ds-icon { transform: rotate(180deg); }
+summary:focus-visible { outline: calc(2 * var(--ds-border-width)) solid var(--ds-color-focus-ring); outline-offset: calc(2 * var(--ds-border-width)); border-radius: var(--ds-radius-sm); }
+.ds-disclosure-body { padding-bottom: var(--ds-space-4); color: var(--ds-color-text-secondary); font-size: var(--ds-type-sm); line-height: 1.5; overflow-wrap: anywhere; }
+@media (prefers-reduced-motion: reduce) { summary ds-icon { transition: none; } }

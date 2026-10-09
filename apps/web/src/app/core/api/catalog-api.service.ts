@@ -93,6 +93,7 @@ export type InventoryRow = {
   name: string;
   option: string | null;
   sku: string | null;
+  imageUrl: string | null;
   stockUnlimited: boolean;
   stockQty: number | null;
   usedInSets: number;

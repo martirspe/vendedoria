@@ -2,8 +2,7 @@
   <header class="shipping__header">
     <h1 class="tw:console-title">Envíos</h1>
     <p>
-      Cómo reciben tus clientes sus pedidos. Tu vendedor IA cotiza con estas tarifas antes de enviar
-      el link de pago, y tu tienda web las usa en el checkout.
+      Configura las formas de entrega y las tarifas que usan tu vendedor IA y tu tienda web.
     </p>
   </header>
 
@@ -21,40 +20,36 @@
   }
 
   @if (loading()) {
-    <div class="skeleton" aria-busy="true">Cargando tus envíos…</div>
+    <div class="tw:console-list-skeleton" role="status" aria-busy="true" aria-label="Cargando configuración de envíos">@for (row of [1, 2, 3]; track row) { <div aria-hidden="true"></div> }</div>
   } @else if (loadError()) {
-    <div class="card">
-      <p class="hint">No pudimos cargar tu configuración de envíos. Revisa tu conexión e inténtalo de nuevo.</p>
-      <ds-button variant="secondary" (click)="load()">Reintentar</ds-button>
-    </div>
+    <ds-empty-state title="No pudimos cargar tus envíos" body="Revisa tu conexión y vuelve a intentarlo."><ds-button type="button" variant="secondary" (click)="load()">Reintentar</ds-button></ds-empty-state>
   } @else {
     @if (!options().length) {
       <div class="tw:feedback tw:feedback-warning" role="status">
         <ds-icon name="info" />
         <span>
-          Aún no ofreces ninguna forma de entrega. Tu vendedor IA no cobrará envío y le dirá al cliente
-          que coordinarás la entrega contigo.
+          No tienes opciones de entrega guardadas. Revisa las agencias o completa los datos de recojo antes de guardar.
         </span>
       </div>
     }
 
     <form class="shipping__form" [formGroup]="form" (ngSubmit)="save()">
-      <div class="tw:console-save-bar">
-        <span class="tw:px-2">Cambios de envíos</span>
-        <ds-button type="submit" [disabled]="saving() || form.pristine">{{ saving() ? 'Guardando…' : 'Guardar envíos' }}</ds-button>
-      </div>
-      <section class="card">
-        <h2>Envío a domicilio</h2>
-        <label class="check">
+      <div class="shipping__layout">
+      <fieldset class="shipping__fields tw:console-card tw:shadow-none!" [disabled]="saving()">
+      <legend class="tw:sr-only">Configuración de entrega</legend>
+      <ds-form-section class="shipping__section" variant="plain" title="Envío a domicilio" icon="truck" description="Agencias, origen y tarifas de entrega.">
+
+        <ds-checkbox>
           <input type="checkbox" formControlName="deliveryEnabled" />
           <span>Hago envíos a domicilio</span>
-        </label>
+        </ds-checkbox>
         @if (form.controls.deliveryEnabled.value) {
           <p class="hint">El cliente indica su distrito y el costo se calcula por la distancia desde tu distrito de despacho.</p>
-          <label>
+          <label class="tw:grid tw:min-w-0 tw:gap-2 tw:text-body tw:font-semibold">
             <span class="label-text">Envío gratis desde (S/) <span class="optional">Opcional</span></span>
-            <input formControlName="freeShippingFrom" type="number" min="1" step="1" inputmode="decimal" />
-            <small>Se calcula sobre el total después de descuentos.</small>
+            <input class="tw:console-field" formControlName="freeShippingFrom" type="number" min="1" step="1" inputmode="decimal" [attr.aria-invalid]="form.controls.freeShippingFrom.touched && form.controls.freeShippingFrom.invalid" [attr.aria-describedby]="form.controls.freeShippingFrom.touched && form.controls.freeShippingFrom.invalid ? 'free-shipping-help free-shipping-error' : 'free-shipping-help'" />
+            @if (form.controls.freeShippingFrom.touched && form.controls.freeShippingFrom.invalid) { <span class="field-error" id="free-shipping-error" role="alert">Ingresa un importe de al menos S/ 1 o deja el campo vacío.</span> }
+            <small id="free-shipping-help">Se calcula sobre el total después de descuentos. Déjalo vacío si no ofreces envío gratis.</small>
           </label>
 
           <div class="carriers">
@@ -64,7 +59,7 @@
               punto de despacho y el cliente la acepta como referencial.
             </p>
             <div class="row row--3">
-              <label>
+              <label class="tw:grid tw:min-w-0 tw:gap-2 tw:text-body tw:font-semibold">
                 Departamento de despacho
                 <ds-select><select (change)="setOriginDepartment($any($event.target).value)">
                   <option value="" [selected]="!originDepartment()">Elige…</option>
@@ -73,7 +68,7 @@
                   }
                 </select></ds-select>
               </label>
-              <label>
+              <label class="tw:grid tw:min-w-0 tw:gap-2 tw:text-body tw:font-semibold">
                 Provincia
                 <ds-select><select [disabled]="!originDepartment()" (change)="setOriginProvince($any($event.target).value)">
                   <option value="" [selected]="!originProvince()">Elige…</option>
@@ -82,9 +77,9 @@
                   }
                 </select></ds-select>
               </label>
-              <label>
+              <label class="tw:grid tw:min-w-0 tw:gap-2 tw:text-body tw:font-semibold">
                 Distrito
-                <ds-select><select formControlName="shippingOriginUbigeo">
+                <ds-select><select formControlName="shippingOriginUbigeo" aria-describedby="shipping-origin-help">
                   <option value="">Elige…</option>
                   @for (district of originDistricts(); track district.code) {
                     <option [value]="district.code">{{ district.district }}</option>
@@ -92,40 +87,73 @@
                 </select></ds-select>
               </label>
             </div>
+            <p class="hint" id="shipping-origin-help">Elige departamento, provincia y distrito de despacho para configurar tarifas por distancia.</p>
+            @if (form.controls.shippingOriginUbigeo.touched && !form.controls.shippingOriginUbigeo.value && (form.controls.olvaEnabled.value || form.controls.shalomEnabled.value)) { <p class="field-error" role="alert">Selecciona el distrito desde donde despachas.</p> }
             @for (carrier of carriers; track carrier.key) {
-              <label class="check">
+              <section class="shipping__carrier" [class.shipping__carrier--enabled]="form.get(carrier.key + 'Enabled')?.value">
+              <ds-checkbox>
                 <input type="checkbox" [formControlName]="carrier.key + 'Enabled'" />
                 <span>Envío con {{ carrier.label }}</span>
-              </label>
+              </ds-checkbox>
               @if (form.get(carrier.key + 'Enabled')?.value) {
                 <div class="tiers" [formArrayName]="carrier.key">
                   @for (label of tierLabels; track label; let i = $index) {
-                    <label>
+                    <label class="tw:grid tw:min-w-0 tw:gap-2 tw:text-body tw:font-semibold">
                       <span class="label-text">{{ label }} (S/)</span>
-                      <input [formControlName]="i" type="number" min="0" max="1000" step="0.10" inputmode="decimal" />
+                      <input class="tw:console-field" [formControlName]="i" type="number" min="0" max="1000" step="0.10" inputmode="decimal" [attr.aria-label]="carrier.label + ' · ' + label + ' (S/)'" [attr.aria-invalid]="form.controls[carrier.key].controls[i].touched && form.controls[carrier.key].controls[i].invalid" [attr.aria-describedby]="form.controls[carrier.key].controls[i].touched && form.controls[carrier.key].controls[i].invalid ? carrier.key + '-rate-' + i : null" />
+                      @if (form.controls[carrier.key].controls[i].touched && form.controls[carrier.key].controls[i].invalid) { <span class="field-error" [id]="carrier.key + '-rate-' + i" role="alert">Ingresa una tarifa entre S/ 0 y S/ 1.000.</span> }
                     </label>
                   }
                 </div>
               }
+              </section>
             }
           </div>
         }
-      </section>
+      </ds-form-section>
 
-      <section class="card">
-        <h2>Recojo</h2>
-        <label class="check">
+      <ds-form-section class="shipping__section" variant="plain" title="Recojo en tienda" icon="store" description="Una alternativa sin costo de envío.">
+        <ds-checkbox>
           <input type="checkbox" formControlName="pickupEnabled" />
           <span>Ofrezco recojo en tienda (gratis)</span>
-        </label>
+        </ds-checkbox>
         @if (form.controls.pickupEnabled.value) {
-          <label>
+          <label class="tw:grid tw:min-w-0 tw:gap-2 tw:text-body tw:font-semibold">
             Dirección y horario de recojo
-            <input formControlName="pickupAddress" maxlength="240" placeholder="Av. Larco 123, Miraflores · Lun a Sáb 10 a 7 p. m." />
+            <input class="tw:console-field" formControlName="pickupAddress" maxlength="240" placeholder="Dirección del local y horario de atención" aria-describedby="pickup-help" />
+            <small id="pickup-help">La opción de recojo aparece al guardar una dirección.</small>
           </label>
         }
-      </section>
+      </ds-form-section>
 
+      </fieldset>
+      <aside class="shipping__summary tw:console-card tw:shadow-none!" aria-label="Opciones de entrega guardadas">
+        <h2 class="tw:m-0 tw:text-section">Opciones guardadas</h2>
+        <p class="hint">Estas opciones reflejan tu configuración guardada.</p>
+        <ul class="tw:m-0 tw:grid tw:list-none tw:gap-3 tw:p-0">
+          @for (option of options(); track option.mode) {
+            <li class="tw:grid tw:gap-1 tw:border-0 tw:border-b tw:border-solid tw:border-divider tw:pb-3">
+              <strong>{{ option.label }}</strong>
+              <span class="tw:text-caption tw:text-muted">{{ option.byDistance ? 'Tarifa referencial según el distrito' : 'Recojo gratis' }}</span>
+              @if (option.eta) { <span class="tw:wrap-anywhere tw:text-caption tw:text-muted">{{ option.eta }}</span> }
+            </li>
+          } @empty { <li class="hint">Sin opciones de entrega guardadas.</li> }
+        </ul>
+        @if (form.dirty) { <p class="tw:m-0 tw:text-caption tw:text-warning-text">Guarda los cambios para actualizar estas opciones.</p> }
+      </aside>
+      </div>
+      <ds-form-section title="Preguntas frecuentes" description="Cómo se usan tus opciones de entrega.">
+        <ds-disclosure title="¿Las tarifas de las agencias son definitivas?" group="shipping-faq">
+          Son referenciales y se calculan según la distancia desde el distrito de despacho. El comprador las revisa al elegir la entrega.
+        </ds-disclosure>
+        <ds-disclosure title="¿Cuándo aparece el recojo en tienda?" group="shipping-faq">
+          Activa el recojo, completa la dirección y guarda los cambios. El recojo no tiene costo de envío.
+        </ds-disclosure>
+        <ds-disclosure title="¿Sobre qué importe se aplica el envío gratis?" group="shipping-faq">
+          Sobre el total después de descuentos. Deja el importe vacío si no ofreces envío gratis.
+        </ds-disclosure>
+      </ds-form-section>
+      <ds-save-bar [pending]="form.dirty" [busy]="saving()" label="Guardar envíos" />
     </form>
   }
 </section>

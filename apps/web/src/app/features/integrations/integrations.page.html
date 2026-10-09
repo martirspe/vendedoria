@@ -1,154 +1,81 @@
-<section class="integrations tw:mx-auto tw:min-w-0">
-  <header class="integrations__header">
-    <div>
-      <h1 class="tw:console-title">Integraciones</h1>
-      <p>
-        Tu vendedor IA funciona solo. Suma las funciones que tu negocio necesite, como
-        la tienda web, y conecta tus canales y cobros. Al activar una función, aparece
-        en el menú para que la configures.
-      </p>
+<section class="tw:mx-auto tw:grid tw:w-full tw:min-w-0 tw:max-w-page tw:gap-5">
+  <header><p class="tw:console-eyebrow">Conexiones</p><h1 class="tw:console-title">Integraciones</h1><p class="tw:mt-2 tw:max-w-prose tw:text-sm tw:text-muted">Activa las funciones de tu plan y conecta los servicios de tu negocio. Después de activar una función, configúrala desde el menú.</p></header>
+  @if (actionError(); as error) { <div class="tw:feedback tw:feedback-danger" role="alert"><ds-icon name="alert" /><span>{{ error }}</span></div> }
+  @if (actionSuccess(); as success) { <div class="tw:feedback tw:feedback-success" role="status"><ds-icon name="check" /><span>{{ success }}</span></div> }
+  <ds-action-bar label="Acciones de integraciones">
+    <span dsActionStatus role="status">{{ loading() ? 'Actualizando estados…' : busyKey() ? 'Guardando cambio…' : 'Funciones y conexiones' }}</span>
+    <ds-button variant="secondary" [disabled]="loading() || busyKey() !== null" (click)="load()"><ds-icon name="rotateCcw" />Actualizar estados</ds-button>
+  </ds-action-bar>
+  @if (loading()) {
+    <div class="tw:console-list-panel" role="status" aria-busy="true" aria-label="Cargando integraciones"><div class="tw:console-list-skeleton" aria-hidden="true">@for (row of [1,2,3,4]; track row) { <div></div> }</div></div>
+  } @else if (errorMessage()) {
+    <ds-empty-state title="No pudimos cargar las integraciones" body="No se ha cambiado la configuración de tus funciones. Reintenta para consultar su estado."><ds-button variant="secondary" (click)="load()">Reintentar</ds-button></ds-empty-state>
+  } @else {
+    <div class="tw:grid tw:gap-3 tw:sm:grid-cols-3">
+      <div class="tw:console-metric"><div><span>Funciones activas</span><small>Habilitadas en tu negocio</small></div><strong>{{ activeCount() }}</strong></div>
+      <div class="tw:console-metric"><div><span>Funciones en pausa</span><small>Requieren otra función activa</small></div><strong>{{ pausedCount() }}</strong></div>
+      <div class="tw:console-metric"><div><span>Funciones del catálogo</span><small>Disponibilidad según tu plan</small></div><strong>{{ features().length }}</strong></div>
     </div>
-  </header>
-
-  @if (errorMessage(); as error) {
-    <div class="tw:feedback tw:feedback-danger" role="alert">
-      <ds-icon name="alert" />
-      <span>{{ error }}</span>
-      <ds-button type="button" variant="secondary" (click)="load()">Reintentar</ds-button>
-    </div>
-  }
-  @if (actionError(); as error) {
-    <div class="tw:feedback tw:feedback-danger" role="alert">
-      <ds-icon name="alert" />
-      <span>{{ error }}</span>
-    </div>
-  }
-  @if (actionSuccess(); as success) {
-    <div class="tw:feedback tw:feedback-success" role="status">
-      <ds-icon name="check" />
-      <span>{{ success }}</span>
-    </div>
-  }
-
-  <section class="features" aria-labelledby="features-title">
-    <h2 id="features-title" class="section-title">Funciones para activar</h2>
-    @if (!canManage) {
-      <p class="hint">Solo el dueño o un administrador puede activar o desactivar funciones.</p>
-    }
-    @if (loading() && !integrations.loaded()) {
-      <div class="skeleton" aria-busy="true">Cargando funciones…</div>
-    } @else {
-      <ul class="grid">
+    @if (!canManage) { <div class="tw:feedback tw:feedback-info" role="status"><ds-icon name="info" /><span>Puedes consultar las integraciones. El propietario o un administrador puede activarlas y desactivarlas.</span></div> }
+    @if (connectionError(); as error) { <div class="tw:feedback tw:feedback-warning" role="status"><ds-icon name="alert" /><span>{{ error }} Actualiza los estados para volver a intentarlo.</span></div> }
+    <section class="tw:grid tw:gap-4" aria-labelledby="features-title">
+      <div><h2 id="features-title" class="tw:m-0 tw:text-lg tw:font-semibold">Funciones de tu negocio</h2><p class="tw:mt-1 tw:text-sm tw:text-muted">Activar una función habilita su configuración; conectar una cuenta es un paso adicional.</p></div>
+      <ul class="tw:m-0 tw:grid tw:list-none tw:gap-4 tw:p-0 tw:lg:grid-cols-2">
         @for (card of features(); track card.key) {
-          <li [attr.data-status]="card.status === 'active' ? 'connected' : card.status === 'available' ? 'ready' : 'waitlist'">
-            <div class="grid__top">
-              <h3 class="feature__name"><ds-icon [name]="card.icon" [size]="1.1" /> {{ card.name }}</h3>
-              <span class="status">{{ featureStatusLabel(card) }}</span>
-            </div>
-            <p>{{ card.summary }}</p>
-            @if (card.key === 'tiktok_live' && card.state?.active) {
-              @if (tiktok(); as connection) {
-                <p>{{ connection.connected ? 'Cuenta conectada' : connection.healthStatus === 'DEGRADED' ? 'Requiere reconexión' : 'Cuenta sin conectar · operación manual disponible' }}</p>
-                @if (connection.errorCode) { <p role="alert">Revisa la autorización de tu cuenta en Configurar.</p> }
-                @if (connection.lastEventAt) { <p>Último evento: {{ connection.lastEventAt | date:'short' }}</p> }
-                @if (canManage) {
-                  <div class="feature__actions">
-                    <ds-button type="button" variant="secondary" (click)="connectTikTok()" [disabled]="busyKey() !== null || !connection.oauthAvailable">{{ connection.connected ? 'Reconectar' : 'Conectar TikTok' }}</ds-button>
-                    @if (connection.accountId) { <ds-button type="button" variant="ghost" (click)="disconnectTikTok()" [disabled]="busyKey() !== null">Desconectar cuenta</ds-button> }
-                  </div>
-                }
-              }
-            }
-            <div class="feature__actions">
-              @switch (card.status) {
-                @case ('active') {
-                  <ds-button type="button" variant="primary" (click)="open(card.path)">Configurar</ds-button>
+          <li class="tw:min-w-0">
+            <ds-form-section [title]="card.name" [description]="card.summary" [icon]="card.icon">
+              <span class="tw:w-fit tw:rounded-sm tw:bg-canvas tw:px-2 tw:py-1 tw:text-caption tw:font-semibold tw:text-muted" [class.tw:bg-success/10]="card.status === 'active'" [class.tw:text-success-text]="card.status === 'active'">{{ featureStatusLabel(card) }}</span>
+              @if (card.key === 'tiktok_live' && card.state?.active) {
+                @if (tiktok(); as connection) {
+                  <p class="tw:m-0 tw:text-sm tw:text-muted">{{ connection.connected ? 'Cuenta TikTok conectada' : connection.healthStatus === 'DEGRADED' ? 'La cuenta requiere reconexión' : 'Cuenta sin conectar · operación manual disponible' }}</p>
+                  @if (connection.errorCode) { <p class="tw:m-0 tw:text-sm tw:text-danger-text" role="alert">Revisa la autorización de tu cuenta en Configurar.</p> }
+                  @if (connection.lastEventAt) { <p class="tw:m-0 tw:text-caption tw:text-muted">Último evento: {{ connection.lastEventAt | date:'short' }}</p> }
+                  @if (!connection.oauthAvailable) { <p class="tw:m-0 tw:text-caption tw:text-muted">La conexión de cuentas no está disponible. Puedes gestionar las ventas manualmente desde el panel.</p> }
                   @if (canManage) {
-                    <ds-button
-                      type="button"
-                      variant="ghost"
-                      [disabled]="busyKey() !== null"
-                      (click)="toggle(card)"
-                    >
-                      {{ busyKey() === card.key ? 'Desactivando…' : 'Desactivar' }}
-                    </ds-button>
+                    <div class="tw:flex tw:flex-wrap tw:gap-2">
+                      <ds-button variant="secondary" (click)="connectTikTok()" [disabled]="busyKey() !== null || !connection.oauthAvailable">{{ connection.connected ? 'Reconectar TikTok' : 'Conectar TikTok' }}</ds-button>
+                      @if (connection.accountId) { <ds-button variant="ghost" (click)="disconnectTikTok()" [disabled]="busyKey() !== null">Desconectar cuenta</ds-button> }
+                    </div>
                   }
                 }
-                @case ('available') {
-                  <ds-button
-                    type="button"
-                    variant="primary"
-                    [disabled]="busyKey() !== null || !canManage"
-                    (click)="toggle(card)"
-                  >
-                    {{ busyKey() === card.key ? 'Activando…' : 'Activar' }}
-                  </ds-button>
-                }
-                @case ('paused') {
-                  <p class="next">Funciona sobre {{ card.needs?.name }}. Vuelve sola, con tu configuración, cuando la actives.</p>
-                  @if (canManage) {
-                    <ds-button
-                      type="button"
-                      variant="ghost"
-                      [disabled]="busyKey() !== null"
-                      (click)="toggle(card)"
-                    >
-                      {{ busyKey() === card.key ? 'Desactivando…' : 'Desactivar' }}
-                    </ds-button>
-                  }
-                }
-                @case ('needs') {
-                  <p class="next">Activa primero {{ card.needs?.name }}: esta función trabaja sobre ella.</p>
-                }
-                @case ('locked') {
-                  <ds-button type="button" variant="secondary" (click)="open('/app/plans')">Ver planes</ds-button>
-                }
-                @default {
-                  <p class="next">Aún no está disponible para tu cuenta. Escríbenos desde Ayuda si la necesitas.</p>
-                }
               }
-            </div>
+              <div class="tw:flex tw:flex-wrap tw:items-center tw:gap-2">
+                @switch (card.status) {
+                  @case ('active') {
+                    <ds-button variant="secondary" [label]="'Configurar ' + card.name" [disabled]="busyKey() !== null" (click)="open(card.path)">Configurar</ds-button>
+                    @if (canManage) { <ds-button variant="ghost" [label]="'Desactivar ' + card.name" [disabled]="busyKey() !== null" (click)="toggle(card)">{{ busyKey() === card.key ? 'Desactivando…' : 'Desactivar' }}</ds-button> }
+                  }
+                  @case ('available') { <ds-button [label]="'Activar ' + card.name" [disabled]="busyKey() !== null || !canManage" (click)="toggle(card)">{{ busyKey() === card.key ? 'Activando…' : 'Activar función' }}</ds-button> }
+                  @case ('paused') {
+                    <p class="tw:m-0 tw:w-full tw:text-sm tw:text-muted">Se reanudará con su configuración cuando actives {{ card.needs?.name }}.</p>
+                    @if (canManage) { <ds-button variant="ghost" [label]="'Desactivar ' + card.name" [disabled]="busyKey() !== null" (click)="toggle(card)">{{ busyKey() === card.key ? 'Desactivando…' : 'Desactivar' }}</ds-button> }
+                  }
+                  @case ('needs') { <p class="tw:m-0 tw:text-sm tw:text-muted">Activa primero {{ card.needs?.name }} para usar esta función.</p> }
+                  @case ('locked') { <ds-button variant="secondary" (click)="open('/app/plans')">Ver planes</ds-button> }
+                  @default { <p class="tw:m-0 tw:text-sm tw:text-muted">Esta función no está disponible para activar en tu cuenta.</p> }
+                }
+              </div>
+            </ds-form-section>
           </li>
         }
       </ul>
-    }
-  </section>
-
-  <h2 class="section-title">Canales y conectores</h2>
-
-  <div class="filters" role="tablist" aria-label="Categoría">
-    @for (category of categories; track category) {
-      <button
-        type="button"
-        role="tab"
-        [attr.aria-selected]="filter() === category"
-        [class.is-active]="filter() === category"
-        (click)="setFilter(category)"
-      >
-        {{ categoryLabel(category) }}
-      </button>
-    }
-  </div>
-
-  @if (loading()) {
-    <div class="skeleton" aria-busy="true">Cargando conectores…</div>
-  } @else {
-    <ul class="grid">
-      @for (card of cards(); track card.id) {
-        <li [attr.data-status]="card.status">
-          <div class="grid__top">
-            <h2>{{ card.name }}</h2>
-            <span class="status">{{ statusLabel(card.status) }}</span>
-          </div>
-          <p>{{ card.summary }}</p>
-          <p class="next">{{ card.nextStep }}</p>
-          @if (card.link) {
-            <a [routerLink]="card.link">
-              <ds-button type="button" variant="secondary">Abrir</ds-button>
-            </a>
-          }
-        </li>
-      }
-    </ul>
+    </section>
+    <section class="tw:grid tw:gap-4" aria-labelledby="connectors-title">
+      <div class="tw:flex tw:flex-wrap tw:items-end tw:justify-between tw:gap-3">
+        <div><h2 id="connectors-title" class="tw:m-0 tw:text-lg tw:font-semibold">Canales y conectores</h2><p class="tw:mt-1 tw:text-sm tw:text-muted">Consulta las conexiones y las opciones disponibles.</p></div>
+        <div class="tw:grid tw:gap-2"><label for="integration-category" class="tw:text-caption tw:font-semibold">Categoría</label><ds-select><select id="integration-category" [value]="filter()" (change)="changeCategory($event)">@for (category of categories; track category) { <option [value]="category">{{ categoryLabel(category) }}</option> }</select></ds-select></div>
+      </div>
+      <p class="tw:m-0 tw:text-caption tw:text-muted" role="status">{{ cards().length }} conectores · {{ categoryLabel(filter()) }}</p>
+      <ul class="tw:m-0 tw:grid tw:list-none tw:gap-4 tw:p-0 tw:lg:grid-cols-2">
+        @for (card of cards(); track card.id) {
+          <li class="tw:min-w-0"><ds-form-section [title]="card.name" [description]="card.summary">
+            <span class="tw:w-fit tw:rounded-sm tw:bg-canvas tw:px-2 tw:py-1 tw:text-caption tw:font-semibold tw:text-muted">{{ statusLabel(card.status) }}</span>
+            <p class="tw:m-0 tw:text-sm tw:text-muted">{{ card.nextStep }}</p>
+            @if (card.link; as link) { <ds-button variant="secondary" [label]="'Configurar ' + card.name" (click)="open(link)">Configurar conexión</ds-button> }
+          </ds-form-section></li>
+        }
+      </ul>
+    </section>
+    <ds-disclosure title="¿Por qué una función está en pausa?"><p class="tw:m-0 tw:text-sm tw:text-muted">Algunas funciones requieren otra función activa. Cuando se desactiva esa dependencia, quedan en pausa. Su configuración se conserva y se reanudan al volver a activarla.</p></ds-disclosure>
   }
 </section>

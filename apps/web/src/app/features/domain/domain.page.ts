@@ -1,3 +1,4 @@
+import { DsActionBarComponent } from '@vendedoria/ui';
 import { DsEmptyStateComponent } from '@vendedoria/ui';
 import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
@@ -18,7 +19,7 @@ const STATUS_LABELS: Record<CustomDomainView['status'], string> = {
 @Component({
   selector: 'app-domain-page',
   standalone: true,
-  imports: [DsEmptyStateComponent, ReactiveFormsModule, DsButtonComponent, DsIconComponent, IntegrationGateComponent],
+  imports: [DsActionBarComponent, DsEmptyStateComponent, ReactiveFormsModule, DsButtonComponent, DsIconComponent, IntegrationGateComponent],
   templateUrl: './domain.page.html',
   styleUrls: ['../store/store.page.scss', '../payments/payments.page.scss', './domain.page.scss'],
   changeDetection: ChangeDetectionStrategy.OnPush,

@@ -1,63 +1,62 @@
-<section class="settings tw:mx-auto tw:min-w-0">
-  <header class="settings__header">
-    <div>
-      <h1 class="tw:console-title">Ajustes</h1>
-      <p>
-        Nombre, país y moneda de tu negocio. El catálogo y los pedidos usan esta
-        moneda por defecto.
-      </p>
-    </div>
-  </header>
-
-  @if (errorMessage() && !loadFailed(); as error) {
-    <div class="tw:feedback tw:feedback-danger" role="alert">
-      <ds-icon name="alert" />
-      <span>{{ error }}</span>
-    </div>
-  }
-  @if (successMessage(); as success) {
-    <div class="tw:feedback tw:feedback-success" role="status">
-      <ds-icon name="check" />
-      <span>{{ success }}</span>
-    </div>
-  }
-
+<section class="tw:mx-auto tw:grid tw:w-full tw:min-w-0 tw:max-w-form tw:gap-5">
+  <header><p class="tw:console-eyebrow">Negocio</p><h1 class="tw:console-title">Ajustes</h1><p class="tw:mt-2 tw:max-w-prose tw:text-sm tw:text-muted">Administra el nombre, el país y la moneda de tu negocio.</p></header>
+  @if (errorMessage() && !loadFailed(); as error) { <div class="tw:feedback tw:feedback-danger" role="alert"><ds-icon name="alert" /><span>{{ error }}</span></div> }
+  @if (successMessage(); as success) { <div class="tw:feedback tw:feedback-success" role="status"><ds-icon name="check" /><span>{{ success }}</span></div> }
   @if (loading()) {
-    <div class="skeleton" aria-busy="true">Cargando ajustes…</div>
+    <div class="tw:console-list-panel" role="status" aria-busy="true" aria-label="Cargando ajustes del negocio"><div class="tw:console-list-skeleton" aria-hidden="true">@for (row of [1,2,3]; track row) { <div></div> }</div></div>
   } @else if (loadFailed()) {
-      <ds-empty-state title="No pudimos cargar esta sección" body="Revisa tu conexión e inténtalo de nuevo.">
-        <ds-button variant="secondary" (click)="load()">Reintentar</ds-button>
-      </ds-empty-state>
-    } @else {
-    <form class="settings__form" [formGroup]="form" (ngSubmit)="save()">
-      <div class="tw:console-save-bar">
-        <span class="tw:px-2">Cambios de ajustes</span>
-        <ds-button type="submit" [disabled]="saving() || form.pristine">{{ saving() ? 'Guardando…' : 'Guardar cambios' }}</ds-button>
-      </div>
-      <label>
-        Nombre del negocio
-        <input formControlName="name" maxlength="120" autocomplete="organization" [attr.aria-invalid]="form.controls.name.touched && form.controls.name.invalid" aria-describedby="settings-name-error" />
-        <span id="settings-name-error" class="tw:text-caption tw:text-danger-text">@if (form.controls.name.touched && form.controls.name.invalid) { Escribe el nombre del negocio con al menos 2 caracteres. }</span>
-      </label>
-      <div class="settings__row">
-        <label>
-          País
-          <input formControlName="country" maxlength="2" placeholder="PE" [attr.aria-invalid]="form.controls.country.touched && form.controls.country.invalid" aria-describedby="settings-country-hint settings-country-error" />
-          <small id="settings-country-hint" class="tw:text-muted">Código de 2 letras. Por ejemplo, PE para Perú.</small>
-          <span id="settings-country-error" class="tw:text-caption tw:text-danger-text">@if (form.controls.country.touched && form.controls.country.invalid) { Escribe un código de país de 2 letras. }</span>
-        </label>
-        <label>
-          Moneda
-          <ds-select><select formControlName="currency">
-            <option value="PEN">Sol peruano (PEN)</option>
-            <option value="USD">Dólar estadounidense (USD)</option>
-            <option value="MXN">Peso mexicano (MXN)</option>
-            <option value="COP">Peso colombiano (COP)</option>
-            <option value="CLP">Peso chileno (CLP)</option>
-            <option value="ARS">Peso argentino (ARS)</option>
-          </select></ds-select>
-        </label>
-      </div>
-    </form>
+    <ds-empty-state title="No pudimos cargar los ajustes" body="Revisa tu conexión e inténtalo de nuevo."><ds-button variant="secondary" (click)="load()">Reintentar</ds-button></ds-empty-state>
+  } @else {
+    <div class="tw:grid tw:min-w-0 tw:items-start tw:gap-5 tw:lg:grid-cols-3">
+      <form class="tw:grid tw:min-w-0 tw:gap-5 tw:lg:col-span-2" [formGroup]="form" (ngSubmit)="save()">
+        <fieldset class="tw:m-0 tw:grid tw:min-w-0 tw:gap-5 tw:border-0 tw:p-0" [disabled]="saving()">
+          <legend class="tw:sr-only">Configuración del negocio</legend>
+          <ds-form-section title="Información del negocio" description="El nombre que identifica tu negocio en VendedorIA." icon="store">
+            <div class="tw:grid tw:gap-2">
+              <label for="settings-name" class="tw:text-sm tw:font-semibold">Nombre del negocio <span class="tw:font-normal tw:text-muted">· obligatorio</span></label>
+              <input id="settings-name" class="tw:console-field" formControlName="name" maxlength="120" autocomplete="organization" [attr.aria-invalid]="!!fieldError('name')" [attr.aria-describedby]="fieldError('name') ? 'settings-name-help settings-name-error' : 'settings-name-help'" />
+              <p id="settings-name-help" class="tw:m-0 tw:text-caption tw:text-muted">Usa al menos 2 caracteres.</p>
+              @if (fieldError('name'); as error) { <p id="settings-name-error" class="tw:m-0 tw:text-caption tw:text-danger-text">{{ error }}</p> }
+            </div>
+          </ds-form-section>
+          <ds-form-section title="País y moneda" description="Configuración regional de tu negocio." icon="globe">
+            <div class="tw:grid tw:gap-4 tw:sm:grid-cols-2">
+              <div class="tw:grid tw:content-start tw:gap-2">
+                <label for="settings-country" class="tw:text-sm tw:font-semibold">País</label>
+                <input id="settings-country" class="tw:console-field" formControlName="country" maxlength="2" autocomplete="country" spellcheck="false" autocapitalize="characters" [attr.aria-invalid]="!!fieldError('country')" [attr.aria-describedby]="fieldError('country') ? 'settings-country-hint settings-country-error' : 'settings-country-hint'" />
+                <p id="settings-country-hint" class="tw:m-0 tw:text-caption tw:text-muted">Código de 2 letras, como PE para Perú.</p>
+                @if (fieldError('country'); as error) { <p id="settings-country-error" class="tw:m-0 tw:text-caption tw:text-danger-text">{{ error }}</p> }
+              </div>
+              <div class="tw:grid tw:content-start tw:gap-2">
+                <label for="settings-currency" class="tw:text-sm tw:font-semibold">Moneda</label>
+                <ds-select><select id="settings-currency" formControlName="currency" [attr.aria-invalid]="!!fieldError('currency')" [attr.aria-describedby]="fieldError('currency') ? 'settings-currency-help settings-currency-error' : 'settings-currency-help'">
+                  @for (currency of currencies; track currency.code) { <option [value]="currency.code">{{ currency.label }} ({{ currency.code }})</option> }
+                  @if (savedSettings(); as saved) { @if (!hasCurrency(saved.currency)) { <option [value]="saved.currency">{{ saved.currency }} · moneda guardada</option> } }
+                </select></ds-select>
+                <p id="settings-currency-help" class="tw:m-0 tw:text-caption tw:text-muted">Moneda utilizada por el negocio.</p>
+                @if (fieldError('currency'); as error) { <p id="settings-currency-error" class="tw:m-0 tw:text-caption tw:text-danger-text">{{ error }}</p> }
+              </div>
+            </div>
+            <div class="tw:feedback tw:feedback-info"><ds-icon name="info" /><span>Cambiar la moneda no convierte automáticamente los importes de tus productos o pedidos. Revisa sus valores antes de guardar.</span></div>
+          </ds-form-section>
+        </fieldset>
+        <ds-disclosure title="¿Cuándo se aplican mis cambios?"><p class="tw:m-0 tw:text-sm tw:text-muted">Los ajustes se actualizan al guardar. Si la solicitud falla, los campos conservan tus cambios para que puedas volver a intentarlo. Descartar restaura la última configuración guardada.</p></ds-disclosure>
+        <ds-save-bar [pending]="hasChanges()" [busy]="saving()" label="Guardar ajustes">
+          <ds-button type="button" variant="ghost" [disabled]="saving() || !hasChanges()" (click)="discard()">Descartar</ds-button>
+        </ds-save-bar>
+      </form>
+      <aside class="tw:grid tw:min-w-0 tw:gap-4" aria-label="Resumen de ajustes guardados">
+        @if (savedSettings(); as saved) {
+          <ds-form-section title="Configuración guardada" description="Estos son los ajustes vigentes.">
+            <dl class="tw:m-0 tw:grid tw:gap-4 tw:text-sm">
+              <div><dt class="tw:text-caption tw:text-muted">Negocio</dt><dd class="tw:m-0 tw:mt-1 tw:wrap-anywhere tw:font-semibold">{{ saved.name }}</dd></div>
+              <div><dt class="tw:text-caption tw:text-muted">País</dt><dd class="tw:m-0 tw:mt-1 tw:font-semibold">{{ saved.country }}</dd></div>
+              <div><dt class="tw:text-caption tw:text-muted">Moneda</dt><dd class="tw:m-0 tw:mt-1 tw:wrap-anywhere tw:font-semibold">{{ currencyLabel(saved.currency) }}</dd></div>
+            </dl>
+            @if (hasChanges()) { <p class="tw:m-0 tw:text-caption tw:text-warning-text">Tienes cambios pendientes. Guarda para actualizar esta configuración.</p> }
+          </ds-form-section>
+        }
+      </aside>
+    </div>
   }
 </section>

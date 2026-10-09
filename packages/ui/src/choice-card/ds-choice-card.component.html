@@ -1,0 +1,5 @@
+<button type="button" [class.is-compact]="density() === 'compact'" [disabled]="disabled()" (click)="activate.emit()">
+  <span class="choice-icon"><ds-icon [name]="icon()" /></span>
+  <span class="choice-copy"><strong>{{ title() }}</strong><span>{{ description() }}</span></span>
+  <ds-icon class="choice-arrow" name="chevronRight" [size]="1" />
+</button>

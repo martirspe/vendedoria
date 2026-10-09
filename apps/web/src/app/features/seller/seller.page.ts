@@ -1,3 +1,4 @@
+import { DsSaveBarComponent } from '@vendedoria/ui';
 import { DsSelectComponent } from '@vendedoria/ui';
 import {
   ChangeDetectionStrategy,
@@ -48,7 +49,7 @@ const CUSTOM_PROMPT_MAX = 12000;
 @Component({
   selector: 'app-seller-page',
   standalone: true,
-  imports: [DsSelectComponent,
+  imports: [DsSaveBarComponent, DsSelectComponent,
     ReactiveFormsModule,
     RouterLink,
     DsButtonComponent,
@@ -186,8 +187,6 @@ export class SellerPage {
     return `¡Hola! Soy ${name} de ${company}. ¿En qué puedo ayudarte hoy?`;
   });
 
-  readonly previewPulse = computed(() => this.previewGreeting().length);
-
   readonly qualityPercent = computed(() => {
     const quality = this.quality();
     if (!quality || quality.max === 0) {
@@ -198,7 +197,8 @@ export class SellerPage {
 
   readonly qualityLabel = computed(() => {
     const percent = this.qualityPercent();
-    if (percent >= 80) return 'Listo para vender';
+    if (percent >= 100) return 'Configuración completa';
+    if (percent >= 80) return 'Configuración avanzada';
     if (percent >= 50) return 'Buen avance';
     if (percent >= 25) return 'En configuración';
     return 'Empieza por lo esencial';

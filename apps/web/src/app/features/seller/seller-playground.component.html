@@ -2,11 +2,11 @@
   <div class="playground__panel">
     <header class="playground__head">
       <div>
-        <p class="playground__eyebrow">No cuenta en tus métricas</p>
+        <p class="playground__eyebrow">Conversación de prueba</p>
         <h2 id="playground-title">Probar a {{ agentName() }}</h2>
         <p>
-          Chatea como comprador y mira qué consultó para responder (catálogo,
-          stock, pedido, link). No aparece en Mensajes ni Pedidos.
+          Prueba cómo responde y qué datos consulta. No envía mensajes a clientes
+          ni crea pedidos reales; tampoco cuenta en tus métricas.
         </p>
       </div>
       <div class="playground__head-actions">
@@ -21,6 +21,7 @@
       <div class="playground__error" role="alert">
         <ds-icon name="alert" />
         <span>{{ message }}</span>
+        @if (!session()) { <ds-button type="button" variant="secondary" [disabled]="loading()" (click)="loadSession()">Reintentar</ds-button> }
       </div>
     }
 
@@ -38,7 +39,7 @@
             </p>
             <div class="playground__suggestions">
               @for (suggestion of suggestions; track suggestion.label) {
-                <button type="button" (click)="sendSuggestion(suggestion.text)" [disabled]="sending()">
+                <button type="button" (click)="sendSuggestion(suggestion.text)" [disabled]="sending() || loading() || !session()">
                   {{ suggestion.label }}
                 </button>
               }
@@ -82,17 +83,17 @@
     </div>
 
     <form class="playground__composer" (submit)="$event.preventDefault(); send()">
-      <label class="playground__sr" for="playground-input">Mensaje de prueba</label>
+      <label class="tw:sr-only" for="playground-input">Mensaje de prueba</label>
       <input
         id="playground-input"
         type="text"
         [value]="draft()"
         (input)="onDraft($any($event.target).value)"
         placeholder="Escribe como comprador…"
-        [disabled]="sending() || loading()"
+        [disabled]="sending() || loading() || !session()"
         autocomplete="off"
       />
-      <ds-button type="submit" [disabled]="sending() || loading() || !draft().trim()">
+      <ds-button type="submit" [disabled]="sending() || loading() || !session() || !draft().trim()">
         {{ sending() ? 'Enviando…' : 'Enviar' }}
       </ds-button>
     </form>

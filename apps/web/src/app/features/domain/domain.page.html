@@ -52,10 +52,10 @@
     <div class="store__grid">
       <form class="store__form" [formGroup]="form" (ngSubmit)="save()">
         @if (canManage) {
-          <div class="tw:console-save-bar">
-            <span class="tw:px-2">Cambios de dominio</span>
+          <ds-action-bar label="Acciones de domain">
+            <span dsActionStatus class="tw:px-2">Cambios de dominio</span>
             <ds-button type="submit" [disabled]="saving()">{{ saving() ? 'Guardando…' : v.domain ? 'Cambiar dominio' : 'Guardar dominio' }}</ds-button>
-          </div>
+          </ds-action-bar>
         }
         <section class="card">
           <h2>Tu dominio</h2>

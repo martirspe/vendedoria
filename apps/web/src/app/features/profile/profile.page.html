@@ -1,259 +1,71 @@
-<section class="profile tw:mx-auto tw:min-w-0">
-  <header class="profile__header">
-    <h1 class="tw:console-title">Mi perfil</h1>
-    <p>Tus datos personales, tu contraseña y los dispositivos donde tienes la sesión abierta.</p>
-  </header>
-
+<section class="tw:mx-auto tw:grid tw:w-full tw:min-w-0 tw:max-w-form tw:gap-5">
+  <header><p class="tw:console-eyebrow">Cuenta</p><h1 class="tw:console-title">Mi perfil</h1><p class="tw:mt-2 tw:max-w-prose tw:text-sm tw:text-muted">Administra tus datos personales, tu contraseña y las sesiones abiertas.</p></header>
   @if (loading() && !profile()) {
-    <div class="profile__skeleton" aria-busy="true" aria-label="Cargando tu perfil">
-      <span class="sk sk--hero"></span>
-      <div class="profile__grid">
-        <span class="sk sk--card"></span>
-        <span class="sk sk--rail"></span>
-      </div>
-    </div>
+    <div class="tw:console-list-panel" role="status" aria-busy="true" aria-label="Cargando perfil"><div class="tw:console-list-skeleton" aria-hidden="true">@for (row of [1,2,3]; track row) { <div></div> }</div></div>
   } @else if (loadError() && !profile()) {
-    <div class="tw:feedback tw:feedback-danger" role="alert">
-      <ds-icon name="alert" />
-      <span>No pudimos cargar tu perfil. Revisa tu conexión e inténtalo de nuevo.</span>
-      <ds-button type="button" variant="secondary" (click)="load()">Reintentar</ds-button>
-    </div>
+    <ds-empty-state title="No pudimos cargar tu perfil" body="Revisa tu conexión e inténtalo de nuevo."><ds-button variant="secondary" (click)="load()">Reintentar</ds-button></ds-empty-state>
   } @else if (profile(); as p) {
-    <div class="hero">
-      <span class="hero__avatar" aria-hidden="true">{{ initials() }}</span>
-      <div class="hero__identity">
-        <h2>{{ p.fullName || 'Sin nombre' }}</h2>
-        <p>{{ p.email }}</p>
-        <ul class="hero__chips" aria-label="Resumen de tu cuenta">
-          <li class="chip chip--role">
-            <ds-icon name="shieldCheck" [size]="0.95" />
-            {{ role()?.label }}
-          </li>
-          <li class="chip">
-            <ds-icon name="store" [size]="0.95" />
-            {{ p.business.name }}
-          </li>
-          <li class="chip">
-            <ds-icon name="calendar" [size]="0.95" />
-            Desde {{ memberSince() }}
-          </li>
-        </ul>
+    @if (loadError()) { <div class="tw:feedback tw:feedback-danger" role="alert"><ds-icon name="alert" /><span>No pudimos actualizar tu perfil. Reintenta antes de editar tus datos.</span><ds-button variant="secondary" [disabled]="busy()" (click)="load()">Reintentar</ds-button></div> }
+    <ds-form-section [title]="p.fullName || 'Tu cuenta'" [description]="p.email" icon="user">
+      <div class="tw:flex tw:flex-wrap tw:items-center tw:gap-3">
+        <span class="tw:flex tw:h-touch tw:w-touch tw:shrink-0 tw:items-center tw:justify-center tw:rounded-md tw:bg-canvas tw:font-semibold" aria-hidden="true">{{ initials() }}</span>
+        <dl class="tw:m-0 tw:flex tw:flex-wrap tw:gap-5 tw:text-sm"><div><dt class="tw:text-caption tw:text-muted">Rol</dt><dd class="tw:m-0 tw:mt-1 tw:font-semibold">{{ role()?.label }}</dd></div><div><dt class="tw:text-caption tw:text-muted">Negocio</dt><dd class="tw:m-0 tw:mt-1 tw:wrap-anywhere tw:font-semibold">{{ p.business.name }}</dd></div><div><dt class="tw:text-caption tw:text-muted">Miembro desde</dt><dd class="tw:m-0 tw:mt-1">{{ memberSince() }}</dd></div></dl>
       </div>
-    </div>
-
-    <div class="profile__grid">
-      <div class="profile__main">
-        <form class="card" [formGroup]="nameForm" (ngSubmit)="saveName()" novalidate>
-          <div class="card__head">
-            <span class="card__icon" aria-hidden="true"><ds-icon name="user" /></span>
-            <div>
-              <h2>Datos personales</h2>
-              <p>Así te verá tu equipo en la consola.</p>
-            </div>
-          </div>
-
-          <label class="field">
-            <span>Nombre completo</span>
-            <input
-              formControlName="fullName"
-              maxlength="120"
-              autocomplete="name"
-              [attr.aria-invalid]="invalid('fullName')"
-              [attr.aria-describedby]="invalid('fullName') ? 'fullName-error' : null"
-            />
-            @if (invalid('fullName')) {
-              <small class="field__error" id="fullName-error">Escribe tu nombre (mínimo 2 caracteres).</small>
-            }
-          </label>
-
-          <label class="field">
-            <span>Correo</span>
-            <span class="field__locked">
-              <input [value]="p.email" type="email" readonly aria-describedby="email-hint" />
-              <ds-icon name="lock" [size]="1" />
-            </span>
-            <small class="field__hint" id="email-hint">Es el correo con el que inicias sesión.</small>
-          </label>
-
-          @if (nameNotice(); as notice) {
-            <p class="notice" [class.notice--danger]="notice.tone === 'danger'" [attr.role]="notice.tone === 'danger' ? 'alert' : 'status'">
-              <ds-icon [name]="notice.tone === 'danger' ? 'circleAlert' : 'circleCheck'" [size]="1" />
-              {{ notice.text }}
-            </p>
-          }
-
-          <footer class="card__foot">
-            <ds-button type="submit" [disabled]="savingName() || nameForm.pristine">
-              {{ savingName() ? 'Guardando…' : 'Guardar cambios' }}
-            </ds-button>
-          </footer>
+    </ds-form-section>
+    <div class="tw:grid tw:min-w-0 tw:items-start tw:gap-5 tw:lg:grid-cols-3">
+      <div class="tw:grid tw:min-w-0 tw:gap-5 tw:lg:col-span-2">
+        <form class="tw:grid tw:min-w-0 tw:gap-4" [formGroup]="nameForm" (ngSubmit)="saveName()" novalidate>
+          <ds-form-section title="Datos personales" description="Así te identifica tu equipo en la consola." icon="user">
+            <fieldset class="tw:m-0 tw:grid tw:min-w-0 tw:gap-4 tw:border-0 tw:p-0" [disabled]="busy() || loadError()">
+              <legend class="tw:sr-only">Datos personales</legend>
+              <div class="tw:grid tw:gap-2"><label for="profile-fullName" class="tw:text-sm tw:font-semibold">Nombre completo</label><input id="profile-fullName" class="tw:console-field" formControlName="fullName" maxlength="120" autocomplete="name" [attr.aria-invalid]="invalid('fullName')" [attr.aria-describedby]="invalid('fullName') ? 'fullName-error' : null" />@if (invalid('fullName')) { <p id="fullName-error" class="tw:m-0 tw:text-caption tw:text-danger-text">Escribe tu nombre con entre 2 y 120 caracteres.</p> }</div>
+              <div class="tw:grid tw:gap-2"><label for="profile-email" class="tw:text-sm tw:font-semibold">Correo de acceso</label><input id="profile-email" class="tw:console-field" [value]="p.email" type="email" readonly aria-describedby="email-hint" /><p id="email-hint" class="tw:m-0 tw:text-caption tw:text-muted">Es el correo con el que inicias sesión. Se muestra solo para consulta.</p></div>
+            </fieldset>
+            @if (nameNotice(); as notice) { <div class="tw:feedback" [class.tw:feedback-danger]="notice.tone === 'danger'" [class.tw:feedback-success]="notice.tone === 'success'" [attr.role]="notice.tone === 'danger' ? 'alert' : 'status'"><ds-icon [name]="notice.tone === 'danger' ? 'alert' : 'check'" /><span>{{ notice.text }}</span></div> }
+          </ds-form-section>
+          <ds-save-bar [pending]="hasNameChanges()" [busy]="savingName()" [disabled]="busy() || loadError()" label="Guardar datos personales"><ds-button type="button" variant="ghost" [disabled]="busy() || !hasNameChanges()" (click)="discardName()">Descartar</ds-button></ds-save-bar>
         </form>
+        <form class="tw:grid tw:min-w-0 tw:gap-4" [formGroup]="passwordForm" (ngSubmit)="changePassword()" novalidate>
+          <ds-form-section title="Cambiar contraseña" description="Este dispositivo seguirá conectado. Se cerrarán las demás sesiones." icon="lock">
+            <input class="tw:sr-only" type="email" autocomplete="username" [value]="p.email" tabindex="-1" aria-hidden="true" readonly />
+            <fieldset class="tw:m-0 tw:grid tw:min-w-0 tw:gap-4 tw:border-0 tw:p-0" [disabled]="busy() || loadError()"><legend class="tw:sr-only">Contraseña</legend><div class="tw:grid tw:gap-2">
+<label for="profile-currentPassword" class="tw:text-sm tw:font-semibold">Contraseña actual</label>
+<div class="tw:flex tw:min-w-0 tw:gap-2"><input id="profile-currentPassword" class="tw:console-field tw:min-w-0 tw:flex-1" formControlName="currentPassword" [type]="visible().current ? 'text' : 'password'" autocomplete="current-password" maxlength="128" [attr.aria-invalid]="!!passwordError('currentPassword')" [attr.aria-describedby]="passwordError('currentPassword') ? 'profile-currentPassword-error' : null" />
+<ds-button type="button" variant="secondary" [disabled]="busy() || loadError()" [label]="visible().current ? 'Ocultar contraseña actual' : 'Mostrar contraseña actual'" (click)="toggle('current')"><ds-icon [name]="visible().current ? 'eyeOff' : 'eye'" /></ds-button></div>
+@if (passwordError('currentPassword'); as error) { <p id="profile-currentPassword-error" class="tw:m-0 tw:text-caption tw:text-danger-text">{{ error }}</p> }
 
-        <form class="card" [formGroup]="passwordForm" (ngSubmit)="changePassword()" novalidate>
-          <div class="card__head">
-            <span class="card__icon" aria-hidden="true"><ds-icon name="lockKeyhole" /></span>
-            <div>
-              <h2>Contraseña</h2>
-              <p>Al cambiarla cerraremos tu sesión en los demás dispositivos.</p>
-            </div>
-          </div>
+</div>
+<div class="tw:grid tw:gap-2">
+<label for="profile-newPassword" class="tw:text-sm tw:font-semibold">Nueva contraseña</label>
+<div class="tw:flex tw:min-w-0 tw:gap-2"><input id="profile-newPassword" class="tw:console-field tw:min-w-0 tw:flex-1" formControlName="newPassword" [type]="visible().next ? 'text' : 'password'" autocomplete="new-password" maxlength="128" [attr.aria-invalid]="!!passwordError('newPassword')" [attr.aria-describedby]="passwordError('newPassword') ? 'profile-newPassword-error profile-password-help' : 'profile-password-help'" />
+<ds-button type="button" variant="secondary" [disabled]="busy() || loadError()" [label]="visible().next ? 'Ocultar nueva contraseña' : 'Mostrar nueva contraseña'" (click)="toggle('next')"><ds-icon [name]="visible().next ? 'eyeOff' : 'eye'" /></ds-button></div>
+@if (passwordError('newPassword'); as error) { <p id="profile-newPassword-error" class="tw:m-0 tw:text-caption tw:text-danger-text">{{ error }}</p> }
+<p id="profile-password-help" class="tw:m-0 tw:text-caption tw:text-muted">Entre 8 y 128 caracteres. {{ strength().score ? 'Orientación de fortaleza: ' + strength().label + '.' : 'Combina letras, números y símbolos.' }}</p>
+</div>
+<div class="tw:grid tw:gap-2">
+<label for="profile-confirmPassword" class="tw:text-sm tw:font-semibold">Repite la nueva contraseña</label>
+<div class="tw:flex tw:min-w-0 tw:gap-2"><input id="profile-confirmPassword" class="tw:console-field tw:min-w-0 tw:flex-1" formControlName="confirmPassword" [type]="visible().confirm ? 'text' : 'password'" autocomplete="new-password" maxlength="128" [attr.aria-invalid]="!!passwordError('confirmPassword')" [attr.aria-describedby]="passwordError('confirmPassword') ? 'profile-confirmPassword-error' : null" />
+<ds-button type="button" variant="secondary" [disabled]="busy() || loadError()" [label]="visible().confirm ? 'Ocultar repite la nueva contraseña' : 'Mostrar repite la nueva contraseña'" (click)="toggle('confirm')"><ds-icon [name]="visible().confirm ? 'eyeOff' : 'eye'" /></ds-button></div>
+@if (passwordError('confirmPassword'); as error) { <p id="profile-confirmPassword-error" class="tw:m-0 tw:text-caption tw:text-danger-text">{{ error }}</p> }
 
-          <input class="visually-hidden" type="email" autocomplete="username" [value]="p.email" tabindex="-1" aria-hidden="true" readonly />
-
-          <label class="field">
-            <span>Contraseña actual</span>
-            <span class="field__secret">
-              <input
-                formControlName="currentPassword"
-                [type]="visible().current ? 'text' : 'password'"
-                autocomplete="current-password"
-                maxlength="128"
-                [attr.aria-invalid]="invalid('currentPassword')"
-              />
-              <button type="button" (click)="toggle('current')" [attr.aria-label]="visible().current ? 'Ocultar contraseña actual' : 'Mostrar contraseña actual'" [attr.aria-pressed]="visible().current">
-                <ds-icon [name]="visible().current ? 'eyeOff' : 'eye'" [size]="1.05" />
-              </button>
-            </span>
-            @if (invalid('currentPassword')) {
-              <small class="field__error">Escribe tu contraseña actual.</small>
-            }
-          </label>
-
-          <div class="profile__row">
-            <label class="field">
-              <span>Nueva contraseña</span>
-              <span class="field__secret">
-                <input
-                  formControlName="newPassword"
-                  [type]="visible().next ? 'text' : 'password'"
-                  autocomplete="new-password"
-                  maxlength="128"
-                  aria-describedby="strength"
-                  [attr.aria-invalid]="invalid('newPassword')"
-                />
-                <button type="button" (click)="toggle('next')" [attr.aria-label]="visible().next ? 'Ocultar nueva contraseña' : 'Mostrar nueva contraseña'" [attr.aria-pressed]="visible().next">
-                  <ds-icon [name]="visible().next ? 'eyeOff' : 'eye'" [size]="1.05" />
-                </button>
-              </span>
-              <span class="strength" [attr.data-score]="strength().score" id="strength" aria-live="polite">
-                <span class="strength__bar" aria-hidden="true"><i></i><i></i><i></i><i></i></span>
-                <small>
-                  @if (strength().score === 0) {
-                    Mínimo 8 caracteres. Combina letras, números y símbolos.
-                  } @else {
-                    Seguridad: {{ strength().label }}
-                  }
-                </small>
-              </span>
-            </label>
-
-            <label class="field">
-              <span>Repite la nueva contraseña</span>
-              <span class="field__secret">
-                <input
-                  formControlName="confirmPassword"
-                  [type]="visible().confirm ? 'text' : 'password'"
-                  autocomplete="new-password"
-                  maxlength="128"
-                  [attr.aria-invalid]="mismatch() || invalid('confirmPassword')"
-                />
-                <button type="button" (click)="toggle('confirm')" [attr.aria-label]="visible().confirm ? 'Ocultar confirmación' : 'Mostrar confirmación'" [attr.aria-pressed]="visible().confirm">
-                  <ds-icon [name]="visible().confirm ? 'eyeOff' : 'eye'" [size]="1.05" />
-                </button>
-              </span>
-              @if (mismatch()) {
-                <small class="field__error">Las contraseñas no coinciden.</small>
-              }
-            </label>
-          </div>
-
-          @if (passwordNotice(); as notice) {
-            <p class="notice" [class.notice--danger]="notice.tone === 'danger'" [attr.role]="notice.tone === 'danger' ? 'alert' : 'status'">
-              <ds-icon [name]="notice.tone === 'danger' ? 'circleAlert' : 'circleCheck'" [size]="1" />
-              {{ notice.text }}
-            </p>
-          }
-
-          <footer class="card__foot">
-            <ds-button type="submit" [disabled]="savingPassword() || passwordForm.invalid || mismatch()">
-              {{ savingPassword() ? 'Actualizando…' : 'Cambiar contraseña' }}
-            </ds-button>
-          </footer>
+</div></fieldset>
+            @if (passwordNotice(); as notice) { <div class="tw:feedback" [class.tw:feedback-danger]="notice.tone === 'danger'" [class.tw:feedback-success]="notice.tone === 'success'" [attr.role]="notice.tone === 'danger' ? 'alert' : 'status'"><ds-icon [name]="notice.tone === 'danger' ? 'alert' : 'check'" /><span>{{ notice.text }}</span></div> }
+          </ds-form-section>
+          <ds-action-bar placement="bottom" label="Actualizar contraseña"><span dsActionStatus role="status">{{ savingPassword() ? 'Actualizando contraseña…' : 'Cambio de contraseña' }}</span><ds-button type="submit" [disabled]="busy() || loadError() || passwordForm.invalid || mismatch()">{{ savingPassword() ? 'Actualizando…' : 'Cambiar contraseña' }}</ds-button></ds-action-bar>
         </form>
       </div>
-
-      <aside class="profile__rail">
-        <section class="card">
-          <div class="card__head">
-            <span class="card__icon" aria-hidden="true"><ds-icon name="monitor" /></span>
-            <div>
-              <h2>Sesiones</h2>
-              <p>
-                @if (otherSessions() === 0) {
-                  Solo tienes la sesión abierta en este dispositivo.
-                } @else {
-                  Además de este, tienes la sesión abierta en {{ otherSessions() === 1 ? '1 dispositivo' : otherSessions() + ' dispositivos' }}.
-                }
-              </p>
-            </div>
-          </div>
-
-          <div class="session">
-            <span class="session__dot" aria-hidden="true"></span>
-            <div>
-              <strong>Este dispositivo</strong>
-              <small>Sesión activa ahora</small>
-            </div>
-          </div>
-
-          @if (sessionNotice(); as notice) {
-            <p class="notice" [class.notice--danger]="notice.tone === 'danger'" [attr.role]="notice.tone === 'danger' ? 'alert' : 'status'">
-              <ds-icon [name]="notice.tone === 'danger' ? 'circleAlert' : 'circleCheck'" [size]="1" />
-              {{ notice.text }}
-            </p>
-          }
-
-          <div class="card__actions">
-            <ds-button type="button" variant="secondary" [block]="true" [disabled]="revoking() || otherSessions() === 0" (click)="revokeOtherSessions()">
-              {{ revoking() ? 'Cerrando…' : 'Cerrar sesión en los demás' }}
-            </ds-button>
-            <ds-button type="button" variant="ghost" [block]="true" (click)="logout()">
-              <ds-icon name="logOut" [size]="1" />
-              Cerrar sesión aquí
-            </ds-button>
-          </div>
-        </section>
-
-        <section class="card">
-          <div class="card__head">
-            <span class="card__icon" aria-hidden="true"><ds-icon name="store" /></span>
-            <div>
-              <h2>Tu negocio</h2>
-              <p>{{ p.business.name }}</p>
-            </div>
-          </div>
-          <dl class="facts">
-            <div>
-              <dt>Tu rol</dt>
-              <dd>{{ role()?.label }}</dd>
-            </div>
-          </dl>
-          <p class="card__note">{{ role()?.description }}</p>
-          @if (isManager) {
-            <nav class="links" aria-label="Accesos del negocio">
-              <a routerLink="/app/settings">
-                <ds-icon name="settings" [size]="1" />
-                Ajustes del negocio
-                <ds-icon name="chevronRight" [size]="0.95" />
-              </a>
-              <a routerLink="/app/team">
-                <ds-icon name="users" [size]="1" />
-                Equipo
-                <ds-icon name="chevronRight" [size]="0.95" />
-              </a>
-            </nav>
-          }
-        </section>
+      <aside class="tw:grid tw:min-w-0 tw:gap-4" aria-label="Sesiones y acceso al negocio">
+        <ds-form-section title="Sesiones abiertas" description="Consulta las sesiones de tu cuenta." icon="monitor">
+          <dl class="tw:m-0 tw:grid tw:gap-3 tw:text-sm"><div><dt class="tw:text-caption tw:text-muted">Este dispositivo</dt><dd class="tw:m-0 tw:mt-1 tw:font-semibold">Sesión activa</dd></div><div><dt class="tw:text-caption tw:text-muted">Otras sesiones</dt><dd class="tw:m-0 tw:mt-1 tw:font-semibold">{{ otherSessions() }}</dd></div></dl>
+          @if (sessionsStale()) { <div class="tw:feedback tw:feedback-warning" role="status"><ds-icon name="alert" /><span>No pudimos actualizar el número de sesiones. Se muestra el último dato disponible.</span></div><ds-button variant="secondary" [disabled]="busy()" (click)="refreshSessions()">Actualizar sesiones</ds-button> }
+          @if (sessionNotice(); as notice) { <div class="tw:feedback" [class.tw:feedback-danger]="notice.tone === 'danger'" [class.tw:feedback-success]="notice.tone === 'success'" [attr.role]="notice.tone === 'danger' ? 'alert' : 'status'"><ds-icon [name]="notice.tone === 'danger' ? 'alert' : 'check'" /><span>{{ notice.text }}</span></div> }
+          <ds-button variant="secondary" [block]="true" [disabled]="busy() || loadError() || otherSessions() === 0" (click)="revokeOtherSessions()">{{ revoking() ? 'Cerrando…' : 'Cerrar las demás sesiones' }}</ds-button>
+          <ds-button variant="ghost" [block]="true" [disabled]="busy()" (click)="logout()"><ds-icon name="logOut" />{{ loggingOut() ? 'Cerrando sesión…' : 'Cerrar sesión aquí' }}</ds-button>
+        </ds-form-section>
+        <ds-form-section title="Tu acceso" [description]="role()?.description || ''" icon="shieldCheck">
+          @if (isManager) { <nav class="tw:grid tw:gap-2" aria-label="Accesos del negocio"><a routerLink="/app/settings" class="tw:console-action-secondary">Ajustes del negocio</a><a routerLink="/app/team" class="tw:console-action-secondary">Equipo</a></nav> }
+        </ds-form-section>
+        <ds-disclosure title="¿Qué ocurre al cerrar las demás sesiones?"><p class="tw:m-0 tw:text-sm tw:text-muted">Se revocan las otras sesiones de tu cuenta. Para volver a entrar desde ellas tendrás que iniciar sesión de nuevo. Este dispositivo permanece conectado.</p></ds-disclosure>
       </aside>
     </div>
   }

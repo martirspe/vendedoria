@@ -1,41 +1,71 @@
 <section class="tw:mx-auto tw:grid tw:max-w-home tw:gap-6">
-  <header class="tw:mx-auto tw:grid tw:w-full tw:max-w-2xl tw:gap-6 tw:pt-8 tw:pb-8 tw:text-center tw:md:pt-12 tw:md:pb-12">
-    <h1 class="tw:m-0 tw:text-welcome tw:font-medium tw:leading-snug tw:tracking-tight"><span class="tw:block tw:text-muted">Bienvenido a VendedorIA</span><span class="tw:block">Tu negocio empieza aquí</span></h1>
-    @if (loading()) {
-      <div class="tw:console-card tw:py-8 tw:text-muted" aria-busy="true">Revisando tu avance…</div>
-    } @else if (errorMessage(); as error) {
-      <div class="tw:feedback tw:feedback-danger tw:text-left" role="alert"><ds-icon name="alert" /><span>{{ error }}</span><ds-button variant="secondary" (click)="load()">Reintentar</ds-button></div>
-    } @else {
-      <div class="tw:console-card tw:grid tw:gap-4 tw:rounded-card! tw:text-left tw:p-5!">
-        @if (nextItem(); as next) {
-          <div class="tw:flex tw:items-start tw:gap-3"><span class="tw:grid tw:size-touch tw:shrink-0 tw:place-items-center tw:rounded-md tw:bg-ink tw:text-primary"><ds-icon name="sparkles" [size]="1.3" /></span><div class="tw:min-w-0"><p class="tw:m-0 tw:text-caption tw:text-muted">Siguiente paso</p><h2 class="tw:m-0 tw:text-section tw:font-medium">{{ next.title }}</h2></div></div>
-          <p class="tw:m-0 tw:text-body tw:text-muted">{{ next.body }}</p>
-        } @else {
-          <h2 class="tw:m-0 tw:text-section tw:font-medium">Completaste tus primeros pasos</h2><p class="tw:m-0 tw:text-body tw:text-muted">Continúa atendiendo las conversaciones y los pedidos de tu negocio.</p>
-        }
-        <div class="tw:flex tw:flex-wrap tw:items-center tw:justify-between tw:gap-3">
-          <div class="tw:grid tw:min-w-0 tw:flex-1 tw:gap-2"><span class="tw:text-caption tw:text-muted">{{ completedCount() }} de {{ items().length }} pasos completados · {{ progressPercent() }}%</span><progress class="tw:setup-progress" role="progressbar" aria-label="Avance de primeros pasos" aria-valuemin="0" aria-valuemax="100" [attr.aria-valuenow]="progressPercent()" [value]="progressPercent()" max="100"></progress></div>
-          @if (nextItem(); as next) { <a [routerLink]="next.link" class="tw:console-action-link tw:rounded-full!">{{ next.cta }}<ds-icon name="arrowRight" [size]="0.9" /></a> }
-          @else { <a routerLink="/app/messages" class="tw:console-action-link tw:rounded-full!">Ir a Mensajes<ds-icon name="arrowRight" [size]="0.9" /></a> }
+  <header class="tw:grid tw:gap-2">
+    <h1 class="tw:console-title">Inicio</h1>
+    <p class="tw:m-0 tw:text-body tw:text-muted">Prepara tu negocio y sigue el avance de tus primeras ventas.</p>
+  </header>
+  @if (loading()) {
+    <div class="tw:grid tw:gap-4" aria-busy="true" role="status">
+      <span class="tw:sr-only">Revisando tu avance…</span>
+      <div class="tw:console-card tw:console-list-skeleton" aria-hidden="true"><div></div><div></div><div></div></div>
+      <div class="tw:console-list-panel tw:console-list-skeleton" aria-hidden="true">
+        @for (item of items(); track item.id) { <div></div> }
+      </div>
+    </div>
+  } @else if (errorMessage(); as error) {
+    <div class="tw:feedback tw:feedback-danger tw:flex-wrap" role="alert">
+      <ds-icon name="alert" /><span class="tw:min-w-0 tw:flex-1">{{ error }}</span>
+      <ds-button variant="secondary" (click)="load()">Reintentar</ds-button>
+    </div>
+  } @else {
+    <section class="tw:console-card tw:grid tw:gap-5" aria-labelledby="setup-next-title">
+      <div class="tw:flex tw:items-start tw:gap-3">
+        <span class="tw:grid tw:size-touch tw:shrink-0 tw:place-items-center tw:rounded-md tw:bg-ink tw:text-primary"><ds-icon [name]="nextItem() ? 'sparkles' : 'circleCheck'" /></span>
+        <div class="tw:min-w-0 tw:flex-1">
+          <p class="tw:m-0 tw:text-caption tw:text-muted">{{ nextItem() ? 'Tu siguiente paso' : 'Primeros pasos completados' }}</p>
+          <h2 id="setup-next-title" class="tw:mt-1 tw:mb-0 tw:text-section tw:font-semibold tw:leading-snug">{{ nextItem()?.title ?? 'Continúa con tus ventas' }}</h2>
+          <p class="tw:mt-2 tw:mb-0 tw:text-body tw:leading-relaxed tw:text-muted">{{ nextItem()?.body ?? 'Revisa tus conversaciones y pedidos para dar seguimiento a tus clientes.' }}</p>
         </div>
       </div>
+      <div class="tw:flex tw:flex-col tw:gap-4 tw:sm:flex-row tw:sm:items-center">
+        <div class="tw:grid tw:min-w-0 tw:flex-1 tw:gap-2">
+          <div class="tw:flex tw:items-center tw:justify-between tw:gap-3 tw:text-caption"><span class="tw:text-muted">{{ completedCount() }} de {{ items().length }} pasos completados</span><span class="tw:font-semibold tw:tabular-nums">{{ progressPercent() }}%</span></div>
+          <progress class="tw:setup-progress" role="progressbar" aria-label="Avance de primeros pasos" aria-valuemin="0" aria-valuemax="100" [attr.aria-valuenow]="progressPercent()" [value]="progressPercent()" max="100"></progress>
+        </div>
+        @if (nextItem(); as next) { <a [routerLink]="next.link" class="tw:console-action-link">{{ next.cta }}<ds-icon name="arrowRight" [size]="0.9" /></a> }
+        @else { <a routerLink="/app/messages" class="tw:console-action-link">Ir a Mensajes<ds-icon name="arrowRight" [size]="0.9" /></a> }
+      </div>
+    </section>
+    @if (readyToSell()) { <div class="tw:feedback tw:feedback-success" role="status"><ds-icon name="check" /><span>Tu vendedor, catálogo y WhatsApp están configurados para atender a tus clientes.</span></div> }
+    <section class="tw:grid tw:gap-3" aria-labelledby="setup-checklist-title">
+      <h2 id="setup-checklist-title" class="tw:m-0 tw:text-section tw:font-semibold">Primeros pasos</h2>
+      <ol class="tw:console-list-panel tw:m-0 tw:list-none tw:p-0 tw:divide-y tw:divide-border">
+        @for (item of items(); track item.id; let index = $index) {
+          <li class="tw:flex tw:items-start tw:gap-3 tw:p-4 tw:sm:gap-4">
+            <span class="tw:grid tw:size-touch tw:shrink-0 tw:place-items-center tw:rounded-md tw:bg-canvas tw:text-muted" aria-hidden="true">
+              @if (item.done) { <ds-icon name="circleCheck" class="tw:text-success-text" /> } @else { <span class="tw:text-body tw:font-semibold tw:tabular-nums">{{ index + 1 }}</span> }
+            </span>
+            <div class="tw:flex tw:min-w-0 tw:flex-1 tw:flex-col tw:gap-3 tw:sm:flex-row tw:sm:items-center tw:sm:justify-between">
+              <div class="tw:min-w-0 tw:flex-1">
+                <div class="tw:flex tw:flex-wrap tw:items-center tw:gap-x-3 tw:gap-y-1"><h3 class="tw:m-0 tw:text-body tw:font-semibold">{{ item.title }}</h3><span class="tw:text-caption tw:text-muted">{{ item.done ? 'Completado' : nextStepId() === item.id ? 'Siguiente paso' : 'Pendiente' }}</span></div>
+                <p class="tw:mt-1 tw:mb-0 tw:text-body tw:leading-relaxed tw:text-muted">{{ item.body }}</p>
+              </div>
+              <a [routerLink]="item.link" class="tw:console-action-secondary tw:shrink-0 tw:self-start"><span class="tw:sr-only">{{ item.title }}. </span>{{ item.done ? 'Revisar' : item.cta }}<ds-icon name="arrowRight" [size]="0.9" /></a>
+            </div>
+          </li>
+        }
+      </ol>
+    </section>
+    @if (agentReady()) {
+      <aside class="tw:flex tw:flex-col tw:gap-3 tw:sm:flex-row tw:sm:items-center tw:sm:justify-between">
+        <div><h2 class="tw:m-0 tw:text-body tw:font-semibold">Prueba cómo atiende tu vendedor</h2><p class="tw:mt-1 tw:mb-0 tw:text-body tw:text-muted">Configuración: {{ agentScore() }}/{{ agentMaxScore() }} puntos. Las pruebas no envían mensajes a clientes reales.</p></div>
+        <a class="tw:console-action-secondary tw:shrink-0 tw:self-start" routerLink="/app/seller/profile" [queryParams]="{ playground: '1' }">Probar vendedor<ds-icon name="arrowRight" [size]="0.9" /></a>
+      </aside>
     }
-  </header>
-  @if (!loading() && !errorMessage()) {
-    @if (readyToSell()) { <div class="tw:feedback tw:feedback-success" role="status"><ds-icon name="check" /><span>Tu vendedor, catálogo y WhatsApp están configurados. Sigue tus conversaciones y pedidos desde la consola.</span></div> }
-    <ol class="tw:m-0 tw:grid tw:list-none tw:grid-cols-1 tw:gap-4 tw:p-0 tw:md:grid-cols-6">
-      @for (item of items(); track item.id; let index = $index) {
-        <li class="setup-card tw:flex tw:min-w-0 tw:flex-col tw:rounded-card tw:border tw:border-solid tw:border-border tw:bg-surface tw:p-4 tw:shadow-sm tw:transition tw:duration-200 tw:ease-out tw:hover:shadow-md tw:focus-within:shadow-md" [class.tw:md:col-span-3]="index < 2" [class.tw:md:col-span-2]="index >= 2">
-          <div class="tw:flex tw:items-start tw:justify-between tw:gap-2"><h2 class="tw:m-0 tw:text-section tw:font-medium tw:leading-snug">{{ item.title }}</h2>@if (item.done) { <span class="tw:text-success-text" aria-label="Paso completado"><ds-icon name="circleCheck" [size]="1" /></span> }</div>
-          <p class="tw:mt-2 tw:mb-0 tw:min-h-12 tw:text-body tw:leading-relaxed tw:text-muted">{{ item.body }}</p>
-          <ds-setup-visual [kind]="item.id" [complete]="item.done" />
-          <a [routerLink]="item.link" class="tw:console-action-secondary tw:mt-auto tw:self-start tw:rounded-full! tw:px-4!"><span class="tw:sr-only">{{ item.done ? 'Completado: ' : '' }}{{ item.title }}. </span>{{ item.done ? 'Revisar' : item.cta }}</a>
-        </li>
-      }
-    </ol>
     @if (!readyToSell()) {
-      <aside class="tw:flex tw:flex-wrap tw:items-center tw:justify-between tw:gap-4 tw:py-4"><div class="tw:min-w-0"><h2 class="tw:m-0 tw:text-body tw:font-semibold">Te acompañamos a configurar tu negocio</h2><p class="tw:mt-1 tw:mb-0 tw:text-body tw:text-muted">Agenda una sesión gratis para conectar WhatsApp, cargar tu catálogo y preparar tu tienda.</p></div><a class="tw:console-action-secondary tw:rounded-full!" [href]="onboardingUrl" target="_blank" rel="noopener">Agendar mi sesión<span class="tw:sr-only"> (se abre en una pestaña nueva)</span></a></aside>
+      <aside class="tw:flex tw:flex-col tw:gap-3 tw:border-0 tw:border-t tw:border-solid tw:border-divider tw:pt-5 tw:sm:flex-row tw:sm:items-center tw:sm:justify-between">
+        <div class="tw:min-w-0"><h2 class="tw:m-0 tw:text-body tw:font-semibold">¿Necesitas ayuda para empezar?</h2><p class="tw:mt-1 tw:mb-0 tw:text-body tw:text-muted">Agenda una sesión gratis para configurar WhatsApp, tu catálogo y tu tienda.</p></div>
+        <a class="tw:console-action-secondary tw:shrink-0 tw:self-start" [href]="onboardingUrl" target="_blank" rel="noopener">Agendar sesión<ds-icon name="externalLink" [size]="0.9" /><span class="tw:sr-only"> (se abre en una pestaña nueva)</span></a>
+      </aside>
     }
-    @if (agentReady()) { <p class="tw:m-0 tw:pb-4 tw:text-center tw:text-caption tw:text-muted">Puntaje de tu vendedor: {{ agentScore() }}/200. <a class="tw:font-semibold tw:underline tw:underline-offset-4" routerLink="/app/seller/profile" [queryParams]="{ playground: '1' }">Probar vendedor</a> sin escribir a clientes reales.</p> }
   }
 </section>

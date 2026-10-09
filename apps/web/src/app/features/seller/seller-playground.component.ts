@@ -48,6 +48,12 @@ export class SellerPlaygroundComponent implements OnInit {
   ];
 
   async ngOnInit(): Promise<void> {
+    await this.loadSession();
+  }
+
+  async loadSession(): Promise<void> {
+    this.loading.set(true);
+    this.error.set(null);
     try {
       const session = await this.api.getPlaygroundSession();
       this.session.set(session);
@@ -129,6 +135,7 @@ export class SellerPlaygroundComponent implements OnInit {
   toolLabel(name: string): string {
     switch (name) {
       case 'search_catalog':
+      case 'search_products':
         return 'Catálogo';
       case 'get_product_availability':
         return 'Precio / stock';
@@ -143,7 +150,7 @@ export class SellerPlaygroundComponent implements OnInit {
       case 'escalate':
         return 'Derivó a asesor';
       default:
-        return name;
+        return 'Consulta del vendedor';
     }
   }
 

@@ -41,7 +41,7 @@ export type DsButtonVariant = 'primary' | 'secondary' | 'ghost' | 'danger';
       justify-content: center;
       min-height: var(--ds-touch-target);
       padding: 0 var(--ds-space-5);
-      border-radius: 999px;
+      border-radius: var(--ds-button-radius, var(--ds-radius-pill));
       border: 1px solid transparent;
       cursor: pointer;
       font-weight: 700;
@@ -70,7 +70,7 @@ export type DsButtonVariant = 'primary' | 'secondary' | 'ghost' | 'danger';
 
     .ds-button--ghost {
       background: transparent;
-      color: var(--ds-color-text-secondary);
+      color: var(--ds-button-ghost-color, var(--ds-color-text-secondary));
     }
 
     .ds-button--danger {

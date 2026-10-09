@@ -1,0 +1,4 @@
+<ds-action-bar placement="bottom" label="Guardar configuración" [attr.aria-busy]="busy()">
+  <span dsActionStatus role="status">{{ busy() ? 'Guardando cambios…' : pending() ? pendingText() : 'Configuración guardada' }}</span>
+  <ng-content /><ds-button type="submit" [disabled]="busy() || disabled() || !pending()">{{ busy() ? 'Guardando…' : label() }}</ds-button>
+</ds-action-bar>

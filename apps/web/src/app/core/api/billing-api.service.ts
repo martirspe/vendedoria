@@ -78,7 +78,7 @@ export type PlanUsage = {
 export type PlanPurchase = { planTier: PlanDefinition['id']; months: number } | { chatPackSize: number };
 
 export type BillingOverview = {
-  currentPlan: PlanDefinition;
+  currentPlan: Omit<PlanDefinition, 'prepay'>;
   planStatus: PlanStatus;
   currentPeriodEnd: string | null;
   trialDays: number;

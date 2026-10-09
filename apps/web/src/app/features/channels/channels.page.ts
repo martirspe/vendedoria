@@ -1,3 +1,4 @@
+import { DsActionBarComponent } from '@vendedoria/ui';
 import { DsSelectComponent } from '@vendedoria/ui';
 import {
   ChangeDetectionStrategy,
@@ -6,7 +7,7 @@ import {
   signal,
 } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
-import { DsButtonComponent } from '@vendedoria/ui';
+import { DsButtonComponent, DsDisclosureComponent, DsFormSectionComponent } from '@vendedoria/ui';
 import { DsEmptyStateComponent } from '@vendedoria/ui';
 import { DsIconComponent } from '@vendedoria/ui';
 import {
@@ -18,14 +19,14 @@ import {
 @Component({
   selector: 'app-channels-page',
   standalone: true,
-  imports: [DsSelectComponent,
+  imports: [DsActionBarComponent, DsSelectComponent,
     ReactiveFormsModule,
     DsButtonComponent,
     DsEmptyStateComponent,
     DsIconComponent,
+    DsDisclosureComponent, DsFormSectionComponent,
   ],
   templateUrl: './channels.page.html',
-  styleUrl: './channels.page.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class ChannelsPage {
@@ -44,6 +45,16 @@ export class ChannelsPage {
   } | null>(null);
   readonly diagnostics = signal<ChannelDiagnostics | null>(null);
   readonly diagnosticsLoading = signal(false);
+  readonly diagnosticsFailed = signal(false);
+  readonly operation = signal<'connect' | 'simulate' | null>(null);
+
+  fieldError(field: keyof ChannelsPage['connectForm']['controls']): string | null {
+    const control = this.connectForm.controls[field];
+    if (!control.touched) return null;
+    if (field === 'accessToken' && control.value.trim().length < 10) return 'Ingresa un token de acceso válido.';
+    if (field === 'phoneNumberId' && control.value.trim().length < 3) return 'Ingresa el identificador del número de Meta.';
+    return control.invalid ? 'Revisa este campo.' : null;
+  }
 
   readonly connectForm = this.fb.nonNullable.group({
     phoneNumberId: ['', [Validators.required, Validators.minLength(3)]],
@@ -82,11 +93,13 @@ export class ChannelsPage {
   }
 
   async loadDiagnostics(): Promise<void> {
+    if (this.diagnosticsLoading()) return;
     this.diagnosticsLoading.set(true);
+    this.diagnosticsFailed.set(false);
     try {
       this.diagnostics.set(await this.api.getWhatsAppDiagnostics());
     } catch {
-      this.diagnostics.set(null);
+      this.diagnosticsFailed.set(true);
     } finally {
       this.diagnosticsLoading.set(false);
     }
@@ -95,7 +108,7 @@ export class ChannelsPage {
   checkStatusLabel(status: 'ok' | 'warn' | 'error'): string {
     switch (status) {
       case 'ok':
-        return 'OK';
+        return 'Correcto';
       case 'warn':
         return 'Revisar';
       case 'error':
@@ -104,38 +117,46 @@ export class ChannelsPage {
   }
 
   async connect(): Promise<void> {
-    if (this.connectForm.invalid) {
+    if (this.saving()) return;
+    if (this.connectForm.invalid || this.connectForm.controls.accessToken.value.trim().length < 10 || this.connectForm.controls.phoneNumberId.value.trim().length < 3) {
       this.connectForm.markAllAsTouched();
+      this.errorMessage.set('Revisa los datos de conexión antes de continuar.');
       return;
     }
     this.saving.set(true);
+    this.operation.set('connect');
     this.errorMessage.set(null);
     this.successMessage.set(null);
     try {
       const result = await this.api.connectWhatsApp(this.connectForm.getRawValue());
+      this.channels.update(channels => [result.channel, ...channels.filter(channel => channel.id !== result.channel.id && channel.type !== 'WHATSAPP')]);
+      this.connectForm.controls.accessToken.reset('');
       this.webhookInfo.set({
         callbackUrl: result.webhook.callbackUrl,
         verifyTokenHint: result.webhook.verifyTokenHint,
       });
-      this.successMessage.set('WhatsApp conectado. Configura el webhook en Meta.');
-      await this.load();
+      this.successMessage.set('Conexión guardada. Revisa el diagnóstico para completar la recepción de mensajes.');
       await this.loadDiagnostics();
     } catch {
       this.errorMessage.set(
-        'No se pudo conectar WhatsApp. Revisa Phone Number ID y access token.',
+        'No se pudo conectar WhatsApp. Revisa el identificador del número y el token de acceso.',
       );
     } finally {
       this.saving.set(false);
+      this.operation.set(null);
     }
   }
 
   async simulate(): Promise<void> {
+    if (this.saving() || !this.whatsapp) return;
     if (this.simulateForm.invalid) {
       this.simulateForm.markAllAsTouched();
       return;
     }
     this.saving.set(true);
+    this.operation.set('simulate');
     this.errorMessage.set(null);
+    this.successMessage.set(null);
     try {
       await this.api.simulateInbound(this.simulateForm.getRawValue());
       this.successMessage.set(
@@ -147,6 +168,7 @@ export class ChannelsPage {
       );
     } finally {
       this.saving.set(false);
+      this.operation.set(null);
     }
   }
 

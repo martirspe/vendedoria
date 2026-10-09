@@ -78,7 +78,8 @@ describe('set editor round trip', () => {
 });
 
 describe('catalog management', () => {
-  afterEach(() => TestBed.resetTestingModule());
+  beforeEach(() => vi.stubGlobal('matchMedia', () => ({ matches: false, addEventListener() {}, removeEventListener() {} })));
+  afterEach(() => { TestBed.resetTestingModule(); vi.unstubAllGlobals(); });
   const state: CatalogListState = { kind: 'todos', query: '', status: 'todos', publication: 'todos', sort: 'nombre', page: 1, pageSize: 25 };
 
   it('finds sold-out physical items from their enabled variants without misclassifying services or sets', () => {
@@ -131,16 +132,46 @@ describe('catalog management', () => {
   async function setup() {
     const params = new BehaviorSubject(convertToParamMap({ pagina: '99', porPagina: '25' }));
     const navigate = vi.fn(async () => true);
+    const api = { list: async () => [], categories: async () => [], create: vi.fn(async (_payload: CreateProductPayload) => product('saved')) };
     TestBed.configureTestingModule({ imports: [ProductsPage], providers: [
-      { provide: CatalogApiService, useValue: { list: async () => [], categories: async () => [] } },
+      { provide: CatalogApiService, useValue: api },
       { provide: IntegrationsStateService, useValue: { isActive: () => true } },
       { provide: DsConfirmService, useValue: { confirm: async () => true } },
       { provide: ActivatedRoute, useValue: { queryParamMap: params } },
       { provide: Router, useValue: { navigate } },
     ] });
     const fixture = TestBed.createComponent(ProductsPage); fixture.detectChanges(); await fixture.whenStable();
-    return { page: fixture.componentInstance, fixture, params, navigate };
+    return { page: fixture.componentInstance, fixture, params, navigate, api };
   }
+
+  it('locks native editor controls during save and preserves the draft after failure', async () => {
+    const { page, fixture, api } = await setup();
+    page.openCreate(); page.productForm.patchValue({ name: 'Producto de prueba', handle: 'producto-prueba', descriptionShort: 'Descripción del producto de prueba', price: 100 });
+    let reject!: (error: Error) => void;
+    api.create.mockImplementationOnce(() => new Promise((_resolve, fail) => { reject = fail; }));
+    const saving = page.saveProduct(); fixture.detectChanges();
+    expect(fixture.nativeElement.querySelector('fieldset').disabled).toBe(true);
+    expect(fixture.nativeElement.querySelector('[formControlName="name"]').matches(':disabled')).toBe(true);
+    expect(fixture.nativeElement.querySelector('[formControlName="isAvailable"]').matches(':disabled')).toBe(true);
+    await page.saveProduct(); page.closeEditor();
+    expect(api.create).toHaveBeenCalledTimes(1); expect(page.editorOpen()).toBe(true);
+    reject(new Error('offline')); await saving; fixture.detectChanges();
+    expect(page.productForm.controls.name.value).toBe('Producto de prueba');
+    expect(page.editorOpen()).toBe(true);
+    expect(fixture.nativeElement.querySelector('fieldset').disabled).toBe(false);
+    expect(page.errorMessage()).toBeTruthy();
+  });
+
+  it('keeps shared checkbox bindings and prevents saving or closing during image upload', async () => {
+    const { page, fixture, api } = await setup();
+    page.openCreate(); fixture.detectChanges();
+    const checkbox = fixture.nativeElement.querySelector('ds-checkbox [formControlName="isAvailable"]') as HTMLInputElement;
+    expect(checkbox.checked).toBe(true); checkbox.click(); fixture.detectChanges();
+    expect(page.productForm.controls.isAvailable.value).toBe(false);
+    expect(page.productForm.dirty).toBe(true);
+    page.uploading.set(true); await page.saveProduct(); page.closeEditor();
+    expect(api.create).not.toHaveBeenCalled(); expect(page.editorOpen()).toBe(true);
+  });
 
   it('explains invalid required fields and focuses the next missing value, including the generated address', async () => {
     const { page, fixture } = await setup();

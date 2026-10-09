@@ -1,0 +1,1 @@
+:host { display: block; position: sticky; bottom: calc(var(--ds-action-offset) + env(safe-area-inset-bottom, 0px)); z-index: var(--ds-z-sticky); min-width: 0; }

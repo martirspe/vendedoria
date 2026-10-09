@@ -2,7 +2,7 @@ import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@a
 import { toSignal } from '@angular/core/rxjs-interop';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { RouterLink } from '@angular/router';
-import { DsButtonComponent, DsConfirmService, DsIconComponent } from '@vendedoria/ui';
+import { DsButtonComponent, DsConfirmService, DsIconComponent, DsFormSectionComponent, DsDisclosureComponent, DsSaveBarComponent, DsActionBarComponent, DsEmptyStateComponent } from '@vendedoria/ui';
 import { AccountApiService } from '../../core/api/account-api.service';
 import { messageFrom } from '../../core/api/api-error';
 import { AuthApiService, type MembershipRole } from '../../core/auth/auth-api.service';
@@ -22,9 +22,8 @@ const MONTH_YEAR = new Intl.DateTimeFormat('es-PE', { month: 'long', year: 'nume
 @Component({
   selector: 'app-profile-page',
   standalone: true,
-  imports: [ReactiveFormsModule, RouterLink, DsButtonComponent, DsIconComponent],
+  imports: [ReactiveFormsModule, RouterLink, DsButtonComponent, DsIconComponent, DsFormSectionComponent, DsDisclosureComponent, DsSaveBarComponent, DsActionBarComponent, DsEmptyStateComponent],
   templateUrl: './profile.page.html',
-  styleUrl: './profile.page.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class ProfilePage {
@@ -39,6 +38,11 @@ export class ProfilePage {
   readonly savingName = signal(false);
   readonly savingPassword = signal(false);
   readonly revoking = signal(false);
+  readonly loggingOut = signal(false);
+  readonly refreshingSessions = signal(false);
+  readonly sessionsStale = signal(false);
+  readonly busy = computed(() => this.loading() || this.savingName() || this.savingPassword() || this.revoking() || this.loggingOut() || this.refreshingSessions());
+  private loadInFlight = false;
   readonly nameNotice = signal<Notice | null>(null);
   readonly passwordNotice = signal<Notice | null>(null);
   readonly sessionNotice = signal<Notice | null>(null);
@@ -83,23 +87,31 @@ export class ProfilePage {
   }
 
   async load(): Promise<void> {
+    if (this.loadInFlight || this.savingName() || this.savingPassword() || this.revoking() || this.loggingOut() || this.refreshingSessions()) return;
+    this.loadInFlight = true;
     this.loading.set(true);
     this.loadError.set(false);
     try {
       const profile = await this.account.load();
       this.nameForm.reset({ fullName: profile.fullName ?? '' });
+      this.sessionsStale.set(false);
     } catch {
       this.loadError.set(true);
     } finally {
       this.loading.set(false);
+      this.loadInFlight = false;
     }
   }
 
   async saveName(): Promise<void> {
+    if (this.busy() || this.loadError() || !this.profile()) return;
+    if (this.nameForm.controls.fullName.value.trim().length < 2) this.nameForm.controls.fullName.setErrors({ trimmedLength: true });
     if (this.nameForm.invalid) {
       this.nameForm.markAllAsTouched();
+      this.nameNotice.set({ tone: 'danger', text: 'Revisa tu nombre antes de guardar.' });
       return;
     }
+    if (!this.hasNameChanges()) return;
     this.savingName.set(true);
     this.nameNotice.set(null);
     try {
@@ -114,8 +126,10 @@ export class ProfilePage {
   }
 
   async changePassword(): Promise<void> {
+    if (this.busy() || this.loadError() || !this.profile()) return;
     if (this.passwordForm.invalid || this.mismatch()) {
       this.passwordForm.markAllAsTouched();
+      this.passwordNotice.set({ tone: 'danger', text: 'Revisa los campos de contraseña antes de continuar.' });
       return;
     }
     const { currentPassword, newPassword } = this.passwordForm.getRawValue();
@@ -128,7 +142,7 @@ export class ProfilePage {
       this.passwordNotice.set({
         tone: 'success',
         text: revokedSessions
-          ? `Contraseña actualizada. Cerramos tu sesión en ${this.devices(revokedSessions)}.`
+          ? `Contraseña actualizada. Cerramos ${this.sessionsLabel(revokedSessions)} en otros dispositivos.`
           : 'Contraseña actualizada.',
       });
       await this.refreshSessions();
@@ -140,6 +154,7 @@ export class ProfilePage {
   }
 
   async revokeOtherSessions(): Promise<void> {
+    if (this.busy() || this.loadError() || this.otherSessions() === 0) return;
     const confirmed = await this.confirmDialog.confirm({
       title: '¿Cerrar sesión en los demás dispositivos?',
       message: 'Tendrás que volver a iniciar sesión en cada uno. Este dispositivo sigue conectado.',
@@ -147,14 +162,14 @@ export class ProfilePage {
       cancelLabel: 'Cancelar',
       tone: 'danger',
     });
-    if (!confirmed) return;
+    if (!confirmed || this.busy() || this.loadError() || this.otherSessions() === 0) return;
     this.revoking.set(true);
     this.sessionNotice.set(null);
     try {
       const { revokedSessions } = await this.account.revokeOtherSessions();
       this.sessionNotice.set({
         tone: 'success',
-        text: revokedSessions ? `Cerramos tu sesión en ${this.devices(revokedSessions)}.` : 'No había otras sesiones abiertas.',
+        text: revokedSessions ? `Cerramos ${this.sessionsLabel(revokedSessions)} en otros dispositivos.` : 'No había otras sesiones abiertas.',
       });
       await this.refreshSessions();
     } catch (error) {
@@ -165,11 +180,18 @@ export class ProfilePage {
   }
 
   async logout(): Promise<void> {
-    await this.auth.logout();
-    location.href = '/auth/login';
+    if (this.busy()) return;
+    this.loggingOut.set(true);
+    try {
+      await this.auth.logout();
+      location.href = '/auth/login';
+    } catch {
+      this.sessionNotice.set({ tone: 'danger', text: 'No pudimos cerrar esta sesión. Vuelve a intentarlo.' });
+    } finally { this.loggingOut.set(false); }
   }
 
   toggle(field: PasswordField): void {
+    if (this.busy()) return;
     this.visible.update((state) => ({ ...state, [field]: !state[field] }));
   }
 
@@ -178,11 +200,34 @@ export class ProfilePage {
     return field.invalid && field.touched;
   }
 
-  private async refreshSessions(): Promise<void> {
-    await this.account.load().catch(() => undefined);
+  hasNameChanges(): boolean {
+    return !!this.profile() && this.nameForm.controls.fullName.value !== (this.profile()?.fullName ?? '');
   }
 
-  private devices(count: number): string {
-    return count === 1 ? '1 dispositivo' : `${count} dispositivos`;
+  passwordError(control: 'currentPassword' | 'newPassword' | 'confirmPassword'): string | null {
+    const field = this.passwordForm.controls[control];
+    if (control === 'confirmPassword' && this.mismatch()) return 'Las contraseñas no coinciden.';
+    if (!field.touched || !field.invalid) return null;
+    if (field.hasError('maxlength')) return 'Usa un máximo de 128 caracteres.';
+    if (field.hasError('minlength')) return 'Usa al menos 8 caracteres.';
+    return control === 'currentPassword' ? 'Escribe tu contraseña actual.' : control === 'newPassword' ? 'Escribe la nueva contraseña.' : 'Repite la nueva contraseña.';
+  }
+
+  discardName(): void {
+    if (this.busy()) return;
+    this.nameForm.reset({ fullName: this.profile()?.fullName ?? '' });
+    this.nameNotice.set(null);
+  }
+
+  async refreshSessions(): Promise<void> {
+    if (this.refreshingSessions()) return;
+    this.refreshingSessions.set(true);
+    try { await this.account.load(); this.sessionsStale.set(false); }
+    catch { this.sessionsStale.set(true); }
+    finally { this.refreshingSessions.set(false); }
+  }
+
+  private sessionsLabel(count: number): string {
+    return count === 1 ? '1 sesión' : `${count} sesiones`;
   }
 }

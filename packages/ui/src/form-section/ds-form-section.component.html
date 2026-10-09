@@ -1,0 +1,8 @@
+<section>
+  <header>
+    @if (icon(); as name) { <ds-icon [name]="name" /> }
+    <div><h2>{{ title() }}</h2>@if (description()) { <p>{{ description() }}</p> }</div>
+    <div class="ds-form-section-actions"><ng-content select="[dsSectionActions]" /></div>
+  </header>
+  <div class="ds-form-section-body"><ng-content /></div>
+</section>

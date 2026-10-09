@@ -1,9 +1,10 @@
+import { DsActionBarComponent } from '@vendedoria/ui';
 import { DsEmptyStateComponent } from '@vendedoria/ui';
 import { ChangeDetectionStrategy, Component, inject, signal } from '@angular/core';
 import { HttpErrorResponse } from '@angular/common/http';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { AuthApiService } from '../../core/auth/auth-api.service';
-import { DsButtonComponent, DsConfirmService, DsIconComponent } from '@vendedoria/ui';
+import { DsButtonComponent, DsConfirmService, DsIconComponent, DsFormSectionComponent, DsSelectComponent, DsDisclosureComponent } from '@vendedoria/ui';
 import {
   ConnectPaymentAccountPayload,
   PaymentAccountView,
@@ -15,9 +16,8 @@ const CREDENTIAL = /^(APP_USR|TEST)-[A-Za-z0-9-]{20,200}$/;
 @Component({
   selector: 'app-payments-page',
   standalone: true,
-  imports: [DsEmptyStateComponent, ReactiveFormsModule, DsButtonComponent, DsIconComponent],
+  imports: [DsActionBarComponent, DsEmptyStateComponent, ReactiveFormsModule, DsButtonComponent, DsIconComponent, DsFormSectionComponent, DsSelectComponent, DsDisclosureComponent],
   templateUrl: './payments.page.html',
-  styleUrls: ['../store/store.page.scss', './payments.page.scss'],
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class PaymentsPage {
@@ -30,6 +30,7 @@ export class PaymentsPage {
   readonly loading = signal(true);
   readonly loadFailed = signal(false);
   readonly saving = signal(false);
+  readonly operation = signal<'connect' | 'disconnect' | null>(null);
   readonly copied = signal(false);
   readonly errorMessage = signal<string | null>(null);
   readonly successMessage = signal<string | null>(null);
@@ -61,7 +62,7 @@ export class PaymentsPage {
   }
 
   async save(): Promise<void> {
-    if (!this.canManage() || this.loading() || this.loadFailed() || this.saving()) return;
+    if (!this.canManage() || this.loading() || this.loadFailed() || this.saving() || !this.view()?.encryptionConfigured) return;
     const connected = this.view()?.connected ?? false;
     const values = this.form.getRawValue();
     if (!connected && !values.accessToken.trim()) {
@@ -79,6 +80,7 @@ export class PaymentsPage {
       ...(values.webhookSecret.trim() ? { webhookSecret: values.webhookSecret.trim() } : {}),
     };
     this.saving.set(true);
+    this.operation.set('connect');
     this.clearMessages();
     try {
       this.apply(await this.api.connect(payload));
@@ -87,19 +89,21 @@ export class PaymentsPage {
       this.errorMessage.set(this.messageFrom(error, 'No se pudo conectar la cuenta.'));
     } finally {
       this.saving.set(false);
+      this.operation.set(null);
     }
   }
 
   async disconnect(): Promise<void> {
-    if (!this.canManage() || this.saving()) return;
+    if (!this.canManage() || this.saving() || !this.view()?.connected) return;
     const confirmed = await this.confirmDialog.confirm({
       title: '¿Desconectar Mercado Pago?',
       message: 'Tu tienda dejará de cobrar online hasta que vuelvas a conectar una cuenta.',
       confirmLabel: 'Desconectar',
       tone: 'danger',
     });
-    if (!confirmed) return;
+    if (!confirmed || !this.canManage() || this.saving() || !this.view()?.connected) return;
     this.saving.set(true);
+    this.operation.set('disconnect');
     this.clearMessages();
     try {
       this.apply(await this.api.disconnect());
@@ -108,6 +112,7 @@ export class PaymentsPage {
       this.errorMessage.set(this.messageFrom(error, 'No se pudo desconectar la cuenta.'));
     } finally {
       this.saving.set(false);
+      this.operation.set(null);
     }
   }
 
@@ -119,6 +124,15 @@ export class PaymentsPage {
     } catch {
       this.errorMessage.set('No se pudo copiar. Selecciona el texto y cópialo manualmente.');
     }
+  }
+
+  fieldError(name: 'publicKey' | 'accessToken' | 'webhookSecret'): string | null {
+    const control = this.form.controls[name];
+    if (!control.touched || !control.invalid) return null;
+    if (control.hasError('required')) return name === 'publicKey' ? 'Introduce la Public Key de tu cuenta.' : 'Introduce el Access Token para conectar la cuenta.';
+    return name === 'webhookSecret'
+      ? 'Usa entre 16 y 200 caracteres: letras, números, guiones o guiones bajos.'
+      : 'Revisa la credencial completa: debe comenzar por APP_USR- o TEST-.';
   }
 
   private apply(view: PaymentAccountView): void {

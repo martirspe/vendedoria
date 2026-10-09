@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { TestBed } from '@angular/core/testing';
 import { provideRouter, Router } from '@angular/router';
 import { NEVER } from 'rxjs';
@@ -21,6 +21,7 @@ async function setup(fail = false) {
     listTemplates: async () => [],
     getConversation: vi.fn(async (id: string) => thread(id)),
     updateConversation: vi.fn<() => Promise<void>>(async () => { throw new Error('unavailable'); }),
+    sendMessage: vi.fn(async () => ({ notice: 'Respuesta enviada. IA pausada.' })),
   };
   TestBed.configureTestingModule({ imports: [MessagesPage], providers: [
     provideRouter([]),
@@ -34,9 +35,58 @@ async function setup(fail = false) {
   return { fixture, page: fixture.componentInstance, api };
 }
 
-afterEach(() => TestBed.resetTestingModule());
+beforeEach(() => vi.stubGlobal('matchMedia', vi.fn(() => ({ matches: false, addEventListener: vi.fn(), removeEventListener: vi.fn() }))));
+afterEach(() => { TestBed.resetTestingModule(); vi.unstubAllGlobals(); });
 
 describe('inbox recovery and selection', () => {
+  it('clears search and both filters without closing the selected conversation', async () => {
+    const { page, api } = await setup();
+    await page.openConversation('qa');
+    page.query.set('sin coincidencias');
+    page.filterSales.set(true);
+    page.filterUnattended.set(true);
+    page.clearFilters();
+    expect(page.query()).toBe('');
+    expect(page.filterSales()).toBe(false);
+    expect(page.filterUnattended()).toBe(false);
+    expect(page.openedConversationId()).toBe('qa');
+    expect(api.listConversations).toHaveBeenLastCalledWith({ q: undefined, unattended: undefined, salesOnly: undefined });
+  });
+
+  it('does not send an empty or whitespace-only manual reply', async () => {
+    const { fixture, page, api } = await setup();
+    await page.openConversation('qa');
+    page.composer.controls.text.setValue('   ');
+    fixture.detectChanges();
+    expect(fixture.nativeElement.querySelector('.composer button').disabled).toBe(true);
+    await page.send();
+    expect(api.sendMessage).not.toHaveBeenCalled();
+  });
+
+  it('keeps templates available and prevents free-form sending outside the window', async () => {
+    const { fixture, page, api } = await setup();
+    await page.openConversation('qa');
+    page.selected.update((value) => value && ({ ...value, messagingWindow: { canSendFreeForm: false, closesAt: null, reason: 'Ventana cerrada' } }));
+    page.composer.controls.text.setValue('Respuesta de prueba');
+    fixture.detectChanges();
+    expect(fixture.nativeElement.querySelector('.composer textarea')).toBeNull();
+    expect(fixture.nativeElement.querySelector('.window-notice summary').textContent).toContain('usar una plantilla');
+    await page.send();
+    expect(api.sendMessage).not.toHaveBeenCalled();
+  });
+
+  it('explains the handoff before sending and labels team messages honestly', async () => {
+    const { fixture, page } = await setup();
+    await page.openConversation('qa');
+    page.selected.update((value) => value && ({ ...value, messages: [{ id: 'manual', body: 'Respuesta de prueba', createdAt: '2026-10-08T00:00:00Z', direction: 'OUTBOUND', authorType: 'HUMAN_OPERATOR' }] }));
+    fixture.detectChanges();
+    expect(fixture.nativeElement.querySelector('#composer-help').textContent).toContain('la IA se pausará');
+    expect(fixture.nativeElement.querySelector('.bubble footer').textContent).toContain('Equipo');
+    page.selected.update((value) => value && ({ ...value, agentEnabled: false }));
+    fixture.detectChanges();
+    expect(fixture.nativeElement.querySelector('#composer-help').textContent).toContain('La IA seguirá pausada');
+  });
+
   it('distinguishes failure from an empty inbox and offers retry', async () => {
     const { fixture, page, api } = await setup(true);
     expect(fixture.nativeElement.textContent).toContain('No pudimos cargar las conversaciones');

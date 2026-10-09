@@ -1,85 +1,52 @@
-<section class="metrics tw:mx-auto tw:min-w-0">
-  <header class="metrics__header">
-    <div>
-      <h1 class="tw:console-title">Métricas</h1>
-      <p>
-        Conversaciones, pedidos e ingresos para entender cómo avanza tu negocio.
-      </p>
-    </div>
-    <div class="metrics__periods" role="group" aria-label="Período">
-      @for (period of [7, 30]; track period) {
-        <button
-          type="button"
-          [class.is-active]="days() === period"
-          [attr.aria-pressed]="days() === period"
-          [disabled]="loading()"
-          (click)="load(period)"
-        >
-          {{ period }} días
-        </button>
-      }
-    </div>
-  </header>
-
+<section class="tw:mx-auto tw:grid tw:w-full tw:min-w-0 tw:max-w-page tw:gap-5">
+  <header><p class="tw:console-eyebrow">Resultados</p><h1 class="tw:console-title">Métricas</h1><p class="tw:mt-2 tw:max-w-prose tw:text-sm tw:text-muted">Consulta la actividad de tus conversaciones y pedidos, y prioriza los clientes que necesitan atención.</p></header>
+  <div class="tw:flex tw:flex-wrap tw:items-end tw:justify-between tw:gap-3">
+    <div class="tw:grid tw:gap-2"><label for="metrics-period" class="tw:text-sm tw:font-semibold">Período de actividad</label><ds-select><select id="metrics-period" [value]="days()" (change)="changePeriod($event)" aria-describedby="metrics-period-help"><option value="7">Últimos 7 días</option><option value="30">Últimos 30 días</option></select></ds-select><p id="metrics-period-help" class="tw:m-0 tw:text-caption tw:text-muted">Incluye hoy. No incluye las pruebas de Probar vendedor.</p></div>
+    @if (summary(); as data) { <p class="tw:m-0 tw:text-caption tw:text-muted">Datos mostrados: {{ data.from | date:'dd/MM/yyyy' }} – {{ data.to | date:'dd/MM/yyyy' }}</p> }
+  </div>
+  <ds-action-bar label="Acciones de métricas">
+    <span dsActionStatus role="status">{{ loading() ? 'Actualizando métricas…' : summary() ? 'Datos de ' + summary()!.periodDays + ' días' : 'Últimos ' + days() + ' días' }}</span>
+    <ds-button variant="secondary" [disabled]="loading()" (click)="load()"><ds-icon name="rotateCcw" />Actualizar</ds-button>
+    @if (summary()?.unattendedOpen) { <a routerLink="/app/messages" [queryParams]="{ unattended: '1' }" class="tw:console-action-link">Atender conversaciones</a> }
+  </ds-action-bar>
   @if (errorMessage(); as error) {
-    <div class="tw:feedback tw:feedback-danger" role="alert">
-      <ds-icon name="alert" />
-      <span>{{ error }}</span>
-      <ds-button type="button" variant="secondary" (click)="load()">Reintentar</ds-button>
-    </div>
+    <div class="tw:feedback tw:feedback-danger" role="alert"><ds-icon name="alert" /><span>{{ error }} @if (summary(); as data) { Se conservan los últimos datos cargados, correspondientes a {{ data.periodDays }} días. }</span><ds-button variant="secondary" [disabled]="loading()" (click)="load()">Reintentar</ds-button></div>
   }
-
-  @if (loading()) {
-    <div class="skeleton" aria-busy="true">Cargando métricas…</div>
+  @if (loading() && !summary()) {
+    <div class="tw:console-list-panel" role="status" aria-busy="true" aria-label="Cargando métricas"><div class="tw:console-list-skeleton" aria-hidden="true">@for (row of [1,2,3,4]; track row) { <div></div> }</div></div>
   } @else if (summary(); as data) {
-    @if (isEmpty(data)) {
-      <ds-empty-state
-        title="Aún no hay movimiento"
-        body="Las conversaciones y los pedidos de tus clientes aparecerán aquí. Configura tu vendedor y conecta un canal para empezar."
-      >
-        <a routerLink="/app/get-started" class="tw:console-action-link">Ver primeros pasos</a>
-      </ds-empty-state>
-    } @else {
-      <div class="metrics__grid">
-        <article>
-          <span>Conversaciones</span>
-          <strong>{{ data.conversations }}</strong>
-        </article>
-        <article>
-          <span>Mensajes entrantes</span>
-          <strong>{{ data.inboundMessages }}</strong>
-        </article>
-        <article>
-          <span>Respuestas del agente</span>
-          <strong>{{ data.agentMessages }}</strong>
-        </article>
-        <article>
-          <span>Pedidos creados</span>
-          <strong>{{ data.ordersCreated }}</strong>
-        </article>
-        <article>
-          <span>Pedidos pagados</span>
-          <strong>{{ data.paidOrders }}</strong>
-        </article>
-        <article>
-          <span>Ingresos</span>
-          <strong>{{ formatMoney(data.revenueCents, data.currency) }}</strong>
-        </article>
-        <article>
-          <span>Conversión chat → pago</span>
-          <strong>{{ data.conversionRate }}%</strong>
-        </article>
-        <article>
-          <span>Sin atender ahora</span>
-          <strong>{{ data.unattendedOpen }}</strong>
-          @if (data.unattendedOpen > 0) {
-            <a routerLink="/app/messages" [queryParams]="{ unattended: '1' }" class="tw:inline-flex tw:min-h-touch tw:items-center tw:font-semibold tw:text-info-text tw:underline tw:underline-offset-4">Atender conversaciones</a>
-          }
-        </article>
-      </div>
-      <p class="metrics__footnote">
-        Período: últimos {{ data.periodDays }} días · no incluye las pruebas de Probar vendedor.
-      </p>
-    }
+    <div class="tw:grid tw:gap-5" [attr.aria-busy]="loading()">
+      @if (isEmpty(data)) {
+        <ds-empty-state title="Sin actividad en este período" body="No hay conversaciones, mensajes ni pedidos registrados en los días mostrados. Puedes consultar otro período o revisar la configuración de tu vendedor."><a routerLink="/app/get-started" class="tw:console-action-link">Ver primeros pasos</a></ds-empty-state>
+      } @else {
+        <ds-form-section title="Ventas" description="Pedidos creados en el período mostrado y su estado actual." icon="wallet">
+          <dl class="tw:m-0 tw:grid tw:gap-3 tw:md:grid-cols-2">
+            <div class="tw:console-metric"><div><dt>Ingresos de pedidos pagados</dt><dd class="tw:m-0 tw:mt-1 tw:wrap-anywhere"><strong>{{ formatMoney(data.revenueCents, data.currency) }}</strong></dd><small>Total de pedidos pagados, en preparación, enviados o completados</small></div></div>
+            <div class="tw:console-metric"><div><dt>Pedidos creados</dt><dd class="tw:m-0 tw:mt-1"><strong>{{ data.ordersCreated }}</strong></dd><small>Todos los estados del pedido</small></div></div>
+            <div class="tw:console-metric"><div><dt>Pedidos pagados</dt><dd class="tw:m-0 tw:mt-1"><strong>{{ data.paidOrders }}</strong></dd><small>Incluye preparación, enviados y completados</small></div></div>
+            <div class="tw:console-metric"><div><dt>Pedidos pagados / conversaciones</dt><dd class="tw:m-0 tw:mt-1"><strong>{{ data.conversionRate }}%</strong></dd><small>Relación entre los totales del período</small></div></div>
+          </dl>
+          <a routerLink="/app/orders" class="tw:console-action-link">Consultar pedidos</a>
+        </ds-form-section>
+        <ds-form-section title="Conversaciones" description="Conversaciones nuevas y mensajes registrados en el período mostrado." icon="message">
+          <dl class="tw:m-0 tw:grid tw:gap-3 tw:md:grid-cols-3">
+            <div class="tw:console-metric"><div><dt>Conversaciones nuevas</dt><dd class="tw:m-0 tw:mt-1"><strong>{{ data.conversations }}</strong></dd></div></div>
+            <div class="tw:console-metric"><div><dt>Mensajes entrantes</dt><dd class="tw:m-0 tw:mt-1"><strong>{{ data.inboundMessages }}</strong></dd></div></div>
+            <div class="tw:console-metric"><div><dt>Respuestas del vendedor IA</dt><dd class="tw:m-0 tw:mt-1"><strong>{{ data.agentMessages }}</strong></dd></div></div>
+          </dl>
+        </ds-form-section>
+      }
+      <ds-form-section title="Atención pendiente" description="Estado al cargar las métricas. Este indicador no depende del período seleccionado." icon="users">
+        <div class="tw:flex tw:flex-wrap tw:items-center tw:justify-between tw:gap-4">
+          <dl class="tw:console-metric tw:m-0"><div><dt>Conversaciones sin atender</dt><dd class="tw:m-0 tw:mt-1"><strong>{{ data.unattendedOpen }}</strong></dd><small>Marcadas sin atender y todavía abiertas</small></div></dl>
+          <p class="tw:m-0 tw:max-w-prose tw:text-sm tw:text-muted">{{ data.unattendedOpen > 0 ? 'Revisa los mensajes pendientes desde la bandeja de conversaciones.' : 'No hay conversaciones abiertas marcadas sin atender.' }}</p>
+        </div>
+      </ds-form-section>
+      <ds-disclosure title="¿Cómo se calculan estos indicadores?">
+        <div class="tw:grid tw:gap-3 tw:text-sm tw:text-muted"><p class="tw:m-0">Los pedidos se agrupan por su fecha de creación. Los ingresos suman el total de los pedidos que actualmente figuran como pagados, en preparación, enviados o completados.</p><p class="tw:m-0">La relación entre pedidos pagados y conversaciones divide ambos totales y los multiplica por 100. No vincula cada pago con una conversación concreta y puede superar el 100 %.</p><p class="tw:m-0">Los mensajes se cuentan por su fecha de registro; pueden pertenecer a conversaciones iniciadas antes del período seleccionado.</p></div>
+      </ds-disclosure>
+    </div>
+  } @else if (!loading()) {
+    <ds-empty-state title="Las métricas no están disponibles" body="Reintenta la consulta para recuperar el resumen de actividad." />
   }
 </section>

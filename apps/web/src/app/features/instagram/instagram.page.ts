@@ -1,7 +1,8 @@
+import { DsActionBarComponent } from '@vendedoria/ui';
 import { DsEmptyStateComponent } from '@vendedoria/ui';
 import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
-import { DsButtonComponent, DsConfirmService, DsIconComponent } from '@vendedoria/ui';
+import { DsButtonComponent, DsDisclosureComponent, DsFormSectionComponent, DsConfirmService, DsIconComponent } from '@vendedoria/ui';
 import { messageFrom } from '../../core/api/api-error';
 import { InstagramStatus, IntegrationsApiService } from '../../core/api/integrations-api.service';
 import { AuthApiService } from '../../core/auth/auth-api.service';
@@ -11,9 +12,8 @@ import { IntegrationGateComponent } from '../integrations/integration-gate.compo
 @Component({
   selector: 'app-instagram-page',
   standalone: true,
-  imports: [DsEmptyStateComponent, ReactiveFormsModule, DsButtonComponent, DsIconComponent, IntegrationGateComponent],
+  imports: [DsActionBarComponent, DsEmptyStateComponent, DsDisclosureComponent, DsFormSectionComponent, ReactiveFormsModule, DsButtonComponent, DsIconComponent, IntegrationGateComponent],
   templateUrl: './instagram.page.html',
-  styleUrls: ['../store/store.page.scss', '../payments/payments.page.scss'],
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class InstagramPage {
@@ -26,6 +26,14 @@ export class InstagramPage {
   readonly loading = signal(true);
   readonly loadFailed = signal(false);
   readonly saving = signal(false);
+  readonly operation = signal<'connect' | 'disconnect' | null>(null);
+
+  fieldError(field: 'accessToken' | 'accountId'): string | null {
+    const control = this.form.controls[field];
+    if (!control.touched) return null;
+    if (field === 'accessToken' && (control.invalid || control.value.trim().length < 10)) return 'Ingresa un token de acceso válido.';
+    return control.invalid ? 'Usa un identificador de 5 a 30 dígitos.' : null;
+  }
   readonly errorMessage = signal<string | null>(null);
   readonly successMessage = signal<string | null>(null);
   readonly status = signal<InstagramStatus | null>(null);
@@ -61,13 +69,15 @@ export class InstagramPage {
   }
 
   async connect(): Promise<void> {
-    if (this.form.invalid) {
+    if (this.saving() || !this.canManage) return;
+    if (this.form.invalid || this.form.controls.accessToken.value.trim().length < 10) {
       this.form.markAllAsTouched();
       this.errorMessage.set('Revisa los campos marcados.');
       return;
     }
     const { accessToken, accountId } = this.form.getRawValue();
     this.saving.set(true);
+    this.operation.set('connect');
     this.errorMessage.set(null);
     this.successMessage.set(null);
     try {
@@ -78,15 +88,17 @@ export class InstagramPage {
         }),
       );
       this.form.reset({ accessToken: '', accountId: '' });
-      this.successMessage.set('Instagram conectado. Tu vendedor ya responde los mensajes directos.');
+      this.successMessage.set('Conexión de Instagram guardada. Revisa el estado de recepción de mensajes.');
     } catch (error) {
       this.errorMessage.set(messageFrom(error, 'No pudimos conectar tu cuenta de Instagram.'));
     } finally {
       this.saving.set(false);
+      this.operation.set(null);
     }
   }
 
   async disconnect(): Promise<void> {
+    if (this.saving() || !this.canManage) return;
     const channel = this.status()?.channel;
     if (!channel) return;
     const confirmed = await this.confirmDialog.confirm({
@@ -95,18 +107,20 @@ export class InstagramPage {
       confirmLabel: 'Desconectar',
       tone: 'danger',
     });
-    if (!confirmed) return;
+    if (!confirmed || this.saving()) return;
     this.saving.set(true);
+    this.operation.set('disconnect');
     this.errorMessage.set(null);
     this.successMessage.set(null);
     try {
       await this.api.disconnectChannel(channel.id);
-      this.status.set(await this.api.getInstagram());
+      this.status.update(status => status ? { ...status, channel: null } : status);
       this.successMessage.set('Instagram desconectado.');
     } catch (error) {
       this.errorMessage.set(messageFrom(error, 'No pudimos desconectar Instagram.'));
     } finally {
       this.saving.set(false);
+      this.operation.set(null);
     }
   }
 }

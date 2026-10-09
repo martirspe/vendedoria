@@ -1,0 +1,4 @@
+interface:
+  display_name: "VendedorIA · UX/UI y Design System"
+  short_description: "Diseño con componentes y tokens compartidos"
+  default_prompt: "Usa $vendedoria-ui para pulir esta sección con la DSM y verificar sus estados, accesibilidad y responsive."

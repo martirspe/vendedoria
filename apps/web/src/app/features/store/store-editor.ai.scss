@@ -8,7 +8,7 @@
 }
 
 .ai-toggle.is-open {
-  color: var(--ds-color-text);
+  color: var(--ds-color-text-primary);
 }
 
 .ai {
@@ -24,20 +24,7 @@
   margin: 0;
 
   textarea {
-    width: 100%;
-    min-height: var(--ds-touch-target);
-    padding: var(--ds-space-2) var(--ds-space-3);
-    border: 1px solid var(--ds-color-border);
-    border-radius: var(--ds-radius-md);
-    background: var(--ds-color-surface);
-    font: inherit;
-    font-size: 0.85rem;
     resize: vertical;
-
-    &:focus-visible {
-      border-color: var(--ds-color-focus-ring);
-      outline: 2px solid color-mix(in srgb, var(--ds-color-focus-ring) 25%, transparent);
-    }
   }
 
   ds-button {

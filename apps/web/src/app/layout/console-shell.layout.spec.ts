@@ -37,11 +37,13 @@ describe('console navigation', () => {
   it('keeps destinations named and reachable when collapsed, and expands again', async () => {
     const { fixture } = await setup();
     const nav = fixture.nativeElement.querySelector('#console-navigation') as HTMLElement;
+    expect(nav.querySelector('[aria-label="Contraer navegación"] ds-icon')?.getAttribute('name')).toBe('panelLeft');
     (nav.querySelector('[aria-label="Contraer navegación"]') as HTMLButtonElement).click();
     fixture.detectChanges();
     await fixture.whenStable();
     expect(document.activeElement?.getAttribute('aria-label')).toBe('Expandir navegación');
     expect(nav.querySelectorAll('[data-nav-toggle]')).toHaveLength(1);
+    expect(nav.querySelector('[aria-label="Expandir navegación"] ds-icon[name="panelRight"]')).not.toBeNull();
     expect(nav.querySelector('[data-nav-toggle]')?.parentElement?.querySelector('a[aria-label="VendedorIA"]')).toBeNull();
     const product = nav.querySelector('a[href="/app/products"]') as HTMLAnchorElement;
     expect(product.getAttribute('aria-label')).toBe('Productos');

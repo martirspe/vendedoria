@@ -81,6 +81,8 @@ const DS_ICONS = {
   smartphone: 'LucideSmartphone',
   panelClose: 'LucidePanelRightClose',
   panelOpen: 'LucidePanelRightOpen',
+  panelLeft: 'LucidePanelLeft',
+  panelRight: 'LucidePanelRight',
   grip: 'LucideGripVertical',
   layers: 'LucideLayers',
   palette: 'LucidePalette',

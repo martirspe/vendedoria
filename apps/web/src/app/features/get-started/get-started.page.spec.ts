@@ -17,7 +17,7 @@ async function setup(healthStatus = 'CONNECTED', isActive = true, fail = false, 
     provideRouter([]),
     { provide: AgentsApiService, useValue: { getPrimary: async () => {
       if (missingSeller) throw new HttpErrorResponse({ status: 404 });
-      return { quality: { score: 100 }, isActive, initialMessage: 'Hola', handoffMessage: 'Te atendemos' };
+      return { quality: { score: 240, max: 240 }, isActive, initialMessage: 'Hola', handoffMessage: 'Te atendemos' };
     } } },
     { provide: CatalogApiService, useValue: catalog },
     { provide: MessagingApiService, useValue: { listChannels: async () => [{ type: 'WHATSAPP', healthStatus, externalId: 'qa-channel' }], listConversations: async () => [{}] } },
@@ -34,6 +34,19 @@ async function setup(healthStatus = 'CONNECTED', isActive = true, fail = false, 
 afterEach(() => TestBed.resetTestingModule());
 
 describe('onboarding readiness and recovery', () => {
+  it('renders the seller score against the API maximum', async () => {
+    const { fixture } = await setup();
+    expect(fixture.nativeElement.textContent).toContain('240/240 puntos');
+    expect(fixture.nativeElement.textContent).not.toContain('/200');
+  });
+
+  it('distinguishes the next step from completed steps with visible labels', async () => {
+    const { fixture } = await setup('DISCONNECTED');
+    const rows = Array.from(fixture.nativeElement.querySelectorAll('ol li')) as HTMLElement[];
+    expect(rows.filter((row) => row.textContent?.includes('Completado'))).toHaveLength(4);
+    expect(rows.find((row) => row.textContent?.includes('Conecta WhatsApp'))?.textContent).toContain('Siguiente paso');
+    expect(fixture.nativeElement.querySelector('#setup-next-title').textContent).toBe('Conecta WhatsApp');
+  });
   it('treats a missing seller as an incomplete step rather than a failed dashboard', async () => {
     const { page } = await setup('CONNECTED', true, false, true);
     expect(page.errorMessage()).toBeNull();

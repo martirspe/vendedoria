@@ -1,129 +1,75 @@
-<section class="store tw:mx-auto tw:min-w-0">
-  <header class="store__header">
-    <div>
-      <h1 class="tw:console-title">Cobros</h1>
-      <p>
-        Conecta tu propia cuenta de Mercado Pago. Lo que pagan tus clientes en la tienda
-        y en los links del vendedor llega directo a tu cuenta.
-      </p>
-    </div>
-  </header>
-
-  @if (errorMessage() && !loadFailed(); as error) {
-    <div class="tw:feedback tw:feedback-danger" role="alert">
-      <ds-icon name="alert" />
-      <span>{{ error }}</span>
-    </div>
-  }
-  @if (successMessage(); as success) {
-    <div class="tw:feedback tw:feedback-success" role="status">
-      <ds-icon name="check" />
-      <span>{{ success }}</span>
-    </div>
-  }
-
+<section class="tw:mx-auto tw:grid tw:w-full tw:min-w-0 tw:max-w-form tw:gap-5">
+  <header><p class="tw:console-eyebrow">Ventas</p><h1 class="tw:console-title">Cobros</h1><p class="tw:mt-2 tw:max-w-prose tw:text-sm tw:text-muted">Conecta tu cuenta de Mercado Pago para recibir los pagos de tus clientes en la tienda y en los links del vendedor.</p></header>
+  @if (errorMessage() && !loadFailed(); as error) { <div class="tw:feedback tw:feedback-danger" role="alert"><ds-icon name="alert" /><span>{{ error }}</span></div> }
+  @if (successMessage(); as success) { <div class="tw:feedback tw:feedback-success" role="status"><ds-icon name="check" /><span>{{ success }}</span></div> }
   @if (loading()) {
-    <div class="skeleton" aria-busy="true">Cargando tus cobros…</div>
+    <div class="tw:console-list-panel" role="status" aria-busy="true" aria-label="Cargando estado de cobros"><div class="tw:console-list-skeleton" aria-hidden="true">@for (row of [1,2,3]; track row) { <div></div> }</div></div>
   } @else if (loadFailed()) {
-      <ds-empty-state title="No pudimos cargar esta sección" body="Revisa tu conexión e inténtalo de nuevo.">
-        <ds-button variant="secondary" (click)="load()">Reintentar</ds-button>
-      </ds-empty-state>
-    } @else if (view(); as v) {
-    <div class="status-card" [class.status-card--live]="v.connected">
-      <span class="pill" [class.pill--ok]="v.connected">
-        {{ v.connected ? (v.liveMode ? 'Producción' : 'Pruebas') : 'Sin conectar' }}
-      </span>
-      <div class="status-card__body">
-        <strong>Mercado Pago</strong>
-        <span>
-          @if (v.connected && v.hasWebhookSecret) {
-            Cuenta {{ v.externalUserId }} verificada. La tienda ya puede cobrar con tarjeta y Yape.
-          } @else if (v.connected) {
-            Cuenta verificada. Falta la clave del webhook para activar el pago en la tienda.
-          } @else if (v.simulatorAvailable) {
-            Modo de prueba: los links de pago son simulados hasta que conectes tu cuenta.
-          } @else {
-            Sin cuenta conectada: la tienda funciona en modo "pedir por WhatsApp".
-          }
-        </span>
-      </div>
-      @if (v.connected) {
-        <ds-button variant="ghost" [disabled]="!canManage() || saving()" (click)="disconnect()">Desconectar</ds-button>
-      }
-    </div>
-
-    @if (!v.encryptionConfigured) {
-      <div class="tw:feedback tw:feedback-danger" role="alert">
-        <ds-icon name="alert" />
-        <span>No podemos guardar las credenciales de forma segura en este momento. Contacta a soporte antes de conectar tu cuenta.</span>
-      </div>
-    }
-
-    @if (!canManage()) { <div class="tw:feedback tw:feedback-info" role="status">Puedes consultar el estado de los cobros. El propietario o un administrador puede conectar y gestionar la cuenta.</div> }
-    <div class="store__grid">
-      <form class="store__form" [formGroup]="form" (ngSubmit)="save()">
-        <div class="tw:console-save-bar">
-          <span class="tw:px-2">{{ v.connected ? 'Cambios de cobros' : 'Nueva conexión' }}</span>
-          <ds-button type="submit" [disabled]="!canManage() || saving() || !v.encryptionConfigured">{{ saving() ? 'Verificando…' : v.connected ? 'Guardar y verificar' : 'Conectar cuenta' }}</ds-button>
-        </div>
-        <section class="card">
-          <h2>Credenciales</h2>
-          <fieldset class="tw:contents" [disabled]="!canManage() || saving() || !v.encryptionConfigured">
-          <fieldset class="mode">
-            <legend>Tipo de credenciales</legend>
-            <label class="mode__option">
-              <input type="radio" formControlName="liveMode" [value]="false" />
-              <span><strong>De prueba</strong> Para hacer compras de prueba sin dinero real.</span>
-            </label>
-            <label class="mode__option">
-              <input type="radio" formControlName="liveMode" [value]="true" />
-              <span><strong>De producción</strong> Cobros reales a tus clientes.</span>
-            </label>
+    <ds-empty-state title="No pudimos cargar tus cobros" body="Revisa tu conexión e inténtalo de nuevo."><ds-button variant="secondary" (click)="load()">Reintentar</ds-button></ds-empty-state>
+  } @else if (view(); as v) {
+    <ds-form-section title="Mercado Pago" description="Estado de la cuenta guardada." icon="wallet">
+      @if (v.connected) { <ds-button dsSectionActions variant="ghost" [disabled]="!canManage() || saving()" (click)="disconnect()">{{ operation() === 'disconnect' ? 'Desconectando…' : 'Desconectar' }}</ds-button> }
+      <dl class="tw:m-0 tw:grid tw:gap-4 tw:text-sm tw:sm:grid-cols-3">
+        <div><dt class="tw:text-caption tw:text-muted">Cuenta</dt><dd class="tw:m-0 tw:mt-1 tw:font-semibold">{{ v.connected ? 'Conectada' : 'Sin conectar' }}</dd></div>
+        <div><dt class="tw:text-caption tw:text-muted">Entorno guardado</dt><dd class="tw:m-0 tw:mt-1 tw:font-semibold">{{ v.connected ? (v.liveMode ? 'Producción' : 'Pruebas') : 'Sin configurar' }}</dd></div>
+        <div><dt class="tw:text-caption tw:text-muted">Notificaciones de pago</dt><dd class="tw:m-0 tw:mt-1 tw:font-semibold">{{ v.hasWebhookSecret ? 'Clave configurada' : 'Clave pendiente' }}</dd></div>
+      </dl>
+      <p class="tw:m-0 tw:text-sm tw:text-muted" role="status">
+        @if (v.connected && !v.hasWebhookSecret) { La cuenta está verificada. Añade la clave secreta del webhook para activar el pago en la tienda. }
+        @else if (v.connected && !v.liveMode) { Tu cuenta usa credenciales de prueba. Este entorno permite comprobar compras sin dinero real. }
+        @else if (v.connected) { Cuenta verificada con credenciales de producción y clave de notificaciones configurada. }
+        @else if (v.simulatorAvailable) { Los links de pago funcionan en modo de prueba hasta que conectes una cuenta. }
+        @else { Conecta una cuenta para habilitar los cobros online. Mientras tanto, la tienda permite pedir por WhatsApp. }
+      </p>
+      @if (v.externalUserId) { <p class="tw:m-0 tw:wrap-anywhere tw:text-caption tw:text-muted">Identificador de cuenta: {{ v.externalUserId }}</p> }
+    </ds-form-section>
+    @if (!v.encryptionConfigured) { <div class="tw:feedback tw:feedback-danger" role="alert"><ds-icon name="alert" /><span>No podemos guardar las credenciales de forma segura en este momento. Contacta a soporte antes de conectar tu cuenta.</span></div> }
+    @if (!canManage()) { <div class="tw:feedback tw:feedback-info" role="status"><ds-icon name="info" /><span>Puedes consultar los cobros. El propietario o un administrador puede gestionar la cuenta.</span></div> }
+    <div class="tw:grid tw:min-w-0 tw:items-start tw:gap-5 tw:lg:grid-cols-3">
+      <form class="tw:grid tw:min-w-0 tw:gap-5 tw:lg:col-span-2" [formGroup]="form" (ngSubmit)="save()">
+        <ds-action-bar label="Acciones de cobros">
+          <span dsActionStatus role="status">{{ saving() ? (operation() === 'disconnect' ? 'Desconectando cuenta' : 'Verificando cuenta') : form.dirty ? 'Cambios sin verificar' : v.connected ? 'Cuenta guardada' : 'Nueva conexión' }}</span>
+          <ds-button type="submit" [disabled]="!canManage() || saving() || !v.encryptionConfigured">{{ operation() === 'connect' ? 'Verificando…' : v.connected ? 'Guardar y verificar' : 'Conectar cuenta' }}</ds-button>
+        </ds-action-bar>
+        <ds-form-section title="Conexión de la cuenta" description="Usa credenciales del mismo entorno. Los cambios se aplican al guardar y verificar.">
+          <fieldset class="tw:m-0 tw:grid tw:min-w-0 tw:gap-5 tw:border-0 tw:p-0" [disabled]="!canManage() || saving() || !v.encryptionConfigured">
+            <legend class="tw:sr-only">Credenciales de Mercado Pago</legend>
+            <div class="tw:grid tw:gap-2">
+              <label for="payment-environment" class="tw:text-sm tw:font-semibold">Entorno</label>
+              <ds-select><select id="payment-environment" formControlName="liveMode" aria-describedby="payment-environment-help"><option [ngValue]="false">Pruebas</option><option [ngValue]="true">Producción</option></select></ds-select>
+              <p id="payment-environment-help" class="tw:m-0 tw:text-caption tw:text-muted">{{ form.controls.liveMode.value ? 'Producción permite cobrar dinero real a tus clientes.' : 'Pruebas permite comprobar el proceso sin dinero real.' }}</p>
+            </div>
+            <div class="tw:grid tw:gap-2">
+<label for="payment-publicKey" class="tw:text-sm tw:font-semibold">Public Key</label>
+<input id="payment-publicKey" class="tw:console-field" formControlName="publicKey" type="text" autocomplete="off" spellcheck="false" [attr.aria-invalid]="!!fieldError('publicKey')" [attr.aria-describedby]="fieldError('publicKey') ? 'payment-publicKey-help payment-publicKey-error' : 'payment-publicKey-help'" />
+<p id="payment-publicKey-help" class="tw:m-0 tw:text-caption tw:text-muted">Copia la credencial completa de tu cuenta de Mercado Pago.</p>
+@if (fieldError('publicKey'); as error) { <p id="payment-publicKey-error" class="tw:m-0 tw:text-caption tw:text-danger-text">{{ error }}</p> }
+</div>
+<div class="tw:grid tw:gap-2">
+<label for="payment-accessToken" class="tw:text-sm tw:font-semibold">Access Token</label>
+<input id="payment-accessToken" class="tw:console-field" formControlName="accessToken" type="password" autocomplete="new-password" spellcheck="false" [attr.aria-invalid]="!!fieldError('accessToken')" [attr.aria-describedby]="fieldError('accessToken') ? 'payment-accessToken-help payment-accessToken-error' : 'payment-accessToken-help'" />
+<p id="payment-accessToken-help" class="tw:m-0 tw:text-caption tw:text-muted">{{ v.connected ? 'Déjalo vacío para conservar el token actual.' : 'Obligatorio para conectar. Se guarda cifrado y nunca vuelve a mostrarse.' }}</p>
+@if (fieldError('accessToken'); as error) { <p id="payment-accessToken-error" class="tw:m-0 tw:text-caption tw:text-danger-text">{{ error }}</p> }
+</div>
+<div class="tw:grid tw:gap-2">
+<label for="payment-webhookSecret" class="tw:text-sm tw:font-semibold">Clave secreta del webhook</label>
+<input id="payment-webhookSecret" class="tw:console-field" formControlName="webhookSecret" type="password" autocomplete="new-password" spellcheck="false" [attr.aria-invalid]="!!fieldError('webhookSecret')" [attr.aria-describedby]="fieldError('webhookSecret') ? 'payment-webhookSecret-help payment-webhookSecret-error' : 'payment-webhookSecret-help'" />
+<p id="payment-webhookSecret-help" class="tw:m-0 tw:text-caption tw:text-muted">{{ v.hasWebhookSecret ? 'Configurada. Déjala vacía para conservar la actual.' : 'Permite verificar las notificaciones de pago. Añádela para activar el pago en la tienda.' }}</p>
+@if (fieldError('webhookSecret'); as error) { <p id="payment-webhookSecret-error" class="tw:m-0 tw:text-caption tw:text-danger-text">{{ error }}</p> }
+</div>
           </fieldset>
-          <label>
-            Public Key
-            <input formControlName="publicKey" autocomplete="off" spellcheck="false" placeholder="APP_USR-…" />
-          </label>
-          <label>
-            <span class="label-text">
-              Access Token
-              @if (v.connected) { <span class="optional">Déjalo vacío para mantener el actual</span> }
-            </span>
-            <input formControlName="accessToken" type="password" autocomplete="off" spellcheck="false" placeholder="APP_USR-…" />
-            <small>Se guarda cifrado y nunca vuelve a mostrarse.</small>
-          </label>
-          <label>
-            <span class="label-text">
-              Clave secreta del webhook
-              @if (v.hasWebhookSecret) { <span class="optional">Configurada · déjala vacía para mantenerla</span> }
-            </span>
-            <input formControlName="webhookSecret" type="password" autocomplete="off" spellcheck="false" />
-          </label>
-          </fieldset>
-        </section>
+        </ds-form-section>
       </form>
-
-      <aside class="store__rail">
-        <section class="card">
-          <h2>Cómo conectarla</h2>
-          <ol class="steps">
-            <li>
-              En <a href="https://www.mercadopago.com.pe/developers/panel/app" target="_blank" rel="noopener">Tus integraciones</a>
-              crea una aplicación de tipo <em>Checkout API</em>.
-            </li>
-            <li>En <em>Credenciales</em> copia la Public Key y el Access Token del mismo tipo (prueba o producción).</li>
-            <li>
-              En <em>Webhooks</em> pega esta URL, marca el evento <strong>Order</strong> y <strong>Pagos</strong>, guarda y copia la clave secreta:
-              <span class="webhook">
-                <code>{{ v.webhookUrl }}</code>
-                <ds-button type="button" variant="secondary" (click)="copyWebhook(v.webhookUrl)">
-                  {{ copied() ? 'Copiada' : 'Copiar' }}
-                </ds-button>
-              </span>
-            </li>
-          </ol>
-          <small>Las credenciales, el webhook y su clave deben ser del mismo tipo (prueba o producción).</small>
-        </section>
+      <aside class="tw:grid tw:min-w-0 tw:gap-4" aria-label="Ayuda para conectar Mercado Pago">
+        <ds-form-section title="Notificaciones de pago" description="Usa esta dirección al configurar el webhook de tu cuenta.">
+          <code class="tw:block tw:select-all tw:wrap-anywhere tw:rounded-md tw:bg-canvas tw:p-3 tw:text-caption">{{ v.webhookUrl }}</code>
+          <ds-button type="button" variant="secondary" (click)="copyWebhook(v.webhookUrl)"><ds-icon name="copy" />{{ copied() ? 'URL copiada' : 'Copiar URL del webhook' }}</ds-button>
+          <p class="tw:m-0 tw:text-caption tw:text-muted">Las credenciales, el webhook y su clave secreta deben pertenecer al mismo entorno.</p>
+          <a class="tw:text-sm tw:font-semibold tw:underline tw:underline-offset-4" href="https://www.mercadopago.com.pe/developers/panel/app" target="_blank" rel="noopener noreferrer">Abrir integraciones de Mercado Pago ↗</a>
+        </ds-form-section>
+        <ds-disclosure title="Pasos para conectar la cuenta"><ol class="tw:m-0 tw:grid tw:gap-3 tw:pl-5 tw:text-sm tw:text-muted"><li>En tus integraciones de Mercado Pago, crea una aplicación de tipo Checkout API.</li><li>Copia la Public Key y el Access Token de prueba o producción.</li><li>En Webhooks, pega la URL de esta página, marca los eventos Order y Pagos, guarda y copia la clave secreta.</li></ol></ds-disclosure>
+        <ds-disclosure title="¿Qué ocurre al actualizar las credenciales?"><p class="tw:m-0 tw:text-sm tw:text-muted">La cuenta se verifica al guardar. Si falla la conexión, tus campos permanecen disponibles para corregirlos y volver a intentarlo. El token y la clave secreta se limpian del formulario después de guardar.</p></ds-disclosure>
+        <ds-disclosure title="¿Qué cobros se gestionan aquí?"><p class="tw:m-0 tw:text-sm tw:text-muted">Aquí configuras los pagos de los pedidos de tus clientes. La suscripción de tu negocio a VendedorIA se gestiona por separado.</p></ds-disclosure>
       </aside>
     </div>
   }

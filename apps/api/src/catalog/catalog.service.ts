@@ -51,6 +51,7 @@ type InventoryRow = {
   name: string;
   option: string | null;
   sku: string | null;
+  imageUrl: string | null;
   stockUnlimited: boolean;
   stockQty: number | null;
   usedInSets: number;
@@ -371,6 +372,12 @@ export class CatalogService {
         name: true,
         handle: true,
         sku: true,
+        media: {
+          where: { kind: { not: 'related' } },
+          orderBy: { sortOrder: 'asc' },
+          take: 1,
+          select: { url: true },
+        },
         stockUnlimited: true,
         stockQty: true,
         isAvailable: true,
@@ -401,6 +408,7 @@ export class CatalogService {
             variantOptions(variant).map((option) => option.value)
               .join(' / ') || null,
           sku: variant.sku,
+          imageUrl: product.media[0]?.url ?? null,
           stockUnlimited: product.stockUnlimited && variant.stockQty === null,
           stockQty: variant.stockQty,
           usedInSets: product._count.componentOf,
@@ -413,6 +421,7 @@ export class CatalogService {
           name: product.name,
           option: null,
           sku: product.sku,
+          imageUrl: product.media[0]?.url ?? null,
           stockUnlimited: product.stockUnlimited,
           stockQty: product.stockQty,
           usedInSets: product._count.componentOf,

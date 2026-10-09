@@ -1,6 +1,6 @@
 <div class="tw:console-scope tw:flex tw:min-h-dvh tw:items-start tw:gap-1 tw:bg-navigation tw:p-1 tw:[&_.ds-button]:rounded-full!">
   <a [href]="contentHref()" class="tw:sr-only tw:focus:not-sr-only tw:focus:fixed tw:focus:left-4 tw:focus:top-4 tw:focus:z-50 tw:console-action-link">Saltar al contenido</a>
-  <aside id="console-navigation" class="tw:console-navigation tw:sticky tw:top-1 tw:hidden tw:h-[calc(100dvh-2*var(--ds-space-1))] tw:shrink-0 tw:flex-col tw:gap-2 tw:overflow-y-auto tw:overflow-x-hidden tw:px-1 tw:py-2 tw:text-navigation-foreground tw:console:flex" [class.tw:w-sidebar]="!navCollapsed()" [class.tw:w-rail]="navCollapsed()" aria-label="Navegación de consola">
+  <aside id="console-navigation" class="tw:console-navigation tw:sticky tw:top-1 tw:hidden tw:h-[calc(100dvh-2*var(--ds-space-1))] tw:shrink-0 tw:flex-col tw:gap-2 tw:overflow-y-auto tw:overflow-x-hidden tw:px-1 tw:py-2 tw:text-navigation-foreground tw:console:flex" [class.tw:w-sidebar]="!navCollapsed()" [class.tw:w-rail]="navCollapsed()" [attr.data-collapsed]="navCollapsed() || null" aria-label="Navegación de consola">
     <ng-container [ngTemplateOutlet]="navigation" [ngTemplateOutletContext]="{ compact: navCollapsed() }" />
   </aside>
   @if (context(); as c) {
@@ -50,7 +50,7 @@
     @if (compact) {
       <button type="button" class="tw:console-rail-button tw:min-w-touch tw:group tw:relative" data-nav-toggle aria-label="Expandir navegación" title="Expandir navegación" aria-controls="console-navigation" [attr.aria-expanded]="!navCollapsed()" (click)="toggleNavigation()">
         <span class="tw:grid tw:size-7 tw:place-items-center tw:rounded-sm tw:bg-primary tw:text-ink tw:transition-opacity tw:group-hover:opacity-0 tw:group-focus-visible:opacity-0" aria-hidden="true"><ds-icon name="sparkles" [size]="1.1" /></span>
-        <span class="tw:absolute tw:inset-0 tw:grid tw:place-items-center tw:opacity-0 tw:transition-opacity tw:group-hover:opacity-100 tw:group-focus-visible:opacity-100" aria-hidden="true"><ds-icon name="panelOpen" [size]="1.1" /></span>
+        <span class="tw:absolute tw:inset-0 tw:grid tw:place-items-center tw:opacity-0 tw:transition-opacity tw:group-hover:opacity-100 tw:group-focus-visible:opacity-100" aria-hidden="true"><ds-icon name="panelRight" [size]="1.1" /></span>
       </button>
     } @else {
       <a class="tw:flex tw:min-h-touch tw:min-w-touch tw:items-center tw:gap-2 tw:px-2 tw:font-display tw:text-section tw:font-bold tw:text-navigation-foreground" routerLink="/app/get-started" aria-label="VendedorIA" title="VendedorIA" (click)="closeNavigation()"><span class="tw:grid tw:size-7 tw:shrink-0 tw:place-items-center tw:rounded-sm tw:bg-primary tw:text-ink" aria-hidden="true"><ds-icon name="sparkles" [size]="1.1" /></span><span>VendedorIA</span></a>
@@ -58,10 +58,10 @@
     @if (mobile) {
       <button type="button" class="tw:console-rail-button" aria-label="Cerrar navegación" (click)="closeNavigation()"><ds-icon name="x" /></button>
     } @else if (!compact) {
-      <button type="button" class="tw:console-rail-button" data-nav-toggle aria-label="Contraer navegación" aria-controls="console-navigation" [attr.aria-expanded]="!navCollapsed()" (click)="toggleNavigation()"><ds-icon name="panelClose" [size]="1" /></button>
+      <button type="button" class="tw:console-rail-button" data-nav-toggle aria-label="Contraer navegación" aria-controls="console-navigation" [attr.aria-expanded]="!navCollapsed()" (click)="toggleNavigation()"><ds-icon name="panelLeft" [size]="1" /></button>
     }
   </div>
-  <button type="button" class="tw:console-rail-link tw:w-full tw:cursor-pointer tw:border tw:border-solid tw:border-navigation-border tw:bg-navigation-hover tw:text-left" aria-label="Buscar páginas y acciones" title="Buscar páginas y acciones (Ctrl K)" aria-haspopup="dialog" [class.tw:justify-center]="compact" (click)="closeNavigation(); openPalette()"><ds-icon name="search" [size]="1" />@if (!compact) { <span class="tw:flex-1">Buscar</span><kbd class="tw:text-caption tw:font-normal tw:text-navigation-muted">Ctrl K</kbd> }</button>
+  <button type="button" class="tw:console-rail-link tw:w-full tw:cursor-pointer tw:border tw:border-solid tw:border-navigation-border tw:bg-navigation-hover tw:text-left" aria-label="Buscar páginas y acciones" title="Buscar páginas y acciones (Ctrl K)" aria-haspopup="dialog" [class.tw:console-rail-search]="compact" [class.tw:justify-center]="compact" (click)="closeNavigation(); openPalette()"><ds-icon name="search" [size]="1" />@if (!compact) { <span class="tw:flex-1">Buscar</span><kbd class="tw:text-caption tw:font-normal tw:text-navigation-muted">Ctrl K</kbd> }</button>
   <nav aria-label="Secciones de tu negocio" class="tw:grid tw:gap-2">
     @for (group of navGroups(); track group.id) {
       <div class="tw:grid tw:gap-1" [class.tw:pt-1]="!!group.label">

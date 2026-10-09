@@ -51,10 +51,10 @@
     <div class="store__grid">
       <form class="store__form" [formGroup]="form" (ngSubmit)="save()">
         @if (canManage) {
-          <div class="tw:console-save-bar">
-            <span class="tw:px-2">Cambios de medición</span>
+          <ds-action-bar label="Acciones de medición">
+            <span dsActionStatus class="tw:px-2">Cambios de medición</span>
             <ds-button type="submit" [disabled]="saving()">{{ saving() ? 'Guardando…' : 'Guardar' }}</ds-button>
-          </div>
+          </ds-action-bar>
         }
         <section class="card">
           <h2>Tus códigos</h2>

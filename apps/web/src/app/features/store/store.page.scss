@@ -19,6 +19,13 @@
   margin: var(--ds-space-2) 0 0;
   color: var(--ds-color-text-secondary);
 }
+.store__header h1 { margin: 0; }
+.store__header p { font-size: var(--ds-type-sm); line-height: 1.5; }
+.store__content { display: grid; min-width: 0; gap: var(--ds-space-5); align-items: start; }
+.store__content--with-rail { grid-template-columns: minmax(0, 1fr) 20rem; }
+.store__fields { display: grid; min-width: 0; margin: 0; padding: 0; border: 0; gap: var(--ds-space-5); }
+.store__fields label, .store__rail label { display: grid; min-width: 0; gap: var(--ds-space-2); font-size: var(--ds-type-sm); font-weight: 600; }
+.store__fields textarea { resize: vertical; }
 
 .store__eyebrow {
   margin: 0 0 var(--ds-space-2) !important;
@@ -129,6 +136,7 @@ small {
   font-weight: 600;
 }
 
+/* Retained for console pages that still import this stylesheet. */
 .card input,
 .card select,
 .card textarea {
@@ -139,19 +147,10 @@ small {
   font: inherit;
   background: #fff;
 }
+.card input.ng-invalid.ng-touched { border-color: var(--ds-color-danger); }
+.card textarea { resize: vertical; }
+.card input:not([type=checkbox]):not([type=radio]), .card select, .card textarea { min-width: 0; width: 100%; }
 
-.card input.ng-invalid.ng-touched {
-  border-color: var(--ds-color-danger);
-}
-
-.card textarea {
-  resize: vertical;
-}
-
-.card input:not([type=checkbox]):not([type=radio]), .card select, .card textarea {
-  min-width: 0;
-  width: 100%;
-}
 
 .card .check {
   display: flex;
@@ -189,7 +188,7 @@ small {
   font-weight: 600;
 }
 
-.card .mode__option {
+.store__fields .mode__option {
   display: flex;
   gap: var(--ds-space-3);
   align-items: flex-start;
@@ -200,7 +199,7 @@ small {
   cursor: pointer;
 }
 
-.card .mode__option input {
+.store__fields .mode__option input {
   min-height: auto;
   margin-top: 0.2rem;
   padding: 0;
@@ -399,7 +398,7 @@ small {
 }
 
 @media (max-width: 960px) {
-  .store__grid {
+  .store__grid, .store__content--with-rail {
     grid-template-columns: 1fr;
   }
 }
@@ -488,7 +487,7 @@ small {
 
 .address__error {
   margin: 0;
-  color: var(--ds-color-danger);
+  color: var(--ds-color-danger-text);
   font-size: 0.85rem;
 }
 

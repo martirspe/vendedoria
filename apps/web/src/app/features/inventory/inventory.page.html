@@ -1,129 +1,151 @@
-<section class="store tw:mx-auto tw:min-w-0">
-  <header class="store__header">
-    <div>
+<section class="tw:mx-auto tw:grid tw:w-full tw:min-w-0 tw:max-w-page tw:gap-5">
+  <header class="tw:flex tw:flex-wrap tw:items-start tw:justify-between tw:gap-4">
+    <div class="tw:grid tw:gap-2">
       <h1 class="tw:console-title">Inventario</h1>
-      <p>
-        Stock por SKU de todos tus productos y variantes. Los sets no aparecen: se venden
-        mientras sus piezas tengan unidades.
-      </p>
     </div>
+    <a routerLink="/app/products" class="tw:console-action-secondary"><ds-icon name="chevronLeft" />Productos</a>
   </header>
 
-  @if (changes().length) {
-    <div class="tw:console-save-bar" aria-label="Acciones de inventario">
-      <span class="tw:px-2">{{ changes().length }} {{ changes().length === 1 ? 'cambio pendiente' : 'cambios pendientes' }}</span>
-      <ds-button variant="ghost" class="tw:[&_.ds-button]:text-surface! tw:[&_.ds-button:hover]:bg-navigation-hover!" [disabled]="saving()" (click)="discard()">Descartar</ds-button>
-      <ds-button [disabled]="saving()" (click)="save()">{{ saving() ? 'Guardando…' : 'Guardar' }}</ds-button>
-    </div>
+  @if (pendingCount()) {
+    <ds-action-bar label="Acciones del inventario">
+      <span dsActionStatus role="status" class="tw:px-2">{{ saving() ? 'Guardando cambios…' : pendingCount() + (pendingCount() === 1 ? ' cambio pendiente' : ' cambios pendientes') }}</span>
+      <ds-button type="button" variant="ghost" [disabled]="saving()" (click)="discard()">Descartar</ds-button>
+      <ds-button type="button" [disabled]="saving() || hasInvalidQty()" (click)="save()">{{ saving() ? 'Guardando…' : 'Guardar stock' }}</ds-button>
+    </ds-action-bar>
   }
-
   @if (errorMessage() && !loadFailed(); as error) {
-    <div class="tw:feedback tw:feedback-danger" role="alert">
-      <ds-icon name="alert" />
-      <span>{{ error }}</span>
-    </div>
+    <div class="tw:feedback tw:feedback-danger" role="alert"><ds-icon name="alert" /><span>{{ error }} Tus cambios siguen disponibles para volver a intentar.</span></div>
   }
   @if (successMessage(); as success) {
-    <div class="tw:feedback tw:feedback-success" role="status">
-      <ds-icon name="check" />
-      <span>{{ success }}</span>
+    <div class="tw:feedback tw:feedback-success" role="status"><ds-icon name="check" /><span>{{ success }}</span></div>
+  }
+  @if (hasInvalidQty()) {
+    <div class="tw:feedback tw:feedback-warning" role="status">
+      <ds-icon name="alert" /><span>Corrige las cantidades marcadas antes de guardar.</span>
+      <ds-button type="button" variant="secondary" (click)="showInvalidRow()">Revisar cantidad</ds-button>
     </div>
   }
 
   @if (loading()) {
-    <div class="skeleton" aria-busy="true">Cargando inventario…</div>
+    <div class="tw:console-list-panel" role="status" aria-busy="true" aria-label="Cargando inventario">
+      <div class="tw:console-list-skeleton" aria-hidden="true">@for (row of [1, 2, 3, 4, 5]; track row) { <div></div> }</div>
+    </div>
   } @else if (loadFailed()) {
-      <ds-empty-state title="No pudimos cargar esta sección" body="Revisa tu conexión e inténtalo de nuevo.">
-        <ds-button variant="secondary" (click)="load()">Reintentar</ds-button>
-      </ds-empty-state>
-    } @else if (!rows().length) {
-    <ds-empty-state title="Aún no hay productos" body="Publica productos para controlar su stock desde aquí.">
-      <a routerLink="/app/products" class="rail-link">Ir a productos <ds-icon name="chevronRight" [size]="1" /></a>
+    <ds-empty-state title="No pudimos cargar el inventario" body="Revisa tu conexión e inténtalo de nuevo.">
+      <ds-button type="button" variant="secondary" (click)="load()">Reintentar</ds-button>
+    </ds-empty-state>
+  } @else if (!rows().length) {
+    <ds-empty-state title="Aún no hay productos con inventario" body="Agrega productos al catálogo para gestionar sus unidades aquí.">
+      <a routerLink="/app/products" class="tw:console-action-secondary">Ir a productos<ds-icon name="chevronRight" /></a>
     </ds-empty-state>
   } @else {
-    <div class="inventory__toolbar">
-      <label class="inventory__search">
-        <ds-icon name="search" [size]="1" />
-        <input
-          type="search"
-          placeholder="Buscar por nombre, variante o SKU"
-          aria-label="Buscar en el inventario"
-          [value]="query()"
-          (input)="query.set($any($event.target).value)"
-        />
-      </label>
-      <label class="check">
-        <input type="checkbox" [checked]="lowOnly()" (change)="lowOnly.set($any($event.target).checked)" />
-        <span>Solo stock bajo (3 o menos)</span>
-      </label>
-    </div>
-
-    @if (!visible().length) {
-      <p class="hint">Ningún SKU coincide con el filtro.</p>
-    } @else {
-      <div class="card inventory" role="region" aria-label="Inventario de productos, tabla desplazable" tabindex="0">
-        <table>
-          <thead>
-            <tr>
-              <th scope="col">Producto</th>
-              <th scope="col">SKU</th>
-              <th scope="col">Stock</th>
-              <th scope="col">Ilimitado</th>
-            </tr>
-          </thead>
-          <tbody>
-            @for (row of visible(); track track(row)) {
-              @let d = draft(row);
-              <tr [class.is-changed]="isChanged(row)">
-                <td>
-                  <strong>{{ row.name }}</strong>
-                  @if (row.option) {
-                    <span class="inventory__option">{{ row.option }}</span>
-                  }
-                  @if (row.usedInSets) {
-                    <span class="inventory__option">En {{ row.usedInSets }} {{ row.usedInSets === 1 ? 'set' : 'sets' }}</span>
-                  }
-                </td>
-                <td><code>{{ row.sku || '—' }}</code></td>
-                <td>
-                  <div class="stepper" [class.is-off]="d.unlimited">
-                    <button type="button" [disabled]="d.unlimited || d.qty <= 0" (click)="step(row, -1)" [attr.aria-label]="'Restar una unidad de ' + row.name">
-                      <ds-icon name="minus" [size]="0.9" />
-                    </button>
-                    <input
-                      type="number"
-                      min="0"
-                      step="1"
-                      inputmode="numeric"
-                      [attr.aria-label]="'Stock de ' + row.name + (row.option ? ' ' + row.option : '')"
-                      [disabled]="d.unlimited"
-                      [value]="d.unlimited ? '' : d.qty"
-                      (input)="setQty(row, $any($event.target).value)"
-                    />
-                    <button type="button" [disabled]="d.unlimited" (click)="step(row, 1)" [attr.aria-label]="'Sumar una unidad a ' + row.name">
-                      <ds-icon name="plus" [size]="0.9" />
-                    </button>
-                  </div>
-                  @if (!d.unlimited && d.qty === 0) {
-                    <span class="inventory__alert">Agotado</span>
-                  }
-                </td>
-                <td>
-                  <label class="inventory__toggle-target">
-                  <input
-                    type="checkbox"
-                    class="inventory__toggle"
-                    [attr.aria-label]="'Stock ilimitado para ' + row.name"
-                    [checked]="d.unlimited"
-                    (change)="setUnlimited(row, $any($event.target).checked)"
-                  />
-                  </label>
-                </td>
-              </tr>
-            }
-          </tbody>
-        </table>
+    <section class="tw:grid tw:grid-cols-2 tw:gap-3 tw:sm:grid-cols-3" aria-label="Resumen del inventario guardado">
+      <div class="tw:console-metric"><span>Productos y variantes<small>Registros guardados</small></span><strong>{{ summary().total }}</strong></div>
+      <div class="tw:console-metric"><span>Sin stock<small>Sin unidades disponibles</small></span><strong class="tw:text-danger-text">{{ summary().soldOut }}</strong></div>
+      <div class="tw:console-metric"><span>Stock bajo<small>3 unidades o menos, incluye agotados</small></span><strong class="tw:text-warning-text">{{ summary().low }}</strong></div>
+    </section>
+    <div class="tw:console-list-panel">
+      <div class="tw:flex tw:flex-wrap tw:items-center tw:gap-3 tw:border-0 tw:border-b tw:border-solid tw:border-divider tw:px-4 tw:py-3">
+        <label class="tw:min-w-0 tw:flex-1">
+          <span class="tw:flex tw:min-w-0 tw:items-center tw:gap-2 tw:rounded-sm tw:border tw:border-solid tw:border-border tw:px-3 tw:focus-within:border-focus">
+            <ds-icon name="search" class="tw:text-muted" />
+            <input type="search" aria-label="Buscar en inventario" class="tw:console-field tw:border-0! tw:px-0!" placeholder="Buscar por nombre, variante o SKU" maxlength="200" [value]="query()" (input)="setFilter('q', $any($event.target).value)" />
+          </span>
+        </label>
+        <ds-checkbox variant="inline">
+          <input type="checkbox" [checked]="lowOnly()" (change)="setFilter('stock', $any($event.target).checked ? 'bajo' : '')" />Stock bajo: 3 o menos
+        </ds-checkbox>
+        <ds-menu #viewOptions label="Ordenar y configurar columnas" menuId="inventory-view-options" mode="panel">
+          <span dsMenuTrigger class="tw:flex tw:items-center tw:gap-2"><ds-icon name="slidersHorizontal" /><span class="tw:sr-only">Opciones de vista</span></span>
+          <div class="tw:grid tw:gap-3 tw:p-2">
+            <div class="tw:flex tw:items-center tw:justify-between tw:gap-2"><strong class="tw:text-body">Opciones de vista</strong><ds-button type="button" variant="ghost" label="Cerrar opciones de vista" (click)="viewOptions.close()"><ds-icon name="x" /></ds-button></div>
+            <label class="tw:grid tw:gap-1 tw:text-caption tw:font-medium">Ordenar por<ds-select><select [value]="sortBy()" (change)="setSort($any($event.target).value)">@for (option of sortOptions; track option.id) { <option [value]="option.id">{{ option.label }}</option> }</select></ds-select></label>
+            <label class="tw:grid tw:gap-1 tw:text-caption tw:font-medium">Dirección<ds-select><select [value]="descending() ? 'desc' : 'asc'" (change)="setDirection($any($event.target).value)"><option value="asc">Ascendente</option><option value="desc">Descendente</option></select></ds-select></label>
+            <fieldset class="tw:m-0 tw:min-w-0 tw:border-0 tw:border-t tw:border-solid tw:border-divider tw:p-0 tw:pt-3">
+              <legend class="tw:text-caption tw:font-medium">Columnas visibles</legend>
+              <ds-checkbox variant="inline" description="Siempre visible para identificar el producto."><input type="checkbox" checked disabled />Producto</ds-checkbox>
+              @for (column of columnOptions; track column.id) {
+                <ds-checkbox variant="inline"><input type="checkbox" [attr.aria-label]="'Mostrar columna ' + column.label" [checked]="columnVisible(column.id)" (change)="toggleColumn(column.id)" />{{ column.label }}</ds-checkbox>
+              }
+            </fieldset>
+            <ds-button type="button" variant="secondary" (click)="resetView()">Restablecer vista</ds-button>
+          </div>
+        </ds-menu>
+        @if (hasFilters()) { <ds-button type="button" variant="secondary" (click)="clearFilters()">Limpiar filtros</ds-button> }
       </div>
-    }
+      @if (hasFilters()) {
+        <div class="tw:flex tw:flex-wrap tw:gap-2 tw:px-4 tw:pb-4" role="group" aria-label="Filtros activos">
+          @if (query().trim()) { <button type="button" class="tw:console-filter-chip" aria-label="Quitar filtro de búsqueda" (click)="setFilter('q', '')"><span class="tw:wrap-anywhere">Búsqueda: {{ query() }}</span><ds-icon name="x" [size]="0.9" /></button> }
+          @if (lowOnly()) { <button type="button" class="tw:console-filter-chip" aria-label="Quitar filtro de stock bajo" (click)="setFilter('stock', '')">Stock bajo<ds-icon name="x" [size]="0.9" /></button> }
+        </div>
+      }
+      @if (!visible().length) {
+        <ds-empty-state title="No hay coincidencias" body="Prueba otro nombre o SKU, o limpia los filtros para ver todo el inventario.">
+          <ds-button type="button" variant="secondary" (click)="clearFilters()">Ver todo el inventario</ds-button>
+        </ds-empty-state>
+      } @else {
+        <div class="tw:console-data-row tw:hidden! tw:bg-canvas tw:text-caption tw:font-medium tw:text-muted tw:md:grid!" aria-hidden="true">
+          <span [class.tw:md:col-span-5]="productSpan() === 5" [class.tw:md:col-span-7]="productSpan() === 7" [class.tw:md:col-span-8]="productSpan() === 8" [class.tw:md:col-span-9]="productSpan() === 9" [class.tw:md:col-span-10]="productSpan() === 10" [class.tw:md:col-span-12]="productSpan() === 12">Producto</span>
+          @if (columnVisible('sku')) { <span class="tw:col-span-2">SKU</span> }
+          @if (columnVisible('disponible')) { <span class="tw:col-span-3">Disponible</span> }
+          @if (columnVisible('limite')) { <span class="tw:col-span-2">Sin límite</span> }
+        </div>
+        <ul class="tw:m-0 tw:list-none tw:p-0" aria-label="Productos y variantes del inventario" [attr.aria-busy]="saving()">
+          @for (row of pagedRows(); track track(row)) {
+            @let d = draft(row);
+            <li class="tw:console-data-row tw:border-0 tw:border-t tw:border-solid tw:border-divider" [class.tw:bg-primary/10]="isChanged(row)">
+              <div class="tw:col-span-2 tw:flex tw:min-w-0 tw:items-center tw:gap-3" [class.tw:md:col-span-5]="productSpan() === 5" [class.tw:md:col-span-7]="productSpan() === 7" [class.tw:md:col-span-8]="productSpan() === 8" [class.tw:md:col-span-9]="productSpan() === 9" [class.tw:md:col-span-10]="productSpan() === 10" [class.tw:md:col-span-12]="productSpan() === 12">
+                <span class="tw:grid tw:size-10 tw:shrink-0 tw:place-items-center tw:overflow-hidden tw:rounded-sm tw:border tw:border-solid tw:border-border tw:bg-canvas">
+                  @if (row.imageUrl && !failedImages().has(row.imageUrl)) {
+                    <img [src]="row.imageUrl" alt="" loading="lazy" width="40" height="40" class="tw:h-full tw:w-full tw:object-cover" (error)="imageFailed(row.imageUrl)" />
+                  } @else {
+                    <ds-icon name="image" class="tw:text-muted" />
+                  }
+                </span>
+                <div class="tw:grid tw:min-w-0 tw:gap-1">
+                <strong class="tw:wrap-anywhere">{{ row.name }}</strong>
+                @if (row.option) { <span class="tw:text-caption tw:text-muted tw:wrap-anywhere">{{ row.option }}</span> }
+                @if (columnVisible('sku')) { <span class="tw:text-caption tw:text-muted tw:wrap-anywhere tw:md:hidden">SKU: {{ row.sku || 'Sin SKU' }}</span> }
+                @if (row.usedInSets) { <span class="tw:text-caption tw:text-muted">Usado en {{ row.usedInSets }} {{ row.usedInSets === 1 ? 'set' : 'sets' }}</span> }
+                @if (isChanged(row)) { <span class="tw:text-caption tw:font-medium">Cambio sin guardar</span> }
+                </div>
+              </div>
+              @if (columnVisible('sku')) { <span class="tw:hidden tw:wrap-anywhere tw:text-caption tw:text-muted tw:md:col-span-2 tw:md:block">{{ row.sku || 'Sin SKU' }}</span> }
+              @if (columnVisible('disponible')) {
+              <div class="tw:grid tw:min-w-0 tw:content-start tw:gap-1 tw:md:col-span-3">
+                <div class="tw:grid tw:gap-1 tw:text-caption tw:font-medium">
+                  <label [for]="'stock-' + track(row)" class="tw:md:sr-only">Disponible</label>
+                  <span class="tw:flex tw:items-center tw:gap-2">
+                    <input [id]="'stock-' + track(row)" type="number" min="0" step="1" inputmode="numeric" class="tw:console-field tw:w-20 tw:text-center tw:tabular-nums" [attr.aria-label]="'Stock de ' + row.name + (row.option ? ' ' + row.option : '')" [attr.aria-invalid]="invalidQty(row) ? 'true' : null" [attr.aria-describedby]="invalidQty(row) ? 'stock-error-' + track(row) : null" [disabled]="saving() || d.unlimited" [value]="d.unlimited ? '' : d.qty" (input)="setQty(row, $any($event.target).value)" />
+                  </span>
+                </div>
+                @if (invalidQty(row)) { <span [id]="'stock-error-' + track(row)" class="tw:text-caption tw:text-danger-text" role="alert">Ingresa un número entero de unidades, desde 0.</span> }
+                @else if (!d.unlimited && +d.qty === 0) { <span class="tw:text-caption tw:font-medium tw:text-danger-text">Agotado{{ isChanged(row) ? ' al guardar' : '' }}</span> }
+                @else if (!d.unlimited && +d.qty <= 3) { <span class="tw:text-caption tw:font-medium tw:text-warning-text">Stock bajo{{ isChanged(row) ? ' al guardar' : '' }}</span> }
+              </div>
+              }
+              @if (columnVisible('limite')) {
+                <ds-checkbox variant="inline" class="tw:md:col-span-2">
+                  <input type="checkbox" [attr.aria-label]="'Stock ilimitado para ' + row.name + (row.option ? ' ' + row.option : '')" [checked]="d.unlimited" [disabled]="saving()" (change)="setUnlimited(row, $any($event.target).checked)" />Stock ilimitado
+                </ds-checkbox>
+              }
+            </li>
+          }
+        </ul>
+        <nav aria-label="Páginas del inventario" class="tw:flex tw:flex-wrap tw:items-center tw:justify-between tw:gap-3 tw:border-0 tw:border-t tw:border-solid tw:border-divider tw:px-4 tw:py-3 tw:text-caption">
+          <span role="status">{{ pageStart() }}–{{ pageEnd() }} de {{ visible().length }} registros</span>
+          <div class="tw:flex tw:flex-wrap tw:items-center tw:gap-2">
+            <label class="tw:flex tw:items-center tw:gap-2">Por página<ds-select><select [value]="pageSize()" (change)="setPageSize($any($event.target).value)"><option value="25">25</option><option value="50">50</option><option value="100">100</option></select></ds-select></label>
+            <ds-button type="button" variant="secondary" label="Página anterior" [disabled]="currentPage() <= 1" (click)="setPage(currentPage() - 1)"><ds-icon name="chevronLeft" /></ds-button>
+            <span>Página {{ currentPage() }} de {{ totalPages() }}</span>
+            <ds-button type="button" variant="secondary" label="Página siguiente" [disabled]="currentPage() >= totalPages()" (click)="setPage(currentPage() + 1)"><ds-icon name="chevronRight" /></ds-button>
+          </div>
+        </nav>
+      }
+    </div>
+    @if (pendingCount() && (hasFilters() || totalPages() > 1)) { <p class="tw:m-0 tw:text-caption tw:text-muted">Guardar aplica todos los cambios pendientes, incluidos los productos ocultos por los filtros o en otras páginas.</p> }
+    <ds-disclosure title="¿Cómo se controla el stock de los sets?">
+      Los sets no tienen unidades propias en esta lista. Su disponibilidad depende de las piezas que los componen; actualiza aquí el stock de cada pieza.
+    </ds-disclosure>
   }
 </section>

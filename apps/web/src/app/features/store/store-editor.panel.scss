@@ -28,6 +28,7 @@
   display: flex;
   align-items: center;
   padding-right: var(--ds-space-2);
+  flex-wrap: wrap;
 }
 
 .section__grip {
@@ -46,14 +47,14 @@
   align-items: center;
   justify-content: space-between;
   min-width: 0;
-  min-height: 3.25rem;
+  min-height: var(--ds-touch-target);
   padding: 0 var(--ds-space-2);
   border: 0;
   background: transparent;
   color: var(--ds-color-text-primary);
   font: inherit;
-  font-size: 0.9rem;
-  font-weight: 700;
+  font-size: var(--ds-type-sm);
+  font-weight: 600;
   text-align: left;
   cursor: pointer;
 
@@ -103,13 +104,16 @@
 
 .section__tools {
   display: flex;
+  width: 100%;
+  padding: 0 var(--ds-space-2) var(--ds-space-2);
+  justify-content: flex-end;
 }
 
 .tool {
   display: grid;
   place-items: center;
-  width: 1.9rem;
-  height: 1.9rem;
+  width: var(--ds-touch-target);
+  height: var(--ds-touch-target);
   border: 0;
   border-radius: var(--ds-radius-sm);
   background: transparent;
@@ -165,7 +169,7 @@
   gap: var(--ds-space-2);
   align-items: center;
   justify-content: center;
-  min-height: 2.5rem;
+  min-height: var(--ds-touch-target);
   font-weight: 600;
 
   &:disabled {
@@ -228,26 +232,8 @@
     font-weight: 700;
   }
 
-  input,
-  textarea {
-    width: 100%;
-    min-height: var(--ds-touch-target);
-    padding: var(--ds-space-2) var(--ds-space-3);
-    border: 1px solid var(--ds-color-border);
-    border-radius: var(--ds-radius-md);
-    background: var(--ds-color-surface);
-    font: inherit;
-    font-size: 0.88rem;
-  }
-
   textarea {
     resize: vertical;
-  }
-
-  input:focus-visible,
-  textarea:focus-visible {
-    border-color: var(--ds-color-focus-ring);
-    outline: 2px solid color-mix(in srgb, var(--ds-color-focus-ring) 25%, transparent);
   }
 }
 
@@ -369,10 +355,15 @@
 
   input[type='color'] {
     flex: none;
-    width: 3rem;
+    width: var(--ds-space-12);
+    min-height: var(--ds-touch-target);
     padding: var(--ds-space-1);
+    border: var(--ds-border-width) solid var(--ds-color-border);
+    border-radius: var(--ds-radius-sm);
+    background: var(--ds-color-surface);
     cursor: pointer;
   }
+  input[type='color']:focus-visible { outline: calc(2 * var(--ds-border-width)) solid var(--ds-color-focus-ring); outline-offset: var(--ds-space-1); }
 
   input[type='text'] {
     flex: 1;

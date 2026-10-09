@@ -231,6 +231,16 @@ export class OrdersPage {
     this.updateList({ pestana: 'todos', estado: value === 'ALL' ? null : value, q: this.query() || null });
   }
 
+  removeSearch(): void {
+    this.cancelSearch();
+    this.updateList({ q: null });
+  }
+
+  removeStatusFilter(): void {
+    this.cancelSearch();
+    this.updateList({ estado: null, q: this.query() || null });
+  }
+
   clearFilters(): void {
     this.cancelSearch();
     this.updateList({ q: null, estado: null });

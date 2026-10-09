@@ -1,22 +1,22 @@
 <section class="seller tw:mx-auto tw:min-w-0">
-  <header class="seller__header">
+  <header class="tw:flex tw:flex-wrap tw:items-start tw:justify-between tw:gap-4">
     <div>
-      <h1 class="tw:console-title">{{ currentAgent()?.name ?? 'Tu vendedor' }}</h1>
-      <p>{{ activeSection().hint }}. Los cambios aplican desde el próximo mensaje.</p>
+      <h1 class="tw:console-title">{{ activeSection().label }}</h1>
+      <p class="tw:mt-2 tw:mb-0 tw:text-muted">{{ activeSection().hint }}.</p>
     </div>
-    <div class="seller__header-actions">
+    <div class="tw:flex tw:flex-wrap tw:items-center tw:gap-3">
       <ds-button type="button" variant="secondary" [disabled]="loading() || loadFailed() || agentLoading() || agentLoadFailed() || !agentId()" (click)="openPlayground()">
         Probar vendedor
       </ds-button>
-      @if (!loading() && !loadFailed() && !agentLoading() && !agentLoadFailed() && agentId()) { <div class="seller__status" [class.seller__status--on]="form.controls.isActive.value">
+      @if (!loading() && !loadFailed() && !agentLoading() && !agentLoadFailed() && agentId()) { <div class="seller__status" [class.seller__status--on]="currentAgent()?.isActive">
         <span class="seller__status-dot" aria-hidden="true"></span>
-        {{ form.controls.isActive.value ? 'Activo' : 'Pausado' }}
+        {{ currentAgent()?.isActive ? 'Activo' : 'Pausado' }}
       </div> }
     </div>
   </header>
 
   @if (!loading() && agents().length) {
-    <div class="agent-bar">
+    <div class="tw:console-card tw:flex tw:flex-wrap tw:items-center tw:justify-between tw:gap-3">
       <label class="agent-bar__select">
         <span>Vendedor</span>
         <ds-select><select
@@ -31,7 +31,7 @@
           }
         </select></ds-select>
       </label>
-      <div class="agent-bar__actions">
+      <div class="tw:flex tw:flex-wrap tw:gap-2">
         <ds-button type="button" variant="ghost" [disabled]="agentBusy()" (click)="toggleNewAgent()">
           <ds-icon name="plus" [size]="1" />
           Nuevo vendedor
@@ -45,9 +45,9 @@
       </div>
     </div>
 
-    <nav class="seller-tabs" aria-label="Secciones del vendedor">
+    <nav class="seller-tabs tw:flex tw:min-w-0 tw:gap-1 tw:overflow-x-auto tw:border-0 tw:border-b tw:border-solid tw:border-divider tw:pb-2" aria-label="Secciones del vendedor">
       @for (item of sections; track item.id) {
-        <a
+        <a class="tw:console-nav-link tw:shrink-0 tw:whitespace-nowrap"
           [routerLink]="['/app/seller', item.id]"
           [queryParams]="sectionQuery()"
           [class.is-active]="section() === item.id"
@@ -61,7 +61,7 @@
   }
 
     @if (newAgentOpen()) {
-      <form class="agent-new" (submit)="$event.preventDefault(); createAgent()">
+      <form class="tw:console-card tw:grid tw:gap-4" (submit)="$event.preventDefault(); createAgent()">
         <label>
           Nombre del nuevo vendedor
           <input
@@ -107,7 +107,7 @@
   }
 
   @if (loading()) {
-    <div class="skeleton" aria-busy="true">Cargando vendedor…</div>
+    <div class="tw:console-card tw:console-list-skeleton" aria-busy="true" role="status"><span class="tw:sr-only">Cargando vendedor…</span><div aria-hidden="true"></div><div aria-hidden="true"></div><div aria-hidden="true"></div></div>
   } @else if (loadFailed() || agentLoadFailed()) {
     <div class="skeleton">
       <p class="empty-note">No pudimos cargar la configuración del vendedor.</p>
@@ -121,56 +121,11 @@
     </div>
   } @else {
     <div class="seller__layout" [class.is-loading]="agentLoading()">
-      <aside class="seller__rail" aria-label="Progreso del vendedor">
-        <div class="score">
-          <div
-            class="score__ring"
-            [style.--score]="qualityPercent()"
-            role="img"
-            [attr.aria-label]="'Calidad del vendedor ' + (quality()?.score ?? 0) + ' de ' + (quality()?.max ?? 240)"
-          >
-            <div class="score__value">
-              <strong>{{ quality()?.score ?? 0 }}</strong>
-              <span>/ {{ quality()?.max ?? 240 }}</span>
-            </div>
-          </div>
-          <div class="score__meta">
-            <h2>{{ qualityLabel() }}</h2>
-            <p>
-              {{ quality()?.completedFields ?? 0 }} de
-              {{ quality()?.totalFields ?? 0 }} bloques listos
-            </p>
-          </div>
-        </div>
 
-        @if (quality()?.missingHints?.length) {
-          <ul class="hints">
-            @for (hint of quality()!.missingHints; track hint) {
-              <li>{{ hint }}</li>
-            }
-          </ul>
-        }
-
-        <div class="preview">
-          <div class="preview__head">
-            <ds-icon name="message" />
-            <div>
-              <strong>Vista previa</strong>
-              <span>Así saluda en el chat</span>
-            </div>
-          </div>
-          <div class="preview__thread">
-            <div class="bubble bubble--buyer">Hola</div>
-            <div class="bubble bubble--agent" [attr.data-pulse]="previewPulse()">
-              {{ previewGreeting() }}
-            </div>
-          </div>
-        </div>
-      </aside>
 
       @if (section() === 'knowledge') {
         <div class="seller__form">
-          <section class="block">
+          <section class="tw:console-card tw:grid tw:gap-4">
             <header class="block__head">
               <h2>Preguntas frecuentes</h2>
               <p>
@@ -286,7 +241,7 @@
         >
           @switch (section()) {
             @case ('profile') {
-              <section class="block">
+              <section class="tw:console-card tw:grid tw:gap-4">
                 <header class="block__head">
                   <h2>Identidad</h2>
                   <p>Cómo se presenta y a qué negocio representa.</p>
@@ -294,7 +249,8 @@
                 <div class="fields">
                   <label>
                     Nombre del vendedor
-                    <input formControlName="name" maxlength="80" autocomplete="off" />
+                    <input formControlName="name" maxlength="80" autocomplete="off" [attr.aria-invalid]="form.controls.name.touched && form.controls.name.invalid ? true : null" [attr.aria-describedby]="form.controls.name.touched && form.controls.name.invalid ? 'seller-name-error' : null" />
+                    @if (form.controls.name.touched && form.controls.name.invalid) { <small id="seller-name-error" class="tw:text-danger-text">Escribe un nombre de al menos 2 caracteres.</small> }
                   </label>
                   <label>
                     Nombre del negocio
@@ -328,7 +284,7 @@
                 </div>
               </section>
 
-              <section class="block">
+              <section class="tw:console-card tw:grid tw:gap-4">
                 <header class="block__head">
                   <h2>Canales que atiende</h2>
                   <p>
@@ -382,7 +338,7 @@
             }
 
             @case ('personality') {
-              <section class="block">
+              <section class="tw:console-card tw:grid tw:gap-4">
                 <header class="block__head">
                   <h2>Punto de partida</h2>
                   <p>Elige un perfil o configura una personalidad propia.</p>
@@ -407,7 +363,7 @@
                 </div>
               </section>
 
-              <section class="block">
+              <section class="tw:console-card tw:grid tw:gap-4">
                 <header class="block__head">
                   <h2>Tono y estilo</h2>
                   <p>Lo que hace reconocible a tu vendedor en cada mensaje.</p>
@@ -454,7 +410,7 @@
                 </div>
               </section>
 
-              <section class="block">
+              <section class="tw:console-card tw:grid tw:gap-4">
                 <header class="block__head">
                   <h2>Mensajes clave</h2>
                   <p>Tu vendedor los usa como base al saludar y al enviar el link de pago.</p>
@@ -473,7 +429,7 @@
             }
 
             @case ('sales') {
-              <section class="block">
+              <section class="tw:console-card tw:grid tw:gap-4">
                 <header class="block__head">
                   <h2>Método de venta</h2>
                   <p>
@@ -507,7 +463,7 @@
                 }
               </section>
 
-              <section class="block">
+              <section class="tw:console-card tw:grid tw:gap-4">
                 <header class="block__head">
                   <h2>Objeciones frecuentes</h2>
                   <p>Cómo responder cuando el cliente duda. Tu vendedor lo dirá con sus palabras.</p>
@@ -523,7 +479,7 @@
                 </label>
               </section>
 
-              <section class="block">
+              <section class="tw:console-card tw:grid tw:gap-4">
                 <header class="block__head">
                   <h2>Guiones por etapa</h2>
                   <p>Frases o pasos que quieres que siga en cada etapa. Son una guía, no texto rígido.</p>
@@ -598,7 +554,7 @@
             }
 
             @case ('rules') {
-              <section class="block">
+              <section class="tw:console-card tw:grid tw:gap-4">
                 <header class="block__head">
                   <h2>Reglas del negocio</h2>
                   <p>Qué debe hacer siempre y qué nunca.</p>
@@ -614,7 +570,7 @@
                 </label>
               </section>
 
-              <section class="block">
+              <section class="tw:console-card tw:grid tw:gap-4">
                 <header class="block__head">
                   <h2>Límites duros</h2>
                   <p>Se cumplen siempre, incluso con un prompt personalizado.</p>
@@ -644,7 +600,7 @@
                 </div>
               </section>
 
-              <section class="block">
+              <section class="tw:console-card tw:grid tw:gap-4">
                 <header class="block__head">
                   <h2>Derivar a un asesor</h2>
                   <p>Cuando el cliente pide hablar con una persona. Te avisamos por correo a ti y a tu equipo con un enlace a la conversación.</p>
@@ -666,7 +622,7 @@
             }
 
             @case ('advanced') {
-              <section class="block">
+              <section class="tw:console-card tw:grid tw:gap-4">
                 <header class="block__head">
                   <h2>Modo de instrucciones</h2>
                   <p>Elige cómo se construyen las instrucciones de este vendedor.</p>
@@ -702,7 +658,7 @@
                 </p>
               </section>
 
-              <section class="block">
+              <section class="tw:console-card tw:grid tw:gap-4">
                 <header class="block__head block__head--row">
                   <div>
                     <h2>Prompt personalizado</h2>
@@ -731,7 +687,7 @@
                 </p>
               </section>
 
-              <section class="block">
+              <section class="tw:console-card tw:grid tw:gap-4">
                 <header class="block__head block__head--row">
                   <div>
                     <h2>Instrucciones finales</h2>
@@ -758,20 +714,35 @@
             }
           }
 
-          <div class="seller__actions" [class.is-dirty]="dirty()">
-            <p>
-              @if (dirty()) {
-                Hay cambios sin guardar
-              } @else {
-                Todo guardado
-              }
-            </p>
-            <ds-button type="submit" [disabled]="saving() || !dirty()">
-              {{ saving() ? 'Guardando…' : 'Guardar vendedor' }}
-            </ds-button>
-          </div>
+          <ds-save-bar [pending]="dirty()" [busy]="saving()" label="Guardar vendedor" pendingText="Hay cambios sin guardar. Se aplicarán al guardar." />
         </form>
       }
+      <aside class="seller__rail" aria-label="Configuración y vista previa">
+        <section class="tw:console-card tw:grid tw:gap-3" aria-labelledby="seller-quality-title">
+          <div class="tw:flex tw:items-center tw:justify-between tw:gap-3">
+            <h2 id="seller-quality-title" class="tw:m-0 tw:text-body tw:font-semibold">Configuración</h2>
+            <span class="tw:text-caption tw:text-muted tw:tabular-nums">{{ quality()?.score ?? 0 }}/{{ quality()?.max ?? 240 }}</span>
+          </div>
+          <progress class="tw:setup-progress" aria-label="Avance de configuración del vendedor" [value]="qualityPercent()" max="100"></progress>
+          <div><strong class="tw:text-body">{{ qualityLabel() }}</strong><p class="tw:mt-1 tw:mb-0 tw:text-caption tw:text-muted">{{ quality()?.completedFields ?? 0 }} de {{ quality()?.totalFields ?? 0 }} bloques completos{{ dirty() ? ' · Sin guardar' : '' }}</p></div>
+          <p class="tw:m-0 tw:text-caption tw:text-muted">Este avance mide la configuración. Revisa también tu catálogo y la conexión del canal antes de atender.</p>
+          @if (quality()?.missingHints?.length) {
+            <div class="tw:grid tw:gap-2 tw:border-0 tw:border-t tw:border-solid tw:border-divider tw:pt-3">
+              <h3 class="tw:m-0 tw:text-caption tw:font-semibold">Qué falta por completar</h3>
+              <ul class="tw:m-0 tw:grid tw:gap-2 tw:pl-4 tw:text-caption tw:leading-relaxed tw:text-muted">
+                @for (hint of quality()!.missingHints; track hint) { <li>{{ hint }}</li> }
+              </ul>
+            </div>
+          }
+        </section>
+        <section class="tw:console-card tw:grid tw:gap-4" aria-labelledby="seller-preview-title">
+          <div><h2 id="seller-preview-title" class="tw:m-0 tw:text-body tw:font-semibold">Vista previa del saludo</h2><p class="tw:mt-1 tw:mb-0 tw:text-caption tw:text-muted">Se actualiza con tus cambios. No envía mensajes.</p></div>
+          <div class="tw:grid tw:gap-3 tw:rounded-md tw:bg-canvas tw:p-3">
+            <div class="tw:justify-self-start tw:rounded-md tw:bg-surface tw:px-3 tw:py-2 tw:text-body">Hola</div>
+            <div class="tw:max-w-full tw:justify-self-end tw:rounded-md tw:bg-primary/20 tw:px-3 tw:py-2 tw:text-body tw:leading-relaxed tw:whitespace-pre-wrap tw:wrap-anywhere">{{ previewGreeting() }}</div>
+          </div>
+        </section>
+      </aside>
     </div>
   }
 

@@ -1,3 +1,4 @@
+import { DsActionBarComponent } from '@vendedoria/ui';
 import { DsEmptyStateComponent } from '@vendedoria/ui';
 import { latestThemes } from '@vendedoria/themes/catalog';
 import { ConversionSettingsComponent } from './conversion-settings.component';
@@ -21,7 +22,7 @@ import { takeUntilDestroyed, toSignal } from '@angular/core/rxjs-interop';
 import { map } from 'rxjs';
 import { STORE_SECTIONS } from '../../layout/console-context';
 import type { StoreTemplate } from '@vendedoria/contracts';
-import { DsButtonComponent, DsIconComponent } from '@vendedoria/ui';
+import { DsButtonComponent, DsDisclosureComponent, DsFormSectionComponent, DsSaveBarComponent, DsIconComponent } from '@vendedoria/ui';
 import {
   SellerType,
   StoreApiService,
@@ -55,7 +56,7 @@ export const TEMPLATE_OPTIONS = latestThemes().map(theme => ({
 @Component({
   selector: 'app-store-page',
   standalone: true,
-  imports: [DsEmptyStateComponent, ThemeManagerComponent, ConversionSettingsComponent, DsSelectComponent, ReactiveFormsModule, RouterLink, DsButtonComponent, DsIconComponent, IntegrationGateComponent],
+  imports: [DsActionBarComponent, DsEmptyStateComponent, DsDisclosureComponent, DsFormSectionComponent, DsSaveBarComponent, ThemeManagerComponent, ConversionSettingsComponent, DsSelectComponent, ReactiveFormsModule, RouterLink, DsButtonComponent, DsIconComponent, IntegrationGateComponent],
   templateUrl: './store.page.html',
   styleUrl: './store.page.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -136,6 +137,29 @@ export class StorePage {
       available: option.industries === 'all' || option.industries.includes(this.industry()),
     })),
   );
+  private readonly formEvents = toSignal(this.form.events, { initialValue: null });
+  readonly hasChanges = computed(() => { this.formEvents(); return this.form.dirty; });
+  readonly mutationBusy = computed(() => this.saving() || this.savingSubdomain() || this.busyAction() !== null);
+
+  fieldError(field: keyof StorePage['form']['controls']): string | null {
+    const control = this.form.controls[field];
+    if (!control.touched || !control.invalid) return null;
+    if (control.hasError('required')) return 'Completa este campo.';
+    if (control.hasError('email')) return 'Ingresa un correo válido.';
+    if (control.hasError('minlength')) return 'Usa al menos 2 caracteres.';
+    if (control.hasError('maxlength')) return `Usa un máximo de ${control.errors?.['maxlength'].requiredLength} caracteres.`;
+    const patterns: Partial<Record<keyof StorePage['form']['controls'], string>> = {
+      whatsappPhone: 'Ingresa un número válido con código de país.', ruc: 'Ingresa un RUC válido de 11 dígitos.', dni: 'Ingresa un DNI de 8 dígitos.', complaintsBookUrl: 'Ingresa una dirección que empiece con https://.',
+    };
+    return patterns[field] ?? 'Ingresa un valor entre 0 y 60.';
+  }
+
+  discardChanges(): void {
+    const view = this.view();
+    if (!view || this.mutationBusy()) return;
+    this.apply(view);
+    this.clearMessages();
+  }
   constructor() {
     void this.load();
     this.form.controls.industry.valueChanges.pipe(takeUntilDestroyed()).subscribe((industry) => {
@@ -147,6 +171,7 @@ export class StorePage {
   }
 
   pickTemplate(template: StoreTemplate): void {
+    if (this.mutationBusy()) return;
     if (!this.templates().find((t) => t.value === template)?.available) return;
     this.form.controls.template.setValue(template);
     this.form.controls.template.markAsDirty();
@@ -179,6 +204,7 @@ export class StorePage {
   }
 
   async save(): Promise<void> {
+    if (this.mutationBusy()) return;
     if (this.form.invalid) {
       this.form.markAllAsTouched();
       this.errorMessage.set('Revisa los campos marcados antes de guardar.');
@@ -220,6 +246,7 @@ export class StorePage {
   }
 
   startSubdomainEdit(): void {
+    if (this.mutationBusy()) return;
     this.subdomain.setValue(this.address()?.slug ?? '');
     this.subdomainError.set(null);
     this.subdomainSuccess.set(null);
@@ -228,6 +255,7 @@ export class StorePage {
   }
 
   cancelSubdomainEdit(): void {
+    if (this.savingSubdomain()) return;
     this.editingSubdomain.set(false);
     this.subdomainError.set(null);
   }
@@ -245,6 +273,7 @@ export class StorePage {
   }
 
   async saveSubdomain(): Promise<void> {
+    if (this.mutationBusy()) return;
     const slug = this.subdomain.value.replace(/^-+|-+$/g, '');
     if (slug === this.address()?.slug) {
       this.editingSubdomain.set(false);
@@ -292,6 +321,7 @@ export class StorePage {
   }
 
   async openPreview(): Promise<void> {
+    if (this.mutationBusy()) return;
     const preview = window.open('', '_blank');
     this.busyAction.set('preview');
     this.clearMessages();
@@ -316,6 +346,11 @@ export class StorePage {
     request: () => Promise<StoreSettingsView>,
     success: string,
   ): Promise<void> {
+    if (this.mutationBusy()) return;
+    if (action === 'publish' && this.hasChanges()) {
+      this.errorMessage.set('Guarda o descarta los cambios de configuración antes de publicar la tienda.');
+      return;
+    }
     this.busyAction.set(action);
     this.clearMessages();
     try {

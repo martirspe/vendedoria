@@ -27,7 +27,7 @@ import type {
   StoreTemplateTheme,
   StoreThemeOption,
 } from '@vendedoria/contracts';
-import { DsButtonComponent, DsConfirmService, DsIconComponent } from '@vendedoria/ui';
+import { DsChoiceCardComponent, DsDisclosureComponent, DsEmptyStateComponent, DsButtonComponent, DsConfirmService, DsIconComponent } from '@vendedoria/ui';
 import { CatalogApiService } from '../../core/api/catalog-api.service';
 import {
   StoreApiService,
@@ -117,7 +117,7 @@ function panelSection(section: StoreEditorSection, id: string, label: string, hi
 @Component({
   selector: 'app-store-editor-page',
   standalone: true,
-  imports: [RouterLink, NgTemplateOutlet, DsButtonComponent, DsIconComponent, IntegrationGateComponent],
+  imports: [RouterLink, NgTemplateOutlet, DsChoiceCardComponent, DsDisclosureComponent, DsEmptyStateComponent, DsButtonComponent, DsIconComponent, IntegrationGateComponent],
   templateUrl: './store-editor.page.html',
   styleUrls: [
     './store-editor.panel.scss',
@@ -161,6 +161,9 @@ export class StoreEditorPage {
   readonly selectedField = signal<string | null>(null);
   readonly device = signal<Device>('desktop');
   readonly panelOpen = signal(true);
+  readonly sectionQuery = signal('');
+  readonly libraryQuery = signal('');
+  readonly refreshingFrame = signal(false);
   readonly saveState = signal<SaveState>('saved');
   readonly hasUnpublished = signal(false);
   readonly scheduledAt = signal<string | null>(null);
@@ -235,6 +238,18 @@ export class StoreEditorPage {
   readonly globalSections = computed(() => this.fixedSections().filter((s) => !s.page));
   readonly pageSections = computed(() => this.fixedSections().filter((s) => s.page));
   readonly library = computed(() => (this.view()?.sections ?? []).filter((s) => s.role === 'block'));
+  readonly filteredBodySections = computed(() => this.bodySections().filter(s => this.matchesSection(s)));
+  readonly filteredGlobalSections = computed(() => this.globalSections().filter(s => this.matchesSection(s)));
+  readonly filteredPageSections = computed(() => this.pageSections().filter(s => this.matchesSection(s)));
+  readonly filteredLibrary = computed(() => {
+    const query = this.normalizeSearch(this.libraryQuery());
+    return this.library().filter(s => this.normalizeSearch(`${s.label} ${s.description ?? ''}`).includes(query));
+  });
+
+  private normalizeSearch(value: string): string { return value.normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim().toLowerCase(); }
+  private matchesSection(section: PanelSection): boolean {
+    return this.normalizeSearch(`${section.label} ${section.description ?? ''} ${section.fields.map(f => f.label).join(' ')}`).includes(this.normalizeSearch(this.sectionQuery()));
+  }
   readonly blockCount = computed(() => this.bodySections().filter((s) => s.role === 'block').length);
   readonly maxBlocks = MAX_BLOCKS;
   readonly section = computed(
@@ -291,12 +306,16 @@ export class StoreEditorPage {
 
   /** New signed frame URL (the previous one may have expired). */
   async reloadFrame(): Promise<void> {
+    if (this.refreshingFrame()) return;
+    this.refreshingFrame.set(true);
     try {
       const view = await this.api.editor();
       this.view.update((current) => (current ? { ...current, frameUrl: view.frameUrl, frameExpiresAt: view.frameExpiresAt } : view));
       this.startFrame(view.frameUrl);
     } catch (error) {
       this.notice.set({ tone: 'danger', text: this.messageFrom(error, 'No pudimos recargar la vista de tu tienda.') });
+    } finally {
+      this.refreshingFrame.set(false);
     }
   }
 
@@ -317,8 +336,12 @@ export class StoreEditorPage {
         }
         break;
       case 'select':
+        this.panelOpen.set(true);
+        this.panelTab.set('sections');
+        this.sectionQuery.set('');
         this.selectedSection.set(message.section);
         this.selectedField.set(message.field);
+        this.reveal('.inspector__content');
         break;
       case 'input':
         this.edit(message.section, message.field, message.value, false);
@@ -351,7 +374,10 @@ export class StoreEditorPage {
   }
 
   selectSection(id: string): void {
+    if (![...this.bodySections(), ...this.fixedSections()].some(s => s.id === id)) return;
     this.panelOpen.set(true);
+    this.panelTab.set('sections');
+    this.sectionQuery.set('');
     this.selectedSection.set(id);
     this.selectedField.set(null);
     const page = [...this.bodySections(), ...this.fixedSections()].find((s) => s.id === id)?.page ?? undefined;
@@ -361,7 +387,7 @@ export class StoreEditorPage {
 
   toggleLibrary(): void {
     this.libraryOpen.update((open) => !open);
-    if (this.libraryOpen()) this.reveal('.library');
+    if (this.libraryOpen()) this.reveal('#section-library');
   }
 
   /** Adds a block written by AI as one undo step; images keep the block defaults. */
@@ -449,6 +475,7 @@ export class StoreEditorPage {
     this.change(addBlock(this.content(), view.template, this.layout(), block, id, this.insertAfter()?.id ?? null), null);
     this.push();
     this.libraryOpen.set(false);
+    this.libraryQuery.set('');
     this.selectSection(id);
   }
 
@@ -690,9 +717,15 @@ export class StoreEditorPage {
 
   /** Ctrl/Cmd+Z outside text fields; inside them the browser undoes the typing. */
   onKeydown(event: KeyboardEvent): void {
-    if (!(event.ctrlKey || event.metaKey) || event.key.toLowerCase() !== 'z') return;
+    if (!(event.ctrlKey || event.metaKey)) return;
+    if (event.key.toLowerCase() === 's') {
+      event.preventDefault();
+      if (!this.busy() && !this.loading() && this.active()) void this.flush();
+      return;
+    }
+    if (event.key.toLowerCase() !== 'z') return;
     const target = event.target as HTMLElement | null;
-    if (target?.closest('input, textarea')) return;
+    if (target?.closest('input, textarea, select, [role="combobox"], [contenteditable="true"]')) return;
     event.preventDefault();
     if (event.shiftKey) this.redo();
     else this.undo();
@@ -704,6 +737,7 @@ export class StoreEditorPage {
   }
 
   async publish(): Promise<void> {
+    if (this.busy()) return;
     this.busy.set('publish');
     this.notice.set(null);
     try {
@@ -726,13 +760,14 @@ export class StoreEditorPage {
   }
 
   async discard(): Promise<void> {
+    if (this.busy()) return;
     const confirmed = await this.confirmDialog.confirm({
       title: '¿Descartar los cambios sin publicar?',
       message: 'Tu tienda vuelve a la última versión publicada. Esta acción no se puede deshacer.',
       confirmLabel: 'Descartar cambios',
       tone: 'danger',
     });
-    if (!confirmed) return;
+    if (!confirmed || this.busy()) return;
     this.busy.set('discard');
     this.notice.set(null);
     try {
@@ -769,6 +804,7 @@ export class StoreEditorPage {
 
   /** `value` comes from a `datetime-local` input, in the merchant's local time. */
   async schedule(value: string): Promise<void> {
+    if (this.busy()) return;
     const date = value ? new Date(value) : null;
     if (!date || Number.isNaN(date.getTime())) {
       this.notice.set({ tone: 'danger', text: 'Elige el día y la hora en que quieres publicar.' });
@@ -790,6 +826,7 @@ export class StoreEditorPage {
   }
 
   async cancelSchedule(): Promise<void> {
+    if (this.busy()) return;
     this.busy.set('schedule');
     this.notice.set(null);
     try {
@@ -804,12 +841,13 @@ export class StoreEditorPage {
 
   /** Restores content and release together, then reloads the matching editor schema. */
   async restoreVersion(version: StoreEditorVersion): Promise<void> {
+    if (this.busy()) return;
     const confirmed = await this.confirmDialog.confirm({
       title: '¿Restaurar esta versión?',
       message: `El diseño publicado hasta el ${formatDate(version.replacedAt)} pasará a tu borrador y reemplazará tus cambios sin publicar. Tus clientes no verán nada hasta que publiques.`,
       confirmLabel: 'Restaurar',
     });
-    if (!confirmed) return;
+    if (!confirmed || this.busy()) return;
     this.busy.set('restore');
     this.notice.set(null);
     try {

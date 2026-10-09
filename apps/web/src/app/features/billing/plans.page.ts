@@ -6,14 +6,13 @@ import {
 } from '@angular/core';
 import { HttpErrorResponse } from '@angular/common/http';
 import { RouterLink } from '@angular/router';
-import { DsButtonComponent } from '@vendedoria/ui';
+import { DsButtonComponent, DsFormSectionComponent, DsSelectComponent, DsDisclosureComponent, DsActionBarComponent, DsEmptyStateComponent } from '@vendedoria/ui';
 import { DsIconComponent } from '@vendedoria/ui';
 import {
   BillingApiService,
   BillingOverview,
   ChatPack,
   PlanCheckout,
-  PlanDefinition,
   PlanPaymentResult,
   PlanPurchase,
   PrepayPrice,
@@ -21,10 +20,12 @@ import {
 import { PlanCheckoutComponent } from './plan-checkout.component';
 import { AuthApiService } from '../../core/auth/auth-api.service';
 
+type PlanOption = BillingOverview['currentPlan'] & { prepay?: PrepayPrice[] };
+
 @Component({
   selector: 'app-plans-page',
   standalone: true,
-  imports: [DsButtonComponent, DsIconComponent, RouterLink, PlanCheckoutComponent],
+  imports: [DsButtonComponent, DsIconComponent, RouterLink, PlanCheckoutComponent, DsFormSectionComponent, DsSelectComponent, DsDisclosureComponent, DsActionBarComponent, DsEmptyStateComponent],
   templateUrl: './plans.page.html',
   styleUrl: './plans.page.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -37,6 +38,8 @@ export class PlansPage {
   readonly loading = signal(true);
   readonly saving = signal(false);
   readonly errorMessage = signal<string | null>(null);
+  readonly overviewError = signal<string | null>(null);
+  private loadInFlight = false;
   readonly successMessage = signal<string | null>(null);
   readonly infoMessage = signal<string | null>(null);
   readonly overview = signal<BillingOverview | null>(null);
@@ -52,25 +55,38 @@ export class PlansPage {
   }
 
   async load(): Promise<void> {
+    if (this.loadInFlight || this.activeCheckout()) return;
+    this.loadInFlight = true;
     this.loading.set(true);
-    this.errorMessage.set(null);
+    this.overviewError.set(null);
     try {
       this.overview.set(await this.api.getPlans());
     } catch {
-      this.overview.set(null);
-      this.errorMessage.set('No pudimos cargar tus planes. Revisa tu conexión y vuelve a abrir esta página.');
+      this.overviewError.set('No pudimos actualizar tu plan y consumo. Reintenta para consultar su estado.');
     } finally {
       this.loading.set(false);
+      this.loadInFlight = false;
     }
   }
 
   setMonths(months: number): void {
+    const data = this.overview();
+    if (!data || this.purchaseBlocked() || !this.periodOptions(data).some(option => option.months === months)) return;
     this.months.set(months);
   }
 
+  changePeriod(event: Event): void {
+    if (event.target instanceof HTMLSelectElement) this.setMonths(Number(event.target.value));
+  }
+
+  purchaseBlocked(): boolean {
+    return this.loading() || this.saving() || !!this.overviewError() || !!this.activeCheckout() || !!this.pendingSimulation();
+  }
+
   /** Price of the plan for the chosen period; quoted plans have none. */
-  priceFor(plan: PlanDefinition): PrepayPrice | null {
-    return plan.prepay.find((option) => option.months === this.months()) ?? null;
+  priceFor(plan: PlanOption): PrepayPrice | null {
+    const prices = plan.prepay ?? this.overview()?.plans.find(item => item.id === plan.id)?.prepay ?? [];
+    return prices.find((option) => option.months === this.months()) ?? null;
   }
 
   /** Largest discount offered, for the period selector hint. */
@@ -90,7 +106,7 @@ export class PlansPage {
     }).format(cents / 100);
   }
 
-  async selectPlan(plan: PlanDefinition): Promise<void> {
+  async selectPlan(plan: PlanOption): Promise<void> {
     const data = this.overview();
     if (!data || !this.canSelect(plan, data)) return;
     const months = this.months();
@@ -105,7 +121,7 @@ export class PlansPage {
 
   async buyChatPack(pack: ChatPack): Promise<void> {
     const data = this.overview();
-    if (!data || !this.canManage() || this.saving() || !data.chatPacksAvailable || !data.checkoutEnabled) return;
+    if (!data || !this.canManage() || this.purchaseBlocked() || !data.chatPacksAvailable || !data.checkoutEnabled) return;
     await this.startCheckout(
       { chatPackSize: pack.chats },
       `Pago de prueba de ${pack.chats} chats extra listo. Confírmalo para sumarlos a este mes.`,
@@ -114,7 +130,7 @@ export class PlansPage {
   }
 
   private async startCheckout(purchase: PlanPurchase, simulatedMessage: string, fallback: string): Promise<void> {
-    if (!this.canManage() || this.saving()) return;
+    if (!this.canManage() || this.purchaseBlocked()) return;
     this.saving.set(true);
     this.clearMessages();
     this.activeCheckout.set(null);
@@ -135,6 +151,7 @@ export class PlansPage {
   }
 
   async onCheckoutCompleted(result: PlanPaymentResult): Promise<void> {
+    if (!this.activeCheckout()) return;
     this.activeCheckout.set(null);
     this.clearMessages();
     this.showResult(result);
@@ -147,7 +164,7 @@ export class PlansPage {
 
   async confirmSimulation(): Promise<void> {
     const paymentId = this.pendingSimulation();
-    if (!paymentId || !this.canManage() || this.saving()) return;
+    if (!paymentId || !this.canManage() || this.saving() || this.loading() || this.overviewError()) return;
     this.saving.set(true);
     this.clearMessages();
     try {
@@ -161,12 +178,12 @@ export class PlansPage {
     }
   }
 
-  canSelect(plan: PlanDefinition, data: BillingOverview): boolean {
-    if (!this.canManage() || this.saving()) return false;
-    return plan.priceCents != null && data.checkoutEnabled;
+  canSelect(plan: PlanOption, data: BillingOverview): boolean {
+    if (!this.canManage() || this.purchaseBlocked()) return false;
+    return plan.priceCents != null && data.checkoutEnabled && !!this.priceFor(plan);
   }
 
-  buttonLabel(plan: PlanDefinition, data: BillingOverview): string {
+  buttonLabel(plan: PlanOption, data: BillingOverview): string {
     if (this.saving()) return 'Procesando…';
     if (plan.id !== data.currentPlan.id) return `Elegir ${plan.name}`;
     return data.planStatus === 'TRIAL' ? `Pagar ${plan.name}` : `Renovar ${plan.name}`;

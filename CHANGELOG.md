@@ -2,6 +2,54 @@
 
 ## [Unreleased]
 
+- Planes: corregido el fallo de renderizado cuando el plan actual llega sin precios por período; se resuelven desde el catálogo. Consumo compacto, comparación adaptable al ancho y condiciones desplegables. Variante compact reutilizable de ds-form-section con tokens compartidos.
+
+- Planes: consumo, comparación, paquetes y condiciones con componentes del Design System, sin stylesheet local. Total a pagar visible junto al equivalente mensual, selector de período compartido y barra de actualización/renovación. Checkout abierto y período preservados; compras repetidas bloqueadas, confirmación de prueba recuperable y fallos de actualización separados del resultado del pago. Contratos de facturación, céntimos y permisos conservados.
+
+- Perfil: datos personales, contraseña, sesiones y acceso al negocio con componentes/campos y barras del Design System, sin stylesheet local. Descarte local del nombre, validación asociada y acciones bloqueadas durante solicitudes; guardados duplicados ignorados y borradores conservados al fallar. Consulta fallida de sesiones con aviso/reintento separado del éxito de contraseña/revocación. Permisos, campos de autenticación y contratos existentes conservados.
+
+- Ajustes: información del negocio y configuración regional con secciones/campos del Design System, resumen guardado y barra corporativa Guardar/Descartar, sin stylesheet local. Validación de nombre después de recortar espacios, controles bloqueados al guardar, cambios conservados tras error y descarte local. Moneda existente preservada aunque no esté en la lista habitual; aviso de que cambiar la moneda no convierte importes.
+
+- Métricas: ventas, conversaciones y atención pendiente organizadas con secciones/tarjetas y controles del Design System, sin stylesheet local. Período de 7/30 días en URL y barra de actualización/atención; últimos datos conservados tras fallo y respuestas antiguas ignoradas al cambiar período. Indicadores descritos según su cálculo real, atención actual independiente del período y vacío sin ocultar pedidos pagados o respuestas del vendedor.
+
+- Integraciones: tarjetas, filtro de categoría, ayuda y acciones con Design System; resumen de funciones activas/en pausa y filtro persistido en URL. Fallo de carga con recuperación y sin estados falsamente disponibles; errores de consulta de TikTok separados del guardado exitoso. Protección de solicitudes repetidas y revalidación tras confirmar desactivación. Sin stylesheet local ni botones anidados en enlaces; funciones y cuentas conectadas diferenciadas.
+
+- Cobros: estado de cuenta, entorno y notificaciones separados; formulario y ayuda con componentes del Design System, sin importar estilos de Tienda. Selector de entorno conserva valores booleanos, validación junto a credenciales y bloqueo durante verificación/desconexión. Datos conservados tras fallo y secretos limpiados al guardar; estados de prueba sin prometer cobros reales. Permisos, contratos y flujos de pago conservados.
+
+- Canales: WhatsApp e Instagram con secciones/campos/ayuda del Design System, sin estilos importados de Tienda/Cobros ni controles locales. Validación asociada, bloqueo de solicitudes repetidas y controles durante conexión, borrador conservado tras error y credenciales limpiadas al guardar. Diagnóstico de WhatsApp recuperable y estado de Instagram distingue cuenta conectada de recepción habilitada. Contratos y permisos existentes conservados.
+
+- Editor de Tienda: estructura, lienzo e inspector de selección separados; búsqueda de secciones y tipos de bloque, biblioteca compacta, contexto de selección y ayuda de atajos. Ctrl/Cmd+S guarda el borrador; actualización de vista previa protegida frente a duplicados y recuperación sin perder contenido. Paneles accesibles en móvil. Mantiene su barra superior original, sin sticky de acciones añadido.
+
+- Tienda web y editor: secciones/campos/checklist y acciones con Design System, guardado con barra corporativa y descarte local, bloqueo durante operaciones y errores junto a los controles. Publicación exige resolver cambios de configuración pendientes; estado distingue tienda publicada de disponibilidad pública. Editor conserva su cabecera y acciones originales, autoguardado e historial, y protege publicación/programación/restauración frente a operaciones simultáneas.
+
+- Descuentos: estado vacío con cuatro entradas por beneficio, selector de creación mediante tarjetas de acción compartidas, encabezado único y resumen vivo de importe, código, requisitos, usos y fechas. Secciones con contexto y ayuda desplegable. Checkboxes mantienen la marca verde sobre casilla ink, sin teñir el fondo de la fila ni del panel seleccionado.
+
+- Descuentos: secciones, campos, checkboxes y estados reutilizan el Design System, sin depender de los estilos de Tienda/Cobros. Validación junto a código, importe, límites, selección y fechas; formulario bloqueado al guardar, protección frente a solicitudes y acciones duplicadas, borrador conservado tras errores y estado real de cambios pendientes. La lista adopta la respuesta guardada sin confundir fallos de recarga con fallos de guardado; resumen al final en móvil.
+
+- Productos: editor con checkboxes y campos del Design System en disponibilidad, publicación, inventario, sets y variantes. Acciones/importación/feedback y filtros de tipo reutilizan estilos centrales. Formulario bloqueado durante guardado/eliminación, protección durante subida de imágenes y conservación del borrador al fallar; confirmación de creación sin inferir publicación o preparación comercial.
+
+- Inventario: panel en el buscador para ordenar por producto/SKU/disponible, elegir dirección y ocultar columnas, con preferencias en URL y restablecimiento. Conserva ediciones y permite recuperar errores en columnas ocultas. Tarjetas de resumen restauradas sobre la lista según la preferencia del usuario. Popover de configuración reutilizable con controles nativos y gestión de foco/Escape.
+
+- Inventario: filas compactas con columnas alineadas y resumen discreto, filtros en una sola franja y paginación de 25/50/100 registros con rango, límites y estado en URL. Las ediciones se conservan entre páginas y los errores ocultos se pueden localizar. Checkbox inline y composición de filas centralizados en el sistema de diseño.
+
+- Inventario: miniatura de la imagen principal de cada producto, también en sus variantes, con carga diferida y fallback del Design System cuando falta la foto o falla su carga. La API selecciona una sola imagen por producto dentro del ámbito del negocio.
+
+- Inventario: controles y barra sticky del Design System, lista adaptable a móvil, resumen de stock guardado y filtros persistentes en URL con limpieza individual. Cantidades inválidas señaladas sin conversión silenciosa; bloqueo de edición y guardados duplicados durante el envío, conservación de cambios tras errores y aviso de cambios ocultos por filtros. Retirados estilos locales de controles y dependencia visual de la página Tienda.
+
+- Design System de consola: matriz de componentes y tokens documentada; checkboxes nativos con tratamiento de marca, secciones reutilizables, FAQs accesibles y CTA sticky compartido con estado/contexto, acciones secundarias y botón principal verde. Migración de diez barras existentes y del guardado de Vendedor IA/Envíos; Envíos reutiliza componentes y campos centrales. Prompt UX/UI consolidado con sección 75 y referencia permanente en AGENTS.md.
+
+- Envíos: formulario ampliado con resumen de opciones guardadas, estado de cambios pendientes, carga con estructura y reintento. Validación junto a importes y distrito, controles bloqueados durante el guardado y protección frente a solicitudes duplicadas; estilos y controles con tokens del diseño.
+
+- Pedidos: estados de pago visibles en tarjetas móviles y tablero, filtros que se quitan individualmente y tablero apilado en móvil. Acciones de diálogos adaptadas a pantallas pequeñas, estilos con tokens semánticos y etiqueta de proveedor sin inferir conexión desde el modo de prueba.
+
+- Mensajes: chat más amplio, estados explícitos de IA activa y atención manual, recuperación de filtros sin cerrar la conversación y autoría del equipo en respuestas manuales. El compositor explica la pausa de IA, bloquea respuestas vacías y ofrece plantillas desplegables cuando la ventana de 24 horas está cerrada; historial y acciones adaptados a móvil y horizontal.
+
+- Vendedor IA: formularios con más espacio y resumen compacto de configuración/saludo al costado (al final en móvil), títulos por sección, estado activo basado en la configuración guardada y errores de nombre junto al campo. La prueba distingue su contexto, ofrece reintento al fallar la apertura y conserva el editor de mensajes accesible en móvil; las consultas muestran etiquetas comprensibles.
+
+- Inicio de consola: cabecera compacta, siguiente paso destacado y checklist legible con estados de pendiente/completado, acciones adaptadas a móvil y carga con estructura de página. El puntaje del vendedor utiliza el máximo real de la API.
+
+- Consola: sidebar colapsado más estrecho, con controles centrados y búsqueda sin marco. El control usa los iconos Lucide PanelLeft para contraer y PanelRight para expandir.
+
 - Console product editor and order detail: live product summary with actionable readiness checks, inline required-field errors and focus on the next missing value. Orders have a wider structured detail with persistent actions, loading/retry states and protection against stale detail responses. New orders show the product subtotal and reject invalid quantities. Removing a redundant dialog click handler restores submission from the actual create button; validation alerts clear when corrected.
 
 - Console catalog and orders: visible operational summaries, stock-aware availability and sold-out quick view, removable catalog filters, list-shaped loading, distinct no-results recovery, and a unified list toolbar. Orders open as a readable list with mobile cards, URL-persisted search/status/view and debounced search; cancelled orders remain visible in the board. The detail offers payment-link actions only for draft or pending-payment orders.

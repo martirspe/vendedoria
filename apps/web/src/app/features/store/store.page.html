@@ -1,28 +1,31 @@
-<section class="store tw:mx-auto tw:w-full tw:min-w-0" [class.tw:max-w-3xl]="section() !== 'temas'" [class.tw:max-w-form]="section() === 'temas'">
+<section class="store tw:mx-auto tw:w-full tw:min-w-0" [class.tw:max-w-form]="section() !== 'temas'" [class.tw:max-w-page]="section() === 'temas'">
   <header class="store__header">
     <div>
+      <p class="tw:console-eyebrow">Tienda web</p>
       <h1 class="tw:console-title">{{ sectionTitle() }}</h1>
       <p>{{ sectionDescription() }}</p>
     </div>
-    @if (view(); as v) {
-      <div class="store__actions tw:console-save-bar">
-        <ds-button variant="secondary" [disabled]="busyAction() !== null || !v.availability.previewAllowed" (click)="openPreview()">
+
+  </header>
+    @if (!loading() && !loadFailed() && active() && view(); as v) {
+      <ds-action-bar label="Acciones de tienda">
+        <span dsActionStatus>{{ hasChanges() ? 'Configuración sin guardar' : v.availability.public ? 'Tienda visible' : isPublished() ? 'Tienda pausada' : 'Tienda en borrador' }}</span>
+        <ds-button variant="secondary" [disabled]="mutationBusy() || !v.availability.previewAllowed" (click)="openPreview()">
           <ds-icon name="eye" />
           {{ busyAction() === 'preview' ? 'Abriendo…' : 'Vista previa de mi tienda' }}
         </ds-button>
         @if (isPublished()) {
-          <ds-button variant="ghost" [disabled]="busyAction() !== null" (click)="unpublish()">
+          <ds-button variant="ghost" [disabled]="mutationBusy()" (click)="unpublish()">
             {{ busyAction() === 'unpublish' ? 'Despublicando…' : 'Despublicar' }}
           </ds-button>
         } @else {
-          <ds-button [disabled]="busyAction() !== null || !v.canPublish || !active()" (click)="publish()">
+          <ds-button [disabled]="mutationBusy() || hasChanges() || !v.canPublish || !active()" (click)="publish()">
             <ds-icon name="rocket" />
             {{ busyAction() === 'publish' ? 'Publicando…' : 'Publicar tienda' }}
           </ds-button>
         }
-      </div>
+      </ds-action-bar>
     }
-  </header>
 
   @if (errorMessage() && !loadFailed(); as error) {
     <div class="tw:feedback tw:feedback-danger" role="alert">
@@ -38,7 +41,7 @@
   }
 
   @if (loading()) {
-    <div class="skeleton" aria-busy="true">Cargando tu tienda…</div>
+    <div class="tw:console-list-panel" role="status" aria-busy="true" aria-label="Cargando configuración de la tienda"><div class="tw:console-list-skeleton" aria-hidden="true">@for (row of [1,2,3]; track row) { <div></div> }</div></div>
   } @else if (loadFailed()) {
       <ds-empty-state title="No pudimos cargar esta sección" body="Revisa tu conexión e inténtalo de nuevo.">
         <ds-button variant="secondary" (click)="load()">Reintentar</ds-button>
@@ -50,8 +53,8 @@
     <app-integration-gate key="store" />
   } @else if (view(); as v) {
     <div class="status-card" [class.status-card--live]="v.availability.public">
-      <span class="pill" [class.pill--ok]="isPublished()">
-        {{ isPublished() ? 'Publicada' : 'Borrador' }}
+      <span class="tw:rounded-sm tw:bg-canvas tw:px-2 tw:py-1 tw:text-caption tw:font-semibold tw:text-muted" [class.tw:bg-success/10]="v.availability.public" [class.tw:text-success-text]="v.availability.public">
+        {{ v.availability.public ? 'Publicada' : isPublished() ? 'Publicada · pausada' : 'Borrador' }}
       </span>
       <div class="status-card__body">
         <strong>{{ v.url }}</strong>
@@ -68,33 +71,34 @@
           }
         </span>
       </div>
-      @if (isPublished()) {
+      @if (v.availability.public) {
         <a class="status-card__link" [href]="v.url" target="_blank" rel="noopener">
           Abrir tienda <ds-icon name="externalLink" [size]="1" />
         </a>
       }
     </div>
 
-    <div class="tw:grid tw:min-w-0 tw:items-start tw:gap-4">
+    <div class="store__content" [class.store__content--with-rail]="section() === 'temas' || section() === 'preferencias'">
       <form class="store__form" [formGroup]="form" (ngSubmit)="save()">
+        <fieldset class="store__fields" [disabled]="mutationBusy()"><legend class="tw:sr-only">Configuración de la tienda</legend>
         @if (section() === 'identidad') {
-        <section class="card">
-          <h2>Identidad</h2>
+        <ds-form-section title="Identidad">
           <label>
             Nombre de la tienda
-            <input formControlName="displayName" maxlength="80" autocomplete="organization" />
+            <input class="tw:console-field" formControlName="displayName" [attr.aria-invalid]="!!fieldError('displayName')" [attr.aria-describedby]="fieldError('displayName') ? 'store-displayName-error' : null" maxlength="80" autocomplete="organization" />
+              @if (fieldError('displayName'); as error) { <small id="store-displayName-error" class="tw:text-danger-text!" role="alert">{{ error }}</small> }
           </label>
           <label>
             <span class="label-text">Frase corta <span class="optional">Opcional</span></span>
-            <input formControlName="tagline" maxlength="140" placeholder="Ej. Moda urbana con envío a todo Lima" />
+            <input class="tw:console-field" formControlName="tagline" [attr.aria-invalid]="!!fieldError('tagline')" [attr.aria-describedby]="fieldError('tagline') ? 'store-tagline-error' : null" maxlength="140" placeholder="Ej. Moda urbana con envío a todo Lima" />
+              @if (fieldError('tagline'); as error) { <small id="store-tagline-error" class="tw:text-danger-text!" role="alert">{{ error }}</small> }
           </label>
-        </section>
+        </ds-form-section>
         }
 
         @if (section() === 'temas') {
 <app-theme-manager (staged)="load()" />
-        <section class="card">
-          <h2>Biblioteca de temas</h2>
+        <ds-form-section title="Biblioteca de temas">
           <label>
             Rubro de tu negocio
             <ds-select><select formControlName="industry">
@@ -132,7 +136,7 @@
                 type="button"
                 class="template__choose"
                 [attr.aria-pressed]="form.controls.template.value === option.value"
-                [disabled]="!option.available"
+                [disabled]="!option.available || mutationBusy()"
                 (click)="pickTemplate(option.value)"
               >
                 {{ form.controls.template.value === option.value ? 'Seleccionada' : 'Elegir plantilla' }}
@@ -156,76 +160,69 @@
               </a>
             }
           </div>
-        </section>
+        </ds-form-section>
         }
 
         @if (section() === 'identidad') {
-        <section class="card">
-          <h2>Contacto</h2>
+        <ds-form-section title="Contacto">
           <div class="row">
             <label>
               WhatsApp de ventas
-              <input formControlName="whatsappPhone" inputmode="tel" placeholder="51987654321" />
+              <input class="tw:console-field" formControlName="whatsappPhone" [attr.aria-invalid]="!!fieldError('whatsappPhone')" [attr.aria-describedby]="fieldError('whatsappPhone') ? 'store-whatsappPhone-error' : null" inputmode="tel" placeholder="51987654321" />
+              @if (fieldError('whatsappPhone'); as error) { <small id="store-whatsappPhone-error" class="tw:text-danger-text!" role="alert">{{ error }}</small> }
               <small>Con código de país, sin espacios. Debe ser el número conectado a tu vendedor.</small>
             </label>
             <label>
               Correo de contacto
-              <input formControlName="contactEmail" type="email" autocomplete="email" />
+              <input class="tw:console-field" formControlName="contactEmail" [attr.aria-invalid]="!!fieldError('contactEmail')" [attr.aria-describedby]="fieldError('contactEmail') ? 'store-contactEmail-error' : null" type="email" autocomplete="email" />
+              @if (fieldError('contactEmail'); as error) { <small id="store-contactEmail-error" class="tw:text-danger-text!" role="alert">{{ error }}</small> }
               <small>Recibe reclamos, solicitudes de devolución y pedidos sobre datos personales.</small>
             </label>
           </div>
-        </section>
+        </ds-form-section>
         }
 
         @if (section() === 'preferencias') {
-        <section class="card">
-          <h2>Entregas</h2>
+        <ds-form-section title="Entregas">
           <p class="hint">
             Tu tienda y tu vendedor IA usan las mismas formas de entrega y tarifas. Se configuran en Envíos.
           </p>
           <a routerLink="/app/shipping" class="rail-link">
             Configurar envíos <ds-icon name="chevronRight" [size]="1" />
           </a>
-        </section>
+        </ds-form-section>
         }
 
         @if (section() === 'legal') {
-        <section class="card">
-          <h2>Datos legales</h2>
+        <ds-form-section title="Datos legales">
           <p class="hint">
             Se muestran en el pie de página y en los términos de tu tienda. Son obligatorios para
             vender online en Perú.
           </p>
-          <fieldset class="mode">
-            <legend>¿Cómo vendes?</legend>
-            <label class="mode__option">
-              <input type="radio" formControlName="sellerType" value="BUSINESS" />
-              <span><strong>Tengo RUC</strong> Empresa o persona natural con negocio.</span>
-            </label>
-            <label class="mode__option">
-              <input type="radio" formControlName="sellerType" value="INDIVIDUAL" />
-              <span><strong>Aún no tengo RUC</strong> Vendes como persona natural con tu DNI.</span>
-            </label>
-          </fieldset>
+          <label>¿Cómo vendes?<ds-select><select formControlName="sellerType"><option value="BUSINESS">Con RUC · empresa o persona natural con negocio</option><option value="INDIVIDUAL">Sin RUC · persona natural con DNI</option></select></ds-select></label>
           @if (individualSeller()) {
             <div class="row">
               <label>
                 Nombre completo
-                <input formControlName="legalName" maxlength="160" autocomplete="name" />
+                <input class="tw:console-field" formControlName="legalName" [attr.aria-invalid]="!!fieldError('legalName')" [attr.aria-describedby]="fieldError('legalName') ? 'store-legalName-error' : null" maxlength="160" autocomplete="name" />
+              @if (fieldError('legalName'); as error) { <small id="store-legalName-error" class="tw:text-danger-text!" role="alert">{{ error }}</small> }
               </label>
               <label>
                 DNI
-                <input formControlName="dni" inputmode="numeric" maxlength="8" placeholder="45678912" />
+                <input class="tw:console-field" formControlName="dni" [attr.aria-invalid]="!!fieldError('dni')" [attr.aria-describedby]="fieldError('dni') ? 'store-dni-error' : null" inputmode="numeric" maxlength="8" placeholder="45678912" />
+              @if (fieldError('dni'); as error) { <small id="store-dni-error" class="tw:text-danger-text!" role="alert">{{ error }}</small> }
               </label>
             </div>
             <label>
               Distrito y provincia
-              <input formControlName="legalDistrict" maxlength="120" placeholder="Miraflores, Lima" />
+              <input class="tw:console-field" formControlName="legalDistrict" [attr.aria-invalid]="!!fieldError('legalDistrict')" [attr.aria-describedby]="fieldError('legalDistrict') ? 'store-legalDistrict-error' : null" maxlength="120" placeholder="Miraflores, Lima" />
+              @if (fieldError('legalDistrict'); as error) { <small id="store-legalDistrict-error" class="tw:text-danger-text!" role="alert">{{ error }}</small> }
               <small>Es lo único de tu ubicación que verán tus clientes.</small>
             </label>
             <label>
               Dirección para notificaciones
-              <input formControlName="legalAddress" maxlength="240" autocomplete="street-address" />
+              <input class="tw:console-field" formControlName="legalAddress" [attr.aria-invalid]="!!fieldError('legalAddress')" [attr.aria-describedby]="fieldError('legalAddress') ? 'store-legalAddress-error' : null" maxlength="240" autocomplete="street-address" />
+              @if (fieldError('legalAddress'); as error) { <small id="store-legalAddress-error" class="tw:text-danger-text!" role="alert">{{ error }}</small> }
               <small>No se muestra en tu tienda. Tu DNI tampoco: solo los usamos si una autoridad lo requiere.</small>
             </label>
             <p class="hint">
@@ -236,58 +233,64 @@
             <div class="row">
               <label>
                 Razón social o nombre completo
-                <input formControlName="legalName" maxlength="160" autocomplete="organization" />
+                <input class="tw:console-field" formControlName="legalName" [attr.aria-invalid]="!!fieldError('legalName')" [attr.aria-describedby]="fieldError('legalName') ? 'store-legalName-error' : null" maxlength="160" autocomplete="organization" />
+              @if (fieldError('legalName'); as error) { <small id="store-legalName-error" class="tw:text-danger-text!" role="alert">{{ error }}</small> }
               </label>
               <label>
                 RUC
-                <input formControlName="ruc" inputmode="numeric" maxlength="11" placeholder="20123456789" />
+                <input class="tw:console-field" formControlName="ruc" [attr.aria-invalid]="!!fieldError('ruc')" [attr.aria-describedby]="fieldError('ruc') ? 'store-ruc-error' : null" inputmode="numeric" maxlength="11" placeholder="20123456789" />
+              @if (fieldError('ruc'); as error) { <small id="store-ruc-error" class="tw:text-danger-text!" role="alert">{{ error }}</small> }
               </label>
             </div>
             <label>
               Dirección fiscal
-              <input formControlName="legalAddress" maxlength="240" autocomplete="street-address" />
+              <input class="tw:console-field" formControlName="legalAddress" [attr.aria-invalid]="!!fieldError('legalAddress')" [attr.aria-describedby]="fieldError('legalAddress') ? 'store-legalAddress-error' : null" maxlength="240" autocomplete="street-address" />
+              @if (fieldError('legalAddress'); as error) { <small id="store-legalAddress-error" class="tw:text-danger-text!" role="alert">{{ error }}</small> }
             </label>
           }
           <label>
             Libro de Reclamaciones virtual (URL)
-            <input formControlName="complaintsBookUrl" type="url" placeholder="https://" />
+            <input class="tw:console-field" formControlName="complaintsBookUrl" [attr.aria-invalid]="!!fieldError('complaintsBookUrl')" [attr.aria-describedby]="fieldError('complaintsBookUrl') ? 'store-complaintsBookUrl-error' : null" type="url" placeholder="https://" />
+              @if (fieldError('complaintsBookUrl'); as error) { <small id="store-complaintsBookUrl-error" class="tw:text-danger-text!" role="alert">{{ error }}</small> }
             <small>El enlace de tu libro (por ejemplo, de Reclamo Fácil). Debe empezar con https://</small>
           </label>
           <div class="row">
             <label>
               <span class="label-text">Plazo para cambios (días) <span class="optional">0 = solo garantía legal</span></span>
-              <input formControlName="exchangeDays" type="number" min="0" max="60" inputmode="numeric" />
+              <input class="tw:console-field" formControlName="exchangeDays" [attr.aria-invalid]="!!fieldError('exchangeDays')" [attr.aria-describedby]="fieldError('exchangeDays') ? 'store-exchangeDays-error' : null" type="number" min="0" max="60" inputmode="numeric" />
+              @if (fieldError('exchangeDays'); as error) { <small id="store-exchangeDays-error" class="tw:text-danger-text!" role="alert">{{ error }}</small> }
             </label>
             <label>
               <span class="label-text">Código del banco de datos (ANPD) <span class="optional">Opcional</span></span>
-              <input formControlName="dataBankCode" maxlength="60" />
+              <input class="tw:console-field" formControlName="dataBankCode" [attr.aria-invalid]="!!fieldError('dataBankCode')" [attr.aria-describedby]="fieldError('dataBankCode') ? 'store-dataBankCode-error' : null" maxlength="60" />
+              @if (fieldError('dataBankCode'); as error) { <small id="store-dataBankCode-error" class="tw:text-danger-text!" role="alert">{{ error }}</small> }
             </label>
           </div>
-        </section>
+        </ds-form-section>
         }
 
         @if (section() === 'preferencias') {
-        <section class="card">
-          <h2>Google y redes</h2>
+        <ds-form-section title="Google y redes">
           <label>
             <span class="label-text">Título <span class="optional">Opcional</span></span>
-            <input formControlName="seoTitle" maxlength="70" />
+            <input class="tw:console-field" formControlName="seoTitle" [attr.aria-invalid]="!!fieldError('seoTitle')" [attr.aria-describedby]="fieldError('seoTitle') ? 'store-seoTitle-error' : null" maxlength="70" />
+              @if (fieldError('seoTitle'); as error) { <small id="store-seoTitle-error" class="tw:text-danger-text!" role="alert">{{ error }}</small> }
           </label>
           <label>
             <span class="label-text">Descripción <span class="optional">Opcional</span></span>
-            <textarea formControlName="seoDescription" rows="3" maxlength="160"></textarea>
+            <textarea class="tw:console-field" formControlName="seoDescription" [attr.aria-invalid]="!!fieldError('seoDescription')" [attr.aria-describedby]="fieldError('seoDescription') ? 'store-seoDescription-error' : null" rows="3" maxlength="160"></textarea>
+              @if (fieldError('seoDescription'); as error) { <small id="store-seoDescription-error" class="tw:text-danger-text!" role="alert">{{ error }}</small> }
             <small>{{ form.controls.seoDescription.value.length }}/160 · Aparece en Google y al compartir el enlace.</small>
           </label>
-        </section>
+        </ds-form-section>
         }
 
-        @if (section() === 'automatizaciones') { <section class="card"><h2>Automatizaciones</h2><app-conversion-settings /></section> }
-        @if (section() !== 'automatizaciones' && (form.dirty || saving())) {
-        <footer class="tw:sticky tw:bottom-2 tw:z-10 tw:rounded-lg tw:border tw:border-solid tw:border-border tw:bg-surface tw:p-2 tw:shadow-sm">
-          <ds-button type="submit" [disabled]="saving() || form.pristine">
-            {{ saving() ? 'Guardando…' : 'Guardar cambios' }}
-          </ds-button>
-        </footer>
+        @if (section() === 'automatizaciones') { <ds-form-section title="Automatizaciones"><app-conversion-settings /></ds-form-section> }
+        </fieldset>
+        @if (section() !== 'automatizaciones' && (hasChanges() || saving())) {
+        <ds-save-bar [pending]="hasChanges()" [busy]="saving()" [disabled]="mutationBusy()">
+          <ds-button variant="ghost" [disabled]="mutationBusy()" (click)="discardChanges()">Descartar</ds-button>
+        </ds-save-bar>
         }
       </form>
 
@@ -295,8 +298,7 @@
       <aside class="store__rail">
         @if (section() === 'preferencias') {
         @if (address(); as a) {
-          <section class="card" aria-labelledby="store-address-title">
-            <h2 id="store-address-title">Dirección de la tienda</h2>
+          <ds-form-section title="Dirección de la tienda">
             @if (!editingSubdomain()) {
               <p class="address">
                 <span>{{ a.protocol }}//</span><strong>{{ a.slug }}</strong><span>{{ a.suffix }}</span>
@@ -312,10 +314,11 @@
               <form class="address__form" [formGroup]="subdomainForm" (ngSubmit)="saveSubdomain()" novalidate>
                 <label for="store-subdomain">Nueva dirección</label>
                 <div class="address__input" [class.is-invalid]="subdomainError()">
-                  <input
+                  <input class="tw:console-field"
                     #subdomainInput
                     id="store-subdomain"
                     formControlName="slug"
+                    [attr.disabled]="savingSubdomain() ? '' : null"
                     maxlength="40"
                     autocomplete="off"
                     autocapitalize="none"
@@ -348,12 +351,11 @@
                 </div>
               </form>
             }
-          </section>
+          </ds-form-section>
         }
 
         }
-        <details class="card">
-          <summary class="tw:min-h-touch tw:content-center tw:cursor-pointer tw:text-body tw:font-semibold">Antes de publicar · {{ requiredPending().length }} {{ requiredPending().length === 1 ? 'paso pendiente' : 'pasos pendientes' }}</summary>
+        <ds-disclosure [title]="'Antes de publicar · ' + requiredPending().length + (requiredPending().length === 1 ? ' paso pendiente' : ' pasos pendientes')">
           <ul class="checklist">
             @for (item of v.checklist; track item.id) {
               <li [class.is-done]="item.done">
@@ -370,15 +372,14 @@
               </li>
             }
           </ul>
-        </details>
+        </ds-disclosure>
 
-        <section class="card">
-          <h2>Productos en la tienda</h2>
+        <ds-form-section title="Productos en la tienda">
           <p class="metric">
             <strong>{{ v.publishedProducts }}</strong> de {{ v.totalProducts }} visibles
           </p>
           @if (hiddenProducts() > 0) {
-            <ds-button variant="secondary" [disabled]="busyAction() !== null" (click)="showAvailableProducts()">
+            <ds-button variant="secondary" [disabled]="mutationBusy()" (click)="showAvailableProducts()">
               <ds-icon name="store" />
               {{ busyAction() === 'products' ? 'Mostrando…' : 'Mostrar los disponibles' }}
             </ds-button>
@@ -386,7 +387,7 @@
           <a routerLink="/app/products" class="rail-link">
             Elegir producto por producto <ds-icon name="chevronRight" [size]="1" />
           </a>
-        </section>
+        </ds-form-section>
 
       </aside>
       }

@@ -9,7 +9,6 @@ import { RouterLink } from '@angular/router';
 import { HttpErrorResponse } from '@angular/common/http';
 import { DsButtonComponent } from '@vendedoria/ui';
 import { DsIconComponent } from '@vendedoria/ui';
-import { DsSetupVisualComponent } from '@vendedoria/ui';
 import { AgentsApiService } from '../../core/api/agents-api.service';
 import { CatalogApiService } from '../../core/api/catalog-api.service';
 import { MessagingApiService } from '../../core/api/messaging-api.service';
@@ -28,7 +27,7 @@ type ChecklistItem = {
 @Component({
   selector: 'app-get-started-page',
   standalone: true,
-  imports: [RouterLink, DsButtonComponent, DsIconComponent, DsSetupVisualComponent],
+  imports: [RouterLink, DsButtonComponent, DsIconComponent],
   templateUrl: './get-started.page.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
@@ -47,6 +46,7 @@ export class GetStartedPage {
   readonly hasConversation = signal(false);
   readonly hasOrder = signal(false);
   readonly agentScore = signal(0);
+  readonly agentMaxScore = signal(0);
 
   readonly items = computed<ChecklistItem[]>(() => [
     {
@@ -126,6 +126,7 @@ export class GetStartedPage {
         ]);
 
       this.agentScore.set(agent?.quality.score ?? 0);
+      this.agentMaxScore.set(agent?.quality.max ?? 0);
       this.agentReady.set(
         Boolean(agent?.isActive && agent.quality.score >= 80 &&
           agent.initialMessage?.trim() && agent.handoffMessage?.trim()),

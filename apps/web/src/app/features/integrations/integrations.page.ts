@@ -5,10 +5,11 @@ import {
   inject,
   signal,
 } from '@angular/core';
-import { Router, RouterLink } from '@angular/router';
+import { ActivatedRoute, Router } from '@angular/router';
+import { toSignal } from '@angular/core/rxjs-interop';
 import { DatePipe } from '@angular/common';
 import { LiveApiService, TikTokStatus } from '../../core/api/live-api.service';
-import { DsButtonComponent, DsConfirmService } from '@vendedoria/ui';
+import { DsButtonComponent, DsConfirmService, DsActionBarComponent, DsFormSectionComponent, DsSelectComponent, DsDisclosureComponent, DsEmptyStateComponent } from '@vendedoria/ui';
 import { DsIconComponent } from '@vendedoria/ui';
 import type { IntegrationKey } from '../../core/api/billing-api.service';
 import { IntegrationState, IntegrationsApiService } from '../../core/api/integrations-api.service';
@@ -60,9 +61,8 @@ type IntegrationCard = {
 @Component({
   selector: 'app-integrations-page',
   standalone: true,
-  imports: [RouterLink, DatePipe, DsButtonComponent, DsIconComponent],
+  imports: [DatePipe, DsButtonComponent, DsIconComponent, DsActionBarComponent, DsFormSectionComponent, DsSelectComponent, DsDisclosureComponent, DsEmptyStateComponent],
   templateUrl: './integrations.page.html',
-  styleUrl: './integrations.page.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class IntegrationsPage {
@@ -73,6 +73,8 @@ export class IntegrationsPage {
   private readonly api = inject(IntegrationsApiService);
   private readonly confirmDialog = inject(DsConfirmService);
   private readonly router = inject(Router);
+  private readonly route = inject(ActivatedRoute);
+  private readonly queryParams = toSignal(this.route.queryParamMap, { initialValue: this.route.snapshot.queryParamMap });
   readonly integrations = inject(IntegrationsStateService);
   readonly canManage = inject(AuthApiService).isManager();
 
@@ -81,10 +83,16 @@ export class IntegrationsPage {
   readonly actionSuccess = signal<string | null>(null);
   readonly loading = signal(true);
   readonly errorMessage = signal<string | null>(null);
-  readonly filter = signal<IntegrationCategory>('ALL');
+  readonly filter = computed<IntegrationCategory>(() => {
+    const value = this.queryParams().get('category');
+    return this.categories.find(category => category === value) ?? 'ALL';
+  });
+  readonly connectionError = signal<string | null>(null);
   readonly whatsappConnected = signal(false);
   readonly paymentsMock = signal(true);
   readonly paymentsProvider = signal('mock');
+  readonly paymentsConfigured = signal(false);
+  private loadInFlight = false;
 
   readonly categories: IntegrationCategory[] = [
     'ALL',
@@ -116,6 +124,8 @@ export class IntegrationsPage {
       return { ...info, state, status, needs };
     }),
   );
+  readonly activeCount = computed(() => this.features().filter(card => card.status === 'active').length);
+  readonly pausedCount = computed(() => this.features().filter(card => card.status === 'paused').length);
 
   readonly cards = computed<IntegrationCard[]>(() => {
     const list: IntegrationCard[] = [
@@ -125,7 +135,7 @@ export class IntegrationsPage {
         category: 'Channel',
         status: this.whatsappConnected() ? 'connected' : 'ready',
         summary: this.whatsappConnected()
-          ? 'Canal conectado: tu vendedor responde los mensajes de WhatsApp.'
+          ? 'Número vinculado. Revisa el estado del canal antes de recibir mensajes.'
           : 'Conecta tu número con el Phone Number ID y el token de Meta.',
         nextStep: this.whatsappConnected()
           ? 'Revisa el estado del canal en Canales.'
@@ -136,13 +146,13 @@ export class IntegrationsPage {
         id: 'mercadopago',
         name: 'Mercado Pago',
         category: 'Payments',
-        status: this.paymentsProvider() === 'mercadopago' ? 'connected' : 'ready',
+        status: this.paymentsProvider() === 'mercadopago' && this.paymentsConfigured() ? 'connected' : 'ready',
         summary: this.paymentsMock()
           ? 'Sin cuenta conectada · los links de pago son simulados (modo de prueba).'
-          : this.paymentsProvider() === 'mercadopago'
-            ? 'Cobros con tu propia cuenta: tienda web (tarjeta y Yape) y links del vendedor.'
+          : this.paymentsProvider() === 'mercadopago' && this.paymentsConfigured()
+            ? 'Proveedor de cobros configurado. Revisa el entorno y las notificaciones en Cobros.'
             : 'Sin cuenta conectada · la tienda funciona en modo "pedir por WhatsApp".',
-        nextStep: this.paymentsProvider() === 'mercadopago'
+        nextStep: this.paymentsProvider() === 'mercadopago' && this.paymentsConfigured()
           ? 'Revisa credenciales y webhook en Cobros.'
           : 'Conecta tu cuenta de Mercado Pago en Cobros.',
         link: '/app/payments',
@@ -152,7 +162,7 @@ export class IntegrationsPage {
         name: 'Shopify',
         category: 'E-commerce',
         status: 'waitlist',
-        summary: 'Sincroniza tu catálogo y stock desde tu tienda Shopify.',
+        summary: 'El conector con Shopify no está disponible para activar.',
         nextStep: 'Aún no disponible. Mientras tanto, carga tus productos en Productos.',
       },
       {
@@ -160,15 +170,15 @@ export class IntegrationsPage {
         name: 'Envíos',
         category: 'Shipping',
         status: 'waitlist',
-        summary: 'Genera etiquetas y comparte el seguimiento de cada envío.',
-        nextStep: 'Muy pronto. Hoy puedes registrar el código de seguimiento en Pedidos.',
+        summary: 'El conector para etiquetas y seguimiento no está disponible para activar.',
+        nextStep: 'Puedes registrar el código de seguimiento en Pedidos.',
       },
       {
         id: 'erp',
         name: 'ERP / stock',
         category: 'ERP',
         status: 'waitlist',
-        summary: 'Usa el inventario de tu sistema de gestión como fuente de stock.',
+        summary: 'El conector con sistemas de gestión no está disponible para activar.',
         nextStep: 'Mientras tanto, administra tu stock en Inventario.',
       },
     ];
@@ -184,7 +194,7 @@ export class IntegrationsPage {
   }
 
   async toggle(card: FeatureCard): Promise<void> {
-    if (this.busyKey() || !this.canManage) return;
+    if (this.busyKey() || !this.canManage || this.loading() || this.errorMessage() || !['active', 'paused', 'available'].includes(card.status)) return;
     const enable = card.status !== 'active' && card.status !== 'paused';
     if (
       !enable &&
@@ -197,17 +207,18 @@ export class IntegrationsPage {
     ) {
       return;
     }
+    if (this.busyKey() || this.loading() || this.errorMessage()) return;
     this.busyKey.set(card.key);
     this.actionError.set(null);
     this.actionSuccess.set(null);
     try {
       this.integrations.set(enable ? await this.api.enable(card.key) : await this.api.disable(card.key));
-      if (card.key === 'tiktok_live') this.tiktok.set(await this.liveApi.status());
       this.actionSuccess.set(
         enable
           ? `${card.name} está activa. La encuentras en el menú como «${card.navLabel}».`
           : `Desactivaste ${card.name}.`,
       );
+      if (card.key === 'tiktok_live') await this.refreshTikTok();
     } catch (error) {
       this.actionError.set(messageFrom(error, 'No pudimos guardar el cambio. Inténtalo de nuevo.'));
     } finally {
@@ -261,14 +272,15 @@ export class IntegrationsPage {
   }
 
   async load(): Promise<void> {
+    if (this.busyKey() || this.loadInFlight) return;
+    this.loadInFlight = true;
     this.loading.set(true);
     this.errorMessage.set(null);
     try {
-      const [channels, provider, , tiktok] = await Promise.all([
+      const [channels, provider] = await Promise.all([
         this.messaging.listChannels(),
         this.orders.getPaymentProvider(),
         this.integrations.refresh(),
-        this.liveApi.status(),
       ]);
       this.whatsappConnected.set(
         channels.some(
@@ -277,22 +289,39 @@ export class IntegrationsPage {
         ),
       );
       this.paymentsMock.set(provider.mockMode);
-      this.tiktok.set(tiktok);
       this.paymentsProvider.set(provider.provider);
+      this.paymentsConfigured.set(provider.configured);
+      await this.refreshTikTok();
     } catch {
       this.errorMessage.set('No pudimos cargar el estado de integraciones.');
     } finally {
       this.loading.set(false);
+      this.loadInFlight = false;
     }
   }
 
   setFilter(value: IntegrationCategory): void {
-    this.filter.set(value);
+    void this.router.navigate([], { relativeTo: this.route, queryParams: { category: value === 'ALL' ? null : value }, queryParamsHandling: 'merge', replaceUrl: true });
+  }
+
+  changeCategory(event: Event): void {
+    if (event.target instanceof HTMLSelectElement) {
+      const selected = event.target.value;
+      const value = this.categories.find(category => category === selected);
+      if (value) this.setFilter(value);
+    }
+  }
+
+  async refreshTikTok(): Promise<void> {
+    this.connectionError.set(null);
+    try { this.tiktok.set(await this.liveApi.status()); }
+    catch { this.connectionError.set('No pudimos actualizar el estado de TikTok. Las funciones guardadas se conservan.'); }
   }
 
   async connectTikTok(): Promise<void> {
-    if (!this.canManage || this.busyKey()) return;
+    if (!this.canManage || this.busyKey() || this.loading() || this.errorMessage() || !this.integrations.isActive('tiktok_live') || !this.tiktok()?.oauthAvailable) return;
     this.busyKey.set('tiktok_live'); this.actionError.set(null);
+    this.actionSuccess.set(null);
     try { const result = await this.liveApi.connect(); window.location.assign(result.url); }
     catch (error) { this.actionError.set(messageFrom(error, 'No pudimos iniciar la conexión con TikTok.')); }
     finally { this.busyKey.set(null); }
@@ -300,7 +329,9 @@ export class IntegrationsPage {
 
   async disconnectTikTok(): Promise<void> {
     if (!this.canManage || this.busyKey() || !(await this.confirmDialog.confirm({ title: '¿Desconectar TikTok?', message: 'Se revocará la autorización de la cuenta. Tus campañas y pedidos se conservan.', confirmLabel: 'Desconectar', tone: 'danger' }))) return;
+    if (this.busyKey() || this.loading() || this.errorMessage() || !this.tiktok()?.accountId) return;
     this.busyKey.set('tiktok_live'); this.actionError.set(null);
+    this.actionSuccess.set(null);
     try { this.tiktok.set(await this.liveApi.disconnect()); this.actionSuccess.set('Cuenta TikTok desconectada.'); }
     catch (error) { this.actionError.set(messageFrom(error, 'No pudimos desconectar TikTok.')); }
     finally { this.busyKey.set(null); }
@@ -311,7 +342,7 @@ export class IntegrationsPage {
       case 'connected':
         return 'Conectado';
       case 'ready':
-        return 'Listo';
+        return 'Sin conectar';
       default:
         return 'No disponible';
     }

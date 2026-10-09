@@ -1,0 +1,11 @@
+<label class="ds-checkbox-label" [class.ds-checkbox-label--inline]="variant() === 'inline'">
+  <span class="ds-checkbox-control">
+    <ng-content select="input[type=checkbox]" />
+    <ds-icon class="ds-checkbox-check" name="check" [size]="1" />
+    <ds-icon class="ds-checkbox-mixed" name="minus" [size]="1" />
+  </span>
+  <span class="ds-checkbox-copy">
+    <span><ng-content /></span>
+    @if (description()) { <small>{{ description() }}</small> }
+  </span>
+</label>

@@ -370,7 +370,7 @@ export class MessagesPage {
   async send(): Promise<void> {
     if (this.sending()) return;
     const thread = this.selected();
-    if (!thread || this.composer.invalid || !this.canSend()) {
+    if (!thread || this.composer.invalid || !this.composer.controls.text.value.trim() || !this.canSend()) {
       this.composer.markAllAsTouched();
       return;
     }
@@ -425,6 +425,14 @@ export class MessagesPage {
   onSearch(value: string): void {
     this.query.set(value);
     this.syncFiltersToUrl(this.selected()?.id);
+    void this.loadList();
+  }
+
+  clearFilters(): void {
+    this.query.set('');
+    this.filterUnattended.set(false);
+    this.filterSales.set(false);
+    this.syncFiltersToUrl(this.openedConversationId() ?? undefined);
     void this.loadList();
   }
 
@@ -537,6 +545,7 @@ export class MessagesPage {
   toolLabel(name: string): string {
     switch (name) {
       case 'search_catalog':
+      case 'search_products':
         return 'Catálogo';
       case 'get_product_availability':
         return 'Precio / stock';
@@ -547,11 +556,11 @@ export class MessagesPage {
       case 'quote_shipping':
         return 'Envío';
       case 'lookup_faq':
-        return 'FAQ';
+        return 'Preguntas frecuentes';
       case 'escalate':
         return 'Derivó a asesor';
       default:
-        return name;
+        return 'Consulta del vendedor';
     }
   }
 }

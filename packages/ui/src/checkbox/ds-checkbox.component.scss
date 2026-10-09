@@ -1,0 +1,38 @@
+ds-checkbox { display: block; min-width: 0; }
+ds-checkbox .ds-checkbox-label {
+  display: flex; align-items: center; gap: var(--ds-space-3);
+  min-height: var(--ds-touch-target); padding: var(--ds-space-3);
+  border: var(--ds-border-width) solid var(--ds-color-border);
+  border-radius: var(--ds-radius-sm); background: var(--ds-color-surface);
+  color: var(--ds-color-text-primary); font: inherit; cursor: pointer;
+}
+ds-checkbox .ds-checkbox-label:has(input:checked), ds-checkbox .ds-checkbox-label:has(input:indeterminate) {
+  border-color: color-mix(in srgb, var(--ds-color-ink) 30%, var(--ds-color-border));
+}
+ds-checkbox .ds-checkbox-control { position: relative; display: grid; place-items: center; flex-shrink: 0; }
+ds-checkbox .ds-checkbox-control > input[type=checkbox] {
+  appearance: none; margin: 0; padding: 0; min-height: 0;
+  width: var(--ds-space-5); height: var(--ds-space-5);
+  border: var(--ds-border-width) solid var(--ds-color-text-secondary);
+  border-radius: var(--ds-space-1); background: var(--ds-color-surface); cursor: inherit;
+}
+ds-checkbox .ds-checkbox-control > input:checked, ds-checkbox .ds-checkbox-control > input:indeterminate {
+  background: var(--ds-color-ink); border-color: var(--ds-color-ink);
+}
+ds-checkbox .ds-checkbox-control > ds-icon { position: absolute; pointer-events: none; color: var(--ds-color-primary); visibility: hidden; }
+ds-checkbox input:checked:not(:indeterminate) ~ .ds-checkbox-check,
+ds-checkbox input:indeterminate ~ .ds-checkbox-mixed { visibility: visible; }
+ds-checkbox .ds-checkbox-copy { display: grid; gap: var(--ds-space-1); min-width: 0; overflow-wrap: anywhere; font-size: var(--ds-type-sm); font-weight: 600; }
+ds-checkbox .ds-checkbox-copy small { color: var(--ds-color-text-secondary); font-size: var(--ds-type-caption); font-weight: 400; }
+ds-checkbox .ds-checkbox-label:has(input:focus-visible) { outline: calc(2 * var(--ds-border-width)) solid var(--ds-color-focus-ring); outline-offset: calc(2 * var(--ds-border-width)); }
+ds-checkbox .ds-checkbox-label:has(input:disabled) { opacity: .55; cursor: not-allowed; }
+ds-checkbox .ds-checkbox-label:has(input[aria-invalid=true]) { border-color: var(--ds-color-danger); }
+ds-checkbox .ds-checkbox-label.ds-checkbox-label--inline {
+  gap: var(--ds-space-2); padding: var(--ds-space-1) 0;
+  border: 0; background: transparent; border-radius: var(--ds-radius-sm);
+}
+ds-checkbox .ds-checkbox-label--inline .ds-checkbox-copy { font-weight: 400; }
+@media (forced-colors: active) {
+  ds-checkbox .ds-checkbox-control > input[type=checkbox] { appearance: auto; }
+  ds-checkbox .ds-checkbox-control > ds-icon { display: none; }
+}

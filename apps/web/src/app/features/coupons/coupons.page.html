@@ -1,12 +1,14 @@
-<section class="discounts tw:mx-auto tw:min-w-0">
+<section class="discounts tw:mx-auto tw:w-full tw:min-w-0 tw:max-w-page">
   <header class="discounts__header">
     <div>
-      <p class="tw:console-eyebrow">Tienda web</p>
-      <h1 class="tw:console-title">Descuentos</h1>
-      <p>Administra códigos y promociones automáticas que se aplican con reglas verificadas en el pago.</p>
+      <p class="tw:console-eyebrow">{{ editing() !== null ? 'Descuentos / ' + kindLabels[kind()] : 'Tienda web' }}</p>
+      <h1 class="tw:console-title">{{ editing() === null ? 'Descuentos' : editing() === 'new' ? 'Crear descuento' : 'Editar descuento' }}</h1>
+      <p>{{ editing() !== null ? 'Define el beneficio, quién puede usarlo y durante cuánto tiempo.' : 'Gestiona códigos y promociones automáticas para tu tienda.' }}</p>
     </div>
-    @if (editing() === null && !loading() && active()) {
-      <ds-button (click)="openCreatePicker()"><ds-icon name="plus" [size]="1" /> Crear descuento</ds-button>
+    @if (editing() !== null) {
+      <ds-button variant="secondary" [disabled]="saving()" (click)="cancel()"><ds-icon name="chevronLeft" [size]="1" /> Volver a descuentos</ds-button>
+    } @else if (!loading() && !loadFailed() && active() && coupons().length) {
+      <ds-button [disabled]="!!busyId()" (click)="openCreatePicker()"><ds-icon name="plus" [size]="1" /> Crear descuento</ds-button>
     }
   </header>
 
@@ -17,10 +19,9 @@
     <dialog dsModal class="discount-picker" aria-labelledby="discount-picker-title" (dsModalClose)="selectingType.set(false)">
       <header class="discount-picker__header"><div><h2 id="discount-picker-title">Crear descuento</h2><p>Elige cómo quieres aplicar la promoción.</p></div><button type="button" class="icon-button" aria-label="Cerrar" autofocus (click)="selectingType.set(false)"><ds-icon name="x" /></button></header>
       <div class="discount-picker__list">
-        <button type="button" class="discount-type" (click)="startCreate('PERCENT')"><ds-icon name="ticketPercent" [size]="1.2" /><span><strong>Descuento en productos</strong><small>Aplica un porcentaje o importe a productos, categorías, marcas o líneas.</small></span><ds-icon name="chevronRight" /></button>
-        <button type="button" class="discount-type" (click)="startCreate('BUY_X_GET_Y')"><ds-icon name="package" [size]="1.2" /><span><strong>Compra X y obtén Y</strong><small>Ofrece unidades adicionales con un beneficio definido.</small></span><ds-icon name="chevronRight" /></button>
-        <button type="button" class="discount-type" (click)="startCreate('FIXED')"><ds-icon name="shoppingBag" [size]="1.2" /><span><strong>Descuento en el pedido</strong><small>Reduce el total del pedido con un porcentaje o importe fijo.</small></span><ds-icon name="chevronRight" /></button>
-        <button type="button" class="discount-type" (click)="startCreate('FREE_SHIPPING')"><ds-icon name="truck" [size]="1.2" /><span><strong>Envío gratis</strong><small>Cubre el envío a domicilio cuando se cumplan tus condiciones.</small></span><ds-icon name="chevronRight" /></button>
+        @for (option of creationOptions; track option.kind) {
+          <ds-choice-card [title]="option.title" [description]="option.description" [icon]="option.icon" (activate)="startCreate(option.kind)" />
+        }
       </div>
       <footer class="discount-picker__footer"><ds-button variant="ghost" (click)="selectingType.set(false)">Cancelar</ds-button></footer>
     </dialog>
@@ -28,77 +29,95 @@
 
   @if (editing() !== null) {
     <form class="discount-editor" [formGroup]="form" (ngSubmit)="save()">
-      <div class="tw:console-save-bar" aria-label="Acciones del descuento">
-        <span class="tw:px-2">{{ editing() === 'new' ? 'Descuento sin guardar' : 'Cambios sin guardar' }}</span>
-        <ds-button type="button" variant="ghost" class="tw:[&_.ds-button]:text-surface! tw:[&_.ds-button:hover]:bg-navigation-hover!" (click)="cancel()">Descartar</ds-button>
-        <ds-button type="submit" [disabled]="saving()">{{ saving() ? 'Guardando…' : editing() === 'new' ? 'Crear descuento' : 'Guardar cambios' }}</ds-button>
-      </div>
-      <header class="discount-editor__top"><button type="button" class="back-button" (click)="cancel()"><ds-icon name="chevronLeft" /> Volver a descuentos</button></header>
-      <div class="discount-editor__heading"><h1 class="tw:console-title">{{ editing() === 'new' ? 'Crear descuento' : 'Editar descuento' }}</h1><p>{{ kindLabels[kind()] }}</p></div>
-      <div class="discount-editor__grid">
+      <ds-action-bar label="Acciones de descuentos">
+        <span dsActionStatus class="tw:px-2">{{ saving() ? 'Guardando descuento…' : editing() === 'new' ? 'Descuento sin guardar' : hasChanges() ? 'Cambios sin guardar' : 'Sin cambios' }}</span>
+        <ds-button type="button" variant="ghost" [disabled]="saving()" (click)="cancel()">Descartar</ds-button>
+        <ds-button type="submit" [disabled]="saving() || (editing() !== 'new' && !hasChanges())">{{ saving() ? 'Guardando…' : editing() === 'new' ? 'Crear descuento' : 'Guardar cambios' }}</ds-button>
+      </ds-action-bar>
+      <fieldset class="tw:m-0 tw:min-w-0 tw:border-0 tw:p-0" [disabled]="saving()"><legend class="tw:sr-only">Configuración del descuento</legend><div class="discount-editor__grid">
         <div class="discount-editor__main">
-          <section class="discount-card">
-            <h2>Método</h2>
-            <div class="method-switch" role="radiogroup" aria-label="Método del descuento">
-              @for (option of methods; track option) { <label [class.method-switch__option--active]="method() === option"><input type="radio" formControlName="method" [value]="option" /><span>{{ methodLabels[option] }}</span></label> }
-            </div>
+          <ds-form-section title="Identificación" description="Elige cómo se aplica y cómo lo reconocerá tu equipo.">
+            <label class="field"><span class="field-heading">Método del descuento</span><ds-select><select formControlName="method">@for (option of methods; track option) { <option [value]="option">{{ methodLabels[option] }}</option> }</select></ds-select></label>
             @if (method() === 'CODE') {
-              <label class="field field--code">Código de descuento<input formControlName="code" class="code-input" autocomplete="off" spellcheck="false" placeholder="VERANO10" /><small>Los clientes ingresarán este código durante el pago.</small></label>
+              <label class="field field--code"><span class="field-heading">Código de descuento</span><input [attr.aria-invalid]="!!fieldError('code')" [attr.aria-describedby]="fieldError('code') ? 'discount-code-error' : null" formControlName="code" maxlength="30" class="tw:console-field code-input" autocomplete="off" spellcheck="false" placeholder="VERANO10" />@if (fieldError('code'); as error) { <small id="discount-code-error" class="tw:text-danger-text!">{{ error }}</small> }<small>Los clientes ingresarán este código durante el pago.</small></label>
             } @else { <div class="automatic-note"><ds-icon name="check" /><span>Se aplicará automáticamente una promoción elegible cuando el pedido no tenga un código.</span></div> }
-            <label class="field">Nombre interno<input formControlName="label" placeholder="Ej.: 15 % para nuevos clientes" /><small>Solo lo ve tu equipo.</small></label>
-          </section>
+            <label class="field"><span class="field-heading">Nombre interno</span><input [attr.aria-invalid]="!!fieldError('label')" [attr.aria-describedby]="fieldError('label') ? 'discount-label-error' : null" class="tw:console-field" formControlName="label" maxlength="80" placeholder="Ej.: 15 % para nuevos clientes" />@if (fieldError('label'); as error) { <small id="discount-label-error" class="tw:text-danger-text!">{{ error }}</small> }<small>Solo lo ve tu equipo.</small></label>
+          </ds-form-section>
 
-          <section class="discount-card">
-            <h2>Valor del descuento</h2>
+          <ds-form-section title="Beneficio" description="Configura el valor que recibirá el cliente.">
             @if (kind() !== 'FREE_SHIPPING') {
               <div class="field-grid">
-                @if (kind() !== 'BUY_X_GET_Y') { <label class="field">Tipo de valor<ds-select><select formControlName="kind"><option value="PERCENT">Porcentaje</option><option value="FIXED">Importe fijo</option></select></ds-select></label> }
-                <label class="field">{{ kind() === 'FIXED' ? 'Importe (S/)' : kind() === 'BUY_X_GET_Y' ? 'Beneficio (%)' : 'Porcentaje' }}<input type="number" formControlName="value" [min]="kind() === 'FIXED' ? 0.01 : 1" [max]="kind() === 'BUY_X_GET_Y' ? 100 : kind() === 'PERCENT' ? 90 : null" [step]="kind() === 'FIXED' ? 0.01 : 1" inputmode="decimal" /></label>
-                @if (kind() === 'PERCENT' || kind() === 'BUY_X_GET_Y') { <label class="field">Tope de descuento (S/) <span class="optional">Opcional</span><input type="number" formControlName="maxDiscount" min="1" step="0.01" inputmode="decimal" /></label> }
+                @if (kind() !== 'BUY_X_GET_Y') { <label class="field"><span class="field-heading">Tipo de valor</span><ds-select><select formControlName="kind"><option value="PERCENT">Porcentaje</option><option value="FIXED">Importe fijo</option></select></ds-select></label> }
+                <label class="field"><span class="field-heading">{{ kind() === 'FIXED' ? 'Importe (S/)' : kind() === 'BUY_X_GET_Y' ? 'Beneficio (%)' : 'Porcentaje' }}</span><input [attr.aria-invalid]="!!fieldError('value')" [attr.aria-describedby]="fieldError('value') ? 'discount-value-error' : null" class="tw:console-field" type="number" formControlName="value" [min]="kind() === 'FIXED' ? 0.01 : 1" [max]="kind() === 'BUY_X_GET_Y' ? 100 : kind() === 'PERCENT' ? 90 : null" [step]="kind() === 'FIXED' ? 0.01 : 1" inputmode="decimal" />@if (fieldError('value'); as error) { <small id="discount-value-error" class="tw:text-danger-text!">{{ error }}</small> }</label>
+                @if (kind() === 'PERCENT' || kind() === 'BUY_X_GET_Y') { <label class="field"><span class="field-heading">Tope de descuento (S/) <span class="optional">Opcional</span></span><input [attr.aria-invalid]="!!fieldError('maxDiscount')" [attr.aria-describedby]="fieldError('maxDiscount') ? 'discount-maxDiscount-error' : null" class="tw:console-field" type="number" formControlName="maxDiscount" min="0.01" step="0.01" inputmode="decimal" />@if (fieldError('maxDiscount'); as error) { <small id="discount-maxDiscount-error" class="tw:text-danger-text!">{{ error }}</small> }</label> }
               </div>
             } @else { <div class="automatic-note"><ds-icon name="truck" /><span>El pedido no pagará envío cuando cumpla las condiciones que definas.</span></div> }
             @if (kind() === 'BUY_X_GET_Y') {
-              <div class="field-grid field-grid--three"><label class="field">El cliente compra<input type="number" formControlName="buyQuantity" min="1" max="20" inputmode="numeric" /></label><label class="field">El cliente obtiene<input type="number" formControlName="getQuantity" min="1" max="20" inputmode="numeric" /></label><label class="field">Límite por pedido <span class="optional">Opcional</span><input type="number" formControlName="maxApplications" min="1" max="50" inputmode="numeric" /></label></div>
+              <div class="field-grid field-grid--three"><label class="field"><span class="field-heading">El cliente compra</span><input [attr.aria-invalid]="!!fieldError('buyQuantity')" [attr.aria-describedby]="fieldError('buyQuantity') ? 'discount-buyQuantity-error' : null" class="tw:console-field" type="number" formControlName="buyQuantity" min="1" max="20" inputmode="numeric" />@if (fieldError('buyQuantity'); as error) { <small id="discount-buyQuantity-error" class="tw:text-danger-text!">{{ error }}</small> }</label><label class="field"><span class="field-heading">El cliente obtiene</span><input [attr.aria-invalid]="!!fieldError('getQuantity')" [attr.aria-describedby]="fieldError('getQuantity') ? 'discount-getQuantity-error' : null" class="tw:console-field" type="number" formControlName="getQuantity" min="1" max="20" inputmode="numeric" />@if (fieldError('getQuantity'); as error) { <small id="discount-getQuantity-error" class="tw:text-danger-text!">{{ error }}</small> }</label><label class="field"><span class="field-heading">Límite por pedido <span class="optional">Opcional</span></span><input [attr.aria-invalid]="!!fieldError('maxApplications')" [attr.aria-describedby]="fieldError('maxApplications') ? 'discount-maxApplications-error' : null" class="tw:console-field" type="number" formControlName="maxApplications" min="1" max="50" inputmode="numeric" />@if (fieldError('maxApplications'); as error) { <small id="discount-maxApplications-error" class="tw:text-danger-text!">{{ error }}</small> }</label></div>
               <p class="help-copy">El beneficio se aplica primero a las unidades elegibles de menor valor.</p>
             }
-          </section>
+          </ds-form-section>
 
-          <section class="discount-card">
-            <h2>{{ kind() === 'FREE_SHIPPING' ? 'Condiciones de envío' : 'Productos participantes' }}</h2>
+          <ds-form-section [title]="kind() === 'FREE_SHIPPING' ? 'Condiciones de envío' : 'Productos participantes'">
             @if (kind() !== 'FREE_SHIPPING') {
-              <label class="field">Se aplica a<ds-select><select formControlName="scope"><option value="ALL">Todos los productos</option><option value="CATEGORY">Categorías específicas</option><option value="BRAND">Marcas específicas</option><option value="LINE">Líneas o colecciones</option><option value="PRODUCTS">Productos específicos</option></select></ds-select></label>
+              @if (fieldError('targets'); as error) { <p id="discount-targets-error" class="tw:m-0 tw:text-caption tw:text-danger-text" role="alert">{{ error }}</p> }<label class="field"><span class="field-heading">Se aplica a</span><ds-select><select formControlName="scope"><option value="ALL">Todos los productos</option><option value="CATEGORY">Categorías específicas</option><option value="BRAND">Marcas específicas</option><option value="LINE">Líneas o colecciones</option><option value="PRODUCTS">Productos específicos</option></select></ds-select></label>
               @if (scope() !== 'ALL') {
-                @if (targetOptions().length) { <div class="targets" role="group" aria-label="Productos participantes">@for (option of targetOptions(); track option.value) { <label class="target"><input type="checkbox" [checked]="selectedTargets().includes(option.value)" (change)="toggleTarget(option.value, $any($event.target).checked)" /><span>{{ option.label }}</span></label> }</div> }
+                @if (targetOptions().length) { <div class="targets" role="group" aria-label="Productos participantes" [attr.aria-describedby]="fieldError('targets') ? 'discount-targets-error' : null">@for (option of targetOptions(); track option.value) { <ds-checkbox variant="inline"><input type="checkbox" [checked]="selectedTargets().includes(option.value)" (change)="toggleTarget(option.value, $any($event.target).checked)" /><span>{{ option.label }}</span></ds-checkbox> }</div> }
                 @else { <p class="help-copy">Aún no tienes opciones para elegir. Completa los datos de tus productos.</p> }
               }
-              <label class="check"><input type="checkbox" formControlName="applyToSets" /><span>Incluir productos vendidos como sets</span></label>
+              <ds-checkbox variant="inline"><input type="checkbox" formControlName="applyToSets" /><span>Incluir productos vendidos como sets</span></ds-checkbox>
             } @else { <p class="help-copy">Aplica a entregas a domicilio. No se usará si el pedido ya tiene envío gratuito o recoge en tienda.</p> }
-          </section>
+          </ds-form-section>
 
-          <section class="discount-card">
-            <h2>Elegibilidad y límites</h2>
-            <div class="field-grid"><label class="field">Compra mínima (S/) <span class="optional">Opcional</span><input type="number" formControlName="minSubtotal" min="0" step="0.01" inputmode="decimal" /></label><label class="field">Artículos mínimos <span class="optional">Opcional</span><input type="number" formControlName="minItems" min="0" max="100" inputmode="numeric" /></label><label class="field">Usos totales <span class="optional">Opcional</span><input type="number" formControlName="usageLimit" min="1" inputmode="numeric" /></label><label class="field">Usos por cliente <span class="optional">Opcional</span><input type="number" formControlName="perCustomerLimit" min="1" inputmode="numeric" /></label></div>
-            <label class="check"><input type="checkbox" formControlName="firstOrderOnly" /><span>Solo para la primera compra del cliente</span></label>
-          </section>
+          <ds-form-section title="Requisitos de compra" description="Los campos vacíos no añaden restricciones de importe, cantidad ni usos.">
+            <div class="field-grid"><label class="field"><span class="field-heading">Compra mínima (S/) <span class="optional">Opcional</span></span><input [attr.aria-invalid]="!!fieldError('minSubtotal')" [attr.aria-describedby]="fieldError('minSubtotal') ? 'discount-minSubtotal-error' : null" class="tw:console-field" type="number" formControlName="minSubtotal" min="0" step="0.01" inputmode="decimal" />@if (fieldError('minSubtotal'); as error) { <small id="discount-minSubtotal-error" class="tw:text-danger-text!">{{ error }}</small> }</label><label class="field"><span class="field-heading">Artículos mínimos <span class="optional">Opcional</span></span><input [attr.aria-invalid]="!!fieldError('minItems')" [attr.aria-describedby]="fieldError('minItems') ? 'discount-minItems-error' : null" class="tw:console-field" type="number" formControlName="minItems" min="0" max="100" inputmode="numeric" />@if (fieldError('minItems'); as error) { <small id="discount-minItems-error" class="tw:text-danger-text!">{{ error }}</small> }</label><label class="field"><span class="field-heading">Usos totales <span class="optional">Opcional</span></span><input [attr.aria-invalid]="!!fieldError('usageLimit')" [attr.aria-describedby]="fieldError('usageLimit') ? 'discount-usageLimit-error' : null" class="tw:console-field" type="number" formControlName="usageLimit" min="1" inputmode="numeric" />@if (fieldError('usageLimit'); as error) { <small id="discount-usageLimit-error" class="tw:text-danger-text!">{{ error }}</small> }</label><label class="field"><span class="field-heading">Usos por cliente <span class="optional">Opcional</span></span><input [attr.aria-invalid]="!!fieldError('perCustomerLimit')" [attr.aria-describedby]="fieldError('perCustomerLimit') ? 'discount-perCustomerLimit-error' : null" class="tw:console-field" type="number" formControlName="perCustomerLimit" min="1" inputmode="numeric" />@if (fieldError('perCustomerLimit'); as error) { <small id="discount-perCustomerLimit-error" class="tw:text-danger-text!">{{ error }}</small> }</label></div>
+            <ds-checkbox variant="inline"><input type="checkbox" formControlName="firstOrderOnly" /><span>Solo para la primera compra del cliente</span></ds-checkbox>
+          </ds-form-section>
 
-          <section class="discount-card">
-            <h2>Programación</h2>
-            <div class="field-grid"><label class="field">Empieza <span class="optional">Ahora si lo dejas vacío</span><input type="datetime-local" formControlName="startsAt" /></label><label class="field">Termina <span class="optional">Sin fecha si lo dejas vacío</span><input type="datetime-local" formControlName="endsAt" /></label></div>
-            <label class="check"><input type="checkbox" formControlName="isActive" /><span>Activar este descuento al guardarlo</span></label>
-            <label class="field">Nota interna <span class="optional">Opcional</span><textarea formControlName="note" rows="2" maxlength="300" placeholder="Contexto para tu equipo"></textarea></label>
-          </section>
+          <ds-form-section title="Vigencia y disponibilidad" description="Programa las fechas o mantén el descuento sin fecha de fin.">
+            <div class="field-grid"><label class="field"><span class="field-heading">Empieza <span class="optional">Ahora si lo dejas vacío</span></span><input [attr.aria-invalid]="!!fieldError('startsAt')" [attr.aria-describedby]="fieldError('startsAt') ? 'discount-startsAt-error' : null" class="tw:console-field" type="datetime-local" formControlName="startsAt" />@if (fieldError('startsAt'); as error) { <small id="discount-startsAt-error" class="tw:text-danger-text!">{{ error }}</small> }</label><label class="field"><span class="field-heading">Termina <span class="optional">Sin fecha si lo dejas vacío</span></span><input [attr.aria-invalid]="!!fieldError('endsAt')" [attr.aria-describedby]="fieldError('endsAt') ? 'discount-endsAt-error' : null" class="tw:console-field" type="datetime-local" formControlName="endsAt" />@if (fieldError('endsAt'); as error) { <small id="discount-endsAt-error" class="tw:text-danger-text!">{{ error }}</small> }</label></div>
+            <ds-checkbox variant="inline"><input type="checkbox" formControlName="isActive" /><span>Activar este descuento al guardarlo</span></ds-checkbox>
+            <label class="field"><span class="field-heading">Nota interna <span class="optional">Opcional</span></span><textarea [attr.aria-invalid]="!!fieldError('note')" [attr.aria-describedby]="fieldError('note') ? 'discount-note-error' : null" class="tw:console-field" formControlName="note" rows="2" maxlength="300" placeholder="Contexto para tu equipo"></textarea>@if (fieldError('note'); as error) { <small id="discount-note-error" class="tw:text-danger-text!">{{ error }}</small> }</label>
+          </ds-form-section>
         </div>
-        <aside class="discount-summary" aria-label="Resumen del descuento"><section><p class="tw:console-eyebrow">Resumen</p><h2>{{ form.controls.label.value || 'Descuento sin nombre' }}</h2><dl><div><dt>Método</dt><dd>{{ methodLabels[method()] }}</dd></div><div><dt>Tipo</dt><dd>{{ kindLabels[kind()] }}</dd></div><div><dt>Aplicación</dt><dd>{{ scope() === 'ALL' ? 'Toda la tienda' : 'Selección específica' }}</dd></div><div><dt>Estado</dt><dd>{{ form.controls.isActive.value ? 'Activo al guardar' : 'Pausado' }}</dd></div></dl></section><p class="discount-summary__note">En el pago, el servidor valida productos, fechas, límites y el importe real del pedido.</p></aside>
+        <aside class="discount-summary" aria-label="Resumen del descuento">
+          <ds-form-section title="Resumen" description="Vista previa de tus cambios">
+            @let draft = formValues();
+            <div class="discount-summary__benefit"><ds-icon [name]="kind() === 'FREE_SHIPPING' ? 'truck' : 'ticketPercent'" /><strong>{{ draftBenefit() }}</strong><span>{{ draft.label.trim() || 'Descuento sin nombre' }}</span></div>
+            @if (method() === 'CODE') { <div class="discount-summary__code"><span>Código en el pago</span><strong>{{ draft.code.toUpperCase() || 'Sin definir' }}</strong></div> }
+            <dl>
+              <div><dt>Aplicación</dt><dd>{{ methodLabels[method()] }}</dd></div>
+              <div><dt>{{ kind() === 'FREE_SHIPPING' ? 'Entrega' : 'Productos' }}</dt><dd>{{ kind() === 'FREE_SHIPPING' ? 'A domicilio' : scope() === 'ALL' ? 'Todos los productos' : selectedTargets().length + ' seleccionados' }}</dd></div>
+              <div><dt>Compra mínima</dt><dd>{{ draft.minSubtotal ? formatSoles(draft.minSubtotal * 100) : 'Sin importe mínimo' }}</dd></div>
+              @if (draft.minItems) { <div><dt>Artículos mínimos</dt><dd>{{ draft.minItems }}</dd></div> }
+              @if (draft.maxDiscount && (kind() === 'PERCENT' || kind() === 'BUY_X_GET_Y')) { <div><dt>Tope del beneficio</dt><dd>{{ formatSoles(draft.maxDiscount * 100) }}</dd></div> }
+              <div><dt>Usos</dt><dd>{{ draft.usageLimit ? draft.usageLimit + ' en total' : 'Sin límite total' }}{{ draft.perCustomerLimit ? ' · ' + draft.perCustomerLimit + ' por cliente' : '' }}</dd></div>
+              @if (draft.firstOrderOnly) { <div><dt>Clientes</dt><dd>Solo primera compra</dd></div> }
+              <div><dt>Inicio</dt><dd>{{ scheduleLabel(draft.startsAt, 'Al activarse') }}</dd></div>
+              <div><dt>Fin</dt><dd>{{ scheduleLabel(draft.endsAt, 'Sin fecha de fin') }}</dd></div>
+              <div><dt>Disponibilidad</dt><dd>{{ draft.isActive ? 'Habilitado al guardar' : 'Pausado al guardar' }}</dd></div>
+            </dl>
+          </ds-form-section>
+          <p class="discount-summary__note"><ds-icon name="info" [size]="1" />El pedido debe cumplir todas las condiciones. Tus cambios se aplican al guardar.</p>
+        </aside>
       </div>
-    </form>
+    </fieldset></form>
   } @else if (loading()) {
-    <div class="skeleton" aria-busy="true">Cargando descuentos…</div>
+    <div class="tw:console-list-panel" role="status" aria-busy="true" aria-label="Cargando descuentos"><div class="tw:console-list-skeleton" aria-hidden="true">@for (row of [1,2,3,4]; track row) { <div></div> }</div></div>
   } @else if (loadFailed()) {
     <ds-empty-state title="No pudimos cargar los descuentos" body="Revisa tu conexión e inténtalo de nuevo."><ds-button variant="secondary" (click)="load()">Reintentar</ds-button></ds-empty-state>
   } @else if (!active()) {
     <app-integration-gate key="store" />
   } @else if (!coupons().length) {
-    <section class="discount-empty"><div class="discount-empty__icon"><ds-icon name="ticketPercent" [size]="2.25" /></div><h2>Ofrece descuentos cuando los necesites</h2><p>Crea códigos o promociones automáticas para productos, pedidos y envío.</p><ds-button (click)="openCreatePicker()">Crear descuento</ds-button></section>
+    <section class="discount-start" aria-labelledby="discount-start-title">
+      <div class="discount-start__intro"><span class="discount-start__icon"><ds-icon name="ticketPercent" [size]="1.5" /></span><div><h2 id="discount-start-title">Crea tu primer descuento</h2><p>Elige el beneficio para empezar. Luego podrás definir un código o aplicarlo automáticamente.</p></div></div>
+      <div class="discount-start__choices">
+        @for (option of creationOptions; track option.kind) {
+          <ds-choice-card [title]="option.title" [description]="option.description" [icon]="option.icon" [disabled]="!!busyId()" (activate)="startCreate(option.kind)" />
+        }
+      </div>
+      <p class="discount-start__footnote"><ds-icon name="info" [size]="1" />Podrás limitar los productos, la compra mínima, los usos y la vigencia antes de guardar.</p>
+    </section>
   } @else {
     <section class="discount-list" aria-label="Descuentos activos y programados">
       <div class="discount-list__toolbar"><strong>{{ coupons().length }} {{ coupons().length === 1 ? 'descuento' : 'descuentos' }}</strong><span>Los descuentos automáticos se evalúan durante el pago.</span></div>
@@ -107,12 +126,18 @@
           @let st = status(coupon);
           <li class="discount-row">
             <div class="discount-row__icon"><ds-icon [name]="coupon.kind === 'FREE_SHIPPING' ? 'truck' : coupon.kind === 'BUY_X_GET_Y' ? 'package' : 'ticketPercent'" /></div>
-            <div class="discount-row__main"><div class="discount-row__title"><strong>{{ coupon.label }}</strong><span class="pill" [class.pill--ok]="st.ok">{{ st.label }}</span></div><span class="discount-row__meta">{{ summary(coupon) }} · {{ coupon.method === 'CODE' ? 'Código: ' + coupon.code : 'Automático' }}</span>@if (campaignLink(coupon); as link) {<button type="button" class="inline-link" (click)="copyLink(coupon)">{{ copiedCode() === coupon.code ? 'Enlace copiado' : 'Copiar enlace de campaña' }}</button>}</div>
+            <div class="discount-row__main"><div class="discount-row__title"><strong>{{ coupon.label }}</strong><span class="tw:rounded-sm tw:bg-canvas tw:px-2 tw:py-1 tw:text-caption tw:text-muted" [class.tw:bg-success/10]="st.ok" [class.tw:text-success-text]="st.ok">{{ st.label }}</span></div><span class="discount-row__meta">{{ summary(coupon) }} · {{ coupon.method === 'CODE' ? 'Código: ' + coupon.code : 'Automático' }}</span>@if (campaignLink(coupon); as link) {<button type="button" class="inline-link" (click)="copyLink(coupon)">{{ copiedCode() === coupon.code ? 'Enlace copiado' : 'Copiar enlace de campaña' }}</button>}</div>
             <dl class="discount-row__stats"><div><dt>Usos</dt><dd>{{ coupon.usedCount }}{{ coupon.usageLimit !== null ? ' / ' + coupon.usageLimit : '' }}</dd></div><div><dt>Otorgado</dt><dd>{{ formatSoles(coupon.discountGivenCents) }}</dd></div></dl>
-            <div class="discount-row__actions"><ds-button variant="secondary" (click)="startEdit(coupon)">Editar</ds-button><ds-button variant="ghost" (click)="toggleActive(coupon)">{{ coupon.isActive ? 'Pausar' : 'Activar' }}</ds-button>@if (coupon.usedCount === 0) {<ds-button variant="ghost" (click)="remove(coupon)" [label]="'Eliminar descuento ' + coupon.label"><ds-icon name="trash" [size]="1" /></ds-button>}</div>
+            <div class="discount-row__actions"><ds-button [disabled]="!!busyId()" variant="secondary" (click)="startEdit(coupon)">Editar</ds-button><ds-button variant="ghost" [disabled]="!!busyId()" (click)="toggleActive(coupon)">{{ busyId() === coupon.id ? 'Procesando…' : coupon.isActive ? 'Pausar' : 'Activar' }}</ds-button>@if (coupon.usedCount === 0) {<ds-button variant="ghost" [disabled]="!!busyId()" (click)="remove(coupon)" [label]="'Eliminar descuento ' + coupon.label"><ds-icon name="trash" [size]="1" /></ds-button>}</div>
           </li>
         }
       </ul>
     </section>
+  }
+  @if (!loading() && !loadFailed() && active()) {
+    <div class="discount-help"><ds-disclosure title="¿Cómo se aplican los descuentos?">
+      <p>Con un código, el cliente introduce la promoción durante el pago. Los descuentos automáticos se evalúan cuando el pedido no tiene un código.</p>
+      <p>El pedido debe cumplir los productos, requisitos de compra, fechas y límites que hayas definido. Puedes pausar un descuento desde la lista.</p>
+    </ds-disclosure></div>
   }
 </section>

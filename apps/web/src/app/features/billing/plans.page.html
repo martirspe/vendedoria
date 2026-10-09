@@ -1,271 +1,93 @@
-<section class="plans tw:mx-auto tw:min-w-0">
-  <header class="plans__header">
-    <div>
-      <h1 class="tw:console-title">Planes</h1>
-      <p>
-        Revisa cuánto usaste este mes y elige el plan que va con el tamaño de
-        tu negocio. Sin contratos: pagas por mes o por adelantado con descuento.
-      </p>
-    </div>
-  </header>
-
-  @if (errorMessage(); as error) {
-    <div class="tw:feedback tw:feedback-danger" role="alert">
-      <ds-icon name="alert" />
-      <span>{{ error }}</span>
-      <ds-button variant="secondary" (click)="load()" [disabled]="loading()">Reintentar</ds-button>
-    </div>
+<section class="tw:mx-auto tw:grid tw:w-full tw:min-w-0 tw:gap-4">
+  <header><h1 class="tw:console-title">Planes</h1><p class="tw:mt-2 tw:max-w-prose tw:text-sm tw:text-muted">Consulta tu consumo y compara los planes de tu negocio.</p></header>
+  @if (errorMessage(); as error) { <div class="tw:feedback tw:feedback-danger" role="alert"><ds-icon name="alert" /><span>{{ error }}</span></div> }
+  @if (successMessage(); as success) { <div class="tw:feedback tw:feedback-success" role="status"><ds-icon name="check" /><span>{{ success }}</span></div> }
+  @if (infoMessage(); as info) { <div class="tw:feedback tw:feedback-info" role="status"><ds-icon name="info" /><span>{{ info }}</span></div> }
+  @if (overviewError(); as error) { <div class="tw:feedback tw:feedback-danger" role="alert"><ds-icon name="alert" /><span>{{ error }} @if (overview()) { Se muestran los últimos datos disponibles. }</span><ds-button variant="secondary" [disabled]="loading() || saving()" (click)="load()">Reintentar</ds-button></div> }
+  @if (pendingSimulation()) {
+    <ds-form-section density="compact" title="Pago de prueba pendiente" description="Confirma el pago de prueba antes de iniciar otra compra.">
+      <ds-button [disabled]="saving() || loading() || !!overviewError() || !canManage()" (click)="confirmSimulation()">{{ saving() ? 'Confirmando…' : 'Confirmar pago de prueba' }}</ds-button>
+    </ds-form-section>
   }
-  @if (successMessage(); as success) {
-    <div class="tw:feedback tw:feedback-success" role="status">
-      <ds-icon name="check" />
-      <span>{{ success }}</span>
-    </div>
-  }
-  @if (infoMessage(); as info) {
-    <div class="tw:feedback tw:feedback-info" role="status">
-      <ds-icon name="wallet" />
-      <span>{{ info }}</span>
-      @if (pendingSimulation()) {
-        <ds-button
-          type="button"
-          variant="primary"
-          [disabled]="saving() || !canManage()"
-          (click)="confirmSimulation()"
-        >
-          {{ saving() ? 'Confirmando…' : 'Confirmar pago de prueba' }}
-        </ds-button>
-      }
-    </div>
-  }
-  @if (activeCheckout(); as active) {
-    <app-plan-checkout
-      [checkout]="active.checkout"
-      [purchase]="active.purchase"
-      (completed)="onCheckoutCompleted($event)"
-      (closed)="closeCheckout()"
-    />
-  }
-
-  @if (loading()) {
-    <div class="skeleton" aria-busy="true">Cargando planes…</div>
+  @if (activeCheckout(); as active) { <app-plan-checkout [checkout]="active.checkout" [purchase]="active.purchase" (completed)="onCheckoutCompleted($event)" (closed)="closeCheckout()" /> }
+  @if (loading() && !overview()) {
+    <div class="tw:console-list-panel" role="status" aria-busy="true" aria-label="Cargando planes"><div class="tw:console-list-skeleton" aria-hidden="true">@for (row of [1,2,3,4]; track row) { <div></div> }</div></div>
   } @else if (overview(); as data) {
-    @if (!canManage()) { <div class="tw:feedback tw:feedback-info" role="status">Puedes consultar el plan y el uso. El propietario o un administrador puede gestionar las compras.</div> }
-    @if (data.planStatus === 'EXPIRED') {
-      <div class="tw:feedback tw:feedback-danger" role="alert">
-        <ds-icon name="alert" />
-        <span>
-          Tu plan venció. Tu vendedor IA no atiende chats nuevos, no puedes
-          agregar productos y tu tienda web está fuera de línea. Tus productos,
-          pedidos y la configuración de tu tienda se guardan: renueva o elige un
-          plan y todo vuelve como estaba.
-        </span>
+    <ds-action-bar label="Acciones del plan">
+      <span dsActionStatus role="status">{{ saving() ? 'Procesando solicitud…' : loading() ? 'Actualizando plan…' : currentPlanLabel(data) }}</span>
+      <ds-button variant="secondary" [disabled]="loading() || saving() || !!activeCheckout()" (click)="load()"><ds-icon name="rotateCcw" />Actualizar uso</ds-button>
+      @if (!activeCheckout() && !pendingSimulation() && canManage() && data.currentPlan.priceCents !== null) { <ds-button [disabled]="!canSelect(data.currentPlan, data)" (click)="selectPlan(data.currentPlan)">{{ buttonLabel(data.currentPlan, data) }}</ds-button> }
+    </ds-action-bar>
+    @if (!canManage()) { <div class="tw:feedback tw:feedback-info" role="status"><ds-icon name="info" /><span>Puedes consultar el plan y el uso. El propietario o un administrador puede gestionar las compras.</span></div> }
+    @if (data.planStatus === 'EXPIRED') { <div class="tw:feedback tw:feedback-danger" role="alert"><ds-icon name="alert" /><span>Tu plan venció. El vendedor no atiende chats nuevos, no puedes agregar productos y la tienda está fuera de línea. Tus productos, pedidos y configuración se conservan. Renueva o elige un plan para reactivarlos.</span></div> }
+    <ds-form-section density="compact" title="Tu plan y consumo">
+      <div class="tw:flex tw:flex-wrap tw:items-start tw:justify-between tw:gap-4">
+        <div><p class="tw:m-0 tw:text-caption tw:text-muted">Plan actual</p><p class="tw:m-0 tw:mt-1 tw:text-lg tw:font-semibold">{{ currentPlanLabel(data) }}</p>@if (periodLabel(data); as period) { <p class="tw:m-0 tw:mt-1 tw:text-sm tw:text-muted">{{ period }}</p> }</div>
+        @if (data.usage.extraChats) { <p class="tw:m-0 tw:text-sm tw:text-muted">Incluye {{ data.usage.extraChats }} chats extra este mes.</p> }
       </div>
-    }
+      <dl class="tw:m-0 tw:grid tw:gap-x-5 tw:gap-y-3 tw:sm:grid-cols-2 tw:lg:grid-cols-4">
+<div class="tw:min-w-0 tw:border-0 tw:border-b tw:border-solid tw:border-divider tw:pb-2"><div><dt class="tw:text-sm">Chats nuevos este mes</dt><dd class="tw:m-0 tw:mt-1 tw:wrap-anywhere tw:text-lg tw:font-semibold"><strong>{{ usageLabel(data, data.usage.conversationsUsed, data.usage.conversationQuota) }}</strong></dd><small class="tw:mt-1 tw:block tw:text-caption tw:text-muted">Se reinicia el 1 de cada mes</small>@if (data.usage.conversationAtLimit) { <small class="tw:mt-1 tw:block tw:text-caption tw:font-semibold tw:text-warning-text">Límite alcanzado</small> }</div></div>
 
-    <h2 class="plans__section-title">Tu uso</h2>
-    <div class="usage">
-      <div>
-        <span>Plan actual</span>
-        <strong>{{ currentPlanLabel(data) }}</strong>
-        @if (periodLabel(data); as period) {
-          <small>{{ period }}</small>
+
+<div class="tw:min-w-0 tw:border-0 tw:border-b tw:border-solid tw:border-divider tw:pb-2"><div><dt class="tw:text-sm">Respuestas con IA este mes</dt><dd class="tw:m-0 tw:mt-1 tw:wrap-anywhere tw:text-lg tw:font-semibold"><strong>{{ usageLabel(data, data.usage.aiRepliesUsed, data.usage.aiReplyQuota) }}</strong></dd><small class="tw:mt-1 tw:block tw:text-caption tw:text-muted">Al llegar al límite, el vendedor sigue con respuestas básicas</small>@if (data.usage.aiAtLimit) { <small class="tw:mt-1 tw:block tw:text-caption tw:font-semibold tw:text-warning-text">Límite alcanzado</small> }</div></div>
+
+
+<div class="tw:min-w-0 tw:border-0 tw:border-b tw:border-solid tw:border-divider tw:pb-2"><div><dt class="tw:text-sm">Productos del catálogo</dt><dd class="tw:m-0 tw:mt-1 tw:wrap-anywhere tw:text-lg tw:font-semibold"><strong>{{ usageLabel(data, data.usage.productsUsed, data.usage.productQuota) }}</strong></dd>@if (data.usage.productAtLimit) { <small class="tw:mt-1 tw:block tw:text-caption tw:font-semibold tw:text-warning-text">Límite alcanzado</small> }</div></div>
+
+
+<div class="tw:min-w-0 tw:border-0 tw:border-b tw:border-solid tw:border-divider tw:pb-2"><div><dt class="tw:text-sm">Usuarios</dt><dd class="tw:m-0 tw:mt-1 tw:wrap-anywhere tw:text-lg tw:font-semibold"><strong>{{ usageLabel(data, data.usage.seatsUsed, data.usage.seatQuota) }}</strong></dd><small class="tw:mt-1 tw:block tw:text-caption tw:text-muted">Incluye invitaciones pendientes</small>@if (data.usage.seatAtLimit) { <small class="tw:mt-1 tw:block tw:text-caption tw:font-semibold tw:text-warning-text">Límite alcanzado</small> }</div></div>
+
+@if (data.usage.couponQuota !== 0) {
+<div class="tw:min-w-0 tw:border-0 tw:border-b tw:border-solid tw:border-divider tw:pb-2"><div><dt class="tw:text-sm">Descuentos activos</dt><dd class="tw:m-0 tw:mt-1 tw:wrap-anywhere tw:text-lg tw:font-semibold"><strong>{{ usageLabel(data, data.usage.couponsActive, data.usage.couponQuota) }}</strong></dd>@if (data.usage.couponAtLimit) { <small class="tw:mt-1 tw:block tw:text-caption tw:font-semibold tw:text-warning-text">Límite alcanzado</small> }</div></div>
+}
+@if (data.usage.aiTextQuota !== 0) {
+<div class="tw:min-w-0 tw:border-0 tw:border-b tw:border-solid tw:border-divider tw:pb-2"><div><dt class="tw:text-sm">Textos con IA de la tienda</dt><dd class="tw:m-0 tw:mt-1 tw:wrap-anywhere tw:text-lg tw:font-semibold"><strong>{{ usageLabel(data, data.usage.aiTextsUsed, data.usage.aiTextQuota) }}</strong></dd><small class="tw:mt-1 tw:block tw:text-caption tw:text-muted">No usan las respuestas del vendedor</small>@if (data.usage.aiTextAtLimit) { <small class="tw:mt-1 tw:block tw:text-caption tw:font-semibold tw:text-warning-text">Límite alcanzado</small> }</div></div>
+}
+@if (data.usage.aiImageQuota !== 0) {
+<div class="tw:min-w-0 tw:border-0 tw:border-b tw:border-solid tw:border-divider tw:pb-2"><div><dt class="tw:text-sm">Imágenes con IA de la tienda</dt><dd class="tw:m-0 tw:mt-1 tw:wrap-anywhere tw:text-lg tw:font-semibold"><strong>{{ usageLabel(data, data.usage.aiImagesUsed, data.usage.aiImageQuota) }}</strong></dd><small class="tw:mt-1 tw:block tw:text-caption tw:text-muted">No usan las respuestas del vendedor</small>@if (data.usage.aiImageAtLimit) { <small class="tw:mt-1 tw:block tw:text-caption tw:font-semibold tw:text-warning-text">Límite alcanzado</small> }</div></div>
+}</dl>
+    </ds-form-section>
+    <section class="tw:grid tw:gap-4" aria-labelledby="choose-plan-title">
+      <div class="tw:flex tw:flex-wrap tw:items-end tw:justify-between tw:gap-4">
+        <div><h2 id="choose-plan-title" class="tw:m-0 tw:text-lg tw:font-semibold">Compara y elige tu plan</h2><p class="tw:mt-1 tw:text-caption tw:text-muted">Pago único por el período seleccionado. Sin cobros automáticos.</p></div>
+        @if (periodOptions(data).length) { <div class="tw:grid tw:gap-2"><label for="plan-period" class="tw:text-sm tw:font-semibold">Período de pago</label><ds-select><select id="plan-period" [value]="months()" [disabled]="purchaseBlocked()" (change)="changePeriod($event)">@for (option of periodOptions(data); track option.months) { <option [value]="option.months">{{ option.label }}{{ option.discountPercent ? ' · ' + option.discountPercent + ' % de descuento' : '' }}</option> }</select></ds-select></div> }
+      </div>
+      @if (months() === 1 && maxDiscount(data) > 0) { <p class="tw:m-0 tw:text-sm tw:text-muted">Paga por adelantado y ahorra hasta {{ maxDiscount(data) }} %.</p> }
+      <ul class="plan-grid tw:m-0 tw:grid tw:list-none tw:gap-3 tw:p-0">
+        @for (plan of data.plans; track plan.id) {
+          <li class="tw:min-w-0">
+            <ds-form-section density="compact" [title]="plan.name" [description]="plan.description">
+              @if (plan.id === data.currentPlan.id) { <span class="tw:w-fit tw:rounded-sm tw:bg-canvas tw:px-2 tw:py-1 tw:text-caption tw:font-semibold">{{ data.planStatus === 'TRIAL' ? 'En prueba' : data.planStatus === 'EXPIRED' ? 'Plan vencido' : 'Plan actual' }}</span> }
+              @if (priceFor(plan); as price) {
+                <p class="tw:m-0 tw:wrap-anywhere tw:text-lg tw:font-semibold">{{ money(price.monthlyCents) }} <span class="tw:text-sm tw:font-normal tw:text-muted">/mes equivalente</span></p>
+                <p class="tw:m-0 tw:text-sm"><strong>Total a pagar: {{ money(price.totalCents) }}</strong> por {{ price.months }} {{ price.months === 1 ? 'mes' : 'meses' }}</p>
+                @if (price.discountPercent) { <p class="tw:m-0 tw:text-caption tw:text-success-text">{{ price.discountPercent }} % de descuento · ahorras {{ money((plan.priceCents ?? 0) * price.months - price.totalCents) }}</p> }
+              } @else { <p class="tw:m-0 tw:text-lg tw:font-semibold">{{ plan.priceLabel }}</p>@if (plan.priceCents !== null) { <p class="tw:m-0 tw:text-caption tw:text-muted">Este plan no ofrece el período seleccionado.</p> } }
+              @if (plan.note) { <p class="tw:m-0 tw:text-caption tw:text-muted">{{ plan.note }}</p> }
+              <ul class="tw:m-0 tw:grid tw:list-none tw:gap-2 tw:p-0 tw:text-sm">@for (item of plan.highlights; track item) { <li class="tw:flex tw:items-start tw:gap-2"><ds-icon name="check" /><span>{{ item }}</span></li> }</ul>
+              @if (plan.priceCents === null) { <a routerLink="/app/help" class="tw:console-action-secondary">Pedir cotización</a> }
+              @else { <ds-button variant="secondary" [disabled]="!canSelect(plan, data)" (click)="selectPlan(plan)">{{ buttonLabel(plan, data) }}</ds-button> }
+            </ds-form-section>
+          </li>
         }
-      </div>
-      <div>
-        <span>Chats nuevos este mes</span>
-        <strong>
-          {{
-            usageLabel(
-              data,
-              data.usage.conversationsUsed,
-              data.usage.conversationQuota
-            )
-          }}
-        </strong>
-        <small>
-          @if (data.usage.extraChats) {
-            Incluye {{ data.usage.extraChats }} chats extra ·
-          }
-          Se reinicia el 1 de cada mes
-        </small>
-      </div>
-      <div [class.is-warning]="data.usage.aiAtLimit">
-        <span>Respuestas con IA este mes</span>
-        <strong>
-          {{ usageLabel(data, data.usage.aiRepliesUsed, data.usage.aiReplyQuota) }}
-        </strong>
-        <small>
-          {{
-            data.usage.aiAtLimit
-              ? 'Llegaste al límite: tu vendedor responde con respuestas básicas hasta el próximo mes.'
-              : 'Al llegar al límite, tu vendedor sigue con respuestas básicas.'
-          }}
-        </small>
-      </div>
-      @if (data.usage.aiTextQuota !== 0) {
-        <div [class.is-warning]="data.usage.aiTextAtLimit || data.usage.aiImageAtLimit">
-          <span>Textos con IA en tu tienda</span>
-          <strong>
-            {{ usageLabel(data, data.usage.aiTextsUsed, data.usage.aiTextQuota) }}
-          </strong>
-          <small>
-            Imágenes con IA: {{ usageLabel(data, data.usage.aiImagesUsed, data.usage.aiImageQuota) }} · No usan las
-            respuestas de tu vendedor
-          </small>
-        </div>
-      }
-      <div>
-        <span>Productos en tu catálogo</span>
-        <strong>
-          {{ usageLabel(data, data.usage.productsUsed, data.usage.productQuota) }}
-        </strong>
-      </div>
-      @if (data.usage.couponQuota !== 0) {
-        <div>
-          <span>Descuentos activos</span>
-          <strong>
-            {{ usageLabel(data, data.usage.couponsActive, data.usage.couponQuota) }}
-          </strong>
-        </div>
-      }
-      <div>
-        <span>Usuarios</span>
-        <strong>
-          {{ usageLabel(data, data.usage.seatsUsed, data.usage.seatQuota) }}
-        </strong>
-        <small>Incluye invitaciones pendientes</small>
-      </div>
-    </div>
-
-    <div class="plans__choose">
-      <h2 class="plans__section-title">Elige tu plan</h2>
-      @if (periodOptions(data).length > 1) {
-        <div class="period" role="radiogroup" aria-label="Periodo de pago">
-          @for (option of periodOptions(data); track option.months) {
-            <button
-              type="button"
-              role="radio"
-              [attr.aria-checked]="months() === option.months"
-              [class.is-active]="months() === option.months"
-              (click)="setMonths(option.months)"
-            >
-              {{ option.label }}
-              @if (option.discountPercent) {
-                <span class="period__save">-{{ option.discountPercent }} %</span>
-              }
-            </button>
-          }
-        </div>
-      }
-    </div>
-    @if (months() === 1 && maxDiscount(data) > 0) {
-      <p class="plans__hint">Paga por adelantado y ahorra hasta {{ maxDiscount(data) }} %. No hay cobros automáticos.</p>
-    }
-    <ul class="plan-grid">
-      @for (plan of data.plans; track plan.id) {
-        <li [class.is-current]="plan.id === data.currentPlan.id">
-          <header>
-            <div class="plan-grid__title">
-              <h3>{{ plan.name }}</h3>
-              @if (plan.id === data.currentPlan.id) {
-                <span class="plan-grid__pill">{{ data.planStatus === 'TRIAL' ? 'En prueba' : 'Tu plan' }}</span>
-              }
-            </div>
-            <p class="plan-grid__description">{{ plan.description }}</p>
-            @if (priceFor(plan); as price) {
-              @if (price.months === 1) {
-                <strong>{{ plan.priceLabel }}</strong>
-              } @else {
-                <strong>{{ money(price.monthlyCents) }} al mes</strong>
-                <small class="plan-grid__period">
-                  {{ money(price.totalCents) }} por {{ price.months }} meses · ahorras
-                  {{ money((plan.priceCents ?? 0) * price.months - price.totalCents) }}
-                </small>
-              }
-            } @else {
-              <strong>{{ plan.priceLabel }}</strong>
-            }
-            @if (plan.note) {
-              <p class="plan-grid__note">{{ plan.note }}</p>
-            }
-          </header>
-          <ul>
-            @for (item of plan.highlights; track item) {
-              <li>{{ item }}</li>
-            }
-          </ul>
-          @if (plan.priceCents == null) {
-            <a class="plan-grid__contact" routerLink="/app/help">
-              <ds-button type="button" variant="secondary">Pedir cotización</ds-button>
-            </a>
-          } @else {
-            <ds-button
-              type="button"
-              [variant]="plan.id === data.currentPlan.id && data.planStatus === 'ACTIVE' ? 'ghost' : 'primary'"
-              [disabled]="!canSelect(plan, data)"
-              (click)="selectPlan(plan)"
-            >
-              {{ buttonLabel(plan, data) }}
-            </ds-button>
-          }
-        </li>
-      }
-    </ul>
-
+      </ul>
+    </section>
     @if (data.chatPacks.length) {
-      <section class="packs" aria-labelledby="packs-title">
-        <div>
-          <h2 class="plans__section-title" id="packs-title">Chats extra para este mes</h2>
-          <p class="plans__hint">
-            ¿Un mes con más ventas? Suma chats nuevos sin cambiar de plan. Se usan hasta fin de mes
-            e incluyen sus respuestas con IA.
-          </p>
-        </div>
-        @if (!data.chatPacksAvailable) {
-          <p class="packs__locked">
-            <ds-icon name="info" />
-            <span>Disponible con un plan pagado y activo.</span>
-          </p>
-        }
-        <ul class="packs__grid">
-          @for (pack of data.chatPacks; track pack.chats) {
-            <li>
-              <strong>{{ pack.chats }} chats</strong>
-              <span>{{ money(pack.priceCents) }}</span>
-              <small>{{ pack.aiReplies }} respuestas con IA</small>
-              <ds-button
-                type="button"
-                variant="secondary"
-                [disabled]="!canManage() || saving() || !data.chatPacksAvailable || !data.checkoutEnabled"
-                (click)="buyChatPack(pack)"
-              >
-                Sumar {{ pack.chats }} chats
-              </ds-button>
-            </li>
-          }
+      <ds-form-section density="compact" title="Chats extra" description="Se usan hasta fin de mes e incluyen respuestas con IA.">
+        @if (!data.chatPacksAvailable) { <div class="tw:feedback tw:feedback-info"><ds-icon name="info" /><span>Disponibles con un plan pagado y activo.</span></div> }
+        <ul class="tw:m-0 tw:grid tw:list-none tw:gap-3 tw:p-0 tw:sm:grid-cols-2 tw:lg:grid-cols-4">
+          @for (pack of data.chatPacks; track pack.chats) { <li class="tw:min-w-0 tw:border-0 tw:border-b tw:border-solid tw:border-divider tw:pb-2"><div class="tw:grid tw:gap-2"><span>{{ pack.chats }} chats</span><strong>{{ money(pack.priceCents) }}</strong><small>{{ pack.aiReplies }} respuestas con IA</small><ds-button variant="secondary" [disabled]="!canManage() || purchaseBlocked() || !data.chatPacksAvailable || !data.checkoutEnabled" (click)="buyChatPack(pack)">Sumar {{ pack.chats }} chats</ds-button></div></li> }
         </ul>
-      </section>
+      </ds-form-section>
     }
-
-    <div class="plans__details">
-      <section>
-        <h2 class="plans__section-title">Todos los planes incluyen</h2>
-        <ul class="plans__list">
-          @for (item of data.includedInAllPlans; track item) {
-            <li><ds-icon name="check" /><span>{{ item }}</span></li>
-          }
-        </ul>
-      </section>
-      <section>
-        <h2 class="plans__section-title">Antes de elegir</h2>
-        <ul class="plans__list plans__list--notes">
-          <li><span>{{ data.checkoutHint }}</span></li>
-          @for (note of data.notes; track note) {
-            <li><span>{{ note }}</span></li>
-          }
-        </ul>
-      </section>
+    <p class="tw:m-0 tw:text-sm tw:text-muted">{{ data.checkoutHint }}</p>
+    <div class="tw:grid tw:gap-3 tw:lg:grid-cols-2">
+      <ds-disclosure title="Incluido en todos los planes"><ul class="tw:m-0 tw:grid tw:gap-2 tw:pl-5 tw:text-sm">@for (item of data.includedInAllPlans; track item) { <li>{{ item }}</li> }</ul></ds-disclosure>
+      <ds-disclosure title="Condiciones del plan"><ul class="tw:m-0 tw:grid tw:gap-2 tw:pl-5 tw:text-sm">@for (note of data.notes; track note) { <li>{{ note }}</li> }</ul></ds-disclosure>
     </div>
+    <ds-disclosure title="¿El precio mensual se cobra cada mes?"><p class="tw:m-0 tw:text-sm tw:text-muted">El precio mensual mostrado es el equivalente del período elegido. Pagas de una vez el total indicado para ese período; no hay cobros automáticos.</p></ds-disclosure>
+    <ds-disclosure title="¿Esta cuenta recibe los pagos de mis clientes?"><p class="tw:m-0 tw:text-sm tw:text-muted">Esta sección corresponde a tu suscripción a VendedorIA. Configura los pagos de los pedidos de tus clientes desde Cobros.</p></ds-disclosure>
+  } @else if (!loading()) {
+    <ds-empty-state title="No pudimos cargar tus planes" body="Reintenta para consultar la suscripción y las opciones disponibles."><ds-button variant="secondary" (click)="load()">Reintentar</ds-button></ds-empty-state>
   }
 </section>

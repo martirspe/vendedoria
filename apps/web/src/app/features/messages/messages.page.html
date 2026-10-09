@@ -3,12 +3,12 @@
     <header class="inbox__list-head">
       <div>
         <h1 class="tw:console-title">Mensajes</h1>
-        @if (!loadingList() && !listError()) { <p>{{ conversations().length }} conversaciones</p> }
+        @if (!loadingList() && !listError()) { <p>{{ conversations().length }} {{ conversations().length === 1 ? 'conversación' : 'conversaciones' }}{{ query() || filterSales() || filterUnattended() ? ' en esta vista' : '' }}</p> }
       </div>
-      <div class="inbox__filters">
+      <div class="inbox__filters tw:flex tw:flex-wrap tw:gap-2 tw:w-full">
         <button
           type="button"
-          class="chip"
+          class="chip tw:console-action-secondary tw:px-3!"
           [class.chip--active]="filterUnattended()"
           [attr.aria-pressed]="filterUnattended()"
           (click)="toggleUnattendedFilter()"
@@ -17,7 +17,7 @@
         </button>
         <button
           type="button"
-          class="chip"
+          class="chip tw:console-action-secondary tw:px-3!"
           [class.chip--active]="filterSales()"
           [attr.aria-pressed]="filterSales()"
           (click)="toggleSalesFilter()"
@@ -39,7 +39,7 @@
     </label>
 
     @if (loadingList()) {
-      <div class="list-state" role="status" aria-busy="true">Cargando conversaciones…</div>
+      <div class="tw:console-list-skeleton" role="status" aria-busy="true"><span class="tw:sr-only">Cargando conversaciones…</span><div aria-hidden="true"></div><div aria-hidden="true"></div><div aria-hidden="true"></div></div>
     } @else if (listError()) {
       <ds-empty-state title="No pudimos cargar las conversaciones" body="Revisa tu conexión e inténtalo de nuevo.">
         <ds-button variant="secondary" (click)="loadList()">Reintentar</ds-button>
@@ -49,7 +49,7 @@
         [title]="query() || filterSales() || filterUnattended() ? 'No hay coincidencias' : 'Sin conversaciones todavía'"
         [body]="query() || filterSales() || filterUnattended() ? 'Prueba otra búsqueda o cambia los filtros.' : 'Conecta un canal para recibir aquí los mensajes de tus clientes.'"
       >
-        @if (!query() && !filterSales() && !filterUnattended()) { <a routerLink="/app/channels" class="tw:console-action-link">Conectar un canal</a> }
+        @if (query() || filterSales() || filterUnattended()) { <ds-button variant="secondary" (click)="clearFilters()">Limpiar filtros</ds-button> } @else { <a routerLink="/app/channels" class="tw:console-action-link">Conectar un canal</a> }
       </ds-empty-state>
     } @else {
       <ul>
@@ -58,20 +58,19 @@
             <button
               type="button"
               class="thread-item"
-              [class.is-active]="selected()?.id === item.id"
+              [class.is-active]="openedConversationId() === item.id"
+              [attr.aria-current]="openedConversationId() === item.id ? true : null"
               (click)="openConversation(item.id)"
             >
               <span class="avatar">{{ initials(item) }}</span>
               <span class="thread-item__body">
                 <span class="thread-item__top">
-                  <strong>{{ item.contactName || item.contactPhone }}</strong>
-                  <time>{{ item.updatedAt | date: 'dd/MM HH:mm' }}</time>
+                  <strong>{{ item.contactName || item.contactPhone || 'Cliente sin nombre' }}</strong>
+                  <time [attr.datetime]="item.updatedAt">{{ item.updatedAt | date: 'dd/MM HH:mm' }}</time>
                 </span>
                 <span class="thread-item__preview">{{ preview(item) }}</span>
                 <span class="thread-item__flags">
-                  @if (!item.agentEnabled) {
-                    <span class="flag flag--paused">Pausado</span>
-                  }
+                  @if (!item.agentEnabled) { <span class="flag flag--paused">Atención manual</span> } @else { <span class="flag flag--sale">IA activa</span> }
                   @if (item.markedUnattended) {
                     <span class="flag flag--alert">Sin atender</span>
                   }
@@ -119,13 +118,13 @@
           <div class="thread-head__identity">
             <span class="avatar avatar--lg">{{ initials(thread) }}</span>
             <div>
-              <h2>{{ thread.contactName || thread.contactPhone }}</h2>
-              <p>{{ thread.contactPhone }}</p>
-              <span class="tw:text-caption tw:font-semibold" [class.tw:text-success-text]="thread.agentEnabled" [class.tw:text-warning-text]="!thread.agentEnabled">{{ thread.agentEnabled ? 'IA atendiendo' : 'IA pausada · atención manual' }}</span>
+              <h2>{{ thread.contactName || thread.contactPhone || 'Cliente sin nombre' }}</h2>
+              <p>{{ channelLabel(thread.channel.type) }}@if (thread.contactName && thread.contactPhone) { · {{ thread.contactPhone }} }</p>
+              <span class="tw:text-caption tw:font-semibold" [class.tw:text-success-text]="thread.agentEnabled" [class.tw:text-warning-text]="!thread.agentEnabled">{{ thread.agentEnabled ? 'IA activa en esta conversación' : 'Atención manual · IA pausada' }}</span>
             </div>
           </div>
 
-          <div class="thread-head__actions">
+          <div class="thread-head__actions tw:flex tw:w-full tw:flex-wrap tw:items-center tw:gap-2">
             <ds-button
               type="button"
               variant="secondary"
@@ -179,7 +178,7 @@
               {{ formatMoney(order.totalCents, order.currency) }}
               · {{ paymentStatusLabel(order.paymentStatus) }}
             </p>
-            <div class="commerce-panel__actions">
+            <div class="commerce-panel__actions tw:flex tw:flex-wrap tw:gap-4 tw:font-bold tw:text-sm">
               <a [routerLink]="['/app/orders']" [queryParams]="{ orderId: order.id }">
                 Ver pedido
               </a>
@@ -192,14 +191,9 @@
           </aside>
         }
 
-        @if (!thread.agentEnabled) {
-          <div class="tw:feedback tw:feedback-warning">
-            La IA está pausada. Tú y tu equipo atienden esta conversación hasta que la reactiven.
-          </div>
-        }
-
         @if (!thread.messagingWindow.canSendFreeForm) {
-          <div class="tw:feedback tw:feedback-warning">
+          <details class="window-notice">
+            <summary>Ventana de 24 horas cerrada · usar una plantilla</summary>
             <div>
               <strong>Ventana de 24h cerrada</strong>
               <p>
@@ -210,6 +204,7 @@
               </p>
             </div>
             <div class="template-box">
+              @if (!templates().length) { <p class="tw:col-span-full">No hay plantillas disponibles para enviar. <a routerLink="/app/channels">Revisar canal</a></p> }
               <label>
                 Plantilla
                 <ds-select><select
@@ -231,10 +226,11 @@
                 {{ sending() ? 'Enviando…' : 'Enviar plantilla' }}
               </ds-button>
             </div>
-          </div>
+          </details>
         }
 
         <div class="messages" #messageList role="log" aria-label="Historial de mensajes">
+          @if (!thread.messages.length) { <div class="thread-empty"><p>Aún no hay mensajes en esta conversación.</p></div> }
           @for (message of thread.messages; track message.id) {
             <article
               class="bubble"
@@ -242,6 +238,7 @@
               [class.bubble--out]="message.direction === 'OUTBOUND'"
               [class.bubble--human]="message.authorType === 'HUMAN_OPERATOR'"
               [class.bubble--agent]="message.authorType === 'SALES_AGENT'"
+              [class.bubble--system]="message.authorType === 'SYSTEM'"
             >
               @if (messageImage(message); as imageUrl) {
                 <img
@@ -262,19 +259,19 @@
                 message.authorType === 'SALES_AGENT' &&
                 messageTools(message).length
               ) {
-                <details class="bubble__why">
-                  <summary>Por qué respondió</summary>
-                  <ul>
+                <details class="bubble__why tw:mt-3 tw:border-0 tw:border-t tw:border-dashed tw:border-border tw:pt-2">
+                  <summary class="tw:cursor-pointer tw:text-caption tw:font-semibold tw:text-muted">Datos consultados</summary>
+                  <ul class="tw:mt-2 tw:grid tw:gap-2">
                     @for (tool of messageTools(message); track $index) {
-                      <li [attr.data-status]="tool.status">
+                      <li class="tw:grid tw:gap-1 tw:rounded-md tw:border tw:border-solid tw:border-border tw:bg-surface tw:px-3 tw:py-2 tw:text-caption" [attr.data-status]="tool.status">
                         <strong>{{ toolLabel(tool.name) }}</strong>
-                        <span>{{ tool.summary }}</span>
+                        <span class="tw:text-muted">{{ tool.summary }}</span>
                       </li>
                     }
                   </ul>
                 </details>
               }
-              <footer>
+              <footer class="tw:flex tw:justify-end tw:gap-2">
                 <span>
                   {{
                     message.authorType === 'BUYER'
@@ -282,28 +279,32 @@
                       : message.authorType === 'SALES_AGENT'
                         ? 'Vendedor IA'
                         : message.authorType === 'HUMAN_OPERATOR'
-                          ? 'Tú'
+                          ? 'Equipo'
                           : 'Sistema'
                   }}
                 </span>
-                <time>{{ message.createdAt | date: 'dd/MM HH:mm' }}</time>
+                <time [attr.datetime]="message.createdAt">{{ message.createdAt | date: 'dd/MM HH:mm' }}</time>
               </footer>
             </article>
           }
         </div>
 
         <form class="composer" [formGroup]="composer" (ngSubmit)="send()">
+          <div class="composer__context tw:col-span-full tw:grid tw:gap-1 tw:text-caption" id="composer-help"><strong>{{ canSend() ? 'Tu respuesta' : 'Respuesta no disponible' }}</strong><span>{{ !canSend() ? 'La ventana de 24 horas está cerrada. Abre las opciones de plantilla para continuar.' : thread.agentEnabled ? 'Al enviarla, la IA se pausará y tu equipo tomará la conversación.' : 'Tu equipo atiende esta conversación. La IA seguirá pausada.' }}</span></div>
+          @if (canSend()) {
           <textarea
             formControlName="text"
             aria-label="Respuesta al cliente"
+            aria-describedby="composer-help"
             rows="2"
             placeholder="Escribe una respuesta…"
             [readOnly]="!canSend() || sending()"
           ></textarea>
-          <ds-button type="submit" [disabled]="sending() || !canSend()">
+          <ds-button type="submit" [disabled]="sending() || !canSend() || !composer.controls.text.value.trim()">
             <ds-icon name="send" />
             {{ sending() ? 'Enviando…' : 'Enviar' }}
           </ds-button>
+          }
         </form>
       }
     }
@@ -321,7 +322,7 @@
         (ngSubmit)="createOrder()"
       >
         <header>
-          <h2>Crear pedido</h2>
+          <h2 class="tw:m-0">Crear pedido</h2>
           <p>
             Se vincula a este chat. Puedes generar el link de pago y enviarlo
             como mensaje del sistema.
