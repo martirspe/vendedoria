@@ -1,58 +1,77 @@
 :host {
-  --mk-line: color-mix(in srgb, var(--ds-color-marketing-text) 10%, transparent);
-  --mk-soft: color-mix(in srgb, var(--ds-color-marketing-text) 5%, transparent);
-
   display: block;
 }
-
-.mk-section {
-  display: grid;
-  gap: var(--ds-space-10);
-  padding-block: clamp(var(--ds-space-12), 8vw, calc(var(--ds-space-12) + var(--ds-space-8)));
-  scroll-margin-top: var(--ds-space-8);
+.mk-shell {
+  width: min(var(--ds-marketing-width), calc(100% - 2 * var(--ds-gutter)));
+  margin-inline: auto;
 }
-
+.mk-section {
+  padding-block: var(--ds-marketing-section-space);
+  scroll-margin-top: var(--ds-space-6);
+}
 .mk-heading {
   display: grid;
-  gap: var(--ds-space-3);
-  max-width: 40rem;
-
-  p {
-    margin: 0;
-    color: var(--ds-color-marketing-muted);
-    font-size: 1.05rem;
-    line-height: 1.6;
-  }
+  gap: var(--ds-space-4);
+  max-width: 45rem;
+  margin-bottom: var(--ds-space-10);
 }
-
+.mk-heading p {
+  margin: 0;
+  color: var(--ds-color-marketing-muted);
+  font-size: var(--ds-type-lg);
+  line-height: 1.65;
+}
 .mk-kicker,
 .mk-heading .mk-kicker {
   margin: 0;
   color: var(--ds-color-primary);
-  font-size: 0.8rem;
-  font-weight: 700;
-  letter-spacing: 0.08em;
+  font-size: var(--ds-type-caption);
+  font-weight: 800;
+  letter-spacing: 0.12em;
   text-transform: uppercase;
 }
-
 h2 {
   margin: 0;
   font-family: var(--ds-font-display);
-  font-size: clamp(1.9rem, 4.5vw, 3rem);
-  line-height: 1.08;
-  letter-spacing: -0.035em;
+  font-size: var(--ds-marketing-type-heading);
+  line-height: 1.1;
+  letter-spacing: var(--ds-marketing-tracking-display);
+  text-wrap: balance;
 }
-
 h3 {
   margin: 0;
   font-family: var(--ds-font-display);
-  font-size: 1.15rem;
+  font-size: var(--ds-type-lg);
   letter-spacing: -0.02em;
 }
-
 ul,
 ol {
   margin: 0;
   padding: 0;
   list-style: none;
+}
+a:focus-visible,
+summary:focus-visible {
+  outline: calc(2 * var(--ds-border-width)) solid var(--ds-color-focus-ring);
+  outline-offset: var(--ds-space-1);
+  border-radius: var(--ds-radius-sm);
+}
+.brand {
+  display: inline-flex;
+  align-items: center;
+  min-height: var(--ds-touch-target);
+  font-family: var(--ds-font-display);
+  font-size: var(--ds-marketing-type-brand);
+  letter-spacing: var(--ds-marketing-tracking-display);
+  font-weight: 700;
+}
+.brand > span {
+  color: var(--ds-color-primary);
+}
+.brand .brand__dot {
+  width: var(--ds-space-2);
+  height: var(--ds-space-2);
+  margin-left: var(--ds-space-2);
+  border-radius: var(--ds-radius-pill);
+  background: var(--ds-color-primary);
 }

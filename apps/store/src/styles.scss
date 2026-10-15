@@ -3,6 +3,9 @@
 @use 'sass:meta';
 // Shared controls stay above template reset layers and inherit each store's tokens.
 @use 'store-buttons';
+@use '../../../packages/ui/src/checkbox/checkbox-control' as checkbox;
+
+@include checkbox.native-checkboxes;
 
 @font-face {
   font-family: 'Manrope';

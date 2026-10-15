@@ -9,12 +9,15 @@
   </header>
     @if (!loading() && !loadFailed() && active() && view(); as v) {
       <ds-action-bar label="Acciones de tienda">
-        <span dsActionStatus>{{ hasChanges() ? 'Configuración sin guardar' : v.availability.public ? 'Tienda visible' : isPublished() ? 'Tienda pausada' : 'Tienda en borrador' }}</span>
+        <span dsActionStatus role="status">{{ saving() ? 'Guardando configuración…' : hasChanges() ? 'Configuración sin guardar' : v.availability.public ? 'Tienda visible' : isPublished() ? 'Tienda pausada' : 'Tienda en borrador' }}</span>
         <ds-button variant="secondary" [disabled]="mutationBusy() || !v.availability.previewAllowed" (click)="openPreview()">
           <ds-icon name="eye" />
           {{ busyAction() === 'preview' ? 'Abriendo…' : 'Vista previa de mi tienda' }}
         </ds-button>
-        @if (isPublished()) {
+        @if (hasChanges() || saving()) {
+          <ds-button variant="ghost" [disabled]="mutationBusy()" (click)="discardChanges()">Descartar</ds-button>
+          <ds-button type="submit" form="store-settings-form" [disabled]="mutationBusy()">{{ saving() ? 'Guardando…' : 'Guardar cambios' }}</ds-button>
+        } @else if (isPublished()) {
           <ds-button variant="ghost" [disabled]="mutationBusy()" (click)="unpublish()">
             {{ busyAction() === 'unpublish' ? 'Despublicando…' : 'Despublicar' }}
           </ds-button>
@@ -79,7 +82,7 @@
     </div>
 
     <div class="store__content" [class.store__content--with-rail]="section() === 'temas' || section() === 'preferencias'">
-      <form class="store__form" [formGroup]="form" (ngSubmit)="save()">
+      <form id="store-settings-form" class="store__form" [formGroup]="form" (ngSubmit)="save()">
         <fieldset class="store__fields" [disabled]="mutationBusy()"><legend class="tw:sr-only">Configuración de la tienda</legend>
         @if (section() === 'identidad') {
         <ds-form-section title="Identidad">
@@ -287,11 +290,6 @@
 
         @if (section() === 'automatizaciones') { <ds-form-section title="Automatizaciones"><app-conversion-settings /></ds-form-section> }
         </fieldset>
-        @if (section() !== 'automatizaciones' && (hasChanges() || saving())) {
-        <ds-save-bar [pending]="hasChanges()" [busy]="saving()" [disabled]="mutationBusy()">
-          <ds-button variant="ghost" [disabled]="mutationBusy()" (click)="discardChanges()">Descartar</ds-button>
-        </ds-save-bar>
-        }
       </form>
 
       @if (section() === 'temas' || section() === 'preferencias') {

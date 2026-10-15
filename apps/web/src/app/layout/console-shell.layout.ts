@@ -29,16 +29,10 @@ import { environment } from '../../environments/environment';
 import { CONSOLE_CONTEXTS, contextForUrl, isContextLinkActive, normalizeSearch, type ContextLink } from './console-context';
 import { CatalogApiService, type ProductDto } from '../core/api/catalog-api.service';
 
-type ConsoleNavChild = {
-  label: string;
-  path: string;
-};
-
 type ConsoleNavItem = {
   label: string;
   path: string;
   icon: DsIconName;
-  children?: ConsoleNavChild[];
   /** Shown only while this integration is active. */
   integration?: IntegrationKey;
 };
@@ -125,17 +119,9 @@ export class ConsoleShellLayout {
     },
     {
       id: 'sell',
-      label: null,
+      label: 'Ventas',
       items: [
-        {
-          label: 'Vendedor IA',
-          path: '/app/seller',
-          icon: 'bot',
-          children: SELLER_SECTIONS.map((section) => ({
-            label: section.label,
-            path: `/app/seller/${section.id}`,
-          })),
-        },
+        { label: 'Vendedor IA', path: '/app/seller', icon: 'bot' },
         { label: 'Mensajes', path: '/app/messages', icon: 'message' },
         { label: 'Pedidos', path: '/app/orders', icon: 'shoppingBag' },
         { label: 'Envíos', path: '/app/shipping', icon: 'truck' },
@@ -143,9 +129,10 @@ export class ConsoleShellLayout {
     },
     {
       id: 'catalog',
-      label: null,
+      label: 'Catálogo y tienda',
       items: [
-        { label: 'Productos', path: '/app/products', icon: 'package', children: [{ label: 'Inventario', path: '/app/inventory' }, { label: 'Importar catálogo', path: '/app/products/import' }] },
+        { label: 'Productos', path: '/app/products', icon: 'package' },
+        { label: 'Inventario', path: '/app/inventory', icon: 'list' },
         { label: 'Descuentos', path: '/app/coupons', icon: 'ticketPercent', integration: 'store' },
       ],
     },
@@ -160,7 +147,7 @@ export class ConsoleShellLayout {
     },
     {
       id: 'results',
-      label: null,
+      label: 'Resultados',
       items: [{ label: 'Métricas', path: '/app/metrics', icon: 'chartColumn' }],
     },
   ];
@@ -225,11 +212,13 @@ export class ConsoleShellLayout {
   readonly currentLocation = computed(() => {
     if (this.context()) return { group: this.context()!.label, label: this.contextLocation() ?? this.context()!.label };
     const path = this.currentUrl().split(/[?#]/)[0];
+    const sellerSection = SELLER_SECTIONS.find(section => path === `/app/seller/${section.id}`);
+    if (sellerSection) return { group: 'Vendedor IA', label: sellerSection.label };
+    if (path === '/app/products/import') return { group: 'Productos', label: 'Importar catálogo' };
     for (const group of this.navGroups()) {
       for (const item of group.items) {
-        if (path === item.path || path.startsWith(`${item.path}/`) || item.children?.some((entry) => entry.path === path)) {
-          const child = item.children?.find((entry) => entry.path === path);
-          return { group: child ? item.label : group.label, label: child?.label ?? item.label };
+        if (path === item.path || path.startsWith(`${item.path}/`)) {
+          return { group: group.label, label: item.label };
         }
       }
     }
@@ -244,21 +233,9 @@ export class ConsoleShellLayout {
 
   readonly contentHref = computed(() => `${this.currentUrl().split('#')[0]}#console-main`);
 
-  /** Parents the user collapsed or expanded by hand; others follow the active route. */
-  private readonly toggled = signal<Record<string, boolean>>({});
-
   isInSection(item: ConsoleNavItem): boolean {
     const path = this.currentUrl().split(/[?#]/)[0];
-    return path === item.path || path.startsWith(`${item.path}/`) || Boolean(item.children?.some((entry) => entry.path === path));
-  }
-
-  isExpanded(item: ConsoleNavItem): boolean {
-    return this.toggled()[item.path] ?? this.isInSection(item);
-  }
-
-  toggleItem(item: ConsoleNavItem): void {
-    const next = !this.isExpanded(item);
-    this.toggled.update((state) => ({ ...state, [item.path]: next }));
+    return path === item.path || path.startsWith(`${item.path}/`);
   }
 
   toggleNavigation(): void {

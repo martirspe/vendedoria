@@ -2,6 +2,18 @@
 
 ## [Unreleased]
 
+- Checkboxes: casilla negra con check verde unificada en consola, formularios de acceso y tiendas públicas, incluyendo controles nativos que usaban el check blanco del navegador. Superficie compartida con ds-checkbox, estado parcial, disabled, error y foco visibles; comportamiento nativo, semántica de switches, radios y contraste del sistema conservados.
+
+- Consola: una sola barra flotante general por vista. Perfil muestra Guardar/Descartar al pie únicamente al editar datos personales; cambiar contraseña conserva su acción local y su formulario independiente. Tienda concentra guardar, descartar, vista previa y publicación en la misma barra superior, priorizando los cambios pendientes. Altura uniforme para botones normales y del CTA: compacta en escritorio y 44 px en móvil/táctil. Botones y barras compartidos admiten asociación nativa a formularios externos, sin duplicar guardados ni mezclar operaciones.
+
+- Consola: sidebar de un solo nivel organizado por Ventas, Catálogo y tienda, Conexiones y Resultados, con Inventario como acceso directo. Secciones de Vendedor IA dentro de su módulo e importación desde Productos; nombres de páginas y accesos del buscador conservados. Cabeceras al expandir, separadores horizontales al contraer, iconos alineados, hover neutro y un único módulo activo. Transiciones suaves de ancho/etiquetas, movimiento reducido y navegación móvil accesible; retirados controles, estado y estilos de los submenús.
+
+- Landing comercial: nueva composición de marca, ejemplo interactivo de recomendación/pago/atención humana, vista de tienda y comparación de planes. Navegación móvil y preguntas accesibles, CTA con enlaces nativos, condiciones comerciales revisadas, metadatos sociales, canonical, datos estructurados, robots y sitemap. Foto de producto propia optimizada; estilos de acciones compartidos y tokens de marketing centralizados.
+
+- WhatsApp: dos modalidades disponibles desde Integraciones y Canales: autorización con Meta y app propia del negocio. Alta manual con credenciales cifradas, validación de permisos y número, webhook específico con firma del cliente y activación confirmada; cambio de modalidad mediante desconexión, diagnóstico y recuperación de fallos sin compartir secretos de VendedorIA.
+
+- WhatsApp: conexión de cada negocio mediante Meta Embedded Signup con Graph API v26.0 por defecto, selección de números autorizados, activación con PIN cuando corresponde, suscripción automática, diagnóstico, reconexión y desconexión. Credenciales cifradas, sesiones de un solo uso y gestión restringida a dueños/administradores; sin solicitar secretos de VendedorIA al cliente.
+
 - Planes: corregido el fallo de renderizado cuando el plan actual llega sin precios por período; se resuelven desde el catálogo. Consumo compacto, comparación adaptable al ancho y condiciones desplegables. Variante compact reutilizable de ds-form-section con tokens compartidos.
 
 - Planes: consumo, comparación, paquetes y condiciones con componentes del Design System, sin stylesheet local. Total a pagar visible junto al equivalente mensual, selector de período compartido y barra de actualización/renovación. Checkout abierto y período preservados; compras repetidas bloqueadas, confirmación de prueba recuperable y fallos de actualización separados del resultado del pago. Contratos de facturación, céntimos y permisos conservados.

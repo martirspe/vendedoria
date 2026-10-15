@@ -1,55 +1,124 @@
-<section id="como-funciona" class="mk-section ds-page-shell" aria-labelledby="steps-title">
-  <header class="mk-heading">
-    <p class="mk-kicker">Cómo funciona</p>
-    <h2 id="steps-title">De la primera pregunta al pedido pagado</h2>
-    <p>Configúralo una vez y tu vendedor trabaja en cada conversación.</p>
-  </header>
-
-  <ol class="steps">
-    @for (step of steps; track step.title; let index = $index) {
-      <li class="steps__item">
-        <span class="steps__number">{{ index + 1 }}</span>
-        <ds-icon class="steps__icon" [name]="step.icon" />
-        <h3>{{ step.title }}</h3>
-        <p>{{ step.text }}</p>
-      </li>
-    }
-  </ol>
-</section>
-
-<section id="funcionalidades" class="mk-section ds-page-shell" aria-labelledby="features-title">
-  <header class="mk-heading">
-    <p class="mk-kicker">Funcionalidades</p>
-    <h2 id="features-title">Todo lo que necesitas para vender por chat y en tu web</h2>
-  </header>
-
+<section id="funcionalidades" class="mk-section mk-shell" aria-labelledby="features-title">
+  <div class="feature-intro">
+    <header class="mk-heading">
+      <p class="mk-kicker">UN VENDEDOR. TODA TU OPERACIÓN.</p>
+      <h2 id="features-title">Responder es el inicio.<br /><span>Vender es el objetivo.</span></h2>
+    </header>
+    <p>
+      De la consulta al pedido, tu vendedor IA trabaja con la información de tu negocio. Tú
+      supervisas la operación desde una misma consola.
+    </p>
+  </div>
   <ul class="features">
     @for (feature of features; track feature.title) {
-      <li class="features__card">
-        <span class="features__icon"><ds-icon [name]="feature.icon" /></span>
+      <li>
+        <ds-icon [name]="feature.icon" [size]="1.5" />
         <h3>{{ feature.title }}</h3>
         <p>{{ feature.text }}</p>
       </li>
     }
   </ul>
+
+  <div class="store-story">
+    <div class="store-story__copy">
+      <p class="mk-kicker">TAMBIÉN, TU PROPIA TIENDA</p>
+      <h2>Tu marca.<br />Tu escaparate.<br /><span>El mismo vendedor.</span></h2>
+      <p>
+        El chat abre la conversación. Tu tienda web abre otra puerta para vender. Ambos comparten
+        catálogo, inventario y pedidos.
+      </p>
+      <ul class="store-story__list">
+        <li><ds-icon name="check" [size]="1" /> Plantillas para darle forma a tu marca</li>
+        <li><ds-icon name="check" [size]="1" /> Textos e imágenes con IA para tu tienda</li>
+        <li><ds-icon name="check" [size]="1" /> Tu propio dominio y cobros en línea</li>
+      </ul>
+      <a dsLink variant="secondary" href="#planes"
+        >Ver planes con tienda <ds-icon name="arrowRight" [size]="1"
+      /></a>
+      <p class="store-story__note">Tienda web disponible desde el plan Crece.</p>
+    </div>
+    <figure class="store-preview">
+      <div class="store-preview__toolbar">
+        <span class="store-preview__dots" aria-hidden="true"><i></i><i></i><i></i></span
+        ><span><ds-icon name="globe" [size]="0.875" /> Tu tienda web</span
+        ><ds-icon name="store" [size]="1" />
+      </div>
+      <img
+        src="/template-previews/selecta.webp"
+        alt="Vista de la plantilla Selecta: portada, categorías y catálogo de una tienda"
+        width="720"
+        height="500"
+        loading="lazy"
+        decoding="async"
+      />
+      <figcaption>Una de las plantillas que puedes personalizar.</figcaption>
+    </figure>
+  </div>
 </section>
 
-<section class="mk-section ds-page-shell" aria-labelledby="channels-title">
-  <div class="channels">
-    <div class="channels__copy">
-      <p class="mk-kicker">Integraciones</p>
-      <h2 id="channels-title">Vende donde ya están tus clientes</h2>
+<section id="como-funciona" class="setup" aria-labelledby="steps-title">
+  <div class="mk-section mk-shell">
+    <header class="mk-heading">
+      <p class="mk-kicker">DE TU NEGOCIO A TU VENDEDOR IA</p>
+      <h2 id="steps-title">Prepáralo a tu manera.<br />Ponlo a trabajar contigo.</h2>
       <p>
-        Un mismo catálogo y una misma bandeja para tus chats y tu tienda web. El dinero
-        de tus ventas llega directo a tu cuenta de Mercado Pago, sin comisión por venta
-        de VendedorIA.
+        Empieza con tu catálogo y tus canales. Prueba la experiencia antes de atender a tus
+        clientes.
       </p>
-    </div>
-    <ul class="channels__list">
-      <li><ds-icon name="whatsapp" /> <span><strong>WhatsApp</strong> Tu número de WhatsApp Business</span></li>
-      <li><ds-icon name="instagram" /> <span><strong>Instagram</strong> Mensajes directos de tu cuenta</span></li>
-      <li><ds-icon name="wallet" /> <span><strong>Mercado Pago</strong> Tarjeta y Yape en el chat y la tienda</span></li>
-      <li><ds-icon name="globe" /> <span><strong>Tu dominio</strong> www.tumarca.pe para tu tienda</span></li>
-    </ul>
+    </header>
+    <ol class="steps">
+      @for (step of steps; track step.title; let index = $index) {
+        <li>
+          <div class="steps__top">
+            <span>0{{ index + 1 }}</span
+            ><ds-icon [name]="step.icon" />
+          </div>
+          <h3>{{ step.title }}</h3>
+          <p>{{ step.text }}</p>
+        </li>
+      }
+    </ol>
   </div>
+</section>
+
+<section class="mk-section mk-shell integrations" aria-labelledby="integrations-title">
+  <header class="mk-heading">
+    <p class="mk-kicker">DONDE YA ESTÁN TUS CLIENTES</p>
+    <h2 id="integrations-title">Conecta las piezas.<br />Conserva tu marca.</h2>
+    <p>La atención y la venta se encuentran en un mismo lugar.</p>
+  </header>
+  <ul class="integrations__list">
+    <li>
+      <ds-icon name="whatsapp" [size]="1.5" />
+      <div>
+        <h3>WhatsApp Business</h3>
+        <p>Tu número, las conversaciones de tus clientes y tu vendedor IA.</p>
+      </div>
+      <span>ATENCIÓN</span>
+    </li>
+    <li>
+      <ds-icon name="instagram" [size]="1.5" />
+      <div>
+        <h3>Instagram</h3>
+        <p>Lleva la atención de tus mensajes directos a tu consola.</p>
+      </div>
+      <span>ATENCIÓN</span>
+    </li>
+    <li>
+      <ds-icon name="wallet" [size]="1.5" />
+      <div>
+        <h3>Mercado Pago</h3>
+        <p>El pago del cliente llega a tu cuenta. Se aplican las tarifas del proveedor.</p>
+      </div>
+      <span>COBROS</span>
+    </li>
+    <li>
+      <ds-icon name="globe" [size]="1.5" />
+      <div>
+        <h3>Tu propia web</h3>
+        <p>Comparte tu tienda y conecta tu propio dominio desde Crece.</p>
+      </div>
+      <span>TIENDA</span>
+    </li>
+  </ul>
 </section>

@@ -11,7 +11,7 @@ export type ChannelDto = {
   externalId: string | null;
   displayName: string | null;
   lastActiveAt: string | null;
-  metadata: { phoneNumberId?: string; hasAccessToken?: boolean } | null;
+  metadata: { phoneNumberId?: string; hasAccessToken?: boolean; wabaId?: string; onboarding?: 'MANUAL' | 'EMBEDDED_SIGNUP' | 'LEGACY' } | null;
 };
 
 export type ConversationListItem = {
@@ -96,6 +96,12 @@ export type ChannelDiagnostics = {
   nextSteps: string[];
 };
 
+export type WhatsAppSignupConfiguration = { available: boolean; manualAvailable: boolean; canManage: boolean; appId: string | null; graphVersion: string; message: string | null };
+export type WhatsAppManualCredentials = { appId: string; appSecret: string; accessToken: string; wabaId: string; phoneNumberId: string };
+export type WhatsAppManualWebhook = { callbackUrl: string; verifyToken: string; verified: boolean };
+export type WhatsAppSignupSession = { sessionId: string; state: string; expiresAt: string; configId: string; appId: string; graphVersion: string };
+export type AuthorizedWhatsAppPhone = { id: string; wabaId: string; displayName: string; displayPhoneNumber: string; coexistence: boolean; registered: boolean };
+
 @Injectable({ providedIn: 'root' })
 export class MessagingApiService {
   private readonly http = inject(HttpClient);
@@ -114,22 +120,32 @@ export class MessagingApiService {
     );
   }
 
-  connectWhatsApp(payload: {
-    phoneNumberId: string;
-    accessToken: string;
-    displayName?: string;
-    connectionMode?: string;
-  }) {
-    return firstValueFrom(
-      this.http.post<{
-        channel: ChannelDto;
-        webhook: {
-          callbackUrl: string;
-          verifyTokenConfigured: boolean;
-          verifyTokenHint: string;
-        };
-      }>(`${environment.apiBaseUrl}/channels/whatsapp/connect`, payload),
-    );
+  getWhatsAppSignupConfiguration() {
+    return firstValueFrom(this.http.get<WhatsAppSignupConfiguration>(`${environment.apiBaseUrl}/channels/whatsapp/signup/config`));
+  }
+  connectWhatsAppManual(credentials: WhatsAppManualCredentials) {
+    return firstValueFrom(this.http.post<{ channel: ChannelDto; webhook: WhatsAppManualWebhook }>(`${environment.apiBaseUrl}/channels/whatsapp/manual/connect`, credentials));
+  }
+  getWhatsAppManualSetup(channelId: string) {
+    return firstValueFrom(this.http.get<WhatsAppManualWebhook>(`${environment.apiBaseUrl}/channels/whatsapp/manual/${encodeURIComponent(channelId)}/setup`));
+  }
+  activateWhatsAppManual(channelId: string) {
+    return firstValueFrom(this.http.post<{ channel: ChannelDto }>(`${environment.apiBaseUrl}/channels/whatsapp/manual/${encodeURIComponent(channelId)}/activate`, {}));
+  }
+  startWhatsAppSignup() {
+    return firstValueFrom(this.http.post<WhatsAppSignupSession>(`${environment.apiBaseUrl}/channels/whatsapp/signup/start`, {}));
+  }
+  authorizeWhatsAppSignup(session: WhatsAppSignupSession, code: string) {
+    return firstValueFrom(this.http.post<{ phones: AuthorizedWhatsAppPhone[] }>(`${environment.apiBaseUrl}/channels/whatsapp/signup/authorize`, { sessionId: session.sessionId, state: session.state, code }));
+  }
+  completeWhatsAppSignup(session: WhatsAppSignupSession, phone: AuthorizedWhatsAppPhone, pin?: string) {
+    return firstValueFrom(this.http.post<{ channel: ChannelDto }>(`${environment.apiBaseUrl}/channels/whatsapp/signup/complete`, { sessionId: session.sessionId, state: session.state, phoneNumberId: phone.id, wabaId: phone.wabaId, ...(pin ? { pin } : {}) }));
+  }
+  cancelWhatsAppSignup(session: WhatsAppSignupSession) {
+    return firstValueFrom(this.http.post(`${environment.apiBaseUrl}/channels/whatsapp/signup/cancel`, { sessionId: session.sessionId, state: session.state }));
+  }
+  disconnectWhatsApp(channelId: string) {
+    return firstValueFrom(this.http.post(`${environment.apiBaseUrl}/channels/whatsapp/${encodeURIComponent(channelId)}/disconnect`, {}));
   }
 
   simulateInbound(payload: {

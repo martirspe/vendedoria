@@ -1,3 +1,5 @@
+@use './checkbox-control' as checkbox;
+
 ds-checkbox { display: block; min-width: 0; }
 ds-checkbox .ds-checkbox-label {
   display: flex; align-items: center; gap: var(--ds-space-3);
@@ -11,13 +13,8 @@ ds-checkbox .ds-checkbox-label:has(input:checked), ds-checkbox .ds-checkbox-labe
 }
 ds-checkbox .ds-checkbox-control { position: relative; display: grid; place-items: center; flex-shrink: 0; }
 ds-checkbox .ds-checkbox-control > input[type=checkbox] {
-  appearance: none; margin: 0; padding: 0; min-height: 0;
-  width: var(--ds-space-5); height: var(--ds-space-5);
-  border: var(--ds-border-width) solid var(--ds-color-text-secondary);
-  border-radius: var(--ds-space-1); background: var(--ds-color-surface); cursor: inherit;
-}
-ds-checkbox .ds-checkbox-control > input:checked, ds-checkbox .ds-checkbox-control > input:indeterminate {
-  background: var(--ds-color-ink); border-color: var(--ds-color-ink);
+  @include checkbox.control;
+  cursor: inherit;
 }
 ds-checkbox .ds-checkbox-control > ds-icon { position: absolute; pointer-events: none; color: var(--ds-color-primary); visibility: hidden; }
 ds-checkbox input:checked:not(:indeterminate) ~ .ds-checkbox-check,

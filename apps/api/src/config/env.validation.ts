@@ -108,6 +108,18 @@ class EnvironmentVariables {
   @IsString()
   META_APP_SECRET?: string;
 
+  @ValidateIf((_env, value) => Boolean(value)) @Matches(/^\d{5,30}$/)
+  META_APP_ID?: string;
+
+  @ValidateIf((_env, value) => Boolean(value)) @Matches(/^\d{5,30}$/)
+  META_WHATSAPP_CONFIG_ID?: string;
+
+  @ValidateIf((_env, value) => Boolean(value)) @Matches(/^v\d{2}\.0$/)
+  META_GRAPH_VERSION?: string;
+
+  @ValidateIf((_env, value) => Boolean(value)) @Matches(/^([0-9a-fA-F]{64}|[A-Za-z0-9+/_-]{43}=?)$/)
+  CHANNEL_CREDENTIALS_KEY?: string;
+
   @IsOptional()
   @IsString()
   INSTAGRAM_APP_SECRET?: string;
@@ -254,7 +266,11 @@ export function validateEnv(config: Record<string, unknown>) {
   }
 
   if (errors.length > 0) {
-    throw new Error(errors.toString());
+    throw new Error(errors.map(error => `${error.property}: ${Object.values(error.constraints || {}).join(', ')}`).join('; '));
+  }
+  if (validated.META_WHATSAPP_CONFIG_ID) {
+    if (!validated.META_APP_ID || !validated.META_APP_SECRET || !validated.META_VERIFY_TOKEN || !validated.CHANNEL_CREDENTIALS_KEY) throw new Error('WhatsApp Embedded Signup requires META_APP_ID, META_APP_SECRET, META_VERIFY_TOKEN and CHANNEL_CREDENTIALS_KEY');
+    if (!/^https:\/\//.test(validated.PUBLIC_API_BASE_URL || '')) throw new Error('WhatsApp Embedded Signup requires an HTTPS PUBLIC_API_BASE_URL');
   }
   if (validated.TIKTOK_CLIENT_KEY || validated.TIKTOK_CLIENT_SECRET || validated.TIKTOK_REDIRECT_URI) {
     if (!validated.TIKTOK_CLIENT_KEY || !validated.TIKTOK_CLIENT_SECRET || !validated.PAYMENT_CREDENTIALS_KEY) throw new Error('TikTok OAuth requires TIKTOK_CLIENT_KEY, TIKTOK_CLIENT_SECRET, TIKTOK_REDIRECT_URI and PAYMENT_CREDENTIALS_KEY together');

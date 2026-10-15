@@ -250,6 +250,7 @@ export class ConversationsService {
       const send = await this.metaWhatsApp.sendTemplateMessage({
         phoneNumberId: metadata.phoneNumberId,
         accessToken: metadata.accessToken,
+        ...(metadata.appSecretEnc ? { appSecretEnc: metadata.appSecretEnc } : {}),
         toPhone: conversation.contactPhone,
         templateName: template.name,
         languageCode: template.language,
@@ -305,6 +306,8 @@ export class ConversationsService {
 
   async ingestInboundWhatsApp(params: {
     phoneNumberId: string;
+    tenantId?: string;
+    channelId?: string;
     fromPhone: string;
     contactName?: string;
     text: string;
@@ -314,10 +317,12 @@ export class ConversationsService {
       where: {
         type: 'WHATSAPP',
         externalId: params.phoneNumberId,
+        healthStatus: { in: ['CONNECTED', 'DEGRADED'] },
+        ...(params.tenantId && params.channelId ? { tenantId: params.tenantId, id: params.channelId } : {}),
       },
     });
 
-    if (!channel) {
+    if (!channel || (!params.channelId && (channel.metadata as Record<string, unknown> | null)?.onboarding === 'MANUAL')) {
       this.logger.warn(
         `No WhatsApp channel for phoneNumberId=${params.phoneNumberId}`,
       );
@@ -512,6 +517,7 @@ export class ConversationsService {
         const send = await this.metaWhatsApp.sendImageMessage({
           phoneNumberId: metadata.phoneNumberId,
           accessToken: metadata.accessToken,
+          ...(metadata.appSecretEnc ? { appSecretEnc: metadata.appSecretEnc } : {}),
           toPhone: params.threadId,
           caption: image.caption,
           cacheKey: image.imageUrl,

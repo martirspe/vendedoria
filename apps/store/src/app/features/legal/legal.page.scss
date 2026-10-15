@@ -254,7 +254,6 @@ a.center__card:hover {
   min-height: var(--ds-touch-target);
   cursor: pointer;
 }
-.personalization-choice input { accent-color: var(--store-accent); }
 .personalization-choice input:focus-visible {
   outline: var(--store-focus-width) solid var(--store-accent);
   outline-offset: var(--ds-space-1);

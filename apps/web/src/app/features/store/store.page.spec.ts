@@ -53,7 +53,8 @@ describe('store settings sections', () => {
     page.discardChanges(); await page.save(); expect(update).toHaveBeenCalledTimes(1);
     reject(new Error('Offline')); await saving; fixture.detectChanges();
     expect(page.form.controls.displayName.value).toBe('Nombre editado'); expect(page.hasChanges()).toBe(true);
-    expect(fixture.nativeElement.querySelector('ds-save-bar')).toBeTruthy();
+    expect(fixture.nativeElement.querySelector('ds-save-bar')).toBeNull();
+    expect(fixture.nativeElement.querySelectorAll('ds-action-bar')).toHaveLength(1);
     expect(fixture.nativeElement.querySelector('[formControlName="displayName"]').matches(':disabled')).toBe(false);
   });
   it('requires saving or discarding settings before publishing and restores saved configuration', async () => {
@@ -62,6 +63,33 @@ describe('store settings sections', () => {
     await page.publish(); expect(publish).not.toHaveBeenCalled(); expect(page.errorMessage()).toContain('Guarda o descarta');
     page.discardChanges(); expect(page.form.controls.displayName.value).toBe('Mi tienda'); expect(page.hasChanges()).toBe(false);
     expect(update).not.toHaveBeenCalled(); await page.publish(); expect(publish).toHaveBeenCalledTimes(1);
+  });
+  it('switches the single page action bar from publication to saving and back', async () => {
+    const { page, fixture, update, publish } = await setup(true);
+    const root = fixture.nativeElement as HTMLElement;
+    expect(root.querySelectorAll('ds-action-bar')).toHaveLength(1);
+    expect(root.querySelector('ds-action-bar')?.textContent).toContain('Publicar tienda');
+    page.form.controls.displayName.setValue('Nombre editado');
+    page.form.markAsDirty();
+    fixture.detectChanges();
+    expect(root.querySelectorAll('ds-action-bar')).toHaveLength(1);
+    expect(root.querySelector('ds-action-bar')?.textContent).not.toContain('Publicar tienda');
+    const save = root.querySelector('ds-action-bar button[type="submit"]') as HTMLButtonElement;
+    expect(save.closest('form')).toBeNull();
+    expect(save.form?.id).toBe('store-settings-form');
+    save.click();
+    await fixture.whenStable();
+    await vi.waitFor(() => expect(page.saving()).toBe(false));
+    fixture.detectChanges();
+    expect(update).toHaveBeenCalledTimes(1);
+    expect(publish).not.toHaveBeenCalled();
+    expect(page.hasChanges()).toBe(true);
+    const discard = Array.from(root.querySelectorAll<HTMLButtonElement>('ds-action-bar button')).find(button => button.textContent?.trim() === 'Descartar')!;
+    discard.click();
+    fixture.detectChanges();
+    expect(root.querySelectorAll('ds-action-bar')).toHaveLength(1);
+    expect(root.querySelector('ds-action-bar')?.textContent).toContain('Publicar tienda');
+    expect(root.querySelector('ds-action-bar button[type="submit"]')).toBeNull();
   });
   it('associates validation messages with the native identity fields', async () => {
     const { page, fixture, update } = await setup(true);

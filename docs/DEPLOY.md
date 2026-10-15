@@ -19,6 +19,8 @@ git clone https://github.com/martirspe/vendedoria.git .
 
 ## 2. `.env`
 
+Para habilitar el alta autónoma de WhatsApp por negocio, configura Embedded Signup y las variables indicadas en [WhatsApp onboarding](WHATSAPP-ONBOARDING.md). La verificación de la empresa no reemplaza la revisión de permisos ni la habilitación de proveedor tecnológico de la aplicación de Meta.
+
 ```bash
 cp .env.production.example .env
 nano .env

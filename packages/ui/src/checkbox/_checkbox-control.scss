@@ -1,0 +1,66 @@
+// One native control surface for both projected and standalone checkboxes.
+@mixin control {
+  appearance: none;
+  display: inline-grid;
+  place-content: center;
+  box-sizing: border-box;
+  width: var(--ds-space-5);
+  height: var(--ds-space-5);
+  min-width: var(--ds-space-5);
+  min-height: 0;
+  padding: 0;
+  margin: 0;
+  flex-shrink: 0;
+  border: var(--ds-border-width) solid var(--ds-color-text-secondary);
+  border-radius: var(--ds-space-1);
+  background-color: var(--ds-color-surface);
+  vertical-align: middle;
+  cursor: pointer;
+  transition: background-color var(--ds-motion-fast) var(--ds-ease-out), border-color var(--ds-motion-fast) var(--ds-ease-out);
+
+  &:checked, &:indeterminate {
+    background-color: var(--ds-color-ink);
+    border-color: var(--ds-color-ink);
+  }
+  &[aria-invalid='true'] { border-color: var(--ds-color-danger); }
+
+  @media (forced-colors: active) {
+    appearance: auto;
+    background-color: Canvas;
+    border-color: ButtonText;
+    &:checked, &:indeterminate { background-color: Canvas; border-color: ButtonText; }
+  }
+}
+
+@mixin native-checkboxes {
+  // ds-checkbox uses this surface with its existing Lucide indicators.
+  input[type='checkbox']:not(ds-checkbox input) {
+    @include control;
+
+    &::before {
+      content: '';
+      width: var(--ds-space-3);
+      height: var(--ds-space-3);
+      background-color: var(--ds-color-primary);
+      clip-path: polygon(14% 44%, 0 59%, 40% 100%, 100% 18%, 84% 4%, 38% 68%);
+      transform: scale(0);
+      pointer-events: none;
+      transition: transform var(--ds-motion-fast) var(--ds-ease-out);
+    }
+    &:checked::before { transform: scale(1); }
+    &:indeterminate::before {
+      height: calc(2 * var(--ds-border-width));
+      clip-path: none;
+      transform: scale(1);
+    }
+    &:focus-visible {
+      outline: calc(2 * var(--ds-border-width)) solid var(--ds-color-focus-ring);
+      outline-offset: calc(2 * var(--ds-border-width));
+    }
+    &:disabled { opacity: .55; cursor: not-allowed; }
+
+    @media (forced-colors: active) {
+      &::before { display: none; }
+    }
+  }
+}

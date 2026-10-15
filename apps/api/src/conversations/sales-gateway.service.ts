@@ -532,6 +532,7 @@ export class SalesGatewayService implements OnModuleInit, OnModuleDestroy {
       const sent = await this.whatsapp.sendImageMessage({
         phoneNumberId: metadata.phoneNumberId,
         accessToken: metadata.accessToken,
+        ...(metadata.appSecretEnc ? { appSecretEnc: metadata.appSecretEnc } : {}),
         toPhone: recipient,
         caption: image.caption,
         cacheKey: image.imageUrl,

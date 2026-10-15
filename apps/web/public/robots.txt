@@ -1,0 +1,9 @@
+User-agent: *
+Allow: /
+Disallow: /app/
+Disallow: /auth/
+Disallow: /invite/
+Disallow: /payment/
+Disallow: /api/
+
+Sitemap: https://marrso.com/sitemap.xml

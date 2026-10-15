@@ -31,6 +31,17 @@
   --ds-color-marketing-bg: var(--ds-color-ink);
   --ds-color-marketing-text: #f5f7fb;
   --ds-color-marketing-muted: #a9b0bf;
+  --ds-marketing-width: 76rem;
+  --ds-marketing-section-space: clamp(3rem, 7vw, 6rem);
+  --ds-marketing-type-hero: clamp(2.75rem, 5.6vw, 5rem);
+  --ds-marketing-type-heading: clamp(2rem, 3.8vw, 3.5rem);
+  --ds-marketing-type-brand: 1.5rem;
+  --ds-marketing-type-price: 2.5rem;
+  --ds-marketing-leading-display: 1.04;
+  --ds-marketing-tracking-display: -0.045em;
+  --ds-marketing-line: color-mix(in srgb, var(--ds-color-marketing-text) 13%, transparent);
+  --ds-marketing-soft: color-mix(in srgb, var(--ds-color-marketing-text) 5%, transparent);
+  --ds-marketing-panel: color-mix(in srgb, var(--ds-color-surface-elevated-marketing) 65%, var(--ds-color-ink));
 
   /* Typography */
   --ds-font-display: 'Satoshi', 'Manrope', system-ui, sans-serif;

@@ -8,6 +8,14 @@ const BASE = {
 };
 
 describe('validateEnv AWS settings', () => {
+  it('requires complete server configuration for Embedded Signup and never echoes invalid key values', () => {
+    expect(() => validateEnv({ ...BASE, META_APP_ID: '', META_WHATSAPP_CONFIG_ID: '', CHANNEL_CREDENTIALS_KEY: '' })).not.toThrow();
+    expect(() => validateEnv({ ...BASE, META_WHATSAPP_CONFIG_ID: '123456' })).toThrow(/WhatsApp Embedded Signup requires/);
+    const meta = { ...BASE, META_APP_ID: '123456', META_WHATSAPP_CONFIG_ID: '234567', META_APP_SECRET: 'synthetic-secret', META_VERIFY_TOKEN: 'synthetic-verify', CHANNEL_CREDENTIALS_KEY: 'ab'.repeat(32), PUBLIC_API_BASE_URL: 'https://example.test/api/v1' };
+    expect(() => validateEnv(meta)).not.toThrow();
+    expect(() => validateEnv({ ...meta, PUBLIC_API_BASE_URL: 'http://example.test' })).toThrow(/HTTPS/);
+    expect(() => validateEnv({ ...meta, CHANNEL_CREDENTIALS_KEY: 'synthetic-invalid-sensitive-value' })).not.toThrow(/synthetic-invalid-sensitive-value/);
+  });
   it('validates private conversion infrastructure without echoing credentials', () => {
     expect(() => validateEnv({ ...BASE, REDIS_URL: 'redis://redis:6379/0', QDRANT_URL: 'http://qdrant:6333', RECOVERY_EMAIL_FROM: 'recovery@example.test' })).not.toThrow();
     expect(() => validateEnv({ ...BASE, REDIS_URL: 'redis://user:fake-credential@redis/not-a-number' })).toThrow('REDIS_URL must be');

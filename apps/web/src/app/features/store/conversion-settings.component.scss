@@ -16,7 +16,6 @@ dd { margin: var(--ds-space-1) 0 0; font-weight: 700; }
 form { display: grid; gap: var(--ds-space-3); }
 .choice { display: flex; align-items: center; gap: var(--ds-space-2); min-height: var(--ds-touch-target); cursor: pointer; }
 .choice--main { font-weight: 600; }
-.choice input { accent-color: var(--ds-color-text-primary); }
 .channels { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--ds-space-2); }
 .channels .choice { padding-inline: var(--ds-space-2); border: thin solid var(--ds-color-border); border-radius: var(--ds-radius-sm); }
 fieldset { padding: 0; margin: 0; min-width: 0; border: 0; }

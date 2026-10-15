@@ -38,6 +38,7 @@ export class ChannelMessengerService {
         ? this.metaWhatsApp.sendTextMessage({
             phoneNumberId: metadata.phoneNumberId,
             accessToken: metadata.accessToken,
+            ...(metadata.appSecretEnc ? { appSecretEnc: metadata.appSecretEnc } : {}),
             toPhone: recipient,
             text,
           })
@@ -75,6 +76,7 @@ export class ChannelMessengerService {
     const send = await this.metaWhatsApp.sendCtaUrlMessage({
       phoneNumberId: metadata.phoneNumberId,
       accessToken: metadata.accessToken,
+      ...(metadata.appSecretEnc ? { appSecretEnc: metadata.appSecretEnc } : {}),
       toPhone: recipient,
       body: params.text,
       buttonText: PAYMENT_BUTTON_TEXT,

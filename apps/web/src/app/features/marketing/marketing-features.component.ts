@@ -1,80 +1,57 @@
 import { ChangeDetectionStrategy, Component } from '@angular/core';
-import { DsIconComponent, DsIconName } from '@vendedoria/ui';
+import { DsIconComponent, DsIconName, DsLinkComponent } from '@vendedoria/ui';
 
 type MarketingItem = { icon: DsIconName; title: string; text: string };
-
 @Component({
   selector: 'app-marketing-features',
-  standalone: true,
-  imports: [DsIconComponent],
+  imports: [DsIconComponent, DsLinkComponent],
   templateUrl: './marketing-features.component.html',
   styleUrl: './marketing-features.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class MarketingFeaturesComponent {
+  readonly features: MarketingItem[] = [
+    {
+      icon: 'package',
+      title: 'Habla con tu catálogo a la mano',
+      text: 'Recomienda tus productos y consulta precios, variantes y disponibilidad para responder con información de tu negocio.',
+    },
+    {
+      icon: 'wallet',
+      title: 'Acerca la conversación al pago',
+      text: 'Arma el pedido y envía el enlace de Mercado Pago. El pago confirmado y el pedido quedan conectados.',
+    },
+    {
+      icon: 'pause',
+      title: 'Te da el control cuando lo necesitas',
+      text: 'Responde desde la consola y el vendedor se pausa en ese chat. Puedes retomar la automatización cuando quieras.',
+    },
+    {
+      icon: 'users',
+      title: 'Organiza la atención de tu equipo',
+      text: 'Conversaciones, pedidos e información del cliente en un solo lugar, con permisos para cada persona de tu equipo.',
+    },
+  ];
   readonly steps: MarketingItem[] = [
     {
       icon: 'plug',
       title: 'Conecta tus canales',
-      text: 'Vincula tu WhatsApp Business y tu Instagram desde la consola, sin instalar nada.',
+      text: 'Vincula tu WhatsApp Business e Instagram con las cuentas y permisos de tu negocio.',
     },
     {
       icon: 'package',
-      title: 'Sube tu catálogo',
-      text: 'Carga productos con fotos, precios y stock, uno por uno o desde un archivo.',
+      title: 'Carga tu catálogo',
+      text: 'Agrega tus fotos, precios y stock. También puedes importar tus productos desde un archivo.',
     },
     {
       icon: 'bot',
-      title: 'Tu vendedor atiende',
-      text: 'Responde dudas, recomienda productos de tu catálogo y arma el pedido en el chat.',
+      title: 'Dale tu estilo',
+      text: 'Define cómo habla tu vendedor y prueba sus respuestas antes de activarlo.',
     },
     {
-      icon: 'wallet',
-      title: 'Cobras y despachas',
-      text: 'El cliente paga con tarjeta o Yape por Mercado Pago y el pedido aparece en tu consola.',
-    },
-  ];
-
-  readonly features: MarketingItem[] = [
-    {
-      icon: 'message',
-      title: 'Vendedor IA en tus chats',
-      text: 'Atiende WhatsApp e Instagram al instante, a cualquier hora, con el tono de tu marca.',
-    },
-    {
-      icon: 'check',
-      title: 'Solo información real',
-      text: 'Precio, stock y envío salen de tu catálogo. Si no lo sabe, no lo inventa.',
-    },
-    {
-      icon: 'pause',
-      title: 'Tú tomas el control',
-      text: 'Cuando respondes un chat, el vendedor se pausa en esa conversación hasta que lo reactives.',
-    },
-    {
-      icon: 'store',
-      title: 'Tienda web diseñada con IA',
-      text: 'Elige una plantilla, genera textos e imágenes con IA y publica tu tienda en minutos.',
-    },
-    {
-      icon: 'ticket',
-      title: 'Cupones y campañas',
-      text: 'Descuentos por porcentaje, monto fijo o envío gratis, con vigencia y límite de usos.',
-    },
-    {
-      icon: 'layers',
-      title: 'Inventario al día',
-      text: 'El stock se descuenta con cada venta, en el chat y en la tienda, sin vender lo que no tienes.',
-    },
-    {
-      icon: 'kanban',
-      title: 'Pedidos en un solo lugar',
-      text: 'Sigue cada pedido desde el pago hasta la entrega, con el historial del chat a la mano.',
-    },
-    {
-      icon: 'users',
-      title: 'Trabaja en equipo',
-      text: 'Invita a tu equipo con permisos y atiendan juntos desde la misma bandeja.',
+      icon: 'shoppingBag',
+      title: 'Empieza a vender',
+      text: 'Activa la atención, conecta tus cobros y gestiona los pedidos desde tu consola.',
     },
   ];
 }

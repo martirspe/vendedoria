@@ -1,6 +1,6 @@
 :host { display: block; color: var(--store-text); }
 .consent { display: flex; align-items: center; gap: var(--ds-space-2); min-height: var(--ds-touch-target); font-size: var(--store-type-caption); cursor: pointer; }
-.consent input { accent-color: var(--store-accent); flex-shrink: 0; }
+.consent input { flex-shrink: 0; }
 .details { display: grid; gap: var(--ds-space-2); margin-bottom: var(--ds-space-3); }
 small, p { color: var(--store-muted); font-size: var(--store-type-caption); line-height: var(--store-leading-body); }
 p { margin-block: var(--ds-space-2); }

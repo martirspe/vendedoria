@@ -14,7 +14,7 @@
     </ds-form-section>
     <div class="tw:grid tw:min-w-0 tw:items-start tw:gap-5 tw:lg:grid-cols-3">
       <div class="tw:grid tw:min-w-0 tw:gap-5 tw:lg:col-span-2">
-        <form class="tw:grid tw:min-w-0 tw:gap-4" [formGroup]="nameForm" (ngSubmit)="saveName()" novalidate>
+        <form id="profile-name-form" class="tw:grid tw:min-w-0 tw:gap-4" [formGroup]="nameForm" (ngSubmit)="saveName()" novalidate>
           <ds-form-section title="Datos personales" description="Así te identifica tu equipo en la consola." icon="user">
             <fieldset class="tw:m-0 tw:grid tw:min-w-0 tw:gap-4 tw:border-0 tw:p-0" [disabled]="busy() || loadError()">
               <legend class="tw:sr-only">Datos personales</legend>
@@ -23,7 +23,6 @@
             </fieldset>
             @if (nameNotice(); as notice) { <div class="tw:feedback" [class.tw:feedback-danger]="notice.tone === 'danger'" [class.tw:feedback-success]="notice.tone === 'success'" [attr.role]="notice.tone === 'danger' ? 'alert' : 'status'"><ds-icon [name]="notice.tone === 'danger' ? 'alert' : 'check'" /><span>{{ notice.text }}</span></div> }
           </ds-form-section>
-          <ds-save-bar [pending]="hasNameChanges()" [busy]="savingName()" [disabled]="busy() || loadError()" label="Guardar datos personales"><ds-button type="button" variant="ghost" [disabled]="busy() || !hasNameChanges()" (click)="discardName()">Descartar</ds-button></ds-save-bar>
         </form>
         <form class="tw:grid tw:min-w-0 tw:gap-4" [formGroup]="passwordForm" (ngSubmit)="changePassword()" novalidate>
           <ds-form-section title="Cambiar contraseña" description="Este dispositivo seguirá conectado. Se cerrarán las demás sesiones." icon="lock">
@@ -50,8 +49,11 @@
 
 </div></fieldset>
             @if (passwordNotice(); as notice) { <div class="tw:feedback" [class.tw:feedback-danger]="notice.tone === 'danger'" [class.tw:feedback-success]="notice.tone === 'success'" [attr.role]="notice.tone === 'danger' ? 'alert' : 'status'"><ds-icon [name]="notice.tone === 'danger' ? 'alert' : 'check'" /><span>{{ notice.text }}</span></div> }
+            <div class="tw:flex tw:flex-wrap tw:items-center tw:justify-end tw:gap-3">
+              @if (savingPassword()) { <span class="tw:text-caption tw:text-muted" role="status">Actualizando contraseña…</span> }
+              <ds-button type="submit" variant="secondary" [disabled]="busy() || loadError() || passwordForm.invalid || mismatch()">{{ savingPassword() ? 'Actualizando…' : 'Cambiar contraseña' }}</ds-button>
+            </div>
           </ds-form-section>
-          <ds-action-bar placement="bottom" label="Actualizar contraseña"><span dsActionStatus role="status">{{ savingPassword() ? 'Actualizando contraseña…' : 'Cambio de contraseña' }}</span><ds-button type="submit" [disabled]="busy() || loadError() || passwordForm.invalid || mismatch()">{{ savingPassword() ? 'Actualizando…' : 'Cambiar contraseña' }}</ds-button></ds-action-bar>
         </form>
       </div>
       <aside class="tw:grid tw:min-w-0 tw:gap-4" aria-label="Sesiones y acceso al negocio">
@@ -68,5 +70,8 @@
         <ds-disclosure title="¿Qué ocurre al cerrar las demás sesiones?"><p class="tw:m-0 tw:text-sm tw:text-muted">Se revocan las otras sesiones de tu cuenta. Para volver a entrar desde ellas tendrás que iniciar sesión de nuevo. Este dispositivo permanece conectado.</p></ds-disclosure>
       </aside>
     </div>
+    @if (hasNameChanges() || savingName()) {
+      <ds-save-bar formId="profile-name-form" [pending]="hasNameChanges()" [busy]="savingName()" [disabled]="busy() || loadError()" label="Guardar datos personales" pendingText="Datos personales sin guardar"><ds-button type="button" variant="ghost" [disabled]="busy() || !hasNameChanges()" (click)="discardName()">Descartar</ds-button></ds-save-bar>
+    }
   }
 </section>

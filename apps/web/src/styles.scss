@@ -1,4 +1,7 @@
 @use './styles/tokens';
+@use '../../../packages/ui/src/checkbox/checkbox-control' as checkbox;
+
+@include checkbox.native-checkboxes;
 
 // Self-hosted (public/fonts): the console CSP only allows fonts from 'self'.
 @font-face {

@@ -9,7 +9,7 @@ Jump table from domain to paths. API paths are under `apps/api/src/`, console pa
 | Sales agent runtime + tools | `agent-runtime/` | — | implement |
 | Stateful AI Sales Engine, durable channel inbox, read tools, semantic catalog/FAQ index and evaluation | `agent-runtime/sales-*`, `conversations/sales-gateway.service.ts`; operations `docs/AI-SALES-ENGINE.md`; dataset `docs/agent/evals/` | existing Inbox / Playground | implement, data, security; personal `vendedoria-ai-sales-engine` |
 | Knowledge (FAQs, journeys) | `knowledge/` | `features/seller/` | implement |
-| WhatsApp channel + Meta webhook | `channels/` | `features/channels/` | security |
+| WhatsApp channel + Meta webhook + dual onboarding | `channels/` (`whatsapp-signup.service.ts`, `whatsapp-manual.service.ts`, `meta-signup.client.ts`); activation guide `docs/WHATSAPP-ONBOARDING.md` | `features/channels/`, `features/integrations/` | security, data, ui |
 | Inbox / conversations | `conversations/` | `features/messages/` | implement |
 | TikTok LIVE sales, liquidation and reservations | `live/`, `checkout/`, `orders/settlement.ts` (stock transfer/payment); official OAuth adapter in `live/tiktok-*` | `features/live/`, integration registry; store universal `/live-checkout`; guide `docs/TIKTOK-LIVE.md` | implement, data, security, ui; personal `vendedoria-tiktok-live` |
 | Catalog, sets, inventory, photo upload, catalog package import (`catalog-import.ts` pure plan + `catalog-import.service.ts`) | `catalog/` | `features/catalog/` (`catalog-import.page`, `catalog-package.ts`), `features/inventory/` | implement |
@@ -31,6 +31,7 @@ Jump table from domain to paths. API paths are under `apps/api/src/`, console pa
 | Docker / deploy | `Dockerfile`, `docker-compose.yml` (prod), `docker-compose.dev.yml`, `docker/nginx/`, `scripts/docker.mjs`, `scripts/{deploy,bootstrap-host,backup,restore-backup}.sh`, `.env.production.example`, guide `docs/DEPLOY.md` | — | — |
 
 ## Discrepancies (code wins; constitution items marked PLANNED)
+- WhatsApp supports Embedded Signup v4 and customer-owned apps with encrypted credentials and connection-scoped signed callbacks. Manual mode requires a registered Cloud API phone and confirmed app webhook; it does not bypass provider approvals or initiate coexistence. Legacy production connections remain readable until reconnection. Coexistence depends on Meta eligibility/configuration, not a merchant-selected label.
 - Billing overview currentPlan has no prepay array; only plans contains period prices. The console contract now reflects this and resolves current-plan renewal prices from the catalog.
 - The user's compact-sidebar refinement sets 30 px navigation rows for desktop fine pointers; mobile/coarse-pointer navigation retains the 44 px DS touch floor. The density value lives in `packages/design-tokens`, with a single Tailwind composition for expanded and collapsed navigation.
 - Console information architecture uses a 200 px global operations sidebar and 224 px contextual sidebars for Store and Settings. Business administration and team remain under Settings; Shipping, payments, channels and integrations are direct operational destinations, while plan access belongs to the account menu/header.

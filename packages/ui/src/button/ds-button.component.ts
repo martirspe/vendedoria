@@ -1,13 +1,9 @@
-import {
-  ChangeDetectionStrategy,
-  Component,
-  input,
-} from '@angular/core';
+import { ChangeDetectionStrategy, Component, input } from "@angular/core";
 
-export type DsButtonVariant = 'primary' | 'secondary' | 'ghost' | 'danger';
+export type DsButtonVariant = "primary" | "secondary" | "ghost" | "danger";
 
 @Component({
-  selector: 'ds-button',
+  selector: "ds-button",
   standalone: true,
   template: `
     <button
@@ -19,82 +15,27 @@ export type DsButtonVariant = 'primary' | 'secondary' | 'ghost' | 'danger';
       [class.ds-button--block]="block()"
       [disabled]="disabled()"
       [attr.type]="type()"
+      [attr.form]="form()"
       [attr.aria-label]="label()"
+      [attr.aria-pressed]="pressed()"
     >
       <ng-content />
     </button>
   `,
-  host: { '[class.ds-button-host--block]': 'block()' },
-  styles: `
-    :host(.ds-button-host--block) {
-      display: block;
-    }
-
-    .ds-button--block {
-      width: 100%;
-    }
-
-    .ds-button {
-      display: inline-flex;
-      gap: var(--ds-space-2);
-      align-items: center;
-      justify-content: center;
-      min-height: var(--ds-touch-target);
-      padding: 0 var(--ds-space-5);
-      border-radius: var(--ds-button-radius, var(--ds-radius-pill));
-      border: 1px solid transparent;
-      cursor: pointer;
-      font-weight: 700;
-      letter-spacing: 0.01em;
-      transition:
-        transform var(--ds-motion-fast) var(--ds-ease-out),
-        background-color var(--ds-motion-fast) var(--ds-ease-out),
-        border-color var(--ds-motion-fast) var(--ds-ease-out);
-    }
-
-    .ds-button:disabled {
-      opacity: 0.5;
-      cursor: not-allowed;
-    }
-
-    .ds-button--primary {
-      background: var(--ds-color-primary);
-      color: var(--ds-color-ink);
-    }
-
-    .ds-button--secondary {
-      background: var(--ds-color-surface);
-      border-color: var(--ds-color-border);
-      color: var(--ds-color-text-primary);
-    }
-
-    .ds-button--ghost {
-      background: transparent;
-      color: var(--ds-button-ghost-color, var(--ds-color-text-secondary));
-    }
-
-    .ds-button--danger {
-      background: var(--ds-color-danger);
-      color: var(--ds-color-surface);
-    }
-
-    .ds-button:focus-visible {
-      outline: 2px solid var(--ds-color-focus-ring);
-      outline-offset: 2px;
-    }
-
-    .ds-button:not(:disabled):hover {
-      transform: translateY(-1px);
-    }
-  `,
+  host: { "[class.ds-button-host--block]": "block()" },
+  styleUrl: "./ds-button.scss",
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class DsButtonComponent {
-  readonly variant = input<DsButtonVariant>('primary');
+  readonly variant = input<DsButtonVariant>("primary");
   readonly disabled = input(false);
   /** Stretches the button to the width of its container. */
   readonly block = input(false);
   /** Accessible name for icon-only buttons. */
   readonly label = input<string | null>(null);
-  readonly type = input<'button' | 'submit' | 'reset'>('button');
+  /** Native toggle state; null keeps ordinary buttons free of aria-pressed. */
+  readonly pressed = input<boolean | null>(null);
+  readonly type = input<"button" | "submit" | "reset">("button");
+  /** Associates the native button with a form outside its ancestor tree. */
+  readonly form = input<string | null>(null);
 }

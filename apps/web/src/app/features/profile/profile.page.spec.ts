@@ -27,6 +27,46 @@ async function setup(manager = true) {
 afterEach(() => TestBed.resetTestingModule());
 
 describe('Profile forms and sessions', () => {
+  it('shows one page save bar and submits only the associated personal-data form', async () => {
+    const { page, fixture, api } = await setup();
+    expect(fixture.nativeElement.querySelectorAll('ds-action-bar')).toHaveLength(0);
+    page.nameForm.controls.fullName.setValue('Nombre editado');
+    page.passwordForm.controls.newPassword.setValue('x'.repeat(12));
+    fixture.detectChanges();
+    const root = fixture.nativeElement as HTMLElement;
+    expect(root.querySelectorAll('ds-action-bar')).toHaveLength(1);
+    const save = root.querySelector('ds-save-bar button[type="submit"]') as HTMLButtonElement;
+    expect(save.closest('form')).toBeNull();
+    expect(save.form?.id).toBe('profile-name-form');
+    save.click();
+    await fixture.whenStable();
+    await vi.waitFor(() => expect(page.savingName()).toBe(false));
+    fixture.detectChanges();
+    expect(api.update).toHaveBeenCalledWith('Nombre editado');
+    expect(api.changePassword).not.toHaveBeenCalled();
+    expect(page.passwordForm.controls.newPassword.value).toHaveLength(12);
+    expect(root.querySelectorAll('ds-action-bar')).toHaveLength(0);
+  });
+
+  it('keeps the local password action separate from the page save bar', async () => {
+    const { page, fixture, api } = await setup();
+    page.nameForm.controls.fullName.setValue('Nombre sin guardar');
+    page.passwordForm.patchValue({ currentPassword: 'x'.repeat(12), newPassword: 'y'.repeat(12), confirmPassword: 'y'.repeat(12) });
+    api.changePassword.mockRejectedValueOnce(new Error('Offline'));
+    fixture.detectChanges();
+    const action = fixture.nativeElement.querySelector('form:not(#profile-name-form) button[type="submit"]') as HTMLButtonElement;
+    expect(action.closest('ds-action-bar')).toBeNull();
+    expect(action.classList.contains('ds-button--secondary')).toBe(true);
+    action.click();
+    await fixture.whenStable();
+    await vi.waitFor(() => expect(page.savingPassword()).toBe(false));
+    fixture.detectChanges();
+    expect(api.changePassword).toHaveBeenCalledTimes(1);
+    expect(api.update).not.toHaveBeenCalled();
+    expect(page.nameForm.controls.fullName.value).toBe('Nombre sin guardar');
+    expect(fixture.nativeElement.querySelectorAll('ds-action-bar')).toHaveLength(1);
+  });
+
   it('prevents duplicate password changes and retains fields after a failed update', async () => {
     const { page, fixture, api } = await setup(); page.passwordForm.patchValue({ currentPassword: 'x'.repeat(12), newPassword: 'y'.repeat(12), confirmPassword: 'y'.repeat(12) });
     let reject!: (reason: Error) => void; api.changePassword.mockImplementationOnce(() => new Promise((_resolve, fail) => { reject = fail; }));

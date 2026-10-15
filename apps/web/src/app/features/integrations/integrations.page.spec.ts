@@ -18,7 +18,7 @@ async function setup(states = [state], manager = true) {
   const live = { status: vi.fn<() => Promise<TikTokStatus>>().mockResolvedValue(tiktok), connect: vi.fn(), disconnect: vi.fn() };
   const confirm = vi.fn<() => Promise<boolean>>().mockResolvedValue(true);
   const params = new BehaviorSubject(convertToParamMap({}));
-  TestBed.configureTestingModule({ imports: [IntegrationsPage], providers: [provideRouter([]), { provide: ActivatedRoute, useValue: { queryParamMap: params, snapshot: { queryParamMap: params.value } } }, { provide: IntegrationsApiService, useValue: api }, { provide: MessagingApiService, useValue: { listChannels: async () => [] } }, { provide: OrdersApiService, useValue: { getPaymentProvider: async () => ({ provider: 'mock', mockMode: true, configured: false }) } }, { provide: LiveApiService, useValue: live }, { provide: AuthApiService, useValue: { isManager: () => manager } }, { provide: DsConfirmService, useValue: { confirm } }] });
+  TestBed.configureTestingModule({ imports: [IntegrationsPage], providers: [provideRouter([]), { provide: ActivatedRoute, useValue: { queryParamMap: params, snapshot: { queryParamMap: params.value } } }, { provide: IntegrationsApiService, useValue: api }, { provide: MessagingApiService, useValue: { listChannels: async () => [], getWhatsAppSignupConfiguration: async () => ({ available: false, manualAvailable: true, canManage: manager, appId: null, graphVersion: 'v26.0', message: null }) } }, { provide: OrdersApiService, useValue: { getPaymentProvider: async () => ({ provider: 'mock', mockMode: true, configured: false }) } }, { provide: LiveApiService, useValue: live }, { provide: AuthApiService, useValue: { isManager: () => manager } }, { provide: DsConfirmService, useValue: { confirm } }] });
   const fixture = TestBed.createComponent(IntegrationsPage); fixture.detectChanges(); await fixture.whenStable();
   await vi.waitFor(() => expect(fixture.componentInstance.loading()).toBe(false)); fixture.detectChanges();
   return { page: fixture.componentInstance, fixture, api, live, confirm, params };
@@ -27,6 +27,14 @@ beforeEach(() => vi.stubGlobal('matchMedia', () => ({ matches: false, addEventLi
 afterEach(() => { TestBed.resetTestingModule(); vi.unstubAllGlobals(); });
 
 describe('Integrations state and actions', () => {
+  it('offers both WhatsApp modes and shows manual availability while Meta authorization is unavailable', async () => {
+    const { page, fixture } = await setup();
+    expect(page.cards().find(card => card.id === 'whatsapp')?.actions).toEqual([
+      { label: 'Conectar con Meta', link: '/app/channels?connection=meta', disabled: true },
+      { label: 'Credenciales propias', link: '/app/channels?connection=manual', disabled: false },
+    ]);
+    expect(fixture.nativeElement.textContent).toContain('Credenciales propias');
+  });
   it('hides unavailable data on load failure and recovers on retry', async () => {
     const { page, fixture, api } = await setup(); api.list.mockRejectedValueOnce(new Error('Offline')); await page.load(); fixture.detectChanges();
     expect(fixture.nativeElement.querySelector('#features-title')).toBeNull(); expect(page.errorMessage()).toBeTruthy();

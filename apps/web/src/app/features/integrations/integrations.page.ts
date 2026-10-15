@@ -13,7 +13,7 @@ import { DsButtonComponent, DsConfirmService, DsActionBarComponent, DsFormSectio
 import { DsIconComponent } from '@vendedoria/ui';
 import type { IntegrationKey } from '../../core/api/billing-api.service';
 import { IntegrationState, IntegrationsApiService } from '../../core/api/integrations-api.service';
-import { MessagingApiService } from '../../core/api/messaging-api.service';
+import { MessagingApiService, WhatsAppSignupConfiguration } from '../../core/api/messaging-api.service';
 import { OrdersApiService } from '../../core/api/orders-api.service';
 import { AuthApiService } from '../../core/auth/auth-api.service';
 import {
@@ -56,6 +56,7 @@ type IntegrationCard = {
   summary: string;
   nextStep: string;
   link?: string;
+  actions?: Array<{ label: string; link: string; disabled: boolean }>;
 };
 
 @Component({
@@ -89,6 +90,7 @@ export class IntegrationsPage {
   });
   readonly connectionError = signal<string | null>(null);
   readonly whatsappConnected = signal(false);
+  readonly whatsappConfiguration = signal<WhatsAppSignupConfiguration | null>(null);
   readonly paymentsMock = signal(true);
   readonly paymentsProvider = signal('mock');
   readonly paymentsConfigured = signal(false);
@@ -136,11 +138,15 @@ export class IntegrationsPage {
         status: this.whatsappConnected() ? 'connected' : 'ready',
         summary: this.whatsappConnected()
           ? 'Número vinculado. Revisa el estado del canal antes de recibir mensajes.'
-          : 'Conecta tu número con el Phone Number ID y el token de Meta.',
+          : 'Autoriza tu negocio con Meta o conecta las credenciales de tu propia app.',
         nextStep: this.whatsappConnected()
           ? 'Revisa el estado del canal en Canales.'
           : 'Conecta WhatsApp para empezar a vender.',
         link: '/app/channels',
+        actions: [
+          { label: 'Conectar con Meta', link: '/app/channels?connection=meta', disabled: !this.canManage || !this.whatsappConfiguration()?.available },
+          { label: 'Credenciales propias', link: '/app/channels?connection=manual', disabled: !this.canManage || !this.whatsappConfiguration()?.manualAvailable },
+        ],
       },
       {
         id: 'mercadopago',
@@ -277,15 +283,17 @@ export class IntegrationsPage {
     this.loading.set(true);
     this.errorMessage.set(null);
     try {
-      const [channels, provider] = await Promise.all([
+      const [channels, provider, , whatsappConfiguration] = await Promise.all([
         this.messaging.listChannels(),
         this.orders.getPaymentProvider(),
         this.integrations.refresh(),
+        this.messaging.getWhatsAppSignupConfiguration(),
       ]);
+      this.whatsappConfiguration.set(whatsappConfiguration);
       this.whatsappConnected.set(
         channels.some(
           (channel) =>
-            channel.type === 'WHATSAPP' && Boolean(channel.externalId),
+            channel.type === 'WHATSAPP' && channel.healthStatus === 'CONNECTED',
         ),
       );
       this.paymentsMock.set(provider.mockMode);

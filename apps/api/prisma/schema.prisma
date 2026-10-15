@@ -193,6 +193,7 @@ model Tenant {
   memberships        Membership[]
   salesAgents        SalesAgent[]
   channels           Channel[]
+  whatsappSignupSessions WhatsAppSignupSession[]
   products           Product[]
   conversations      Conversation[]
   orders             Order[]
@@ -650,6 +651,22 @@ model JourneyTemplate {
   tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
 
   @@index([tenantId, isActive])
+}
+
+model WhatsAppSignupSession {
+  id             String   @id @default(cuid())
+  tenantId       String
+  userId         String
+  stateHash      String   @unique
+  status         String   @default("CREATED")
+  accessTokenEnc String?
+  channelId      String?
+  expiresAt      DateTime
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+  tenant         Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId, userId, expiresAt])
 }
 
 model Channel {

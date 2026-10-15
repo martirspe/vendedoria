@@ -2,7 +2,7 @@ import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@a
 import { toSignal } from '@angular/core/rxjs-interop';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { RouterLink } from '@angular/router';
-import { DsButtonComponent, DsConfirmService, DsIconComponent, DsFormSectionComponent, DsDisclosureComponent, DsSaveBarComponent, DsActionBarComponent, DsEmptyStateComponent } from '@vendedoria/ui';
+import { DsButtonComponent, DsConfirmService, DsIconComponent, DsFormSectionComponent, DsDisclosureComponent, DsSaveBarComponent, DsEmptyStateComponent } from '@vendedoria/ui';
 import { AccountApiService } from '../../core/api/account-api.service';
 import { messageFrom } from '../../core/api/api-error';
 import { AuthApiService, type MembershipRole } from '../../core/auth/auth-api.service';
@@ -22,7 +22,7 @@ const MONTH_YEAR = new Intl.DateTimeFormat('es-PE', { month: 'long', year: 'nume
 @Component({
   selector: 'app-profile-page',
   standalone: true,
-  imports: [ReactiveFormsModule, RouterLink, DsButtonComponent, DsIconComponent, DsFormSectionComponent, DsDisclosureComponent, DsSaveBarComponent, DsActionBarComponent, DsEmptyStateComponent],
+  imports: [ReactiveFormsModule, RouterLink, DsButtonComponent, DsIconComponent, DsFormSectionComponent, DsDisclosureComponent, DsSaveBarComponent, DsEmptyStateComponent],
   templateUrl: './profile.page.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })

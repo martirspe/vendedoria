@@ -18,6 +18,28 @@ class ComponentsHost {
   submissions = 0;
 }
 
+@Component({
+  imports: [ReactiveFormsModule, DsSaveBarComponent],
+  template: `<form id="external-save-form" [formGroup]="form" (ngSubmit)="submissions = submissions + 1"><input formControlName="name" /></form>
+    <form id="unrelated-save-form" (submit)="$event.preventDefault(); unrelatedSubmissions = unrelatedSubmissions + 1"></form>
+    <ds-save-bar formId="external-save-form" [pending]="true" [busy]="busy()" label="Guardar nombre" />`,
+})
+class ExternalSaveHost {
+  readonly form = new FormGroup({ name: new FormControl('Nombre', { nonNullable: true }) });
+  readonly busy = signal(false);
+  submissions = 0;
+  unrelatedSubmissions = 0;
+}
+
+@Component({
+  imports: [ReactiveFormsModule],
+  template: `<form [formGroup]="form"><fieldset [disabled]="disabled()"><label for="native-checkbox">Activar avisos</label><input id="native-checkbox" type="checkbox" formControlName="enabled" /></fieldset></form>`,
+})
+class NativeCheckboxHost {
+  readonly form = new FormGroup({ enabled: new FormControl(false, { nonNullable: true }) });
+  readonly disabled = signal(false);
+}
+
 async function setup() {
   TestBed.configureTestingModule({ imports: [ComponentsHost] });
   const fixture = TestBed.createComponent(ComponentsHost);
@@ -27,6 +49,57 @@ async function setup() {
 afterEach(() => TestBed.resetTestingModule());
 
 describe('shared console controls', () => {
+  it('preserves label activation, dirty and touched state on standalone native checkboxes', async () => {
+    TestBed.configureTestingModule({ imports: [NativeCheckboxHost] });
+    const fixture = TestBed.createComponent(NativeCheckboxHost);
+    fixture.detectChanges();
+    const host = fixture.componentInstance;
+    const element = fixture.nativeElement as HTMLElement;
+    const checkbox = element.querySelector('input')!;
+    element.querySelector('label')!.click();
+    expect(checkbox.checked).toBe(true);
+    expect(host.form.controls.enabled.value).toBe(true);
+    expect(host.form.dirty).toBe(true);
+    checkbox.focus();
+    checkbox.blur();
+    expect(host.form.touched).toBe(true);
+  });
+
+  it('keeps mixed state and disabled fieldsets native after checkbox appearance changes', async () => {
+    TestBed.configureTestingModule({ imports: [NativeCheckboxHost] });
+    const fixture = TestBed.createComponent(NativeCheckboxHost);
+    fixture.detectChanges();
+    const host = fixture.componentInstance;
+    const checkbox = fixture.nativeElement.querySelector('input') as HTMLInputElement;
+    checkbox.indeterminate = true;
+    checkbox.click();
+    expect(checkbox.indeterminate).toBe(false);
+    expect(host.form.controls.enabled.value).toBe(true);
+    host.disabled.set(true);
+    fixture.detectChanges();
+    expect(checkbox.matches(':disabled')).toBe(true);
+    checkbox.click();
+    expect(host.form.controls.enabled.value).toBe(true);
+  });
+
+  it('associates an external save bar with exactly one native form and retains busy blocking', async () => {
+    TestBed.configureTestingModule({ imports: [ExternalSaveHost] });
+    const fixture = TestBed.createComponent(ExternalSaveHost);
+    fixture.detectChanges();
+    const host = fixture.componentInstance;
+    const element = fixture.nativeElement as HTMLElement;
+    const save = element.querySelector('ds-save-bar button') as HTMLButtonElement;
+    expect(save.form?.id).toBe('external-save-form');
+    expect(element.querySelector('[role="region"]')?.getAttribute('aria-label')).toBe('Guardar nombre');
+    save.click();
+    expect(host.submissions).toBe(1);
+    expect(host.unrelatedSubmissions).toBe(0);
+    host.busy.set(true);
+    fixture.detectChanges();
+    save.click();
+    expect(host.submissions).toBe(1);
+  });
+
   it('keeps the native checkbox form value, dirty state and label association', async () => {
     const { fixture, host, element } = await setup();
     const checkbox = element.querySelector('input')!;

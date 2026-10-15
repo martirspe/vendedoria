@@ -15,4 +15,5 @@ export class DsSaveBarComponent {
   readonly disabled = input(false);
   readonly label = input('Guardar cambios');
   readonly pendingText = input('Cambios sin guardar');
+  readonly formId = input<string | null>(null);
 }

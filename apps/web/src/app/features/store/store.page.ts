@@ -22,7 +22,7 @@ import { takeUntilDestroyed, toSignal } from '@angular/core/rxjs-interop';
 import { map } from 'rxjs';
 import { STORE_SECTIONS } from '../../layout/console-context';
 import type { StoreTemplate } from '@vendedoria/contracts';
-import { DsButtonComponent, DsDisclosureComponent, DsFormSectionComponent, DsSaveBarComponent, DsIconComponent } from '@vendedoria/ui';
+import { DsButtonComponent, DsDisclosureComponent, DsFormSectionComponent, DsIconComponent } from '@vendedoria/ui';
 import {
   SellerType,
   StoreApiService,
@@ -56,7 +56,7 @@ export const TEMPLATE_OPTIONS = latestThemes().map(theme => ({
 @Component({
   selector: 'app-store-page',
   standalone: true,
-  imports: [DsActionBarComponent, DsEmptyStateComponent, DsDisclosureComponent, DsFormSectionComponent, DsSaveBarComponent, ThemeManagerComponent, ConversionSettingsComponent, DsSelectComponent, ReactiveFormsModule, RouterLink, DsButtonComponent, DsIconComponent, IntegrationGateComponent],
+  imports: [DsActionBarComponent, DsEmptyStateComponent, DsDisclosureComponent, DsFormSectionComponent, ThemeManagerComponent, ConversionSettingsComponent, DsSelectComponent, ReactiveFormsModule, RouterLink, DsButtonComponent, DsIconComponent, IntegrationGateComponent],
   templateUrl: './store.page.html',
   styleUrl: './store.page.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,

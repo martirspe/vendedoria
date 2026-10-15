@@ -48,7 +48,11 @@ describe('console navigation', () => {
     const product = nav.querySelector('a[href="/app/products"]') as HTMLAnchorElement;
     expect(product.getAttribute('aria-label')).toBe('Productos');
     expect(product.getAttribute('title')).toBe('Productos');
-    expect(product.querySelector('span')).toBeNull();
+    expect(product.querySelector('span')?.getAttribute('aria-hidden')).toBe('true');
+    const inventory = nav.querySelector('a[href="/app/inventory"]') as HTMLAnchorElement;
+    expect(inventory.getAttribute('aria-label')).toBe('Inventario');
+    expect(inventory.getAttribute('title')).toBe('Inventario');
+    expect(inventory.closest('[inert]')).toBeNull();
     (nav.querySelector('[aria-label="Expandir navegación"]') as HTMLButtonElement).click();
     fixture.detectChanges();
     await fixture.whenStable();
@@ -69,27 +73,102 @@ describe('console navigation', () => {
     expect(contextual.querySelectorAll('a')).toHaveLength(8);
   });
 
-  it('keeps catalog details nested and promotes shipping to a direct operational destination', async () => {
+  it('keeps inventory and shipping as independent operational destinations', async () => {
     const { fixture, router } = await setup();
-    for (const [route, parent, label] of [['/app/inventory', '/app/products', 'Inventario']]) {
+    for (const [route, sibling, label] of [
+      ['/app/inventory', '/app/products', 'Inventario'],
+      ['/app/shipping', '/app/orders', 'Envíos'],
+    ]) {
       await router.navigateByUrl(route);
       fixture.detectChanges();
       await fixture.whenStable();
       fixture.detectChanges();
       if (fixture.componentInstance.navCollapsed()) { fixture.componentInstance.toggleNavigation(); fixture.detectChanges(); await fixture.whenStable(); }
       const nav = fixture.nativeElement.querySelector('#console-navigation') as HTMLElement;
-      expect(nav.querySelector(`a[href="${parent}"]`)?.getAttribute('aria-current')).toBe('location');
+      expect(nav.querySelector(`a[href="${sibling}"]`)?.getAttribute('aria-current')).toBeNull();
       expect(nav.querySelector(`a[href="${route}"]`)?.getAttribute('aria-current')).toBe('page');
       expect(fixture.componentInstance.currentLocation().label).toBe(label);
       expect(fixture.componentInstance.contentHref()).toBe(`${route}#console-main`);
     }
-    await router.navigateByUrl('/app/shipping');
+  });
+
+  it('navigates straight to inventory from the rail without opening a submenu', async () => {
+    const { fixture } = await setup();
+    const router = TestBed.inject(Router);
+    const nav = fixture.nativeElement.querySelector('#console-navigation') as HTMLElement;
+    (nav.querySelector('[data-nav-toggle]') as HTMLButtonElement).click();
     fixture.detectChanges();
     await fixture.whenStable();
+    const inventory = nav.querySelector('a[href="/app/inventory"]') as HTMLAnchorElement;
+    inventory.click();
+    await fixture.whenStable();
+    fixture.detectChanges();
+    expect(router.url).toBe('/app/inventory');
+    expect(inventory.getAttribute('aria-current')).toBe('page');
+    expect(nav.querySelectorAll('nav button')).toHaveLength(0);
+    expect(nav.querySelectorAll('nav ul ul')).toHaveLength(0);
+    expect(nav.querySelector('a[href="/app/products/import"]')).toBeNull();
+    expect(nav.querySelector('a[href="/app/seller/personality"]')).toBeNull();
+    (nav.querySelector('[data-nav-toggle]') as HTMLButtonElement).click();
+    fixture.detectChanges();
+    await fixture.whenStable();
+    expect(nav.querySelector('a[href="/app/inventory"]')).toBe(inventory);
+    expect(document.activeElement?.getAttribute('aria-label')).toBe('Contraer navegación');
+  });
+
+  it('groups sales, commerce, connections and results, replacing headings with dividers in the rail', async () => {
+    const { fixture } = await setup();
+    const nav = fixture.nativeElement.querySelector('#console-navigation nav') as HTMLElement;
+    const groups = Array.from(nav.children);
+    expect(groups).toHaveLength(5);
+    for (const [index, label, routes] of [
+      [1, 'Ventas', ['/app/seller', '/app/messages', '/app/orders', '/app/shipping']],
+      [2, 'Catálogo y tienda', ['/app/products', '/app/inventory', '/app/coupons', '/app/store']],
+      [3, 'Conexiones', ['/app/channels', '/app/payments', '/app/integrations']],
+      [4, 'Resultados', ['/app/metrics']],
+    ] as const) {
+      expect(groups[index].querySelector('p')?.textContent).toBe(label);
+      for (const route of routes) expect(groups[index].querySelector(`a[href="${route}"]`)).not.toBeNull();
+    }
+    expect(nav.querySelectorAll('hr')).toHaveLength(0);
+    fixture.componentInstance.toggleNavigation();
+    fixture.detectChanges();
+    await fixture.whenStable();
+    expect(nav.querySelectorAll('hr')).toHaveLength(groups.length - 1);
+    expect(groups[0].querySelector('hr')).toBeNull();
+    for (const group of groups.slice(1)) {
+      expect(group.firstElementChild?.tagName).toBe('HR');
+      expect(group.querySelector('p')?.getAttribute('aria-hidden')).toBe('true');
+    }
+    fixture.componentInstance.toggleNavigation();
+    fixture.detectChanges();
+    await fixture.whenStable();
+    expect(nav.querySelectorAll('hr')).toHaveLength(0);
+  });
+
+  it('marks only the current module and preserves the local page name for deep links', async () => {
+    const { fixture, router } = await setup();
     const nav = fixture.nativeElement.querySelector('#console-navigation') as HTMLElement;
-    expect(nav.querySelector('a[href="/app/shipping"]')?.getAttribute('aria-current')).toBe('page');
-    expect(nav.querySelector('a[href="/app/orders"]')?.getAttribute('aria-current')).toBeNull();
-    expect(nav.querySelector('#nav-shoppingBag')).toBeNull();
+    for (const [route, destination, label] of [
+      ['/app/inventory', '/app/inventory', 'Inventario'],
+      ['/app/products/import', '/app/products', 'Importar catálogo'],
+      ['/app/seller/personality', '/app/seller', 'Personalidad'],
+      ['/app/seller/rules?agent=sample', '/app/seller', 'Reglas y derivación'],
+    ]) {
+      await router.navigateByUrl(route);
+      fixture.detectChanges();
+      await fixture.whenStable();
+      const active = nav.querySelector(`a[href="${destination}"]`) as HTMLAnchorElement;
+      expect(active.getAttribute('aria-current')).toBe('page');
+      expect(nav.querySelectorAll('nav a[aria-current]')).toHaveLength(1);
+      expect(fixture.componentInstance.currentLocation().label).toBe(label);
+    }
+    await router.navigateByUrl('/app/products');
+    fixture.detectChanges();
+    await fixture.whenStable();
+    const products = nav.querySelector('a[href="/app/products"]') as HTMLAnchorElement;
+    expect(products.getAttribute('aria-current')).toBe('page');
+    expect(nav.querySelector('a[href="/app/inventory"]')?.getAttribute('aria-current')).toBeNull();
   });
 
   it('keeps the settings sidebar administrative and removes duplicated operational routes', async () => {

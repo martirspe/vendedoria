@@ -1,4 +1,5 @@
 export * from './src/button/ds-button.component';
+export * from './src/button/ds-link.component';
 export * from './src/confirm/ds-confirm-dialog.component';
 export * from './src/confirm/ds-confirm.service';
 export * from './src/empty-state/ds-empty-state.component';

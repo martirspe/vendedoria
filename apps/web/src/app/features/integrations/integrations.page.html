@@ -71,7 +71,11 @@
           <li class="tw:min-w-0"><ds-form-section [title]="card.name" [description]="card.summary">
             <span class="tw:w-fit tw:rounded-sm tw:bg-canvas tw:px-2 tw:py-1 tw:text-caption tw:font-semibold tw:text-muted">{{ statusLabel(card.status) }}</span>
             <p class="tw:m-0 tw:text-sm tw:text-muted">{{ card.nextStep }}</p>
-            @if (card.link; as link) { <ds-button variant="secondary" [label]="'Configurar ' + card.name" (click)="open(link)">Configurar conexión</ds-button> }
+            @if (card.actions; as actions) {
+              <div class="tw:flex tw:flex-wrap tw:gap-2">@for (action of actions; track action.link) { <ds-button variant="secondary" [disabled]="action.disabled || busyKey() !== null" (click)="open(action.link)">{{ action.label }}</ds-button> }</div>
+              @if (!whatsappConfiguration()?.available) { <p class="tw:m-0 tw:text-caption tw:text-muted">La autorización con Meta aún no está disponible. Puedes usar credenciales propias si tu negocio ya tiene una app y un número activo en Cloud API.</p> }
+            }
+            @if (card.link; as link) { <ds-button variant="ghost" [label]="'Configurar ' + card.name" (click)="open(link)">{{ card.actions ? 'Ver estado y configuración' : 'Configurar conexión' }}</ds-button> }
           </ds-form-section></li>
         }
       </ul>
